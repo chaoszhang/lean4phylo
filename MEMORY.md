@@ -140,7 +140,35 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   cp -r /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo/Phylo/* ~/lean4phylo/Phylo/
   cd ~/lean4phylo && ~/.elan/bin/lake env lean Phylo/Core.lean   # 单文件 ~9s
   ```
-- **下一步**：M0 接口已交付，等老师确认后开 M1（`Phylogram` + `dist` + `restrict` + `Iso`）。
+- **M1 进度（2026-10-02，进行中）**：
+  - ✅ `Edge`（`E` 派生自 `edgeSet`，子路线 A）
+  - ✅ `Phylogram extends Cladogram`（`w : Edge → ℝ` + `w_nonneg`）· `w_nonneg'` · `w_mem`
+  - ✅ `wExt`（非边取 0 的技术扩展）· `walkDist`（`Walk` 边权和，用 `Walk.edges : List (Sym2 V)`）· **`dist`**（唯一路径权和，可加性化身）· `dist_self`
+  - ✅ `Iso`（`SimpleGraph.Iso` + `leaf_compat`）· `refl` · `symm`
+  - ⬜ 剩：`restrict`（`suppress` + 边权相加 + `restrict_dist`）· `splits`
+  - `lake build` → **1258 jobs 通过**（仍仅 module-system 无害提示）
+- **Lean 4 坑（M1 新踩）**：
+  - ① `Mathlib.Data.Real.Basic` **已弃用** → 改 `import Mathlib.Basic.Real.Basic`（否则只报 `OfNat ℝ 0` 失败，很难定位）。
+  - ② `SimpleGraph.Iso.refl` 是**无参** abbrev（靠期望类型推断），不接 `G` 参数；`RelIso.refl` 才接关系参数。
+  - ③ `∃! p, P p` 的 `.choose_spec` 类型是 `P choose ∧ (∀ y, P y → y = choose)` —— 唯一性在 `.2`，用它比用 `ExistsUnique.unique` 省事。
+  - ④ `Phylogram extends Cladogram` 后**不必**重新注册实例 —— `Cladogram.fintypeV` 等已注册为 instance，沿 `toCladogram` 自动找到（但 `attribute [instance] Phylogram.toCladogram` 会报错：返回值不是 type class）。
+- **下一步**：`restrict`（需 `suppress`，独立工程）+ `splits`（需 M2 的 `Split` 类型）。
+
+## Git / 远程（2026-10-02）
+
+- **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
+- **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
+- **⚠️ 关键：认证只在 WSL 侧**！Windows 侧**没有 SSH key**（`~/.ssh` 只有 known_hosts），WSL 侧 `~/.ssh/id_ed25519` 已配到 GitHub 账号 `chaoszhang`。
+  ⇒ **所有 git 远程操作（push/pull/fetch）必须走 WSL**，且需绕过 `dubious ownership`：
+  ```bash
+  wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
+    GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o BatchMode=yes" \
+    git -c safe.directory="*" push -u origin main'
+  ```
+- **本机无 `gh` CLI、无 GitHub token** ⇒ **不能**用 API 建仓库（本次靠老师在网页建空仓库）。
+- **工具链**：Windows git 2.55.0；提交身份 `chaoszhang <chaoszhang@users.noreply.github.com>`（仓库级 local config，noreply 式，可改）。
+- **已配置**：`.gitignore`（忽略 `.lake/` 等）· `.gitattributes`（**统一 LF**，Windows 编辑 + WSL 编译）· `LICENSE`（Apache 2.0 全文）· `lake-manifest.json`（固定 mathlib rev，PhysLib 惯例）。
+- **CI**：`.github/workflows/build.yml` 已随仓库上线（`lake exe cache get` → `lake build`）。查看：https://github.com/chaoszhang/lean4phylo/actions
 - 原则：老师要求 **更多交互**，重大设计决策不擅自拍板。
 - **已建 `DESIGN.md`**（库设计文档）：Mathlib 现状实测表 / 分层架构 / 已定决策 D1–D4 / **待定决策 P1–P5** / 里程碑 M0–M3。
   - 待定 P1（M0 中「叶」的定义）**阻塞 M0**；P2 推进节奏；P3 quartet 表示；P4 目录切分；P5 Buneman 放哪层。老师本轮跳过 P1/P2 未答 → **不擅自开工**。

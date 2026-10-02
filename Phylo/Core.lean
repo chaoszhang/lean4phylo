@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Mathlib.Combinatorics.SimpleGraph.Acyclic
 import Mathlib.Combinatorics.SimpleGraph.Maps
 import Mathlib.Combinatorics.SimpleGraph.DegreeSum
+import Mathlib.Basic.Real.Basic
 import Mathlib.Data.Fintype.Basic
 import Mathlib.Data.Finset.Card
 
@@ -83,3 +84,101 @@ theorem existsUnique_path (u v : T.V) : ∃! p : T.graph.Walk u v, p.IsPath :=
   (isTree_iff_existsUnique_path.mp T.isTree).2 u v
 
 end Cladogram
+
+/-! ## 第 2 层（必备）：phylogram —— 拓扑 + 可加边权 -/
+
+/-- 树的**边类型**：`graph.edgeSet` 作为 `Sym2 V` 的子类型。
+
+    §3.6.5 决策（子路线 A）：`E` **派生**自 `edgeSet`，零维护 —— 不给结构新增字段。 -/
+abbrev Edge {X : Type*} (T : Cladogram X) : Type _ :=
+  {e : Sym2 T.V // e ∈ T.graph.edgeSet}
+
+/-- **phylogram**（第 2 层，必备）：cladogram + 定义在**边**上的非负权重。
+
+    「可加」（沿路径求和 = 距离）由 `dist` 承载，见 `CONCEPTS.md` §3.6.4 / §3.6.6。
+
+    * `extends Cladogram X` —— 免费继承全部拓扑引理
+    * `w : Edge → ℝ` —— 边权（定义域**只含真正的边**，无冗余）
+    * `w_nonneg` —— 非负（树度量要求；负权排除） -/
+structure Phylogram (X : Type*) extends Cladogram X where
+  w : Edge toCladogram → ℝ
+  w_nonneg : ∀ e, 0 ≤ w e
+
+-- `Phylogram` 的实例（`Fintype V` / `DecidableEq V` / `DecidableRel Adj`）
+-- 经 `Cladogram.fintypeV` 等（已注册为 instance）沿 `toCladogram` 自动找到。
+
+namespace Phylogram
+
+variable {X : Type*} (T : Phylogram X)
+
+/-- 边权非负（字段的引用版）。 -/
+theorem w_nonneg' (e : Edge T.toCladogram) : 0 ≤ T.w e :=
+  T.w_nonneg e
+
+/-- `w` 的定义域确实只含 `graph` 的边（由子类型保证）。 -/
+theorem w_mem (e : Edge T.toCladogram) : e.1 ∈ T.graph.edgeSet :=
+  e.2
+
+section Dist
+
+open Classical
+
+/-- 把边权扩展到**所有**顶点对（非边取 0）—— 便于沿 `Walk` 求和。
+
+    （`w` 本身只定义在边上；这里是求和用的技术性扩展。） -/
+noncomputable def wExt (e : Sym2 T.V) : ℝ :=
+  if h : e ∈ T.graph.edgeSet then T.w ⟨e, h⟩ else 0
+
+/-- 一条 `Walk` 的**加权长度**（按边出现次数累加）。 -/
+noncomputable def walkDist {u v : T.V} (p : T.graph.Walk u v) : ℝ :=
+  (p.edges.map T.wExt).sum
+
+/-- 两点间的**加权距离**：树上唯一路径的边权和。
+
+    这正是「**可加性**」的化身（§3.6.4）—— `phylogram` 区别于 `annotated` 之处。 -/
+noncomputable def dist (u v : T.V) : ℝ :=
+  T.walkDist (T.existsUnique_path u v).choose
+
+/-- `u` 到自身距离为 0。
+
+    对树，`u → u` 的**唯一路径**必是平凡 walk（`IsPath` 无重复顶点），故边表为空。 -/
+theorem dist_self (u : T.V) : T.dist u u = 0 := by
+  unfold dist walkDist
+  have hnil : (T.existsUnique_path u u).choose = SimpleGraph.Walk.nil :=
+    ((T.existsUnique_path u u).choose_spec.2 SimpleGraph.Walk.nil (by simp)).symm
+  rw [hnil]
+  simp [SimpleGraph.Walk.edges]
+
+end Dist
+
+end Phylogram
+
+/-! ## 树同构 `Iso`（§3.8：A 作定义） -/
+
+/-- **保标号同构**（identity on `X`）：两棵 cladogram 之间的同构。
+
+§3.8 决策：`Iso` 作「树相等」的**定义**（而 Splits-Equivalence 作**定理**）。
+底层复用 Mathlib 的 `SimpleGraph.Iso`（记法 `G ≃g G'`），只需再保持 `leaf`。 -/
+structure Iso {X : Type*} (T T' : Cladogram X) where
+  gIso : T.graph ≃g T'.graph
+  leaf_compat : ∀ x : X, gIso (T.leaf x) = T'.leaf x
+
+namespace Iso
+
+variable {X : Type*} {T T' T'' : Cladogram X}
+
+/-- 同构关系自反。 -/
+def refl (T : Cladogram X) : Iso T T where
+  gIso := SimpleGraph.Iso.refl
+  leaf_compat := fun _ => rfl
+
+/-- 同构关系对称。 -/
+def symm (e : Iso T T') : Iso T' T where
+  gIso := e.gIso.symm
+  leaf_compat := fun x => by
+    have h := e.leaf_compat x
+    -- gIso.symm (gIso a) = a
+    have := congrArg e.gIso.symm h
+    simpa using this.symm
+
+end Iso
