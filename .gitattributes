@@ -1,0 +1,14 @@
+# 统一行尾为 LF —— 本项目在 Windows 侧编辑、WSL 侧编译，行尾不统一会出问题
+* text=auto eol=lf
+
+# 显式声明
+*.lean  text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.sh    text eol=lf
+
+# 二进制
+*.olean binary
+*.ilean binary

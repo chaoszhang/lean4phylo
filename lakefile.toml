@@ -1,0 +1,11 @@
+name = "lean4phylo"
+defaultTargets = ["Phylo"]
+
+# mathlib 依赖。rev 可改为某个已发布的 tag/commit 以固定版本。
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "master"
+
+[[lean_lib]]
+name = "Phylo"

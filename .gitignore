@@ -1,0 +1,9 @@
+# Lean / Lake 构建产物
+/.lake/
+/build/
+*.olean
+*.ilean
+*.trace
+
+# 编辑器
+/.vscode/*.log
