@@ -542,6 +542,67 @@ theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (
    `B` 是某边的一侧；`s = splitOf B` 或 `s = (splitOf B).swap`（`swap` 也对应同一条边的另一侧）。
 3. 之后：**Buneman 存在性** 与 **NJ 硬核 `MaxZCherryCore`** 同时开门。
 
+## ★★★★ 统计一致性层（2026-10-07 老师定，`Phylo/Stat/`，1060 行）
+
+**任务**：证明 **ASTRAL / CASTER / parsimony** 在 quartet MSC 下、**NJst** 在多物种下的**统计一致性**。
+
+### 决策（老师 2026-10-07）
+
+1. **先把 MSC 公理化**，把「证明 MSC」本身另立为课题；
+2. **parsimony 走 unrooted quartet + ISM**（Felsenstein zone 需同塑性；ISM 下不发生同塑性；
+   Roch–Steel 2015 的 unrooted 反例是 6 taxon，不覆盖 4 taxon）。
+
+### 架构：三层
+
+```
+① 理想一致性   MSC 频率 ⟹ E 输出 ≅ 真树            （各算法分头证）
+② gap 引理     严格最大 ⟹ 存在正 gap δ              （有限性，Stability.lean）
+③ 稳定性       扰动 < δ/(2N+1) ⟹ argmax 不变        （Stability.lean）
+──────────────────────────────────────────────
+⟹ 统计一致性   （① + ② + ③ + MSC 大数定律）
+```
+
+### 文件与成果
+
+| 文件 | 内容 |
+|---|---|
+| `MSC.lean` | `QuartetFreq` / `QuartetTree` / ★★ `MSCFreq`（真树 + quartet 选择 + 频率 + `majorizes`）/ `MSCFreq.p_le` / `FreqClose(+_symm)` / `MSCSampling`（**大数定律公理化**）/ `IdeallyConsistent` / `StatisticallyConsistent` |
+| `ASTRAL.lean` | `astralScore` / ★★ `astralScore_le`（真树得分最大）/ ★★ `astralScore_eq_iff` / `IsASTRAL` / ★★★ `astral_maximizer_agrees` |
+| `Stability.lean` | `IsTrueChoice` / ★ `score_lt_of_not_true` / ★ `exists_gap`（`Finset.min'`）/ ★★ `stable_argmax` / ★★★ `astral_statisticallyConsistent` |
+| `CASTER.lean` | `MultiMarkerFreq` / `avg` / `casterScore` / ★ `casterScore_eq`（归约 `= L·astralScore(avg)`）/ ★★ `caster_isASTRAL` / ★★★ `caster_statisticallyConsistent` |
+| `Parsimony.lean` | ★ `Pattern.fitchCost_eq`（**48 情形 `native_decide` 枚举**）/ `SiteSupport` / `parsimonyScore` / ★★ `parsimonyScore_le_iff` / `MSCSite` / ★★ `stable_argmax_site` / ★★★ `parsimony_statisticallyConsistent` |
+| `NJst.lean` | `NJstData` / ★ `njst_cherry`（第一步）/ **诚实边界**：`MaxZCherryCore`（open）+ NJ 归纳正确性 |
+| `QuartetDecides.lean` | ★★ **`QuartetDecidesTree`（显式缺口）** / `agreesWith_symm` / ★★★ `astral_iso` / `caster_iso` / `parsimony_iso` |
+
+### 缺口（唯一，四算法共享）
+
+**`QuartetDecidesTree`**：两棵 binary cladogram 有相同 quartet 系统 ⟹ 同构。
+（Steel 1992 / Colonius–Schultze 1981；**binary 不可去** —— polytomy refine 成 binary 不改 quartet 系统。）
+
+**证明路线（4 步，已写进模块文档）**：
+1. binary `T` 的每条内部边两侧各 `≥ 2` 叶（`deg = 3`）；
+2. 边的叶侧由「被它分离的 4-元 2\|2 划分」见证；
+3. 由 `q ≈ q'` 得 `Σ(T) = Σ(T')`（**库里已有 C-S 规则** `displaysQuartet_of_displaysQuartet_common`）；
+4. binary 树由 `Σ` 唯一决定（接 `Laminar.toRootedTreeOfCard` + Buneman 存在性）。
+
+**为什么卡住**：第 1 步需要「树的**分量 / 诱导子图 / 叶存在性 / 最长路径**」基础设施层 ——
+Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
+**没有「诱导子图是树」「最长 walk 存在」**，自建约 300–500 行。
+
+### 本轮踩坑（Lean 4，已入共享记忆 lesson）
+
+1. **`Exists.choose` 不做 ι-归约**（`Classical.choice` 是公理）：
+   `(⟨a, h⟩ : ∃ x, p x).choose = a` **不可 `rfl`**。
+   ⇒ **改用结构字段**（`MSCFreq.q`）代替 `∃` + `choose`，一切变成投影。**这是本层最关键的设计决策。**
+2. **`Cladogram` 的顶点宇宙必须显式**：`Cladogram.{u, v} X`（否则 `Failed to infer universe levels`）。
+   `structure` 字段里的 `∀ S hS, ...` 也**必须带类型标注**（无期望类型可推）。
+3. **ℝ 没有 `OrderBot`** ⇒ `Finset.sup` 不可用；用 `Finset.min'`（`LinearOrder` + `Nonempty`）代替。
+4. **Python 在 Windows 写文件默认 CRLF** ⇒ `check_file_imports.sh` 的 `grep "…$"` 失配误报
+   「未 import」。**写 `.lean` 必须 `newline='\n'`**（或事后统一转 LF，8 个文件受影响）。
+5. `native_decide`（Parsimony 的 48 情形枚举）引入 `Lean.ofReduceBool` 信任假设 —— 已标注。
+6. **`rw` 链里 `mul_div_assoc` / `div_mul_cancel₀` 的方向**：`L * (Y/L) = Y` 用
+   `rw [mul_comm, div_mul_cancel₀ _ hL]` 两步，比 `mul_div_cancel₀` 稳。
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
