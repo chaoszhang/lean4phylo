@@ -55,14 +55,47 @@ theorem mem_strictSups {F : Finset (Finset α)} {A B : Finset α} :
 
 /-- **父簇**：镶嵌族中 `A` 的**最小严格包含者**。
 
-镶嵌性 ⟹ 严格包含者两两嵌套 ⟹ 取交集即得最小者（`Finset.inf'`）。
-无严格包含者时返回 `univ`（视为根，调用处再作区分）。 -/
+镶嵌性 ⟹ 严格包含者两两嵌套 ⟹ 其下确界（`Finset.inf`，即交集）落在族中，
+且正是最小者。无严格包含者时 `Finset.inf` 给 `⊤ = univ`。
+
+（`Finset α` 本身是 `SemilatticeInf` + `OrderTop`，故 `Finset.inf` 可直接用。） -/
 noncomputable def parentOf (F : Finset (Finset α)) (A : Finset α) : Finset α :=
-  if h : (strictSups F A).Nonempty then
-    (strictSups F A).inf' h id
-  else Finset.univ
+  (strictSups F A).inf id
+
+/-- **`B` 是 `A`（在族 `F` 中）的父**：`B ∈ F`，`A ⊊ B`，且 `B` 含于任一严格包含 `A` 的族成员。 -/
+def IsParentOf (F : Finset (Finset α)) (A B : Finset α) : Prop :=
+  B ∈ F ∧ A ⊂ B ∧ ∀ C ∈ F, A ⊂ C → B ⊆ C
 
 variable {F : Finset (Finset α)}
+
+/-- **`parentOf` 确实是父**（镶嵌族、`univ ∈ F`、族元素非空、`A ≠ univ`）。
+
+`univ ∈ strictSups F A`（因 `A ⊂ univ`）⟹ `A` 有严格包含者；
+镶嵌性 ⟹ 严格包含者对 `∩` 封闭 ⟹ `Finset.inf_mem` 给出 `parentOf F A` 在族中且 ⊋ `A`；
+`Finset.inf_le` 给出最小性。 -/
+theorem isParentOf_parentOf (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty)
+    (huniv : (Finset.univ : Finset α) ∈ F) {A : Finset α} (hA : A ∈ F)
+    (hAuniv : A ≠ Finset.univ) :
+    IsParentOf F A (parentOf F A) := by
+  have hmem : parentOf F A ∈ {B : Finset α | B ∈ F ∧ A ⊂ B} := by
+    refine Finset.inf_mem ({B : Finset α | B ∈ F ∧ A ⊂ B})
+      ⟨huniv, lt_of_le_of_ne (Finset.subset_univ A) hAuniv⟩ ?_ _ _ ?_
+    · intro x hx y hy
+      obtain ⟨hxF, hxA⟩ := hx
+      obtain ⟨hyF, hyA⟩ := hy
+      rcases hl x hxF y hyF with hxy | hyx | hd
+      · rw [inf_eq_left.mpr hxy]; exact ⟨hxF, hxA⟩
+      · rw [inf_eq_right.mpr hyx]; exact ⟨hyF, hyA⟩
+      · exfalso
+        obtain ⟨a, ha⟩ := hne A hA
+        rw [Finset.disjoint_iff_inter_eq_empty] at hd
+        have hmem' : a ∈ x ∩ y := Finset.mem_inter.mpr ⟨hxA.1 ha, hyA.1 ha⟩
+        rw [hd] at hmem'
+        exact Finset.notMem_empty a hmem'
+    · intro B hB
+      exact mem_strictSups.mp hB
+  exact ⟨hmem.1, hmem.2, fun C hC hAC => Finset.inf_le (mem_strictSups.mpr ⟨hC, hAC⟩)⟩
 
 /-- **镶嵌族中同一簇的严格包含者两两嵌套**（`A` 非空时「相离」被排除）。
 
@@ -84,14 +117,7 @@ theorem laminar_strictSups_pairwise {A : Finset α} (hl : LaminarFamily F)
     ∀ B ∈ strictSups F A, ∀ C ∈ strictSups F A, B ⊆ C ∨ C ⊆ B :=
   fun _ hB _ hC => laminar_strictSups hl hne hB hC
 
-/-! ### 父关系（「最小严格包含者」的特征性质）
-
-用**特征性质**而非选函数定义父关系 —— 免去 `Finset.inf'` 的选择与引理麻烦，
-且「最小性」（`∀ C ∈ F, A ⊊ C → B ⊆ C`）正是建图所需的。 -/
-
-/-- **`B` 是 `A`（在族 `F` 中）的父**：`B ∈ F`，`A ⊊ B`，且 `B` 含于任一严格包含 `A` 的族成员。 -/
-def IsParentOf (F : Finset (Finset α)) (A B : Finset α) : Prop :=
-  B ∈ F ∧ A ⊂ B ∧ ∀ C ∈ F, A ⊂ C → B ⊆ C
+/-! ### 父关系的特征性质 -/
 
 /-- **父唯一**（两个父互相包含）。 -/
 theorem isParentOf_unique {A B B' : Finset α}
@@ -183,5 +209,86 @@ theorem isParentVertex_adj {F : Finset (Finset α)} {u v : TreeVertex α}
   | Sum.inr x, Sum.inl B => exact h
   | Sum.inl _, Sum.inr _ => exact h.elim
   | Sum.inr _, Sum.inr _ => exact h.elim
+
+/-! ### 修正构造：删单元素簇 + 加 `univ` 作根（解决「度 2」问题）
+
+原 `laminarGraph F` 有两处毛病：
+
+* 元素 `ρ ∉ ⋃F` 时**孤立** ⟹ 图不连通（需 `univ` 作根）；
+* 单元素簇 `{x}` 与叶 `x` 重复（它们本是同一条**叶边**）⟹ 产生度 2 顶点。
+
+**修正**：`normFinset F` 删掉单元素簇、加入 `univ`。下面给出配套的构件。 -/
+
+/-- **正规化簇族**：删掉单元素簇（叶边不需要内部顶点），加入 `univ` 作根。 -/
+def normFinset (F : Finset (Finset α)) : Finset (Finset α) :=
+  insert Finset.univ (F.filter fun A => 2 ≤ A.card)
+
+theorem mem_normFinset {A : Finset α} :
+    A ∈ normFinset F ↔ A = Finset.univ ∨ (A ∈ F ∧ 2 ≤ A.card) := by
+  simp [normFinset]
+
+theorem univ_mem_normFinset : (Finset.univ : Finset α) ∈ normFinset F :=
+  Finset.mem_insert_self _ _
+
+/-- **正规化保持镶嵌性**（`univ` 包含一切；删元素保持镶嵌）。 -/
+theorem laminarFamily_normFinset (hl : LaminarFamily F) : LaminarFamily (normFinset F) := by
+  intro A hA B hB
+  rw [mem_normFinset] at hA hB
+  rcases hA with rfl | hA
+  · rcases hB with rfl | hB
+    · exact Or.inl (Finset.Subset.refl _)
+    · exact Or.inr (Or.inl (Finset.subset_univ B))
+  · rcases hB with rfl | hB
+    · exact Or.inl (Finset.subset_univ A)
+    · exact hl A hA.1 B hB.1
+
+/-- 正规化后族元素都非空（`univ` 非空需 `α` 非空；其余 `|A| ≥ 2`）。 -/
+theorem normFinset_nonempty [Nonempty α] : ∀ B ∈ normFinset F, B.Nonempty := by
+  intro B hB
+  rw [mem_normFinset] at hB
+  rcases hB with rfl | ⟨_, hcard⟩
+  · exact Finset.univ_nonempty
+  · exact Finset.card_pos.mp (by omega)
+
+/-- **`B` 是 `A` 的孩子**：`B` 是 `A` 在 `F` 中的**极大真子集**。 -/
+def IsChildOf (F : Finset (Finset α)) (A B : Finset α) : Prop :=
+  B ∈ F ∧ B ⊂ A ∧ ∀ C ∈ F, B ⊂ C → ¬ C ⊂ A
+
+/-- **孩子是父关系的反向**：`IsChildOf F A B ⟹ IsParentOf F B A`。
+
+证：任取 `C ∈ F` 使 `B ⊂ C`；`C` 与 `A` 都由镶嵌性可比（都真包含非空的 `B`，故不相离）；
+`C ⊊ A` 会与「`B` 是极大真子集」矛盾，故 `A ⊆ C` —— 正是 `IsParentOf F B A` 的第三项。 -/
+theorem isChildOf_isParentOf (hl : LaminarFamily F) {A B : Finset α}
+    (hA : A ∈ F) (hne : B.Nonempty) (h : IsChildOf F A B) : IsParentOf F B A := by
+  obtain ⟨hBF, hBA, hmax⟩ := h
+  refine ⟨hA, hBA, ?_⟩
+  intro C hC hBC
+  have hne' : (A ∩ C).Nonempty := hne.mono (Finset.subset_inter hBA.1 hBC.1)
+  rcases hl A hA C hC with hsub | hsub | hdisj
+  · exact hsub
+  · -- `C ⊆ A`：若 `A ⊄ C` 则 `C ⊊ A`，与「`B` 是极大真子集」矛盾
+    by_contra hAC
+    exact hmax C hC hBC
+      (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, fun hCA => hAC (by rw [hCA])⟩)
+  · exfalso
+    rw [Finset.disjoint_iff_inter_eq_empty] at hdisj
+    obtain ⟨a, ha⟩ := hne'
+    rw [hdisj] at ha
+    exact absurd ha (Finset.notMem_empty a)
+
+/-- **`A` 的直接元素**：`x ∈ A` 且**不被任何含 `x` 的族成员真包含于 `A`**（`x` 直接挂在 `A` 上）。 -/
+def directElems (F : Finset (Finset α)) (A : Finset α) : Finset α :=
+  A.filter fun x => ∀ B ∈ F, x ∈ B → A ⊆ B
+
+theorem mem_directElems {A : Finset α} {x : α} :
+    x ∈ directElems F A ↔ x ∈ A ∧ ∀ B ∈ F, x ∈ B → A ⊆ B := by
+  classical
+  simp [directElems]
+
+/-- **直接元素挂在 `A` 上**：`x ∈ directElems F A ⟹ IsMinClusterOf F x A`。 -/
+theorem directElems_isMinClusterOf {F : Finset (Finset α)} {A : Finset α} (hA : A ∈ F)
+    {x : α} (h : x ∈ directElems F A) : IsMinClusterOf F x A := by
+  rw [mem_directElems] at h
+  exact ⟨hA, h.1, h.2⟩
 
 end Phylo
