@@ -781,4 +781,33 @@ theorem isTree_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
     Fintype.card_pos_iff.mpr ⟨rootV huniv⟩
   omega
 
+/-! ### 叶的度 = 1（`leaf_iff_degree_one` 的一半） -/
+
+/-- **元素的邻居恰为「含它的最小簇」**（唯一性由 `isMinClusterOf_unique`）。 -/
+theorem neighborFinset_inr {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) (x : α) :
+    ∃ A : ↥F, (treeGraph F).neighborFinset (Sum.inr x) = {Sum.inl A} := by
+  classical
+  obtain ⟨A, hA⟩ := exists_isMinClusterOf (F := F) hl ⟨Finset.univ, huniv, Finset.mem_univ x⟩
+  refine ⟨⟨A, hA.1⟩, ?_⟩
+  have hsub : (treeGraph F).neighborFinset (Sum.inr x) ⊆ {Sum.inl ⟨A, hA.1⟩} := by
+    intro v hv
+    rw [SimpleGraph.mem_neighborFinset] at hv
+    rcases v with B | y
+    · rw [treeGraph_adj_inr_inl] at hv
+      have hBeq : B = ⟨A, hA.1⟩ := Subtype.ext (isMinClusterOf_unique hv hA)
+      rw [hBeq, Finset.mem_singleton]
+    · exact absurd hv id
+  have hmem : Sum.inl ⟨A, hA.1⟩ ∈ (treeGraph F).neighborFinset (Sum.inr x) := by
+    rw [SimpleGraph.mem_neighborFinset, treeGraph_adj_inr_inl]
+    exact hA
+  exact Finset.Subset.antisymm hsub (Finset.singleton_subset_iff.mpr hmem)
+
+/-- **★ 元素的度 = 1**（叶边）。 -/
+theorem degree_inr_eq_one {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) (x : α) :
+    (treeGraph F).degree (Sum.inr x) = 1 := by
+  obtain ⟨A, hA⟩ := neighborFinset_inr hl huniv x
+  rw [← SimpleGraph.card_neighborFinset_eq_degree, hA, Finset.card_singleton]
+
 end Phylo
