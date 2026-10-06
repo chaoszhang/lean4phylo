@@ -255,6 +255,29 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `Fintype.card_subtype` 方向：`Fintype.card {x // p x} = (univ.filter p).card`；计数要以 `(Finset.univ : Finset (Quartet X)).card` → `Finset.card_univ` → `Fintype.card_subtype` 的顺序 `rw`。
   - `Quartet` 用 **`abbrev`** 才能自动拿 `Fintype`/`DecidableEq`（`def` 不会自动派生）。
 
+## M4 完成 + M5 起步（2026-10-06，老师「先B再A」）
+
+### B：M4 续 —— display + ★ Colonius–Schultze 推理规则 ✅
+- **`Phylo/Split.lean` 新地基**：
+  - **★ `Split.compatible_iff_subset`**（相容的**嵌套形式**：一侧含于另一侧）—— 推理规则的支点
+  - `Split.mem_sideA_of_not_mem_sideB` / `mem_sideB_of_not_mem_sideA`
+  - **`Cladogram.compl_sideLeaves`**（边两侧互补）· **`Cladogram.isSplitOf_swap`**（★ `IsSplitOf` 对换向封闭 —— display 的 `comm_cd` 靠它）
+- **`Phylo/Quartet.lean` display 层（307 行）**：
+  - `Cladogram.DisplaysQuartet`（树展示 `ab|cd`）+ `displaysQuartet_comm_ab` / `_comm_cd`
+  - **`exists_split_inter_of_displaysQuartet`**（★ 展示 ⟹ 该 split 在 4 元集上恰给出 `{a,b}|{c,d}`，§3.5 的「quartet + split」桥）
+  - **★ `displaysQuartet_of_displaysQuartet_common`：`ab|ce ∧ ab|de ⟹ ab|cd`**（Colonius–Schultze 推理规则）
+    - 证法：`compatible_iff_subset` 得四种嵌套 → 共同元素 `e ∈ B₁ ∩ B₂` 排除两个交叉情形 → 剩下 `A₁⊆A₂`（用 `s₁`）或 `B₁⊆B₂`（用 `s₂`）
+  - `Cladogram.DisplaysTopology` + `QuartetCompatible`（**存在性命题**，非判据 —— §3.11 NP-complete）
+
+### A：M5 起步 —— cherry + RF ✅
+- **`Phylo/Split.lean`**：**`KPartition.eq_iff_parts` + `instDecidableEqKPartition`**
+  - ⚠️ **坑**：`deriving DecidableEq` 会报「synthesized instance not definitionally equal」（与 `[DecidableEq α]` 参数冲突）→ **必须手写实例**（`decidable_of_iff (a.parts = b.parts) (eq_iff_parts a b).symm`，注意 `.symm` 方向！）
+  - 有了它 `Finset (Split α)` 才能做 `\` / `∪` / `card`
+- **`Phylo/Algorithm/Cherry.lean`（57 行）**：`Cladogram.IsCherry`（叶共享公共邻居）+ `isCherry_symm` / `isCherry_comm` / `not_isLeaf_common` / `degree_common_ne_two` / `leaf_ne_common`
+- **`Phylo/Algorithm/RF.lean`（57 行）**：`Split.rfDistance`（对称差基数）+ **★ 度量三性质**：`rfDistance_comm` / `rfDistance_self` / `rfDistance_eq_zero_iff` / **`rfDistance_triangle`**
+- `lake build` → **1264 jobs**；无 sorry；**1778 行**
+- **⬜ 剩**：**cherry 存在性**（「每棵树有 cherry」—— 直径 + 分支论证：取最长路径、端点叶 x,y，`u`=x 的邻居，若 `u` 有非叶子邻居 z 则分支内叶 c 满足 `dist(c,y) = dist(c,u)+dist(u,y) > dist(x,y)` 矛盾；故 `u` 邻接叶 z ⇒ `{x,z}` 是 cherry）· NJ · UPGMA · KF / BHV · NNI / SPR
+
 ## Git / 远程（2026-10-02）
 
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
