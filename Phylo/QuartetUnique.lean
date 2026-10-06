@@ -134,3 +134,28 @@ theorem Cladogram.displaysSplitOn_unique {T : Cladogram.{u, v} X} {S : Finset X}
       exact (Finset.disjoint_left.mp hdd) hx (by simpa [Finset.mem_compl] using hx2)
     refine Or.inr (swap_of_compl ?_)
     exact (Finset.eq_of_subset_of_card_le hsub (by rw [hcard₁, hc₂])).symm
+
+/-! ## `Σ(T) = Σ(T')` ⟹ 展示的 quartet 相同（`Δ` 由 `Σ` 决定）
+
+这是「quartet 系统 ↔ split 系统」链条中**容易的一半**：
+`DisplaysSplitOn` 的定义直接经 `IsSplitOf`，故 split 系统相同 ⟹ quartet 展示相同。
+（难的一半 ——「`Δ` 相同 ⟹ `Σ` 相同」——需要「内部边两侧各 ≥ 2 叶」，见 `Phylo/SideSubtree.lean`。） -/
+
+/-- **split 系统相同 ⟺ 逐 split 的展示性相同**。 -/
+theorem Cladogram.splits_eq_iff {T T' : Cladogram.{u, v} X} :
+    T.splits = T'.splits ↔ ∀ s : Split X, T.IsSplitOf s ↔ T'.IsSplitOf s := by
+  constructor
+  · intro h s
+    have hmem : s ∈ T.splits ↔ s ∈ T'.splits := by rw [h]
+    simpa [Cladogram.splits] using hmem
+  · intro h
+    ext s
+    simpa [Cladogram.splits] using h s
+
+/-- ★★ **`Σ(T) = Σ(T')` ⟹ 在任一 4-元集上展示的 quartet 相同**。 -/
+theorem Cladogram.displaysSplitOn_congr {T T' : Cladogram.{u, v} X}
+    (h : ∀ s : Split X, T.IsSplitOf s ↔ T'.IsSplitOf s) (S : Finset X) (q : Split ↥S) :
+    T.DisplaysSplitOn S q ↔ T'.DisplaysSplitOn S q := by
+  constructor
+  · rintro ⟨s, hs, hq⟩; exact ⟨s, (h s).mp hs, hq⟩
+  · rintro ⟨s, hs, hq⟩; exact ⟨s, (h s).mpr hs, hq⟩

@@ -627,12 +627,20 @@ Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
    由 Aho 得树 `T''`；`T''` 严格更多 split ⟹ `T` 是 `T''` 的**收缩** ⟹ `T` 有度 ≥ 4 顶点，与 binary 矛盾。
    ⇒ **需要 refinement / contraction 理论**（本库尚无）。
 2. **「`≥ 2` 叶」引理**（Cladogram 每条内部边两侧各 ≥ 2 叶）是**多处的共同前置**
-   （quartet→split 恢复、KF 距离的 `Split` 构造、maximality）。**未做**。
-   - 计数路线需要「`T − e` 的 `u` 侧分量诱导子图是树」：无环用 `IsAcyclic.induce` ✓；
-     **连通需 `SimpleGraph.Walk.induce`**（`Combinatorics/SimpleGraph/Walk/Maps.lean:225` 存在）。
-   - `SimpleGraph.dist` 极大性路线**不成立**（最长距离顶点的邻居距离可能相等）——
-     需「无环 ⟹ 至多一个前驱」的深引理。
-   - **下次从这里攻**。
+   （quartet→split 恢复、KF 距离的 `Split` 构造、maximality）。**已做阶段 1，阶段 2 暂缓**（2026-10-07 深夜）。
+   - ✅ **`Phylo/SideSubtree.lean` 阶段 1**：`sideVertices`（`T − e` 中含 `u` 的分量）·
+     ★ 跨越侧分量的边只有 `e` · **★★ `isTree_induce_sideVertices`（侧分量的诱导子图是树）** ·
+     `card_edgeFinset_induce_sideVertices`（`#边 + 1 = |U|`）。
+     关键 API：`SimpleGraph.Walk.induce`（`Walk/Maps.lean:225`）+ `Walk.mapLe` + `IsAcyclic.induce`
+     + `IsTree.card_edgeFinset`（形式为 `#边 + 1 = |V|`，**无减法**）。
+   - ⬜ **阶段 2（握手计数）暂缓**：目标是 `ℓ_U ≥ i_U + 1 ≥ 2`，需
+     `deg_{T[U]}(x) = deg_T(x)`（`SimpleGraph.degree_induce_of_neighborSet_subset` ✓ 存在）与 `deg_{T[U]}(u) ≥ 2`。
+     **卡点（实测）**：`T.graph.induce ↑(T.sideVertices …)` 这个类型**每次 `whnf` 都极贵**，
+     `maxHeartbeats 1600000` 仍超时（compile 2 分半）；且 `degree_induce_of_neighborSet_subset`
+     还要 `Fintype ↑(G.neighborSet v)` 实例。
+     **下次建议**：(i) 把 `sideVertices` 改 `abbrev` 让类型透明；(ii) **直接在子类型上定义图**，
+     绕开 `Finset → Set → induce` 的三层转换。
+   - `SimpleGraph.dist` 极大性路线**不成立**（最长距离顶点的邻居距离可能相等）。
 3. `Phylo/Stat/SVDQuartets.lean` 的**统计一致性**（非仅正确性）：SVDQuartets 用的是
    **奇异值之和**（连续），不是秩（下半连续，扰动下会跳）。Mathlib 有
    `Analysis/InnerProductSpace/SingularValues.lean`，但要把矩阵装上内积空间结构，工作量中等偏大。
