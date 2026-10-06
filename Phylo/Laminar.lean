@@ -1680,4 +1680,123 @@ noncomputable def toRootedTree {F : Finset (Finset α)} (hl : LaminarFamily F)
         + (directElems F Finset.univ).card) :
     (toRootedTree hl hne huniv hcard hroot).graph = treeGraph F := rfl
 
+/-! ## ★ 消除 `hroot`：`2 ≤ |univ 的孩子| + |univ 的直接元素|` 的充分条件
+
+只需 `F` 正规化（无单元素簇）+ `2 ≤ |α|`。三种情形的核心是**极大性**：
+存在非 `univ` 成员 ⟹ `univ` 有孩子（否则族里只有 `univ`）。 -/
+
+/-- 存在非 `univ` 成员 ⟹ `univ` 有孩子（取 card 最大的非 `univ` 成员）。 -/
+theorem exists_isChildOf_univ_of_exists_ne_univ {F : Finset (Finset α)}
+    (h : ∃ B ∈ F, B ≠ Finset.univ) : ∃ C, IsChildOf F Finset.univ C := by
+  obtain ⟨B, hBF, hBne⟩ := h
+  exact exists_isChildOf (A := Finset.univ) (F := F)
+    ⟨B, hBF, Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_univ B, hBne⟩⟩
+
+/-- `univ` 没有孩子 ⟹ 族里只有 `univ`。 -/
+theorem eq_univ_of_forall_not_isChildOf_univ {F : Finset (Finset α)}
+    (h : ∀ C, ¬ IsChildOf F Finset.univ C) : ∀ B ∈ F, B = Finset.univ := by
+  intro B hBF
+  by_contra hBne
+  exact h _ (Classical.choose_spec
+    (exists_isChildOf_univ_of_exists_ne_univ ⟨B, hBF, hBne⟩))
+
+/-- 每个非 `univ` 成员含于某个 `univ` 的孩子。 -/
+theorem exists_isChildOf_univ_superset {F : Finset (Finset α)}
+    {B : Finset α} (hBF : B ∈ F) (hBne : B ≠ Finset.univ) :
+    ∃ C, IsChildOf F Finset.univ C ∧ B ⊆ C := by
+  classical
+  set S := F.filter fun C => B ⊆ C ∧ C ≠ Finset.univ with hS
+  have hSne : S.Nonempty :=
+    ⟨B, Finset.mem_filter.mpr ⟨hBF, Finset.Subset.refl B, hBne⟩⟩
+  obtain ⟨C, hCS, hCmax⟩ := Finset.exists_mem_eq_sup S hSne Finset.card
+  obtain ⟨hCF, hBC, hCne⟩ := Finset.mem_filter.mp hCS
+  have hCmax' : ∀ D ∈ S, D.card ≤ C.card := fun D hD => hCmax ▸ Finset.le_sup hD
+  refine ⟨C, ⟨hCF, Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_univ C, hCne⟩, ?_⟩, hBC⟩
+  intro D hDF hCD hDlt
+  have hDne : D ≠ Finset.univ := (Finset.ssubset_iff_subset_ne.mp hDlt).2
+  exact absurd (Finset.card_lt_card hCD)
+    (not_lt.mpr (hCmax' D (Finset.mem_filter.mpr ⟨hDF, hBC.trans hCD.1, hDne⟩)))
+
+/-- ★ **`2 ≤ |univ 的孩子| + |univ 的直接元素|`**（只需 `2 ≤ |α|`，不需 `hcard`）。
+
+三种情形：
+* `|孩子| ≥ 2` 显然；
+* `|孩子| = 0` ⟹ 族里只有 `univ` ⟹ `直接元素 = univ`，故 `|直接元素| = |α| ≥ 2`；
+* `|孩子| = 1`（唯一孩子 `A`）⟹ 若 `直接元素 = ∅`，则每个元素的极小簇是非 `univ` 成员，
+  它含于某个 `univ` 的孩子（`exists_isChildOf_univ_superset`）—— 而孩子只有 `A` ——
+  于是 `A = univ`，与 `A ⊊ univ` 矛盾。 -/
+theorem two_le_card_kids_add_dirs {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) (h2 : 2 ≤ Fintype.card α) :
+    2 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+      + (directElems F Finset.univ).card := by
+  classical
+  by_contra hcon
+  have hle : (F.filter fun B => IsChildOf F Finset.univ B).card
+      + (directElems F Finset.univ).card ≤ 1 := by omega
+  by_cases hk : (F.filter fun B => IsChildOf F Finset.univ B).card = 0
+  · rw [Finset.card_eq_zero] at hk
+    have hall : ∀ B ∈ F, B = Finset.univ :=
+      eq_univ_of_forall_not_isChildOf_univ (fun C hC =>
+        absurd (Finset.mem_filter.mpr ⟨hC.1, hC⟩)
+          (by rw [hk]; exact Finset.notMem_empty C))
+    have hdirs : directElems F Finset.univ = Finset.univ := by
+      ext x
+      rw [mem_directElems]
+      exact ⟨fun h => h.1, fun _ => ⟨Finset.mem_univ x,
+        fun D hDF _ => by rw [hall D hDF]⟩⟩
+    have hcard' : (directElems F Finset.univ).card = Fintype.card α := by
+      rw [hdirs, Finset.card_univ]
+    omega
+  · have hk1 : 1 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card :=
+      Nat.one_le_iff_ne_zero.mpr hk
+    have hkeq : (F.filter fun B => IsChildOf F Finset.univ B).card = 1 := by omega
+    obtain ⟨A, hAeq⟩ := Finset.card_eq_one.mp hkeq
+    have hAS : A ∈ F.filter fun B => IsChildOf F Finset.univ B := by
+      rw [hAeq]; exact Finset.mem_singleton_self A
+    obtain ⟨_, hAchild⟩ := Finset.mem_filter.mp hAS
+    have hdirsne : (directElems F Finset.univ).Nonempty := by
+      by_contra hdem
+      have hde : directElems F Finset.univ = ∅ := Finset.not_nonempty_iff_eq_empty.mp hdem
+      have hallA : ∀ x : α, x ∈ A := by
+        intro x
+        obtain ⟨C, hmin⟩ := exists_isMinClusterOf (F := F) hl
+          ⟨Finset.univ, huniv, Finset.mem_univ x⟩
+        have hCne : C ≠ Finset.univ := by
+          intro hCU
+          have hmem : x ∈ directElems F Finset.univ := by
+            rw [mem_directElems]
+            exact ⟨Finset.mem_univ x, fun D hDF hxD => hCU ▸ hmin.2.2 D hDF hxD⟩
+          rw [hde] at hmem
+          exact Finset.notMem_empty x hmem
+        obtain ⟨D, hDchild, hCD⟩ := exists_isChildOf_univ_superset hmin.1 hCne
+        have hDA : D = A := by
+          have : D ∈ F.filter fun B => IsChildOf F Finset.univ B :=
+            Finset.mem_filter.mpr ⟨hDchild.1, hDchild⟩
+          rw [hAeq] at this
+          exact Finset.mem_singleton.mp this
+        rw [hDA] at hCD
+        exact hCD hmin.2.1
+      have hAuniv : A = Finset.univ := Finset.eq_univ_of_forall hallA
+      exact hAchild.2.1.2 (by rw [hAuniv])
+    have : 1 ≤ (directElems F Finset.univ).card := Finset.card_pos.mpr hdirsne
+    omega
+
+set_option maxHeartbeats 800000 in
+/-- ★★★ **由镶嵌族构造 `RootedTree`**（`hroot` 已自动满足，只需 `2 ≤ |α|`）。
+
+这是「相容 ⟹ 存在树」的**最终形态**：
+* `F` 镶嵌 · `univ ∈ F` · `F` 正规化（无单元素簇，`normFinset` 的输出性质）· `2 ≤ |α|`；
+* ⟹ 存在有根树（`RootedTree`），其 `Σ` 含 `F` 的每个非 `univ` 成员（`splitOf_mem_splits` 同理）。 -/
+noncomputable def toRootedTreeOfCard {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (h2 : 2 ≤ Fintype.card α) :
+    RootedTree α :=
+  toRootedTree hl
+    (fun B hB => by
+      rcases hcard B hB with h | h
+      · rw [h]; exact Finset.card_pos.mp (by rw [Finset.card_univ]; omega)
+      · exact Finset.card_pos.mp (by omega))
+    huniv hcard (two_le_card_kids_add_dirs hl huniv h2)
+
 end Phylo
