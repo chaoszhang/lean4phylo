@@ -483,6 +483,19 @@ def swap (s : Split α) : Split α where
   show s.parts ((1 : Fin 2) + 1) = s.parts 0
   norm_num
 
+/-- **`swap` 是对合**（`swap ∘ swap = id`）—— 无序性商掉 `swap` 的依据。 -/
+@[simp] theorem swap_swap (s : Split α) : s.swap.swap = s := by
+  refine (KPartition.eq_iff_parts _ _).mpr ?_
+  show (fun i : Fin 2 => s.parts ((i + 1) + 1)) = s.parts
+  funext i
+  congr 1
+  fin_cases i <;> rfl
+
+theorem swap_injective : Function.Injective (swap : Split α → Split α) :=
+  fun s t h => by
+    have := congrArg Split.swap h
+    rwa [swap_swap, swap_swap] at this
+
 end Split
 
 /-! ## 树 → split 系统 -/

@@ -3,6 +3,7 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
+import Phylo.Distance
 import Phylo.Split
 
 /-!
@@ -305,3 +306,37 @@ universe u v
 def QuartetCompatible {X : Type u} [Fintype X] [DecidableEq X]
     (Q : Set (QuartetTopology X)) : Prop :=
   ∃ T : Cladogram.{u, v} X, ∀ q ∈ Q, T.DisplaysTopology q
+
+/-! ## quartet 距离 -/
+
+namespace Cladogram
+
+/-- 树 `T` 展示的 quartet 拓扑集（`Set` 版，因 `IsSplitOf` 不可判定）。 -/
+def displaysSet (T : Cladogram X) : Set (QuartetTopology X) := {q | T.DisplaysTopology q}
+
+end Cladogram
+
+/-- **quartet 距离**（§5 M5）：**固定支撑集** `S` 上两个 quartet 拓扑集 `Q`、`Q'` 的对称差大小。
+
+取固定支撑集是因为 `QuartetTopology` 的 `top` 字段类型**依赖** `supp`（§3.5 的「quartet + split」
+设计），故全局 `Finset (QuartetTopology X)` 需要依赖型 `DecidableEq`；限定支撑集后
+`Split ↥S` 有现成的可判定相等，距离也正对应「同一叶集上的两个 quartet 系统」。
+
+复用 `symmDiffCard` —— 与 RF 距离同一骨架，故度量性质直接继承。 -/
+abbrev quartetDistance {S : Finset X} (Q Q' : Finset (Split ↥S)) : ℕ := symmDiffCard Q Q'
+
+theorem quartetDistance_comm {S : Finset X} (Q Q' : Finset (Split ↥S)) :
+    quartetDistance Q Q' = quartetDistance Q' Q :=
+  symmDiffCard_comm Q Q'
+
+@[simp] theorem quartetDistance_self {S : Finset X} (Q : Finset (Split ↥S)) :
+    quartetDistance Q Q = 0 :=
+  symmDiffCard_self Q
+
+@[simp] theorem quartetDistance_eq_zero_iff {S : Finset X} {Q Q' : Finset (Split ↥S)} :
+    quartetDistance Q Q' = 0 ↔ Q = Q' :=
+  symmDiffCard_eq_zero_iff
+
+theorem quartetDistance_triangle {S : Finset X} (Q R Q' : Finset (Split ↥S)) :
+    quartetDistance Q Q' ≤ quartetDistance Q R + quartetDistance R Q' :=
+  symmDiffCard_triangle Q R Q'

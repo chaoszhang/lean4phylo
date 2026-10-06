@@ -6,7 +6,9 @@ Authors: ASTER LAB
 import Phylo.Algorithm.Cherry
 import Phylo.Algorithm.NJ
 import Phylo.Algorithm.RF
+import Phylo.Algorithm.UPGMA
 import Phylo.Core
+import Phylo.Distance
 import Phylo.Laminar
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
