@@ -11,6 +11,7 @@ import Phylo.Algorithm.UPGMA
 import Phylo.Binary
 import Phylo.Consensus
 import Phylo.Core
+import Phylo.Dendrogram
 import Phylo.Distance
 import Phylo.Laminar
 import Phylo.Mathlib.Walk
