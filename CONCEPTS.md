@@ -800,6 +800,12 @@ end Binary
 
 ### 3.11 Splits-Equivalence 定理（第 10 条核心，2026-10-02 简述）
 
+> 🟢 **进展（2026-10-06）：「树 ⟹ 相容」方向已在 Lean 中证出** ——
+> `Cladogram.pairwiseCompatible : T.PairwiseCompatible`（树的 split 系统两两相容）。
+> 证明走「同侧关系 + 关键观察（相邻边必同侧）+ 旁侧连通性 + 补侧轮换」，
+> 无 `sorry`，`lake build` 1260 jobs 通过。详见 `Phylo/Split.lean` 与 `MEMORY.md`。
+> **剩余：「相容 ⟹ 存在树」**（需劈顶点引理 —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B）。
+
 **一句话**：一个 split 系统「**两两相容**」⟺ 它是某棵树**全部边**诱导的 split 集；且这棵树**同构意义下唯一**。⇒ **树 ⟺ 相容 split 系统**，是**双射**。
 
 **三个精确陈述（文献口径一致）**：
@@ -895,7 +901,7 @@ end Binary
 |---|---|---|
 | **M0 树载体** | `structure Cladogram`（`V` / `graph` / `isTree` / `leaf : X ↪ V` / `leaf_iff_degree_one` / `no_degree_two`）+ 基础引理（`IsLeaf`、`leaf_degree_one`、`degree_one_leaf`、`path_unique`、`exists_leaf`） | `Phylo/Core.lean` 编译通过 |
 | **M1 加权层 + 同构** | `Phylogram extends Cladogram`（`w : {e // e ∈ edgeSet} → ℝ` + `w_nonneg`）、`dist`（路径求和）、`restrict`（抑制 + **边权相加**）、`restrict_dist`、`Iso`（`≃g` + leaf/w 保持）、`splits : T → Finset (Split X)` | `Phylo/Core.lean` 续写 |
-| **M2 split 系统 + Splits-Equivalence** ★ | `KPartition` / `Split`、相容性、**劈顶点引理**（染色 + 极值点）、**Splits-Equivalence 定理** | `Phylo/Split.lean` |
+| **M2 split 系统 + Splits-Equivalence** ★ | `KPartition` / `Split`、相容性、**劈顶点引理**（染色 + 极值点）、**Splits-Equivalence 定理** | `Phylo/Split.lean` —— 🚧 **「树 ⟹ 相容」方向已证出**（`Cladogram.pairwiseCompatible`，2026-10-06）；剩「相容 ⟹ 存在树」（劈顶点） |
 | **M3 Buneman** | tree metric / 四点条件 / 可加性；**Buneman 定理**（加权版，用 M2） | `Phylo/Metric.lean`；接回 `NJ/CherryTree.lean` |
 | **M4 quartet / triplet 层** | `Topology`（集合 + `Split ↥S`）、`display`、Colonius-Schultze（full 推理规则）、quartet 距离 | `Phylo/Quartet.lean` |
 | **M5 算法层** | NJ（接现有 `Cherry.lean`）、UPGMA（超度量）、RF / KF / BHV、NNI/SPR、parsimony / ML | `Phylo/Algorithm/…` |

@@ -102,6 +102,51 @@ theorem sidesCompatible_compl_left {α : Type*} [Fintype α] [DecidableEq α]
   · exact Or.inr (Or.inl (h2.mpr h))
   · exact Or.inl (h1.mpr h)
 
+/-- **相容性对称**。 -/
+theorem sidesCompatible_comm {α : Type*} [Fintype α] [DecidableEq α]
+    {A B : Finset α} : SidesCompatible A B ↔ SidesCompatible B A := by
+  constructor <;> intro h <;> rcases h with h | h | h | h
+  · exact Or.inr (Or.inl h)
+  · exact Or.inl h
+  · exact Or.inr (Or.inr (Or.inl (disjoint_comm.mpr h)))
+  · exact Or.inr (Or.inr (Or.inr (by rw [Finset.union_comm]; exact h)))
+  · exact Or.inr (Or.inl h)
+  · exact Or.inl h
+  · exact Or.inr (Or.inr (Or.inl (disjoint_comm.mpr h)))
+  · exact Or.inr (Or.inr (Or.inr (by rw [Finset.union_comm]; exact h)))
+
+/-- **相容性对第二侧的补不变**。 -/
+theorem sidesCompatible_compl_right {α : Type*} [Fintype α] [DecidableEq α]
+    {A B : Finset α} : SidesCompatible A Bᶜ ↔ SidesCompatible A B :=
+  sidesCompatible_comm.trans (sidesCompatible_compl_left.trans sidesCompatible_comm)
+
+/-- **相容 + 避开 `ρ` ⟹ 嵌套或相离**（四种情形中「并 = 全集」被排除）。
+
+这是「相容 ⟹ 存在树」的关键化简：**树构造只需处理镶嵌族**。 -/
+theorem laminar_of_sidesCompatible_of_notMem {α : Type*} [Fintype α] [DecidableEq α]
+    {ρ : α} {A B : Finset α} (h : SidesCompatible A B) (hA : ρ ∉ A) (hB : ρ ∉ B) :
+    A ⊆ B ∨ B ⊆ A ∨ Disjoint A B := by
+  rcases h with h | h | h | h
+  · exact Or.inl h
+  · exact Or.inr (Or.inl h)
+  · exact Or.inr (Or.inr h)
+  · exfalso
+    have : ρ ∈ A ∪ B := h ▸ Finset.mem_univ ρ
+    rcases Finset.mem_union.mp this with h' | h'
+    · exact hA h'
+    · exact hB h'
+
+/-- **镶嵌族**：任意两个成员嵌套或相离（梯级树的组合骨架）。 -/
+def LaminarFamily {α : Type*} [DecidableEq α] (F : Finset (Finset α)) : Prop :=
+  ∀ A ∈ F, ∀ B ∈ F, A ⊆ B ∨ B ⊆ A ∨ Disjoint A B
+
+/-- **两两相容族避开 `ρ` 后是镶嵌族** —— 「相容 ⟹ 存在树」的核心化简。 -/
+theorem laminarFamily_of_pairwise {α : Type*} [Fintype α] [DecidableEq α]
+    {F : Finset (Finset α)} {ρ : α}
+    (h : ∀ A ∈ F, ∀ B ∈ F, SidesCompatible A B) (havoid : ∀ A ∈ F, ρ ∉ A) :
+    LaminarFamily F :=
+  fun A hA B hB => laminar_of_sidesCompatible_of_notMem (h A hA B hB) (havoid A hA) (havoid B hB)
+
 /-- **`k`-块划分**：把 `α` 分成 `n` 个**两两不交、非空、并为全体**的块。
 
 §3.4：这是「划分族」的共享基础。 -/
@@ -216,6 +261,81 @@ theorem compatible_of_sides {s t : Split α}
   · exact compatible_of_subset_right h
   · exact compatible_of_disjoint h
   · exact compatible_of_union h
+
+/-- `ρ` 恰在两侧之一。 -/
+theorem mem_sideB_iff_not_mem_sideA (s : Split α) (ρ : α) : ρ ∈ s.sideB ↔ ρ ∉ s.sideA := by
+  constructor
+  · intro h h'
+    exact (Finset.disjoint_left.mp s.disjoint_sides) h' h
+  · intro h
+    have hmem : ρ ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ ρ
+    rcases Finset.mem_union.mp hmem with h' | h'
+    · exact absurd h' h
+    · exact h'
+
+/-- `sideB` 是 `sideA` 的补。 -/
+theorem sideB_eq_compl (s : Split α) : s.sideB = s.sideAᶜ := s.sideB_eq_sdiff
+
+/-- `Compatible` 的另一半：由相容性推出两侧相容（互补的两侧互相「让位」）。 -/
+theorem sidesCompatible_of_compatible {s t : Split α} (h : Compatible s t) :
+    SidesCompatible s.sideA t.sideA := by
+  rcases h with h | h | h | h
+  · exact Or.inr (Or.inr (Or.inl h))
+  · refine Or.inl fun x hx => ?_
+    by_contra hx'
+    exact (Finset.disjoint_left.mp h) hx
+      (by rw [t.sideB_eq_sdiff]; exact Finset.mem_sdiff.mpr ⟨Finset.mem_univ x, hx'⟩)
+  · refine Or.inr (Or.inl fun x hx => ?_)
+    by_contra hx'
+    exact (Finset.disjoint_left.mp h)
+      (by rw [s.sideB_eq_sdiff]; exact Finset.mem_sdiff.mpr ⟨Finset.mem_univ x, hx'⟩) hx
+  · refine Or.inr (Or.inr (Or.inr ?_))
+    ext x
+    refine ⟨fun _ => Finset.mem_univ _, fun _ => ?_⟩
+    rcases Finset.mem_union.mp (by rw [s.union_sides]; exact Finset.mem_univ x) with h' | h'
+    · exact Finset.mem_union.mpr (Or.inl h')
+    · refine Finset.mem_union.mpr (Or.inr ?_)
+      by_contra hx'
+      exact (Finset.disjoint_left.mp h) h' ((Split.mem_sideB_iff_not_mem_sideA t x).mpr hx')
+
+/-- **`Compatible` ⟺ 两侧相容**（两个方向都好用，是 cluster 化简的支点）。 -/
+theorem compatible_iff_sides {s t : Split α} :
+    Compatible s t ↔ SidesCompatible s.sideA t.sideA :=
+  ⟨sidesCompatible_of_compatible, compatible_of_sides⟩
+
+/-- **规范 cluster**：避开 `ρ` 的那一侧（每个 split 恰有一侧不含 `ρ`）。
+
+这是「相容 ⟹ 存在树」里「选代表」的一步 —— 全部 cluster 都避开 `ρ`，于是两两镶嵌。 -/
+noncomputable def cluster (s : Split α) (ρ : α) : Finset α :=
+  if ρ ∈ s.sideA then s.sideB else s.sideA
+
+/-- `cluster` 确实避开 `ρ`。 -/
+theorem notMem_cluster (s : Split α) (ρ : α) : ρ ∉ s.cluster ρ := by
+  unfold cluster
+  split_ifs with h
+  · intro hb
+    exact ((s.mem_sideB_iff_not_mem_sideA ρ).mp hb) h
+  · exact h
+
+/-- `cluster` 要么是 `sideA`、要么是它的补。 -/
+theorem cluster_eq_sideA_or_compl (s : Split α) (ρ : α) :
+    s.cluster ρ = s.sideA ∨ s.cluster ρ = s.sideAᶜ := by
+  unfold cluster
+  split_ifs with h
+  · exact Or.inr s.sideB_eq_compl
+  · exact Or.inl rfl
+
+/-- **相容 split 的规范 cluster 两两相容**（配合 `notMem_cluster` 立得镶嵌）。 -/
+theorem sidesCompatible_cluster {s t : Split α} (h : Compatible s t) (ρ : α) :
+    SidesCompatible (s.cluster ρ) (t.cluster ρ) := by
+  have hbase : SidesCompatible s.sideA t.sideA := compatible_iff_sides.mp h
+  rcases s.cluster_eq_sideA_or_compl ρ with hs | hs <;>
+    rcases t.cluster_eq_sideA_or_compl ρ with ht | ht
+  · rw [hs, ht]; exact hbase
+  · rw [hs, ht]; exact sidesCompatible_compl_right.mpr hbase
+  · rw [hs, ht]; exact sidesCompatible_compl_left.mpr hbase
+  · rw [hs, ht]
+    exact sidesCompatible_compl_right.mpr (sidesCompatible_compl_left.mpr hbase)
 
 /-- 把 split 的第 `i` 侧限制到子集 `Y`（得到 `↥Y` 上的子集）。 -/
 noncomputable def restrictSide (s : Split α) (Y : Finset α) (i : Fin 2) : Finset ↥Y :=
@@ -612,6 +732,26 @@ theorem sidesCompatible_sideLeaves (T : Cladogram X)
       exact T.sidesCompatible_sideLeaves_of_not_inSide rfl hin
         (fun h => hin (hcongr.mpr h))
 
+/-- **平凡 split 必被展示**：每个叶 `x` 的 `{x}` 都出现在 `T` 的 split 系统里（`|X| ≥ 2`）。
+
+（§3.4：`Σ(T)` 含全部平凡 split —— 这是 `Σ(T) = Σ ∪ Σ_triv(X)` 里 `Σ_triv` 的部分。） -/
+theorem exists_isSplitOf_singleton (T : Cladogram X) [Nontrivial X] (x : X) :
+    ∃ s : Split X, T.IsSplitOf s ∧ s.sideA = {x} := by
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf x)).mp ⟨x, rfl⟩
+  obtain ⟨b, hb, _⟩ := degree_eq_one_iff_existsUnique_adj.mp hdeg
+  obtain ⟨y, hy⟩ := exists_ne x
+  have hA : (T.sideLeaves s(T.leaf x, b) (T.leaf x)).Nonempty :=
+    ⟨x, T.mem_sideLeaves_self _ x⟩
+  have hB : (Finset.univ \ T.sideLeaves s(T.leaf x, b) (T.leaf x)).Nonempty :=
+    ⟨y, Finset.mem_sdiff.mpr ⟨Finset.mem_univ y, by
+      rw [T.sideLeaves_leaf_edge hb, Finset.mem_singleton]
+      exact hy⟩⟩
+  refine ⟨T.splitOfEdge s(T.leaf x, b) (T.leaf x) hA hB,
+    ⟨T.leaf x, b, hb, T.leaf x, rfl⟩, ?_⟩
+  show T.sideLeaves s(T.leaf x, b) (T.leaf x) = {x}
+  exact T.sideLeaves_leaf_edge hb
+
 end Cladogram
 
 /-- **Splits-Equivalence 的「树 ⟹ 相容」方向**：树的 split 系统两两相容。
@@ -628,3 +768,17 @@ theorem pairwiseCompatible {X : Type*} [Fintype X] [DecidableEq X] (T : Cladogra
   refine Split.compatible_of_sides ?_
   rw [h1, h2]
   exact T.sidesCompatible_sideLeaves hab hcd u₁ u₂
+
+/-! ## cluster 化简（「相容 ⟹ 存在树」的入口） -/
+
+/-- **相容 split 的规范 cluster 两两镶嵌** —— 树构造只需处理镶嵌族。
+
+（由 `sidesCompatible_cluster` + 两侧都避开 `ρ`，用 `laminar_of_sidesCompatible_of_notMem`。） -/
+theorem laminar_of_compatible_clusters {α : Type*} [Fintype α] [DecidableEq α]
+    {A B : Finset α} {s t : Split α} {ρ : α}
+    (h : Split.Compatible s t) (hA : A = s.cluster ρ) (hB : B = t.cluster ρ) :
+    A ⊆ B ∨ B ⊆ A ∨ Disjoint A B := by
+  subst hA
+  subst hB
+  exact laminar_of_sidesCompatible_of_notMem (Split.sidesCompatible_cluster h ρ)
+    (s.notMem_cluster ρ) (t.notMem_cluster ρ)
