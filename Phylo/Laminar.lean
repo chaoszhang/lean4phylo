@@ -990,6 +990,79 @@ theorem three_le_degree_rootV {F : Finset (Finset α)} (hl : LaminarFamily F)
     _ ≤ ((treeGraph F).neighborFinset (Sum.inl R)).card := Finset.card_le_card hSsub
     _ = (treeGraph F).degree (Sum.inl R) := SimpleGraph.card_neighborFinset_eq_degree _ _
 
+/-- **根的度 ≥ 2**（弱化版：只需 `|孩子| + |直接元素| ≥ 2`）。
+
+`RootedCladogram` 只要「除 root 外 ≠ 2」，故 ≥ 2 足够 —— 让退化情形
+（`|极大簇| + |未覆盖元素| = 2`，此时 `deg(univ) = 2`）成为合法的**有根树**。 -/
+theorem two_le_degree_rootV {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (h : 2 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card) :
+    2 ≤ (treeGraph F).degree (Sum.inl (⟨Finset.univ, huniv⟩ : ↥F)) := by
+  classical
+  set R := (⟨Finset.univ, huniv⟩ : ↥F) with hR
+  set kids := F.filter fun B => IsChildOf F Finset.univ B with hkids
+  set dirs := directElems F Finset.univ with hdirs
+  have hne_kids : ∀ B ∈ kids, B ∈ F := fun B hB => (Finset.mem_filter.mp (hkids ▸ hB)).1
+  have hch_kids : ∀ B ∈ kids, IsChildOf F Finset.univ B :=
+    fun B hB => (Finset.mem_filter.mp (hkids ▸ hB)).2
+  have hne_dirs : ∀ y ∈ dirs, y ∈ directElems F Finset.univ := fun y hy => hdirs ▸ hy
+  -- `kidVOf` 在 `kids` 上单射
+  have hkidinj : Set.InjOn (kidVOf F huniv) ↑kids := by
+    intro B hB C hC hEq
+    simp only [kidVOf] at hEq
+    rw [dif_pos (hne_kids B hB), dif_pos (hne_kids C hC)] at hEq
+    exact congrArg Subtype.val (Sum.inl_injective hEq)
+  -- 每个孩子都是根的邻居
+  have hchild : ∀ B ∈ kids, (treeGraph F).Adj (Sum.inl R) (kidVOf F huniv B) := by
+    intro B hB
+    rw [kidVOf, dif_pos (hne_kids B hB)]
+    exact (treeGraph_adj_inl_inl F R (⟨B, hne_kids B hB⟩ : ↥F)).mpr
+      (Or.inr (isChildOf_isParentOf (A := Finset.univ) hl huniv (hne B (hne_kids B hB))
+        (hch_kids B hB)))
+  -- 每个直接元素都是根的邻居
+  have hdir : ∀ y ∈ dirs, (treeGraph F).Adj (Sum.inl R) (Sum.inr y) := fun y hy =>
+    (treeGraph_adj_inl_inr F R y).mpr
+      (directElems_isMinClusterOf (A := Finset.univ) huniv (hne_dirs y hy))
+  -- 取 `min |kids| 2` 个孩子
+  obtain ⟨ks, hkssub, hkscard⟩ := Finset.exists_subset_card_eq (s := kids) (min_le_left _ _)
+  have hkscard' : ks.card = min kids.card 2 := hkscard
+  have hjd : 2 - ks.card ≤ dirs.card := by
+    have h1 : ks.card ≤ kids.card := Finset.card_le_card hkssub
+    rw [hkscard']; omega
+  obtain ⟨ds, hdsub, hdscard⟩ := Finset.exists_subset_card_eq (s := dirs) hjd
+  -- 像集
+  set S := (ks.image (kidVOf F huniv)) ∪ (ds.image (Sum.inr : α → LaminarVertex F)) with hS
+  have hks_inj : Set.InjOn (kidVOf F huniv) ↑ks :=
+    hkidinj.mono (fun x hx => hkssub hx)
+  have hds_inj : Set.InjOn (Sum.inr : α → LaminarVertex F) ↑ds :=
+    fun a _ b _ h => Sum.inr_injective h
+  have hdisj : Disjoint (ks.image (kidVOf F huniv)) (ds.image (Sum.inr : α → LaminarVertex F)) := by
+    rw [Finset.disjoint_left]
+    intro u hu hu'
+    obtain ⟨B, hBks, hBu⟩ := Finset.mem_image.mp hu
+    obtain ⟨y, -, hyu⟩ := Finset.mem_image.mp hu'
+    have hEq : kidVOf F huniv B = Sum.inr y := by rw [hBu, ← hyu]
+    rw [kidVOf, dif_pos (hne_kids B (hkssub hBks))] at hEq
+    exact Sum.inl_ne_inr hEq
+  have hScard : S.card = 2 := by
+    rw [hS, Finset.card_union_of_disjoint hdisj,
+      Finset.card_image_of_injOn hks_inj, Finset.card_image_of_injOn hds_inj,
+      hkscard', hdscard]
+    omega
+  have hSsub : S ⊆ (treeGraph F).neighborFinset (Sum.inl R) := by
+    intro u hu
+    rw [hS] at hu
+    rw [SimpleGraph.mem_neighborFinset]
+    rcases Finset.mem_union.mp hu with hu | hu
+    · obtain ⟨B, hB, rfl⟩ := Finset.mem_image.mp hu
+      exact hchild B (hkssub hB)
+    · obtain ⟨y, hy, rfl⟩ := Finset.mem_image.mp hu
+      exact hdir y (hdsub hy)
+  calc 2 = S.card := hScard.symm
+    _ ≤ ((treeGraph F).neighborFinset (Sum.inl R)).card := Finset.card_le_card hSsub
+    _ = (treeGraph F).degree (Sum.inl R) := SimpleGraph.card_neighborFinset_eq_degree _ _
+
 /-- ★★ **`treeGraph` 无度 2 顶点**（`Cladogram.no_degree_two` 字段）。
 
 假设：
@@ -1551,5 +1624,60 @@ theorem splitOf_mem_splits {F : Finset (Finset α)} (hl : LaminarFamily F)
     splitOf B (hne B hB) (compl_nonempty_of_ne_univ hBuniv) ∈
       (toCladogram hl hne huniv hcard hroot).splits :=
   isSplitOf_splitOf hl hne huniv hcard hroot hB hBuniv
+
+/-! ## ★★ 由镶嵌族构造**有根树**（去掉 `hroot` 的 `≥ 3` 强假设）
+
+`toCladogram` 需要 `|孩子| + |直接元素| ≥ 3`；而**退化情形**（`= 2`）下 `deg(univ) = 2`。
+按 `CONCEPTS.md` §3.3 老师的表示约定，这正是一棵**有根树**（root 度 2），
+故用 `RootedTree` 陈述即可 —— 假设弱化为 `≥ 2`。 -/
+
+set_option maxHeartbeats 800000 in
+/-- ★★ **由镶嵌族构造 `RootedTree`**（只需 `|孩子| + |直接元素| ≥ 2`）。
+
+与 `toCladogram` 的区别：`no_degree_two` 放松为「除 root（`univ`）外无度 2 顶点」，
+于是 `deg(univ) = 2` 的退化情形也合法。 -/
+noncomputable def toRootedTree {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 2 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card) :
+    RootedTree α where
+  V := LaminarVertex F
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := treeGraph F
+  decAdj := Classical.decRel _
+  isTree := isTree_treeGraph hl hne huniv
+  leaf := ⟨Sum.inr, Sum.inr_injective⟩
+  leaf_iff_degree_one := by
+    intro v
+    constructor
+    · rintro ⟨x, rfl⟩
+      exact degree_inr_eq_one hl huniv x
+    · intro hv
+      rcases v with A | x
+      · by_cases hAu : A.1 = Finset.univ
+        · have hAeq : A = (⟨Finset.univ, huniv⟩ : ↥F) := Subtype.ext hAu
+          rw [hAeq] at hv
+          have h2 := two_le_degree_rootV hl hne huniv hroot
+          omega
+        · have hAc : 2 ≤ A.1.card := by
+            rcases hcard A.1 A.2 with h | h
+            · exact absurd h hAu
+            · exact h
+          have h3 := three_le_degree_treeGraph hl hne huniv hAu hAc
+          omega
+      · exact ⟨x, rfl⟩
+  root := Sum.inl (⟨Finset.univ, huniv⟩ : ↥F)
+  no_degree_two_except_root := by
+    intro v hv
+    exact no_degree_two_except_root hl hne huniv hcard v hv
+
+@[simp] theorem toRootedTree_graph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 2 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card) :
+    (toRootedTree hl hne huniv hcard hroot).graph = treeGraph F := rfl
 
 end Phylo

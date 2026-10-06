@@ -286,3 +286,57 @@ abbrev inducedSubgraph (T : Cladogram X) (S : Finset T.V) :
   SimpleGraph.induce (↑S : Set T.V) T.graph
 
 end Cladogram
+
+/-! ## ★ 有根树（`CONCEPTS.md` §3.3 老师表示约定的「**同构形式**」）
+
+2026-10-06 老师定：**无根树** → 内部节点 `degree = 3`（`IsBinary`）；
+**有根树** → 无根树 + 一个 root 叶节点，**或与之同构的形式**。
+
+这里取「同构形式」：保留 `Cladogram` 的全部字段，只把 `no_degree_two` 放松为
+「**除 root 外**无度 2 顶点」—— 即 **root 允许度 2**，这正是「有根二叉树的根有两个孩子」。
+
+（「带 root 叶节点」的形式另见 `RootedCladogram X := Cladogram (X ⊕ Unit)`。）
+
+**用途**：`toRootedTree`（见 `Phylo/Laminar.lean`）只需 `|univ 的孩子| + |univ 的直接元素| ≥ 2`
+（而非 `≥ 3`），从而把「`deg(univ) = 2`」的退化情形纳入合法的树表示。 -/
+
+/-- **有根树**。 -/
+structure RootedTree (X : Type*) where
+  V : Type*
+  fintypeV : Fintype V
+  decEqV : DecidableEq V
+  graph : SimpleGraph V
+  decAdj : DecidableRel graph.Adj
+  isTree : graph.IsTree
+  leaf : X ↪ V
+  /-- 叶 ⟺ 度 1（root 度 ≠ 1 时自动成立）。 -/
+  leaf_iff_degree_one : ∀ v : V, (∃ x : X, leaf x = v) ↔ graph.degree v = 1
+  /-- 根顶点（唯一允许度 2 的顶点）。 -/
+  root : V
+  /-- **除 root 外无度 2 顶点**。 -/
+  no_degree_two_except_root : ∀ v : V, v ≠ root → graph.degree v ≠ 2
+
+attribute [instance] RootedTree.fintypeV RootedTree.decEqV RootedTree.decAdj
+
+namespace Cladogram
+
+variable {X : Type*} (T : Cladogram X)
+
+/-- 任意 cladogram 都是**有根树**（任取一顶点作 root）。 -/
+def toRootedTree (r : T.V) : RootedTree X where
+  V := T.V
+  fintypeV := T.fintypeV
+  decEqV := T.decEqV
+  graph := T.graph
+  decAdj := T.decAdj
+  isTree := T.isTree
+  leaf := T.leaf
+  leaf_iff_degree_one := T.leaf_iff_degree_one
+  root := r
+  no_degree_two_except_root := fun v _ => T.no_degree_two v
+
+@[simp] theorem toRootedTree_root (r : T.V) : (T.toRootedTree r).root = r := rfl
+
+@[simp] theorem toRootedTree_graph (r : T.V) : (T.toRootedTree r).graph = T.graph := rfl
+
+end Cladogram
