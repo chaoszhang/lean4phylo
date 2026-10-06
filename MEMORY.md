@@ -369,12 +369,27 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **★★★ `isTree_treeGraph`**：`IsTree` —— 上界由满射、下界由 `Connected.card_vert_le_card_edgeSet_add_one` 夹出，最后 `isTree_iff_connected_and_card`
 
 ### ⬜ 剩余（「相容 ⟹ 存在树」的最后两块）
-1. **`univ` 的度** —— 精确刻画 **`deg(univ) = m + |U|`**：
-   - `univ` 的邻居 = **极大簇**（`IsChildOf F univ` 的孩子）∪ **未覆盖元素** `U = {x | IsMinClusterOf F x univ}`（两者不交，各自单射）
-   - `m + |U| ≥ 3` 或 `m = 0` ⟹ 直接可用
-   - **`m + |U| = 2` 的两种退化子情形需改构造**：(m=1,|U|=1) 合并 `univ` 与唯一极大簇；(m=2,|U|=0) 合并 `univ` 与其中一个极大簇
+1. **`univ` 的度** —— **精确刻画 `deg(univ) = |孩子| + |直接元素|`**（`univ` 无父）：
+   - 邻居 = **极大簇**（`IsChildOf F univ`）∪ **未覆盖元素** `{x | IsMinClusterOf F x univ}`
+   - **本轮已证**：`Sum.inr x` 度 = 1 ✓ · **非 `univ` 簇度 ≥ 3** ✓（见下）
+   - **⬜ 待证**：`deg(univ)`。**已于 2026-10-06 尝试两种方案均差临门一脚**：
+     - **方案 A（双射）**：`rootIdx F := (kids.image Sum.inl) ∪ (dirs.image Sum.inr) : Finset (Finset α ⊕ α)`
+       （*kids 与 dirs 类型不同，无法直接 `∪`，故用 `Sum` 统一编码*）+ `rootVOf : Finset α ⊕ α → LaminarVertex F`
+       （`Sum.inl B ↦ if B ∈ F then Sum.inl ⟨B,h⟩ else root`）。**坑**：`rootVOf_injOn` 里
+       `rw [rootVOf, dif_pos ...]` 对 `Sum.inl B₂` 不生效（需先 `cases`/`split_ifs`）。
+     - **方案 B（三元素）**：同 `three_le_degree_treeGraph`，但需 4 种情况（|kids| = 0/1/2/≥3 配 |dirs|）—— 啰嗦但可靠。
+   - **数学结论**：`m + |U| ≤ 2` 的退化情形（`m` = 极大簇数、`U` = 未覆盖元素数）需**合并 `univ` 与某簇**，
+     或直接**一般 `suppress`**。
 2. **`Σ(树) = 规范 cluster 集`** —— 收口 Buneman 存在性 / NJ 硬核
-3. **移植**：`three_le_degree_of_ne_univ`（现关于 `laminarGraph`）→ `treeGraph`（度数相同，邻接定义一致）
+3. **`leaf_iff_degree_one`** —— 正向（`Sum.inr x`）由 `degree_inr_eq_one` ✓；
+   反向（度 1 ⟹ 是叶的像）需 `Sum.inl A` 的度 ≠ 1，由非 `univ` 的 ≥ 3 与 `univ` 的 ≥ 2 给出。
+
+### ✅ 2026-10-06 深夜续：度条件（`no_degree_two` 的大部分）
+- **`neighborFinset_inr` + `degree_inr_eq_one`**：元素 `Sum.inr x` 的邻居恰为 `{Sum.inl 最小簇}` ⟹ 度 = 1 ✓
+- **★ `three_le_degree_treeGraph`**：非 `univ` 簇（且 `|A| ≥ 2`）度 ≥ 3 ✓
+  - **「三元素」方案**：显式构造父 + 两个孩子（或孩子+元素、或两个元素）三个**互异**邻居
+  - **避开 `Finset.image` 基数论证**（该路线在 `↥(F.filter p)` vs `↥F` 上有 `Sum.inl_injective` 类型推断障碍）
+- `lake build` **1321 jobs**，无 sorry，`Phylo/Laminar.lean` **907 行**
 
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
