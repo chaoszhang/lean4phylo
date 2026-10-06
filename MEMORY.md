@@ -152,7 +152,13 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - ② `SimpleGraph.Iso.refl` 是**无参** abbrev（靠期望类型推断），不接 `G` 参数；`RelIso.refl` 才接关系参数。
   - ③ `∃! p, P p` 的 `.choose_spec` 类型是 `P choose ∧ (∀ y, P y → y = choose)` —— 唯一性在 `.2`，用它比用 `ExistsUnique.unique` 省事。
   - ④ `Phylogram extends Cladogram` 后**不必**重新注册实例 —— `Cladogram.fintypeV` 等已注册为 instance，沿 `toCladogram` 自动找到（但 `attribute [instance] Phylogram.toCladogram` 会报错：返回值不是 type class）。
-- **下一步**：`restrict`（需 `suppress`，独立工程）+ `splits`（需 M2 的 `Split` 类型）。
+- **restrict 进度（2026-10-06）**：地基已完成并编译通过 ——
+  - `pathVerts`（两点唯一路径的顶点集）· `spanVerts`（连接 `Y` 的顶点集，`Y.biUnion`）· `leaf_mem_spanVerts` · `inducedSubgraph`（**白蹭 `SimpleGraph.induce`**，它即 `comap`）。
+  - ⬜ 剩 **`suppress`**（删度 2 顶点 + 合并边）—— 大工程：要造新顶点类型 + 新图 + 三条结构证明（`IsTree` / `leaf_iff_degree_one` / `no_degree_two`）。
+- **⚠️ 发现更短路径（待老师定）**：文献定义 restriction 的标准方式是 **split 层面** ——
+  `Cl(T|Y) = {C ∩ Y : C ∈ Cl(T), C ∩ Y ≠ ∅}`（Bryant–Steel；Semple & Steel §3.9）。
+  ⇒ **先做 `Split` 类型 + `splits : T → Finset (Split X)`（M2 前置），restrict 直接定义在 split 上，不必造新树**；且 `splits` 本来就是 M2（Splits-Equivalence）的必备地基，一举两得。
+- **下一步**：等老师选 **A**（硬做 `suppress`，树版 restrict）或 **B**（先 `Split`+`splits`，restrict 走 split 版 —— 我推荐）。
 
 ## Git / 远程（2026-10-02）
 
@@ -168,7 +174,10 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **本机无 `gh` CLI、无 GitHub token** ⇒ **不能**用 API 建仓库（本次靠老师在网页建空仓库）。
 - **工具链**：Windows git 2.55.0；提交身份 `chaoszhang <chaoszhang@users.noreply.github.com>`（仓库级 local config，noreply 式，可改）。
 - **已配置**：`.gitignore`（忽略 `.lake/` 等）· `.gitattributes`（**统一 LF**，Windows 编辑 + WSL 编译）· `LICENSE`（Apache 2.0 全文）· `lake-manifest.json`（固定 mathlib rev，PhysLib 惯例）。
-- **CI**：`.github/workflows/build.yml` 已随仓库上线（`lake exe cache get` → `lake build`）。查看：https://github.com/chaoszhang/lean4phylo/actions
+- **CI**：`.github/workflows/build.yml`（`lake exe cache get` → `lake build`）。
+  - ✅ **run 1（M0）success** · ✅ **run 2（`cefdee9` M1: Phylogram/dist/Iso）success** —— **CI 全绿，模板可直接复用**。
+  - ⚠️ **后台 bash 里 `curl` 抓不到 GitHub API 输出**（返回空），但**前台 `curl` 正常** —— 查 CI 状态要在前台跑（`curl -s https://api.github.com/repos/chaoszhang/lean4phylo/actions/runs | grep -E '"run_number"|"status"|"conclusion"'`）。
+  - 查看：https://github.com/chaoszhang/lean4phylo/actions
 - 原则：老师要求 **更多交互**，重大设计决策不擅自拍板。
 - **已建 `DESIGN.md`**（库设计文档）：Mathlib 现状实测表 / 分层架构 / 已定决策 D1–D4 / **待定决策 P1–P5** / 里程碑 M0–M3。
   - 待定 P1（M0 中「叶」的定义）**阻塞 M0**；P2 推进节奏；P3 quartet 表示；P4 目录切分；P5 Buneman 放哪层。老师本轮跳过 P1/P2 未答 → **不擅自开工**。

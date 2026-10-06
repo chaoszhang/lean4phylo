@@ -182,3 +182,39 @@ def symm (e : Iso T T') : Iso T' T where
     simpa using this.symm
 
 end Iso
+
+/-! ## restriction：`T|Y` 的顶点集（§3.7 第一步） -/
+
+namespace Cladogram
+
+open Classical
+
+variable {X : Type*} (T : Cladogram X)
+
+/-- `u` 到 `v` 的**唯一路径**上的顶点集合。 -/
+noncomputable def pathVerts (u v : T.V) : Finset T.V :=
+  ((T.existsUnique_path u v).choose.support).toFinset
+
+/-- 连接 `Y` 中所有叶的**最小连通子树**的顶点集（span）。
+
+    §3.7：`T|Y` 的顶点集取自这里（再抑制度 2 顶点）。 -/
+noncomputable def spanVerts (Y : Finset X) : Finset T.V :=
+  Y.biUnion fun y₁ => Y.biUnion fun y₂ => T.pathVerts (T.leaf y₁) (T.leaf y₂)
+
+/-- 叶 `y` 的像属于 `spanVerts T Y`（当 `Y` 非空）。 -/
+theorem leaf_mem_spanVerts {Y : Finset X} {y : X} (hy : y ∈ Y) :
+    T.leaf y ∈ T.spanVerts Y := by
+  unfold spanVerts
+  refine Finset.mem_biUnion.mpr ⟨y, hy, ?_⟩
+  refine Finset.mem_biUnion.mpr ⟨y, hy, ?_⟩
+  unfold pathVerts
+  exact List.mem_toFinset.mpr (SimpleGraph.Walk.start_mem_support _)
+
+/-- `T` 在顶点集 `S` 上的**诱导子图**（白蹭 `SimpleGraph.induce`，它即 `comap`）。
+
+    §3.7：`T|Y` 先取 span 上的诱导子图，再抑制度 2 顶点。 -/
+abbrev inducedSubgraph (T : Cladogram X) (S : Finset T.V) :
+    SimpleGraph ↥(↑S : Set T.V) :=
+  SimpleGraph.induce (↑S : Set T.V) T.graph
+
+end Cladogram

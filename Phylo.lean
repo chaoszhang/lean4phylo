@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.Core
+import Phylo.Split
 
 /-!
 # `lean4phylo` —— 系统发生学经典算法的形式化库
