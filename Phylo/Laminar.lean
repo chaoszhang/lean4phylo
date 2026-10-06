@@ -1781,22 +1781,45 @@ theorem two_le_card_kids_add_dirs {F : Finset (Finset α)} (hl : LaminarFamily F
     have : 1 ≤ (directElems F Finset.univ).card := Finset.card_pos.mpr hdirsne
     omega
 
+/-- `hcard` + `2 ≤ |α|` ⟹ 族成员非空（`toRootedTreeOfCard` 内部的 `hne`）。 -/
+theorem nonempty_of_mem_of_hcard {F : Finset (Finset α)}
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card) (h2 : 2 ≤ Fintype.card α) :
+    ∀ B ∈ F, B.Nonempty := fun B hB => by
+  rcases hcard B hB with h | h
+  · rw [h]; exact Finset.card_pos.mp (by rw [Finset.card_univ]; omega)
+  · exact Finset.card_pos.mp (by omega)
+
 set_option maxHeartbeats 800000 in
 /-- ★★★ **由镶嵌族构造 `RootedTree`**（`hroot` 已自动满足，只需 `2 ≤ |α|`）。
 
 这是「相容 ⟹ 存在树」的**最终形态**：
 * `F` 镶嵌 · `univ ∈ F` · `F` 正规化（无单元素簇，`normFinset` 的输出性质）· `2 ≤ |α|`；
-* ⟹ 存在有根树（`RootedTree`），其 `Σ` 含 `F` 的每个非 `univ` 成员（`splitOf_mem_splits` 同理）。 -/
+* ⟹ 存在有根树（`RootedTree`），其图就是 `treeGraph F`（故 `leafSide` 的结论直接适用）。 -/
 noncomputable def toRootedTreeOfCard {F : Finset (Finset α)} (hl : LaminarFamily F)
     (huniv : (Finset.univ : Finset α) ∈ F)
     (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
     (h2 : 2 ≤ Fintype.card α) :
     RootedTree α :=
-  toRootedTree hl
-    (fun B hB => by
-      rcases hcard B hB with h | h
-      · rw [h]; exact Finset.card_pos.mp (by rw [Finset.card_univ]; omega)
-      · exact Finset.card_pos.mp (by omega))
+  toRootedTree hl (nonempty_of_mem_of_hcard hcard h2)
     huniv hcard (two_le_card_kids_add_dirs hl huniv h2)
 
+@[simp] theorem toRootedTreeOfCard_graph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (h2 : 2 ≤ Fintype.card α) :
+    (toRootedTreeOfCard hl huniv hcard h2).graph = treeGraph F := rfl
+
+set_option maxHeartbeats 800000 in
+/-- ★★★ **hroot-free 的 `Σ ⊇ F`**：`F` 的每个非 `univ` 成员都是 `toRootedTreeOfCard`
+（其图即 `treeGraph F`）的一条**边侧**。 -/
+theorem leafSide_parentEdge_of_card {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (h2 : 2 ≤ Fintype.card α)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    leafSide F (parentEdge hl (nonempty_of_mem_of_hcard hcard h2) huniv B hB hBuniv)
+      (Sum.inl (⟨B, hB⟩ : ↥F)) = B :=
+  leafSide_parentEdge hl (nonempty_of_mem_of_hcard hcard h2) huniv hB hBuniv
+
 end Phylo
+
