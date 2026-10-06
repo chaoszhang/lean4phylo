@@ -293,6 +293,25 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - `lake build` → **1264 jobs**；无 sorry（`Phylo/Algorithm/Cherry.lean` **217 行**）
 - **⬜ 剩**：NJ 本体（用 cherry 归约 + 四点的 `z := δₓᵧ + ...` 极大性）· UPGMA · KF / BHV · NNI / SPR
 
+### A++：M5 —— NJ 代数层移植 + ★ `four_point_z_iff` ✅
+- **`Phylo/Algorithm/NJ.lean`（311 行，零 sorry）** —— 把旧 `NJ/Cherry.lean` 的 `Dissimilarity` 框架**移植进主库**并加新引理：
+  - 定义：`Dissimilarity` / `FourPoint`（四点条件）/ `IsCherry`（**度量**樱桃）/ `S` / `Q`（Q-判据）/ `ell` / `z` / `rho`
+  - 已证：`triangle`（四点 ⟹ 三角不等式）· `fourpoint_not_unique_max` · `fourpoint_eq_of_lt` · `rho_nonneg` · `ell_eq_sum_rho` · **`ell_comm` / `z_comm`（本轮新增）**
+  - **★ `Q_eq_neg_two_ell`**：`Q = -2(δ+ℓ)` ⟹ 最小化 Q ⟺ 最大化 `z`
+  - **★ `two_mul_z`**：`2z(i,j) = S(i)+S(j)+(2-n)δ(i,j)` —— z 不等式全化为线性不等式
+  - **★ `z_hinge`**：门控恒等式（把 z 不等式翻译成四点和不等式）
+  - **★★ `four_point_z_iff`（本轮新增）**：`n ≥ 4` 时「四点和 `P` 最小」**⟺**「`z` 的和最大」
+    —— **z 最大性与 quartet 分裂的精确字典**（NJ 硬核证明的代数骨架；`z_hinge` + 系数 `(2-n)/2 < 0` 直接给出）
+- **⚠️⚠️ 诚实边界（重要）**：**NJ 硬核 `max_z_cherry_core` 是 open problem**（`ROADMAP.md` §0.1 已记录）：
+  - 「`z` 最大性是**全局**的（涉及所有行和 `S`），quartet 分裂是**局部**的」
+  - 标准证明（Weller 2023 *leaf-status* / Pachter–Sturmfels Thm 2.38 / MLP 2006）**都显式用实现树**，即需要 **Buneman 存在性**
+  - 纯度量路线（只用 `FourPoint`）**尚缺干净证明**；数值上随机 4000 棵正权树无界点
+  - **本库的处理**：`MaxZCherryCore` 定义为**显式 `Prop` 假设**（**不用 `sorry`** ⟹ 库仍零 sorry），
+    `nj_cherry` 表述为「**假设硬核 ⟹ NJ 樱桃引理**」—— 诚实且依赖关系可见
+  - **解锁路径**：**解锁 Buneman 存在性（四点条件 ⟹ 存在实现树）= 解锁 NJ 硬核**。而 Buneman 卡在
+    「连通性需根 vs `no_degree_two`」的设计问题（见上文 M2 卡点）。**两者是同一个瓶颈。**
+- **旧 `NJ/Cherry.lean` 保留**（`CONCEPTS.md` §「库与算法分离」：新库 `Phylo/` 通用，`NJ/` 作为算法应用独立保留）
+
 ## Git / 远程（2026-10-02）
 
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
