@@ -291,4 +291,192 @@ theorem directElems_isMinClusterOf {F : Finset (Finset α)} {A : Finset α} (hA 
   rw [mem_directElems] at h
   exact ⟨hA, h.1, h.2⟩
 
+/-! ### 极大真子集（孩子）的存在性 —— 取 `card` 最大者
+
+`Finset.exists_mem_eq_sup` 是关键工具（`Finset.max'` / `exists_max_image` 在本版 Mathlib 不存在）。 -/
+
+/-- **`A` 有真子集 ⟹ `A` 有孩子**（`A` 的真子集中 `card` 最大者）。 -/
+theorem exists_isChildOf {A : Finset α} (h : ∃ B ∈ F, B ⊂ A) : ∃ B, IsChildOf F A B := by
+  classical
+  have hne : (F.filter fun B => B ⊂ A).Nonempty :=
+    h.imp fun B hB => Finset.mem_filter.mpr hB
+  obtain ⟨B, hB, hBmax⟩ := Finset.exists_mem_eq_sup (F.filter fun B => B ⊂ A) hne Finset.card
+  obtain ⟨hBF, hBA⟩ := Finset.mem_filter.mp hB
+  refine ⟨B, hBF, hBA, fun C hC hBC hCA => ?_⟩
+  have hCS : C ∈ F.filter fun B => B ⊂ A := Finset.mem_filter.mpr ⟨hC, hCA⟩
+  have h1 : C.card ≤ B.card := hBmax ▸ Finset.le_sup hCS
+  have h2 : B.card < C.card := Finset.card_lt_card hBC
+  omega
+
+/-- **含 `x` 的极大真子集存在**：若 `x ∈ A` 且 `x` 被某个 `A` 的真子集含，则存在孩子含 `x`。 -/
+theorem exists_isChildOf_mem {A : Finset α} {x : α}
+    (h : ∃ B ∈ F, x ∈ B ∧ B ⊂ A) : ∃ B, IsChildOf F A B ∧ x ∈ B := by
+  classical
+  have hne : (F.filter fun B => x ∈ B ∧ B ⊂ A).Nonempty :=
+    h.imp fun B hB => Finset.mem_filter.mpr hB
+  obtain ⟨B, hB, hBmax⟩ :=
+    Finset.exists_mem_eq_sup (F.filter fun B => x ∈ B ∧ B ⊂ A) hne Finset.card
+  obtain ⟨hBF, hxB, hBA⟩ := Finset.mem_filter.mp hB
+  refine ⟨B, ⟨hBF, hBA, fun C hC hBC hCA => ?_⟩, hxB⟩
+  have hxS : x ∈ C := hBC.1 hxB
+  have hCS : C ∈ F.filter fun B => x ∈ B ∧ B ⊂ A := Finset.mem_filter.mpr ⟨hC, hxS, hCA⟩
+  have h1 : C.card ≤ B.card := hBmax ▸ Finset.le_sup hCS
+  have h2 : B.card < C.card := Finset.card_lt_card hBC
+  omega
+
+/-- **非直接元素 ⟹ 落在某个真子集里**。 -/
+theorem exists_ssubset_of_not_mem_directElems (hl : LaminarFamily F) {A : Finset α}
+    (hA : A ∈ F) {t : α} (ht : t ∈ A) (hd : t ∉ directElems F A) :
+    ∃ B ∈ F, t ∈ B ∧ B ⊂ A := by
+  classical
+  rw [mem_directElems, not_and_or] at hd
+  rcases hd with h | h
+  · exact absurd ht h
+  · push_neg at h
+    obtain ⟨B, hB, htB, hAB⟩ := h
+    refine ⟨B, hB, htB, ?_⟩
+    rcases hl A hA B hB with hsub | hsub | hdisj
+    · exact absurd hsub hAB
+    · exact Finset.ssubset_iff_subset_ne.mpr
+        ⟨hsub, fun heq => hAB (heq ▸ Finset.Subset.refl A)⟩
+    · exfalso
+      rw [Finset.disjoint_iff_inter_eq_empty] at hdisj
+      have : t ∈ A ∩ B := Finset.mem_inter.mpr ⟨ht, htB⟩
+      rw [hdisj] at this
+      exact Finset.notMem_empty t this
+
+/-! ### ★ 核心计数：孩子数 + 直接元素数 ≥ 2
+
+这是「非 `univ` 簇的度 ≥ 3」的全部内容（`A ≠ univ` 时另有父，故总邻居 ≥ 1 + 2 = 3）。
+
+**论证**（设孩子数 `k`）：
+* `k = 0`：`A` 无真子集 ⟹ 每个 `t ∈ A` 的**最小簇就是 `A`** ⟹ `A ⊆ directElems` ⟹ `|A| ≤ |dirs|`，而 `|A| ≥ 2`；
+* `k = 1`（孩子 `B`）：`B ⊊ A` ⟹ 取 `t ∈ A \ B`；若 `t` 不是直接元素，
+  则由 `exists_isChildOf_mem` 还有**另一个**含 `t` 的孩子 ≠ `B`，与 `k = 1` 矛盾 ⟹ `dirs ≥ 1`；
+* `k ≥ 2`：显然。 -/
+theorem two_le_card_children_add_card_directElems (hl : LaminarFamily F)
+    {A : Finset α} (hA : A ∈ F) (hcard : 2 ≤ A.card) :
+    2 ≤ (F.filter fun B => IsChildOf F A B).card + (directElems F A).card := by
+  classical
+  rcases Nat.lt_or_ge (F.filter fun B => IsChildOf F A B).card 2 with hlt | hge
+  · have hK : (F.filter fun B => IsChildOf F A B).card = 0 ∨
+        (F.filter fun B => IsChildOf F A B).card = 1 := by omega
+    rcases hK with h0 | h1
+    · -- 无孩子 ⟹ `A ⊆ directElems`
+      have hempty : (F.filter fun B => IsChildOf F A B) = ∅ := Finset.card_eq_zero.mp h0
+      have hsub : A ⊆ directElems F A := by
+        intro t ht
+        rw [mem_directElems]
+        refine ⟨ht, fun B hB htB => ?_⟩
+        by_contra hAB
+        have hBA : B ⊂ A := by
+          rcases hl A hA B hB with hsub | hsub | hdisj
+          · exact absurd hsub hAB
+          · exact Finset.ssubset_iff_subset_ne.mpr
+              ⟨hsub, fun heq => hAB (heq ▸ Finset.Subset.refl A)⟩
+          · exfalso
+            rw [Finset.disjoint_iff_inter_eq_empty] at hdisj
+            have ht' : t ∈ A ∩ B := Finset.mem_inter.mpr ⟨ht, htB⟩
+            rw [hdisj] at ht'
+            exact Finset.notMem_empty t ht'
+        obtain ⟨C, hC⟩ := exists_isChildOf (F := F) ⟨B, hB, hBA⟩
+        have hmem : C ∈ F.filter fun B => IsChildOf F A B :=
+          Finset.mem_filter.mpr ⟨hC.1, hC⟩
+        rw [hempty] at hmem
+        exact Finset.notMem_empty C hmem
+      have : A.card ≤ (directElems F A).card := Finset.card_le_card hsub
+      omega
+    · -- 恰一个孩子 `B`
+      obtain ⟨B, hBset⟩ := Finset.card_eq_one.mp h1
+      have hBchild : IsChildOf F A B := by
+        have hmem : B ∈ F.filter fun B => IsChildOf F A B := by
+          rw [hBset]; exact Finset.mem_singleton_self B
+        exact (Finset.mem_filter.mp hmem).2
+      have hnotsub : ¬ A ⊆ B := hBchild.2.1.2
+      obtain ⟨t, htA, htB⟩ := Finset.not_subset.mp hnotsub
+      have htd : t ∈ directElems F A := by
+        by_contra htd'
+        obtain ⟨C, hC, htC, hCA⟩ :=
+          exists_ssubset_of_not_mem_directElems hl hA htA htd'
+        obtain ⟨D, hDchild, htD⟩ := exists_isChildOf_mem (F := F) ⟨C, hC, htC, hCA⟩
+        have hDB : D ≠ B := fun heq => htB (heq ▸ htD)
+        have hmem : D ∈ F.filter fun B => IsChildOf F A B :=
+          Finset.mem_filter.mpr ⟨hDchild.1, hDchild⟩
+        rw [hBset] at hmem
+        exact hDB (Finset.mem_singleton.mp hmem)
+      have : 0 < (directElems F A).card := Finset.card_pos.mpr ⟨t, htd⟩
+      omega
+  · omega
+
+/-! ### ★ 非 `univ` 簇的度 ≥ 3（修正构造的核心性质）
+
+邻居由三部分组成，**互不相交**：
+1. 父 `inl (parentOf F' A)`（`A ≠ univ` ⟹ 父存在）；
+2. 孩子 `inl B`（`B ∈ kids`）；
+3. 直接元素 `inr t`（`t ∈ dirs`）。
+
+计数 `two_le_card_children_add_card_directElems` 给出 `|kids| + |dirs| ≥ 2`，
+故 `|邻居| ≥ 1 + 2 = 3`。**这就是「度 2 问题」的解**（`univ` 自身的度另论）。 -/
+theorem three_le_degree_of_ne_univ (hl : LaminarFamily F) [Nonempty α]
+    {A : Finset α} (hA : A ∈ normFinset F) (hAuniv : A ≠ Finset.univ) :
+    3 ≤ (laminarGraph (normFinset F)).degree (Sum.inl A) := by
+  classical
+  set F' := normFinset F with hF'
+  have hl' : LaminarFamily F' := laminarFamily_normFinset hl
+  have hne' : ∀ B ∈ F', B.Nonempty := fun B hB => normFinset_nonempty B (hF' ▸ hB)
+  have huniv : (Finset.univ : Finset α) ∈ F' := hF' ▸ univ_mem_normFinset
+  obtain ⟨hAF, hcard⟩ : A ∈ F ∧ 2 ≤ A.card := by
+    rcases (mem_normFinset.mp hA) with h | h
+    · exact absurd h hAuniv
+    · exact h
+  have hAF' : A ∈ F' := hA
+  have hPA : IsParentOf F' A (parentOf F' A) := isParentOf_parentOf hl' hne' huniv hAF' hAuniv
+  set kids := F'.filter fun B => IsChildOf F' A B with hkids
+  set dirs := directElems F' A with hdirs
+  have hcount : 2 ≤ kids.card + dirs.card :=
+    two_le_card_children_add_card_directElems hl' hAF' hcard
+  -- 三个互不相交的邻居族
+  have hd1 : Disjoint ({Sum.inl (parentOf F' A)} : Finset (TreeVertex α))
+      (kids.image (Sum.inl : Finset α → TreeVertex α) ∪ dirs.image (Sum.inr : α → TreeVertex α)) := by
+    rw [Finset.disjoint_left]
+    intro u hu hu'
+    rw [Finset.mem_singleton] at hu
+    subst hu
+    simp only [Finset.mem_union, Finset.mem_image] at hu'
+    rcases hu' with ⟨B, hBk, hPB⟩ | ⟨t, -, hPt⟩
+    · obtain ⟨hBF, hBchild⟩ := Finset.mem_filter.mp (hkids ▸ hBk)
+      have hPB' : B = parentOf F' A := Sum.inl.inj hPB
+      rw [hPB'] at hBchild
+      exact absurd hPA.2.1.1 hBchild.2.1.2
+    · exact Sum.inl_ne_inr hPt.symm
+  have hd2 : Disjoint (kids.image (Sum.inl : Finset α → TreeVertex α)) (dirs.image (Sum.inr : α → TreeVertex α)) := by
+    rw [Finset.disjoint_left]
+    intro u hu hu'
+    obtain ⟨B, -, hBu⟩ := Finset.mem_image.mp hu
+    obtain ⟨t, -, htu⟩ := Finset.mem_image.mp hu'
+    exact Sum.inl_ne_inr (hBu ▸ htu).symm
+  have hk : (kids.image (Sum.inl : Finset α → TreeVertex α)).card = kids.card :=
+    Finset.card_image_of_injOn fun a _ b _ h => Sum.inl.inj h
+  have hdr : (dirs.image (Sum.inr : α → TreeVertex α)).card = dirs.card :=
+    Finset.card_image_of_injOn fun a _ b _ h => Sum.inr.inj h
+  have hcard3 : 3 ≤ ({(Sum.inl (parentOf F' A) : TreeVertex α)} ∪
+      (kids.image (Sum.inl : Finset α → TreeVertex α) ∪ dirs.image (Sum.inr : α → TreeVertex α))).card := by
+    rw [Finset.card_union_of_disjoint hd1, Finset.card_union_of_disjoint hd2,
+      Finset.card_singleton, hk, hdr]
+    omega
+  have hsub : ({(Sum.inl (parentOf F' A) : TreeVertex α)} ∪ (kids.image (Sum.inl : Finset α → TreeVertex α) ∪ dirs.image (Sum.inr : α → TreeVertex α)))
+      ⊆ (laminarGraph F').neighborFinset (Sum.inl A) := by
+    intro u hu
+    rw [SimpleGraph.mem_neighborFinset]
+    simp only [Finset.mem_union, Finset.mem_singleton, Finset.mem_image] at hu
+    rcases hu with rfl | ⟨B, hBk, rfl⟩ | ⟨t, htd, rfl⟩
+    · exact Or.inl hPA
+    · obtain ⟨hBF, hBchild⟩ := Finset.mem_filter.mp (hkids ▸ hBk)
+      exact Or.inr (isChildOf_isParentOf hl' hAF' (hne' B hBF) hBchild)
+    · exact directElems_isMinClusterOf hAF' (hdirs ▸ htd)
+  calc 3 ≤ ({(Sum.inl (parentOf F' A) : TreeVertex α)} ∪ (kids.image (Sum.inl : Finset α → TreeVertex α) ∪ dirs.image (Sum.inr : α → TreeVertex α))).card :=
+        hcard3
+    _ ≤ ((laminarGraph F').neighborFinset (Sum.inl A)).card := Finset.card_le_card hsub
+    _ = (laminarGraph F').degree (Sum.inl A) := SimpleGraph.card_neighborFinset_eq_degree _ _
+
 end Phylo
