@@ -904,7 +904,7 @@ end Binary
 | **M2 split 系统 + Splits-Equivalence** ★ | `KPartition` / `Split`、相容性、**劈顶点引理**（染色 + 极值点）、**Splits-Equivalence 定理** | `Phylo/Split.lean` —— ✅ **「树 ⟹ 相容」方向已证出**（`Cladogram.pairwiseCompatible`，2026-10-06）；⏸️「相容 ⟹ 存在树」**暂缓**（连通性需根 vs `no_degree_two` 设计卡点，见 `MEMORY.md`），入口与构造层（`Phylo/Laminar.lean`）已落地 |
 | **M3 Buneman** | tree metric / 四点条件 / 可加性；**Buneman 定理**（加权版，用 M2） | `Phylo/Metric.lean`；接回 `NJ/CherryTree.lean` |
 | **M4 quartet / triplet 层** | `Topology`（集合 + `Split ↥S`）、`display`、Colonius-Schultze（full 推理规则）、quartet 距离 | `Phylo/Quartet.lean` —— ✅ **定义层 + display + ★ Colonius–Schultze 推理规则已完成**（2026-10-06）：`DisplaysQuartet`/`DisplaysTopology`/`QuartetCompatible` 与 `ab|ce ∧ ab|de ⟹ ab|cd`；剩 quartet 距离 |
-| **M5 算法层** | NJ（接现有 `Cherry.lean`）、UPGMA（超度量）、RF / KF / BHV、NNI/SPR、parsimony / ML | `Phylo/Algorithm/…` —— 🚧 **起步**（2026-10-06）：`Cherry.lean`（`IsCherry` 定义层，**存在性待证**）· `RF.lean`（**`rfDistance` + 度量三性质已证**）；剩 NJ / UPGMA / KF / BHV / NNI / SPR |
+| **M5 算法层** | NJ（接现有 `Cherry.lean`）、UPGMA（超度量）、RF / KF / BHV、NNI/SPR、parsimony / ML | `Phylo/Algorithm/…` —— 🚧 **cherry + RF 完成**（2026-10-06）：**★ `exists_isCherry`（每棵树都有 cherry，纯组合计数证）** · `IsCherry` 定义层 · `rfDistance` + 度量三性质；剩 NJ / UPGMA / KF / BHV / NNI / SPR |
 
 **前四个里程碑对应第一批大目标**（Splits-Equivalence → Buneman），M0/M1 是它们的必要前置。
 

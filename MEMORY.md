@@ -278,6 +278,21 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - `lake build` → **1264 jobs**；无 sorry；**1778 行**
 - **⬜ 剩**：**cherry 存在性**（「每棵树有 cherry」—— 直径 + 分支论证：取最长路径、端点叶 x,y，`u`=x 的邻居，若 `u` 有非叶子邻居 z 则分支内叶 c 满足 `dist(c,y) = dist(c,u)+dist(u,y) > dist(x,y)` 矛盾；故 `u` 邻接叶 z ⇒ `{x,z}` 是 cherry）· NJ · UPGMA · KF / BHV · NNI / SPR
 
+### A+：M5 —— ★ **每棵树都有 cherry** 证出来了 ✅
+- **★ 主定理 `Cladogram.exists_isCherry (hV : 3 ≤ Fintype.card T.V) : ∃ a b : X, T.IsCherry a b`**
+  —— NJ / UPGMA 等贪心归约算法的起点。
+- **证法：纯组合计数（完全不用距离！）** —— 比「直径 + 最长路径」路线好形式化得多：
+  - **上界 `card_leafFinset_le_internalFinset`（无 cherry ⟹ `ℓ ≤ i`）**：
+    「叶 ↦ 其唯一邻居」是**单射**（否则两叶共邻居 = cherry），且落点都是**内部顶点**
+    （由 `eq_or_eq_of_adj_of_degree_eq_one`：叶–叶相邻 ⟹ 树只有 2 顶点，故 `|V| ≥ 3` 时不可能）。
+  - **下界 `internalFinset_card_add_two_le_leafFinset_card`（`i + 2 ≤ ℓ`）**：
+    握手引理 `sum_degrees_eq_twice_card_edges` + `IsTree.card_edgeFinset`（`|E| = n-1`）
+    + **`three_le_degree_of_not_isLeaf`（内部顶点度 ≥ 3）** + `ℓ + i = |V|` ⟹ `ℓ ≥ i + 2`。
+  - 两者矛盾（`omega`）。
+- 辅助：`leafFinset` / `internalFinset`（叶集与内部点集）· `three_le_degree_of_not_isLeaf` · `eq_or_eq_of_adj_of_degree_eq_one` · `not_isLeaf_of_adj_of_isLeaf` · `adj_leafNb` · `leafNb`
+- `lake build` → **1264 jobs**；无 sorry（`Phylo/Algorithm/Cherry.lean` **217 行**）
+- **⬜ 剩**：NJ 本体（用 cherry 归约 + 四点的 `z := δₓᵧ + ...` 极大性）· UPGMA · KF / BHV · NNI / SPR
+
 ## Git / 远程（2026-10-02）
 
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
