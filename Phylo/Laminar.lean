@@ -17,6 +17,7 @@ instance instFintypeSubtype {α : Type*} [Fintype α] [DecidableEq α]
     (F : Finset (Finset α)) : Fintype ↥F :=
   ⟨F.attach, fun x => Finset.mem_attach F x⟩
 
+
 /-!
 # `Phylo.Laminar` —— 镶嵌族 ⟹ 树（「相容 ⟹ 存在树」的构造层）
 
@@ -1017,5 +1018,52 @@ theorem no_degree_two_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
       omega
   · have h1 := degree_inr_eq_one hl huniv x
     omega
+
+/-! ## ★★★ 终点：由镶嵌族构造 `Cladogram`（「相容 ⟹ 存在树」）
+
+组装所有字段：`V := LaminarVertex F` · `graph := treeGraph F` · `leaf := Sum.inr`
+· `isTree`（`isTree_treeGraph`）· `no_degree_two`（`no_degree_two_treeGraph`）
+· `leaf_iff_degree_one`（元素度 1 ／ 簇度 ≥ 3）。 -/
+
+set_option maxHeartbeats 800000 in
+/-- **由镶嵌族构造 cladogram**。
+
+假设：
+* `F` 镶嵌、`univ ∈ F`、族元素非空；
+* `F` 已正规化（无单元素簇）：`∀ B ∈ F, B = univ ∨ 2 ≤ B.card`；
+* 根非退化：`|univ 的孩子| + |univ 的直接元素| ≥ 3`。 -/
+noncomputable def toCladogram {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card) :
+    Cladogram α where
+  V := LaminarVertex F
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := treeGraph F
+  decAdj := Classical.decRel _
+  isTree := isTree_treeGraph hl hne huniv
+  leaf := ⟨Sum.inr, Sum.inr_injective⟩
+  leaf_iff_degree_one := by
+    intro v
+    constructor
+    · rintro ⟨x, rfl⟩
+      exact degree_inr_eq_one hl huniv x
+    · intro hv
+      rcases v with A | x
+      · by_cases hAu : A.1 = Finset.univ
+        · have hAeq : A = (⟨Finset.univ, huniv⟩ : ↥F) := Subtype.ext hAu
+          rw [hAeq] at hv
+          have h3 := three_le_degree_rootV hl hne huniv hroot
+          omega
+        · have hAc : 2 ≤ A.1.card := by
+            rcases hcard A.1 A.2 with h | h
+            · exact absurd h hAu
+            · exact h
+          have h3 := three_le_degree_treeGraph hl hne huniv hAu hAc
+          omega
+      · exact ⟨x, rfl⟩
+  no_degree_two := no_degree_two_treeGraph hl hne huniv hcard hroot
 
 end Phylo
