@@ -206,10 +206,23 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `Phylo/Split.lean` → **784 行**；`lake build` 1260 jobs；无 sorry
 - **路线（下一步）**：**「相容 ⟹ 存在树」的标准构造** ——
   1. 固定 `ρ`，取 Σ 的规范 cluster 族 `{s.cluster ρ}`（**全部避开 `ρ`，故两两镶嵌**：`laminar_of_compatible_clusters` 已证）。
-  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；`parent A = ⋂{B ∈ 族 : A ⊊ B}`；叶按「最小包含簇」挂载。  
-     ⚠️ **须验证 `no_degree_two`**：镶嵌构造可能产生度 2 顶点（当 A 恰有一个子簇且 `A∖B = ∅`）—— 需证明 `A∖B ≠ ∅` 或改取「极大簇」。
+  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；父 = 最小严格包含者（`IsParentOf` 已落地）。  
   3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。  
      （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
+- **⚠️⚠️ 设计卡点（2026-10-06，**需老师定夺**）：连通性需要「根」，且与 `no_degree_two` 冲突。**
+  - **问题**：`laminarGraph F` 顶点 = 簇 ∪ 叶。若 `F` 有 **≥2 个极大簇**（如 `F = {{a,b},{c,d}}` 两者相离），**极大簇之间无边** ⇒ 图**不连通**。
+  - **标准修正**：把 **`univ` 加入簇集**作根（`F' := insert univ F`）⇒ 每个极大簇的父 = `univ`，图连通。
+  - **新矛盾**：若 `F'` 只有 **2 个极大簇**，则 `degree(univ) = 2` ⇒ **违背 `no_degree_two`**（`Cladogram` 必需字段）。
+  - **三条候选出路（待老师选）**：
+    - **(i) 压缩度 2 顶点**：suppress 度为 2 的顶点 —— 即 M1 曾绕开的 `suppress` 大工程。
+    - **(ii) 加强假设**：只在「`Σ(T) ⊇ Σ_triv`」（每个叶边都在）的 split 系统上陈述，使树无度 2。
+    - **(iii) 弱化结论**：不构造 `Cladogram`，改陈述「存在无度 2 的未标号树 + 与 `Σ` 的双射」。
+  - **相关**：`Σ_triv` 已由 `exists_isSplitOf_singleton` 保证必被展示（或许能排除 `univ` 度 2）。
+  - **另需**：`Finset.min'_mem` / `Finset.min'_le` / `Finset.exists_min_image` **本版 Mathlib 均不存在** ⇒「取 card 最小的严格包含者」要自建有限集极值引理。
+- **已完成（2026-10-06 续）**：父链阶梯 —— `isParentOf_ssubset` / `isParentOf_card_lt`（父严格递增势能）· `IsParentVertex` / `isParentVertex_adj`。`lake build` 1261 jobs，无 sorry。
+- **Lean 4 坑（本轮新增）**：
+  - `SimpleGraph` 的 `symm : Std.Symm Adj` / `loopless : Std.Irrefl Adj` **是结构体**，必须 `⟨fun ... => ...⟩` 构造（`intro` 报 "no additional binders"）；`Std.Irreflexive` / `Symmetric` / `Irreflexive` **均非可用名**。
+  - `Finset.inf'_mem` 参数顺序反直觉（第一显式参数是闭包条件）→ 已改用「特征性质」定义父关系。
 - **Lean 4 坑（本轮新增）**：
   - `<;>` 同时作用于两个方向会留下 **8 个目标**，bullet 必须写满 8 个（`sidesCompatible_comm` 就栽在这）。
   - **`rw [Finset.mem_univ]` 会把「引理名」解析成「证明项」** → 报 `Expected an equality or iff proof`；改用 `Finset.mem_univ y` 作**项**。
