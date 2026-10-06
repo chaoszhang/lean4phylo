@@ -1,21 +1,25 @@
 # lean 项目 · MEMORY
 
 ## 项目
+
 NJ cherry 引理形式化（Lean 4 + Mathlib）
+
 - 源码正本（Windows）：`C:/Users/ASTER/WorkBuddy/Project/lean/`
 - 构建目录（WSL 原生盘）：`~/nj-lean`（Linux 侧，需手动 `cp` 同步）
 - 工具链：elan → `leanprover/lean4:v4.35.0-rc3` + mathlib4(master)，已 `lake exe cache get`
 - lake 路径：`/home/chaos/.elan/bin/lake`
 
 ## 当前状态（2026-09-29，第 2 轮收口）
+
 - ✅ `lake env lean NJ/Cherry.lean` 通过（全量 `import Mathlib`，约 3.5–5.5min；开发期最小导入 ~5s）
 - ✅ 已机器验证：`Q_eq_neg_two_ell`/`Q_eq_neg_two_z`、`max_at_cherry`、`nj_cherry`
-- ✅ 新增辅引理：`triangle`（四点条件⟹三角不等式）、`rho_nonneg`、`ell_eq_sum_rho`、
+- ✅ 新增辅引理：`triangle`（四点条件⟹三角不等式）、`rho_nonneg`、`ell_eq_sum_rho`、  
   `two_mul_z`、`z_hinge`（门控恒等式）
-- ⬜ **唯一剩余 `sorry` = `max_z_cherry_core`**（★ 硬核）
+- ⬜ **唯一剩余 `sorry` = `max_z_cherry_core`**（★ 硬核）  
   —— `max_at_cherry` 已完全由它推出（`k≠l` 归约、`k=l` 用 triangle）
 
 ## 加速技巧（重要）
+
 - 开发期把 `import Mathlib` 换成最小导入集，编译 **~5s/次**：
   ```
   import Mathlib.Data.Real.Basic
@@ -28,11 +32,13 @@ NJ cherry 引理形式化（Lean 4 + Mathlib）
   交付前换回 `import Mathlib`。
 
 ## 编译命令
+
 ```bash
 wsl -e bash -lc 'cd ~/nj-lean && cp /mnt/c/Users/ASTER/WorkBuddy/Project/lean/NJ/Cherry.lean NJ/Cherry.lean && ~/.elan/bin/lake env lean NJ/Cherry.lean'
 ```
 
 ## max_at_cherry 的数学现状（本轮分析）
+
 - 定理：`FourPoint δ` + `(a,b)` 最大化 `z:=δ+ℓ` ⟹ `IsCherry δ a b`。
 - **数值验证**：随机 4000 棵正权树（n=4..8），argmax z 恒为樱桃（0 反例）→ 定理成立。
 - 关键恒等式：`z(i,j) = ½(A_i + A_j + (2-n)δ_ij)`，`A_x = Σ_k δ_xk`；等价于 `Q = -2z`。
@@ -45,20 +51,26 @@ wsl -e bash -lc 'cd ~/nj-lean && cp /mnt/c/Users/ASTER/WorkBuddy/Project/lean/NJ
 - Mathlib **无** 系统发生/树度量 API（只有 `SimpleGraph` 树）。
 
 ## 参考文献
+
 Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Statistics for Comp. Bio.* Thm 2.38; Mihaescu–Levy–Pachter 2006 (arXiv:cs/0602041); Saitou–Nei 1987; Studier–Keppler 1988.
 
 ## 研究脚本
+
 `C:/Users/ASTER/WorkBuddy/Claw/temp/nj_explore*.py`（数值探索：定理验证 + 候选引理证伪）
 
+
 ## 远期目标与库设计（2026-10-02）
+
 **远期目标**：建立**所有 phylogeny 经典算法证明的库**（Lean 4 + Mathlib）。
 
 **Mathlib 图/树设施调研结论（grep 实证）**
+
 - 可复用：`SimpleGraph` / `Walk`(Decomp·Subwalks·Maps·Traversal) / `IsTree`(extends Connected) / `Subgraph` / `Connected` / `Dart` / `AdjMatrix`·`IncMatrix`·`LapMatrix` / `Matroid/`(graphic matroid) / `Data/Sym/Sym2`(无序对) / `Finset.powersetCard` / `Setoid.Partition` / `Matrix`。
 - ⚠️ `SimpleGraph.dist : V → V → ℕ` 是**无权重** BFS 距离；加权路径长须自建。
 - ❌ 完全缺失：加权树、树度量、四点条件、Buneman、split、quartet、RF、NNI/SPR、溯祖。
 
 **已定设计决策**
+
 1. **树底层 = 自定义接口包 SimpleGraph**（对外 phylogeny API，内部 SimpleGraph + 权函数）。→ 现有 `TreeRealization` 未来需按此重构。
 2. **起步 = 先备树零件**（叶 / 樱桃 / 子树 / quartet / split），算法无关。
 3. **split 表示 = 建「划分族」，自定义 `Partition` 作共享基础（2026-10-02 定，取代旧 1a）**：
@@ -110,19 +122,23 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
    - **quartet 版等价描述（老师补充）**：`(n choose 4)` 个 quartet 决定 **binary** 树（Colonius-Schultze 1981 / Bandelt-Dress 1986），**与 split 版平行**；但**判据形态不同**：**无两两判据**（split 有）、full 情形用**推理规则** `ab|cx ∧ ab|xd ⟹ ab|cd`（Colonius-Schultze，多项式）、一般情形 **NP-complete**（Steel 1992）、thin（每 k 元子集 ≤ k−3 个 quartet）⟹ 相容（充分）。⇒ **quartet 相容性只能作算法目标/存在性命题，不能当判据或定义**。
    - **§5 全部 10 条已定，`CONCEPTS.md` 设计阶段收口。**
 10. **落地路线（`CONCEPTS.md` §4，2026-10-02）**：
-   - **Mathlib 支撑点**：★ `SimpleGraph/Acyclic.lean:240` **`isTree_iff_existsUnique_path`（树 ⟺ 路径唯一 = M0 地基）**；`Acyclic.lean:512` `IsTree.exists_ne_and_degree_eq_one`；`Maps.lean:307` `Iso := RelIso G.Adj G'.Adj`；`G.edgeSet`；`G.degree`。❌ `SimpleGraph.dist` 是无权 BFS(`ℕ`)，**加权距离必须自建**。
-   - **里程碑**：M0 树载体 → M1 加权层+同构 → **M2 Splits-Equivalence ★** → **M3 Buneman** → M4 quartet/triplet → M5 算法。
-   - **目录**：**新库 `Phylo/`**（`Core.lean`/`Split.lean`/`Metric.lean`/`Quartet.lean`/`Algorithm/*` + 根模块 `Phylo.lean`）；**现有 `NJ/Cherry.lean`、`NJ/CherryTree.lean` 保留为独立文件**（库与算法分离）。
-   - **第一步 M0**：新建 `Phylo/Core.lean` → 写 `Cladogram` → `IsLeaf`+四条引理 → `lake env lean` 迭代 → **停下汇报接口**（M0 跑通再确认节奏）。
-11. **工程骨架（`SCAFFOLD.md`，2026-10-02）**：
-   - 调研源：官方 `lake new`/`lake init . math`；**`leanprover-community/physlib`（领域库范例）**；`LeanProject` 模板。
-   - 骨架：补 `lean-toolchain`（`v4.35.0-rc3`）+ `.gitignore` + `.vscode/` + `.github/workflows/build.yml` + `scripts/check_file_imports.lean`；`lakefile.toml` 加 `[[lean_lib]] name = "Phylo"`。
-   - **四条规矩**：文件头三件套（版权+import+`/-! # 模块描述 -/`）；每定义带 docstring；根模块按字母序 import + 自动检查；**开发期 `-Dwarn.sorry=false`**（PhysLib 做法，让含 sorry 的库照常编译）。
-   - **暂不采纳**：Blueprint、PhysLib 的 informal/semiformal 追踪、Alpha 双库。
-   - ⚠️ **命名（2026-10-02）**：原拟 `Nj` **不可用** —— **Windows 文件系统大小写不敏感**（实测 `ls -d nj` 匹配 `NJ/`），`Nj/` 会与现有 `NJ/` 撞目录。**最终命名（老师提议）：仓库/包名 `lean4phylo`（双关：Lean 4 phylo / lean for phylo），Lean 库名 `Phylo`（PascalCase）**。**铁律：库目录名不得与 `NJ` 仅差大小写。**
-   - `leanprover-community/LeanProject` 评估：**部分有用，取零件** —— ✅ 取 `build-project.yml`/`.vscode`/`.gitignore`/**`Phylo/Mathlib/` 缺声明层**/`scripts`；🔶 **Blueprint 体系**（其产物 = 定义·定理·证明状态 + 依赖图网站，**正是我们引理树的正式版**）暂缓但留位置；❌ 不取 upstreaming dashboard / Jekyll。
+
+- **Mathlib 支撑点**：★ `SimpleGraph/Acyclic.lean:240` **`isTree_iff_existsUnique_path`（树 ⟺ 路径唯一 = M0 地基）**；`Acyclic.lean:512` `IsTree.exists_ne_and_degree_eq_one`；`Maps.lean:307` `Iso := RelIso G.Adj G'.Adj`；`G.edgeSet`；`G.degree`。❌ `SimpleGraph.dist` 是无权 BFS(`ℕ`)，**加权距离必须自建**。
+- **里程碑**：M0 树载体 → M1 加权层+同构 → **M2 Splits-Equivalence ★** → **M3 Buneman** → M4 quartet/triplet → M5 算法。
+- **目录**：**新库 `Phylo/`**（`Core.lean`/`Split.lean`/`Metric.lean`/`Quartet.lean`/`Algorithm/*` + 根模块 `Phylo.lean`）；**现有 `NJ/Cherry.lean`、`NJ/CherryTree.lean` 保留为独立文件**（库与算法分离）。
+- **第一步 M0**：新建 `Phylo/Core.lean` → 写 `Cladogram` → `IsLeaf`+四条引理 → `lake env lean` 迭代 → **停下汇报接口**（M0 跑通再确认节奏）。
+
+1. **工程骨架（`SCAFFOLD.md`，2026-10-02）**：
+
+- 调研源：官方 `lake new`/`lake init . math`；**`leanprover-community/physlib`（领域库范例）**；`LeanProject` 模板。
+- 骨架：补 `lean-toolchain`（`v4.35.0-rc3`）+ `.gitignore` + `.vscode/` + `.github/workflows/build.yml` + `scripts/check_file_imports.lean`；`lakefile.toml` 加 `[[lean_lib]] name = "Phylo"`。
+- **四条规矩**：文件头三件套（版权+import+`/-! # 模块描述 -/`）；每定义带 docstring；根模块按字母序 import + 自动检查；**开发期 `-Dwarn.sorry=false`**（PhysLib 做法，让含 sorry 的库照常编译）。
+- **暂不采纳**：Blueprint、PhysLib 的 informal/semiformal 追踪、Alpha 双库。
+- ⚠️ **命名（2026-10-02）**：原拟 `Nj` **不可用** —— **Windows 文件系统大小写不敏感**（实测 `ls -d nj` 匹配 `NJ/`），`Nj/` 会与现有 `NJ/` 撞目录。**最终命名（老师提议）：仓库/包名 `lean4phylo`（双关：Lean 4 phylo / lean for phylo），Lean 库名 `Phylo`（PascalCase）**。**铁律：库目录名不得与 `NJ` 仅差大小写。**
+- `leanprover-community/LeanProject` 评估：**部分有用，取零件** —— ✅ 取 `build-project.yml`/`.vscode`/`.gitignore`/**`Phylo/Mathlib/` 缺声明层**/`scripts`；🔶 **Blueprint 体系**（其产物 = 定义·定理·证明状态 + 依赖图网站，**正是我们引理树的正式版**）暂缓但留位置；❌ 不取 upstreaming dashboard / Jekyll。
 
 ---
+
 
 ## 工程落地（2026-10-02）
 
@@ -155,8 +171,8 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **restrict 进度（2026-10-06）**：地基已完成并编译通过 ——
   - `pathVerts`（两点唯一路径的顶点集）· `spanVerts`（连接 `Y` 的顶点集，`Y.biUnion`）· `leaf_mem_spanVerts` · `inducedSubgraph`（**白蹭 `SimpleGraph.induce`**，它即 `comap`）。
   - ⬜ 剩 **`suppress`**（删度 2 顶点 + 合并边）—— 大工程：要造新顶点类型 + 新图 + 三条结构证明（`IsTree` / `leaf_iff_degree_one` / `no_degree_two`）。
-- **⚠️ 发现更短路径（待老师定）**：文献定义 restriction 的标准方式是 **split 层面** ——
-  `Cl(T|Y) = {C ∩ Y : C ∈ Cl(T), C ∩ Y ≠ ∅}`（Bryant–Steel；Semple & Steel §3.9）。
+- **⚠️ 发现更短路径（待老师定）**：文献定义 restriction 的标准方式是 **split 层面** ——  
+  `Cl(T|Y) = {C ∩ Y : C ∈ Cl(T), C ∩ Y ≠ ∅}`（Bryant–Steel；Semple & Steel §3.9）。  
   ⇒ **先做 `Split` 类型 + `splits : T → Finset (Split X)`（M2 前置），restrict 直接定义在 split 上，不必造新树**；且 `splits` 本来就是 M2（Splits-Equivalence）的必备地基，一举两得。
 - **M2 进度（2026-10-06）**：`Phylo/Split.lean`（282 行）编译通过，**无 sorry** ——
   - 结构：`KPartition α n` · `Split α := KPartition α 2` · `sideA`/`sideB`/`disjoint_sides`/`union_sides` · **`Split.swap`**（`i ↦ i+1`，即 `Fin 2` 模 2 加法）+ `swap_sideA`/`swap_sideB`
@@ -191,7 +207,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
-- **⚠️ 关键：认证只在 WSL 侧**！Windows 侧**没有 SSH key**（`~/.ssh` 只有 known_hosts），WSL 侧 `~/.ssh/id_ed25519` 已配到 GitHub 账号 `chaoszhang`。
+- **⚠️ 关键：认证只在 WSL 侧**！Windows 侧**没有 SSH key**（`~/.ssh` 只有 known_hosts），WSL 侧 `~/.ssh/id_ed25519` 已配到 GitHub 账号 `chaoszhang`。  
   ⇒ **所有 git 远程操作（push/pull/fetch）必须走 WSL**，且需绕过 `dubious ownership`：
   ```bash
   wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
@@ -204,7 +220,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **CI**：`.github/workflows/build.yml`（`lake exe cache get` → `lake build`）。
   - ✅ **run 1（M0）success** · ✅ **run 2（`cefdee9` M1: Phylogram/dist/Iso）success** —— **CI 全绿，模板可直接复用**。
   - ⚠️ **后台 bash 里 `curl` 抓不到 GitHub API 输出**（返回空），但**前台 `curl` 正常** —— 查 CI 状态要在前台跑（`curl -s https://api.github.com/repos/chaoszhang/lean4phylo/actions/runs | grep -E '"run_number"|"status"|"conclusion"'`）。
-  - 查看：https://github.com/chaoszhang/lean4phylo/actions
+  - 查看：<https://github.com/chaoszhang/lean4phylo/actions>
 - 原则：老师要求 **更多交互**，重大设计决策不擅自拍板。
 - **已建 `DESIGN.md`**（库设计文档）：Mathlib 现状实测表 / 分层架构 / 已定决策 D1–D4 / **待定决策 P1–P5** / 里程碑 M0–M3。
   - 待定 P1（M0 中「叶」的定义）**阻塞 M0**；P2 推进节奏；P3 quartet 表示；P4 目录切分；P5 Buneman 放哪层。老师本轮跳过 P1/P2 未答 → **不擅自开工**。

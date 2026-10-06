@@ -40,6 +40,68 @@ theorem reachable_eq_of_isIsolated {V : Type*} {G : SimpleGraph V} {a u : V}
 def SidesCompatible {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) : Prop :=
   A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = Finset.univ
 
+/-- **相容性对补侧不变**（四项恰好对应轮换）：
+`Aᶜ ⊆ B ↔ A ∪ B = univ`、`B ⊆ Aᶜ ↔ Disjoint A B`、`Disjoint Aᶜ B ↔ B ⊆ A`、`Aᶜ ∪ B = univ ↔ A ⊆ B`。
+
+这条让「情形 2」可以整体换到**补侧**处理。 -/
+theorem sidesCompatible_compl_left {α : Type*} [Fintype α] [DecidableEq α]
+    {A B : Finset α} : SidesCompatible Aᶜ B ↔ SidesCompatible A B := by
+  have h1 : Aᶜ ⊆ B ↔ A ∪ B = Finset.univ := by
+    constructor
+    · intro h
+      ext x
+      refine ⟨fun _ => Finset.mem_univ _, fun _ => ?_⟩
+      by_cases hx : x ∈ A
+      · exact Finset.mem_union.mpr (Or.inl hx)
+      · exact Finset.mem_union.mpr (Or.inr (h (by simpa using hx)))
+    · intro h x hx
+      rcases Finset.mem_union.mp (by rw [h]; exact Finset.mem_univ x) with h' | h'
+      · exact absurd h' (by simpa using hx)
+      · exact h'
+  have h2 : B ⊆ Aᶜ ↔ Disjoint A B := by
+    rw [Finset.disjoint_left]
+    constructor
+    · intro h x hA hB
+      have hx := h hB
+      simp only [Finset.mem_compl] at hx
+      exact hx hA
+    · intro h x hx
+      simp only [Finset.mem_compl]
+      exact fun hA => h hA hx
+  have h3 : Disjoint Aᶜ B ↔ B ⊆ A := by
+    rw [Finset.disjoint_left]
+    constructor
+    · intro h x hx
+      by_contra hA
+      have hx' := h (by simpa [Finset.mem_compl] using hA)
+      exact hx' hx
+    · intro h x hx hB
+      have hx' := hx
+      simp only [Finset.mem_compl] at hx'
+      exact hx' (h hB)
+  have h4 : Aᶜ ∪ B = Finset.univ ↔ A ⊆ B := by
+    constructor
+    · intro h x hx
+      rcases Finset.mem_union.mp (by rw [h]; exact Finset.mem_univ x) with h' | h'
+      · exact absurd hx (by simpa using h')
+      · exact h'
+    · intro h
+      ext x
+      refine ⟨fun _ => Finset.mem_univ _, fun _ => ?_⟩
+      by_cases hx : x ∈ A
+      · exact Finset.mem_union.mpr (Or.inr (h hx))
+      · exact Finset.mem_union.mpr (Or.inl (by simpa using hx))
+  simp only [SidesCompatible]
+  constructor <;> intro h <;> rcases h with h | h | h | h
+  · exact Or.inr (Or.inr (Or.inr (h1.mp h)))
+  · exact Or.inr (Or.inr (Or.inl (h2.mp h)))
+  · exact Or.inr (Or.inl (h3.mp h))
+  · exact Or.inl (h4.mp h)
+  · exact Or.inr (Or.inr (Or.inr (h4.mpr h)))
+  · exact Or.inr (Or.inr (Or.inl (h3.mpr h)))
+  · exact Or.inr (Or.inl (h2.mpr h))
+  · exact Or.inl (h1.mpr h)
+
 /-- **`k`-块划分**：把 `α` 分成 `n` 个**两两不交、非空、并为全体**的块。
 
 §3.4：这是「划分族」的共享基础。 -/
@@ -145,6 +207,15 @@ theorem compatible_of_union {s t : Split α} (h : s.sideA ∪ t.sideA = Finset.u
   rcases Finset.mem_union.mp hmem with h' | h'
   · exact (Finset.mem_sdiff.mp hx).2 h'
   · exact (Finset.mem_sdiff.mp hy).2 h'
+
+/-- **两侧相容 ⟹ 对应 split 相容**。 -/
+theorem compatible_of_sides {s t : Split α}
+    (h : SidesCompatible s.sideA t.sideA) : Compatible s t := by
+  rcases h with h | h | h | h
+  · exact compatible_of_subset_left h
+  · exact compatible_of_subset_right h
+  · exact compatible_of_disjoint h
+  · exact compatible_of_union h
 
 /-- 把 split 的第 `i` 侧限制到子集 `Y`（得到 `↥Y` 上的子集）。 -/
 noncomputable def restrictSide (s : Split α) (Y : Finset α) (i : Fin 2) : Finset ↥Y :=
@@ -313,11 +384,12 @@ noncomputable def splitOfEdge (T : Cladogram X) (e : Sym2 T.V) (u : T.V)
     · exact hA
     · exact hB
 
-/-- `s` 是树 `T` 的**一条边的 split**：`s` 的某一侧恰是「删某条边后某一侧的叶集」。
+/-- `s` 是树 `T` 的**一条边的 split**：`s` 的某一侧恰是「删去某条边后某一侧的叶集」。
 
-§3.4：删边 `e` ⟹ bipartition。`u` 取边的两端点即得两个方向。 -/
+§3.4：删边 `e = ⟦a,b⟧` ⟹ bipartition。直接以**相邻点对**给出（等价于 `edgeSet`，
+但省去从 `Sym2` 提取端点的麻烦）。 -/
 def IsSplitOf (T : Cladogram X) (s : Split X) : Prop :=
-  ∃ (e : Sym2 T.V) (u : T.V), s.sideA = T.sideLeaves e u
+  ∃ (a b : T.V) (_ : T.graph.Adj a b) (u : T.V), s.sideA = T.sideLeaves s(a, b) u
 
 /-- 树 `T` 的**全部边的 split 集**（§3.4 的三级对应之一：边 ↔ bipartition）。
 
@@ -450,15 +522,109 @@ theorem inSide_or_inSide (T : Cladogram X) {a b x : T.V} (hab : T.graph.Adj a b)
       · exact Or.inl (hadj'.reachable.trans ih)
       · exact Or.inr (hadj'.reachable.trans ih)
 
+/-- **`e` 的两端点分居两侧**（否则 `T - e` 中 `a` 与 `b` 可达，与「边是桥」矛盾）。 -/
+theorem not_inSide_both (T : Cladogram X) {a b y : T.V} (hab : T.graph.Adj a b) :
+    ¬ (T.inSide s(a, b) a y ∧ T.inSide s(a, b) b y) := by
+  rintro ⟨h1, h2⟩
+  exact T.not_reachable_deleteEdges_of_adj hab (h1.trans h2.symm)
+
+/-- **边 `⟦a,b⟧` 的两侧互为补**（由 2 类性 + 两端点分居两侧）。 -/
+theorem sideLeaves_compl_adj (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b) :
+    T.sideLeaves s(a, b) b = (T.sideLeaves s(a, b) a)ᶜ := by
+  ext x
+  rw [Finset.mem_compl, T.mem_sideLeaves_iff_inSide, T.mem_sideLeaves_iff_inSide]
+  constructor
+  · intro hb ha
+    exact T.not_inSide_both hab ⟨ha, hb⟩
+  · intro hb
+    rcases T.inSide_or_inSide hab (x := T.leaf x) with h | h
+    · exact absurd ((T.inSide_comm _ _ _).mp h) hb
+    · exact (T.inSide_comm _ _ _).mp h
+
+/-- **同侧基准可换**：若 `u` 与 `a` 在 `e` 同侧，则 `u` 侧即 `a` 侧。 -/
+theorem sideLeaves_eq_of_inSide (T : Cladogram X) {e : Sym2 T.V} {u a : T.V}
+    (h : T.inSide e u a) : T.sideLeaves e u = T.sideLeaves e a := by
+  ext x
+  rw [T.mem_sideLeaves_iff_inSide, T.mem_sideLeaves_iff_inSide]
+  exact ⟨fun hu => h.symm.trans hu, fun ha => h.trans ha⟩
+
+/-- **主引理（一般情形）**：任意两条边的 split 侧集相容。
+
+分析：`e₁` 与 `e₂` 的端点相对位置由 `inSide_congr_of_adj` 压缩为两情形；
+情形 1 直接由 `sidesCompatible_sideLeaves_of_not_inSide`；
+情形 2 用**补侧轮换** + `sideLeaves_compl_adj` 化归到情形 1。 -/
+theorem sidesCompatible_sideLeaves (T : Cladogram X)
+    {a b c d : T.V} (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) (u₁ u₂ : T.V) :
+    SidesCompatible (T.sideLeaves s(a, b) u₁) (T.sideLeaves s(c, d) u₂) := by
+  by_cases hsame : s(c, d) = s(a, b)
+  · -- 两边相同：`u₁`、`u₂` 各归到 `a`/`b` 侧，两侧要么相同、要么互补
+    rw [hsame]
+    rcases T.inSide_or_inSide hab (x := u₁) with h1 | h1 <;>
+      rcases T.inSide_or_inSide hab (x := u₂) with h2 | h2
+    · rw [T.sideLeaves_eq_of_inSide h1, T.sideLeaves_eq_of_inSide h2]
+      exact Or.inl (Finset.Subset.refl _)
+    · rw [T.sideLeaves_eq_of_inSide h1, T.sideLeaves_eq_of_inSide h2, T.sideLeaves_compl_adj hab]
+      refine Or.inr (Or.inr (Or.inl ?_))
+      rw [Finset.disjoint_left]
+      intro x hx hxc
+      exact (Finset.mem_compl.mp hxc) hx
+    · rw [T.sideLeaves_eq_of_inSide h1, T.sideLeaves_eq_of_inSide h2, T.sideLeaves_compl_adj hab]
+      refine Or.inr (Or.inr (Or.inl ?_))
+      rw [Finset.disjoint_left]
+      intro x hx hxc
+      exact (Finset.mem_compl.mp hx) hxc
+    · rw [T.sideLeaves_eq_of_inSide h1, T.sideLeaves_eq_of_inSide h2]
+      exact Or.inl (Finset.Subset.refl _)
+  · have hcongr : T.inSide s(a, b) u₁ c ↔ T.inSide s(a, b) u₁ d :=
+      T.inSide_congr_of_adj hcd hsame
+    by_cases hin : T.inSide s(a, b) u₁ c
+    · -- 情形 2：`c,d` 都在 `u₁` 侧 —— 换到补侧，化归情形 1
+      rcases T.inSide_or_inSide hab (x := u₁) with hua | hub
+      · have hca : T.inSide s(a, b) a c := hua.symm.trans hin
+        have hda : T.inSide s(a, b) a d := hua.symm.trans (hcongr.mp hin)
+        have hc' : ¬ T.inSide s(a, b) b c := fun h => T.not_inSide_both hab ⟨hca, h⟩
+        have hd' : ¬ T.inSide s(a, b) b d := fun h => T.not_inSide_both hab ⟨hda, h⟩
+        have hres := T.sidesCompatible_sideLeaves_of_not_inSide
+          (e₁ := s(a, b)) (e₂ := s(c, d)) (u₁ := b) (u₂ := u₂) rfl hc' hd'
+        have hres' : SidesCompatible (T.sideLeaves s(a, b) a)ᶜ (T.sideLeaves s(c, d) u₂) := by
+          rw [← T.sideLeaves_compl_adj hab]; exact hres
+        simpa [T.sideLeaves_eq_of_inSide hua] using sidesCompatible_compl_left.mp hres'
+      · have hcb : T.inSide s(a, b) b c := hub.symm.trans hin
+        have hdb : T.inSide s(a, b) b d := hub.symm.trans (hcongr.mp hin)
+        have hc' : ¬ T.inSide s(a, b) a c := fun h => T.not_inSide_both hab ⟨h, hcb⟩
+        have hd' : ¬ T.inSide s(a, b) a d := fun h => T.not_inSide_both hab ⟨h, hdb⟩
+        have hres := T.sidesCompatible_sideLeaves_of_not_inSide
+          (e₁ := s(a, b)) (e₂ := s(c, d)) (u₁ := a) (u₂ := u₂) rfl hc' hd'
+        have hcompl : T.sideLeaves s(a, b) a = (T.sideLeaves s(a, b) b)ᶜ := by
+          ext x
+          simp only [Finset.mem_compl, T.mem_sideLeaves_iff_inSide]
+          constructor
+          · intro ha hb
+            exact T.not_inSide_both hab ⟨ha, hb⟩
+          · intro hb
+            rcases T.inSide_or_inSide hab (x := T.leaf x) with h | h
+            · exact h.symm
+            · exact absurd h.symm hb
+        have hres' : SidesCompatible (T.sideLeaves s(a, b) b)ᶜ (T.sideLeaves s(c, d) u₂) := by
+          rw [← hcompl]; exact hres
+        simpa [T.sideLeaves_eq_of_inSide hub] using sidesCompatible_compl_left.mpr hres'
+    · -- 情形 1：`c,d` 都不在 `u₁` 侧
+      exact T.sidesCompatible_sideLeaves_of_not_inSide rfl hin
+        (fun h => hin (hcongr.mpr h))
+
 end Cladogram
 
-/-! ## 两侧相容 ⟹ split 相容 -/
+/-- **Splits-Equivalence 的「树 ⟹ 相容」方向**：树的 split 系统两两相容。
 
-/-- 两侧相容 ⟹ 对应 split 相容。 -/
-theorem Split.compatible_of_sides {α : Type*} [Fintype α] [DecidableEq α]
-    {s t : Split α} (h : SidesCompatible s.sideA t.sideA) : Split.Compatible s t := by
-  rcases h with h | h | h | h
-  · exact Split.compatible_of_subset_left h
-  · exact Split.compatible_of_subset_right h
-  · exact Split.compatible_of_disjoint h
-  · exact Split.compatible_of_union h
+（`CONCEPTS.md` §3.4 里 Splits-Equivalence 定理的一半；另一半
+「相容 ⟹ 存在树」需要劈顶点引理。） -/
+theorem pairwiseCompatible {X : Type*} [Fintype X] [DecidableEq X] (T : Cladogram X) :
+    T.PairwiseCompatible := by
+  intro s hs t ht
+  change T.IsSplitOf s at hs
+  change T.IsSplitOf t at ht
+  obtain ⟨a, b, hab, u₁, h1⟩ := hs
+  obtain ⟨c, d, hcd, u₂, h2⟩ := ht
+  refine Split.compatible_of_sides ?_
+  rw [h1, h2]
+  exact T.sidesCompatible_sideLeaves hab hcd u₁ u₂
