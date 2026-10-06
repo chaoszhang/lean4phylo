@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Phylo.Core
 import Phylo.Laminar
 import Phylo.Mathlib.Walk
+import Phylo.Quartet
 import Phylo.Split
 
 /-!
