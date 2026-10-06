@@ -160,6 +160,27 @@ structure KPartition (α : Type*) [Fintype α] [DecidableEq α] (n : ℕ) where
   /-- 每块非空。 -/
   nonempty : ∀ i : Fin n, (parts i).Nonempty
 
+/-- **相等性只看 `parts`**（其余字段是 Prop，由证明无关性决定）—— 这是下面 `DecidableEq` 的依据。 -/
+theorem KPartition.eq_iff_parts {α : Type*} [Fintype α] [DecidableEq α] {n : ℕ}
+    (a b : KPartition α n) : a = b ↔ a.parts = b.parts := by
+  constructor
+  · intro h; rw [h]
+  · intro h
+    cases a with
+    | mk pa pd pu pn =>
+      cases b with
+      | mk pb pd' pu' pn' =>
+        simp only at h
+        subst h
+        congr 1 <;> exact Subsingleton.elim _ _
+
+/-- **`KPartition` 可判定相等**（`parts` 是有限函数，可判定；其余是 Prop）。
+
+有了它，`Finset (Split α)` 才能做 `\`、`∪`、`card` 等运算（RF 距离需要）。 -/
+instance instDecidableEqKPartition {α : Type*} [Fintype α] [DecidableEq α] (n : ℕ) :
+    DecidableEq (KPartition α n) :=
+  fun a b => decidable_of_iff (a.parts = b.parts) (KPartition.eq_iff_parts a b).symm
+
 /-- **split（二分）**：`KPartition` 在 `n = 2` 的特例。
 
 §3.4：`Split` 单独立专用 API（兼容性判定 / Buneman 定理都压在它上面）。

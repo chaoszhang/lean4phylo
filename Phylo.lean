@@ -3,6 +3,8 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
+import Phylo.Algorithm.Cherry
+import Phylo.Algorithm.RF
 import Phylo.Core
 import Phylo.Laminar
 import Phylo.Mathlib.Walk
