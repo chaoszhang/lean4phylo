@@ -209,17 +209,24 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；父 = 最小严格包含者（`IsParentOf` 已落地）。  
   3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。  
      （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
-- **⚠️⚠️ 设计卡点（2026-10-06，**需老师定夺**）：连通性需要「根」，且与 `no_degree_two` 冲突。**
-  - **问题**：`laminarGraph F` 顶点 = 簇 ∪ 叶。若 `F` 有 **≥2 个极大簇**（如 `F = {{a,b},{c,d}}` 两者相离），**极大簇之间无边** ⇒ 图**不连通**。
-  - **标准修正**：把 **`univ` 加入簇集**作根（`F' := insert univ F`）⇒ 每个极大簇的父 = `univ`，图连通。
-  - **新矛盾**：若 `F'` 只有 **2 个极大簇**，则 `degree(univ) = 2` ⇒ **违背 `no_degree_two`**（`Cladogram` 必需字段）。
-  - **三条候选出路（待老师选）**：
-    - **(i) 压缩度 2 顶点**：suppress 度为 2 的顶点 —— 即 M1 曾绕开的 `suppress` 大工程。
-    - **(ii) 加强假设**：只在「`Σ(T) ⊇ Σ_triv`」（每个叶边都在）的 split 系统上陈述，使树无度 2。
-    - **(iii) 弱化结论**：不构造 `Cladogram`，改陈述「存在无度 2 的未标号树 + 与 `Σ` 的双射」。
-  - **相关**：`Σ_triv` 已由 `exists_isSplitOf_singleton` 保证必被展示（或许能排除 `univ` 度 2）。
-  - **另需**：`Finset.min'_mem` / `Finset.min'_le` / `Finset.exists_min_image` **本版 Mathlib 均不存在** ⇒「取 card 最小的严格包含者」要自建有限集极值引理。
-- **已完成（2026-10-06 续）**：父链阶梯 —— `isParentOf_ssubset` / `isParentOf_card_lt`（父严格递增势能）· `IsParentVertex` / `isParentVertex_adj`。`lake build` 1261 jobs，无 sorry。
+- **⚠️⚠️ 设计卡点（2026-10-06）：连通性需根 vs `no_degree_two`** —— **已定位根因并攻下大半（2026-10-06 晚）**：
+  - **根因（两条）**：
+    1. **`ρ ∉ ⋃F` 时元素孤立** ⟹ 图不连通（须加 `univ` 作根）；
+    2. **单元素簇 `{x}` 与叶 `x` 重复**（它们本是同一条**叶边**）⟹ 度 2 顶点。
+  - **修正构造**：`normFinset F := insert univ (F.filter (2 ≤ ·.card))` —— **删单元素簇 + 加根** ✓ 已实现（`Phylo/Laminar.lean`）。
+  - **★ 已证 `three_le_degree_of_ne_univ`**：正规化后 **`A ≠ univ` ⟹ `degree(inl A) ≥ 3`** ✓✓
+    - 邻居三分（互不相交）：**父**（`A ≠ univ` ⟹ 存在）· **孩子**（`IsChildOf`）· **直接元素**（`directElems`）
+    - **★ 核心计数 `two_le_card_children_add_card_directElems`：`|kids| + |dirs| ≥ 2`**
+      - `k = 0`：`A` 无真子集 ⟹ 每个 `t ∈ A` 的最小簇就是 `A` ⟹ `A ⊆ directElems` ⟹ `|dirs| ≥ |A| ≥ 2`
+      - `k = 1`（孩子 `B`）：`B ⊊ A` ⟹ 取 `t ∈ A∖B`；若 `t` 非直接元素，则另有含 `t` 的孩子 `≠ B`，与 `k = 1` 矛盾
+      - `k ≥ 2`：显然
+    - 前置：**`exists_isChildOf` / `exists_isChildOf_mem`（极大真子集存在性，用 `Finset.exists_mem_eq_sup`）** · `exists_ssubset_of_not_mem_directElems` · **`isParentOf_parentOf`（`parentOf` 改用 `Finset.inf` + `Finset.inf_mem`）** · `isChildOf_isParentOf`
+  - **⬜ 剩余：`univ` 自身的度**。退化时 `deg(univ) = 1(ρ) + #(极大簇)`，当 **`F` 恰有 1 个极大簇且只有 `ρ` 挂 `univ`** 时 = 2。
+    - 此时那个极大簇就是 **`X∖{ρ}`**（因所有 `x ≠ ρ` 都被 `{x}` 覆盖，而 `{x}` 已被删）—— **它是平凡 split `{ρ}|X∖{ρ}` 的另一侧**。
+    - **两条出路**：**(i)** 令 `univ` 与 `X∖{ρ}` **合并**（同一条边的两侧不该都是内部顶点）；**(ii)** 一般 `suppress`（压缩所有度 2 顶点）。
+  - **相关**：`Finset.min'_mem` / `min'_le` / `exists_min_image` / `max'_mem` / `le_max'` / `exists_max_image` **本版 Mathlib 全不存在** —— 极值一律走 **`Finset.exists_mem_eq_sup`**（`[LinearOrder] [OrderBot]`）。
+- **（原记录）三条候选出路**：(i) 压缩度 2 顶点 / (ii) 加强假设 `Σ ⊇ Σ_triv` / (iii) 弱化结论。**现走 (i) 的思路但用「删单元素簇」实现，已绕过大半。**
+- **已完成（2026-10-06 晚）**：修正构造全部构件 + 度 ≥ 3 主定理。`lake build` **1319 jobs**，无 sorry，`Phylo/Laminar.lean` **482 行**。
 - **Lean 4 坑（本轮新增）**：
   - `SimpleGraph` 的 `symm : Std.Symm Adj` / `loopless : Std.Irrefl Adj` **是结构体**，必须 `⟨fun ... => ...⟩` 构造（`intro` 报 "no additional binders"）；`Std.Irreflexive` / `Symmetric` / `Irreflexive` **均非可用名**。
   - `Finset.inf'_mem` 参数顺序反直觉（第一显式参数是闭包条件）→ 已改用「特征性质」定义父关系。
