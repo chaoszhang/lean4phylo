@@ -311,6 +311,19 @@ rooted 层的**抽象接口**建议用 **hierarchy（laminar cluster family）**
 
 **结论**：老师方案**可直接用**，只要把 `X ⊕ Unit` 关在转换层。
 
+#### 🟢 落实（2026-10-06，老师重申 + 编码）
+
+> 老师原话：**「证明的话怎么简单怎么来，但表示无根树肯定采取 degree=3 的形式，或者说所有内部节点 degree 都是 3，表示有根树可以弄个带 root 叶节点的无根树，也可选择与它 isomorphic」**
+
+| 层 | 表示约定 | Lean 实体 |
+|---|---|---|
+| **无根树** | **内部节点度恰为 3**（binary） | **`Cladogram.IsBinary`**（`Phylo/Core.lean`）+ `IsBinary.degree_eq_one_or_three` / `degree_eq_three` |
+| **有根树** | **无根树 + 一个「root 叶」**（底层实现） | **`RootedCladogram X := Cladogram (X ⊕ Unit)`**（标记叶 = `Sum.inr ()`）+ **`IsRootedBinary`**（标记叶的邻居度 2，其余内部点度 3） |
+| **证明** | **怎么简单怎么来** | ⇒ `toCladogram` 的 `hroot` 假设**保留**（不做移根大重构） |
+
+**注**：`no_degree_two`（只排除度 2、允许 polytomy）与 `IsBinary`（内部度**恰为** 3）**并存** ——
+前者是 `Cladogram` 字段（一般性），后者是额外谓词（binary 情形）。
+
 ### 3.4 split 的表示 —— ✅ 已定：自定义「划分族」（2026-10-02）
 
 | 方案 | 优点 | 缺点 |

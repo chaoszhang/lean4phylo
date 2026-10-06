@@ -83,7 +83,61 @@ theorem IsLeaf.degree_ne_two {v : T.V} (h : T.IsLeaf v) : T.graph.degree v ≠ 2
 theorem existsUnique_path (u v : T.V) : ∃! p : T.graph.Walk u v, p.IsPath :=
   (isTree_iff_existsUnique_path.mp T.isTree).2 u v
 
+/-! ### 二叉性 —— **无根树**的表示约定
+
+`CONCEPTS.md` §3.3（2026-10-06 老师定）：**表示无根树采取「内部节点 degree = 3」的形式**。
+
+（`no_degree_two` 只排除度 2、允许 polytomy；`IsBinary` 进一步要求内部顶点度**恰为** 3。） -/
+
+/-- **二叉（binary）无根树**：所有内部顶点度恰为 3。 -/
+def IsBinary (T : Cladogram X) : Prop :=
+  ∀ v : T.V, ¬ T.IsLeaf v → T.graph.degree v = 3
+
+/-- 二叉树的度只有 1（叶）与 3（内部顶点）—— **无根二叉树**的特征刻画。 -/
+theorem IsBinary.degree_eq_one_or_three {T : Cladogram X} (h : T.IsBinary) (v : T.V) :
+    T.graph.degree v = 1 ∨ T.graph.degree v = 3 := by
+  by_cases hv : T.IsLeaf v
+  · exact Or.inl hv.degree_eq_one
+  · exact Or.inr (h v hv)
+
+/-- 二叉树内部顶点的度就是 3（定义的重述，便于使用）。 -/
+theorem IsBinary.degree_eq_three {T : Cladogram X} (h : T.IsBinary) {v : T.V}
+    (hv : ¬ T.IsLeaf v) : T.graph.degree v = 3 := h v hv
+
 end Cladogram
+
+/-! ## **有根树**的底层实现：`Cladogram (X ⊕ Unit)`
+
+`CONCEPTS.md` §3.3 —— **方案 A 已定**（2026-10-02 老师拍板，2026-10-06 重申）：
+
+> **先做无根，有根另建一层，底层暂时定义为「有名为 root 的叶子节点的无根树」。**
+> 老师补充（2026-10-06）：**表示无根树采取「内部节点 degree = 3」的形式**（见 `IsBinary`）；
+> **表示有根树可以弄个带 root 叶节点的无根树**，也可选择与它同构的形式。
+
+**三条纪律**（§3.3，防类型污染）：
+
+1. **标记叶不塞进 `X`** —— 用 `X ⊕ Unit`（真 taxon 是 `Sum.inl x`）；
+2. **「根」是标记叶的唯一邻居**（一个顶点），不是标记叶本身；
+3. `X ⊕ Unit` **只出现在转换引理里**，不进 rooted 侧引理签名
+   （rooted 侧的抽象接口将来用 **hierarchy**：Semple–Steel 已证 rooted tree ↔ laminar cluster family）。
+
+先例：Dress (1997)「X is augmented by an additional outgroup `*`」；arXiv:1203.5835
+的计数 `|R(n)| = (2n−3)·|B(n)|` 说明「无根 + 一个标记叶」与「有根」双射。 -/
+
+/-- **有根树的底层实现**：`Cladogram (X ⊕ Unit)`，标记叶 = `Sum.inr ()`。
+
+真 taxon 是 `Sum.inl x`；`Sum.inr ()` 是那个「名为 root 的叶子节点」。
+（指向 rooted 层抽象接口的转换引理待建，见 §3.3。） -/
+abbrev RootedCladogram (X : Type*) := Cladogram (X ⊕ Unit)
+
+/-- **有根二叉树的刻画**（底层实现视角）：**标记叶的邻居**（即有根树的 `root`）度为 2，
+其余非叶顶点度为 3 —— 正是「有根二叉树 = root 度 2 + 其余内部点度 3」。
+
+（标记叶的邻居唯一：叶度为 1。） -/
+def IsRootedBinary {X : Type*} (T : RootedCladogram X) : Prop :=
+  (∀ v : T.V, T.graph.Adj (T.leaf (Sum.inr ())) v → T.graph.degree v = 2) ∧
+    ∀ v : T.V, ¬ T.IsLeaf v → ¬ T.graph.Adj (T.leaf (Sum.inr ())) v →
+      T.graph.degree v = 3
 
 /-! ## 第 2 层（必备）：phylogram —— 拓扑 + 可加边权 -/
 

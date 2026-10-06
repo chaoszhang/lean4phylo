@@ -418,6 +418,41 @@ noncomputable def toCladogram (hl : LaminarFamily F) (hne : ∀ B ∈ F, B.Nonem
 
 **⬜ 剩余**：① 退化情形（合并 `univ` 与某簇）· ② `Σ(toCladogram F) = 规范 cluster 集`（收口 Bunatic/NJ）· ③ `leaf_iff_degree_one` 已随 `toCladogram` 完成 ✓
 
+## 🟢 表示层落实（2026-10-06 深夜，老师定："怎么简单怎么来"）
+
+> 老师原话：**「证明的话怎么简单怎么来，但表示无根树肯定采取 degree=3 的形式，或者说所有内部节点 degree
+> 都是 3，表示有根树可以弄个带 root 叶节点的无根树，也可选择与它 isomorphic」**
+
+### `Phylo/Core.lean` 新增
+| 实体 | 内容 |
+|---|---|
+| **`Cladogram.IsBinary`** | 无根树的表示：**内部顶点度恰为 3**（+ `IsBinary.degree_eq_one_or_three` / `degree_eq_three`） |
+| **`RootedCladogram X := Cladogram (X ⊕ Unit)`** | 有根树的**底层实现**：标记叶 = `Sum.inr ()`（"名为 root 的叶子节点"） |
+| **`IsRootedBinary`** | 有根二叉树刻画：标记叶的邻居（= root）度 2，其余内部点度 3 |
+
+### ⚠️ 我犯的错（记录以防再犯）
+第一版我把 `RootedCladogram` 写成 `structure ... extends Cladogram X where rootLeaf : X` ，
+**违反了 `CONCEPTS.md` §3.3 三条纪律的第 ① 条**（「标记叶不能塞进 `X`」—— 否则类型污染扩散）。
+**已改为 `Cladogram (X ⊕ Unit)`** ✓。纪律另两条：② 「根」= 标记叶的**唯一邻居**；③ `X ⊕ Unit` 只出现在**转换引理**里。
+
+### 证明层
+**`toCladogram` 的 `hroot` 假设保留**（老师「怎么简单怎么来」）—— 不做移根大重构。
+`no_degree_two`（一般，只排斥度 2）与 `IsBinary`（binary，内部度恰 3）**并存**。
+
+## ① 退化情形 —— 结论（2026-10-06）
+- **★ `no_degree_two_except_root`：除根 `univ` 外所有顶点度 ≠ 2**（对任意 `F`，与 `hroot` 无关！）
+  - ⇒ 退化情形下 **`univ` 是唯一的度 2 顶点**；此时 `treeGraph F` 是**合法的实现树**
+    （`IsTree` + 叶嵌入 + 叶度为 1），只是不满足 `Cladogram` 的 `no_degree_two`
+  - 消除这一个顶点需**改图**（移根 / suppress）—— 但既然老师批准"简单来"，保留 `hroot` 即可
+- 配套：`isChildOf_erase_of_isChildOf` · `isMinClusterOf_erase_of_directElems`（删极大簇后的结构，供将来 suppress 用）
+
+## ② 簇 ↔ split 字典 —— 进展
+- ✅ **★★ `leavesOf_eq`**：`leavesOf F B = B`（`B ∈ F`）—— `B` 的子树叶集恰为 `B`
+  - `leavesOf F B := {x | x 的最小簇 ⊆ B}`，证明只用 `isMinClusterOf_subset`（**不需要镶嵌性**）
+- ⬜ **桥接到 `sideLeaves`**：需证「删掉 `B` 与其父的边后，`B` 的分量 = `B` 的子树」
+  - 三条子引理已推演清楚：**(a)** `A ⊆ B, A ≠ B ⟹ parent(A) ⊆ B`；**(b)** 子树连通（父链）；**(c)** 唯一跨越边就是 `e`
+  - 然后 `sideLeaves e (inl B) = leavesOf F B = B` ⟹ `IsSplitOf` + `Σ(toCladogram F) ⊇ F`
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
