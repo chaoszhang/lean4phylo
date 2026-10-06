@@ -325,8 +325,36 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
     「连通性需根 vs `no_degree_two`」的设计问题（见上文 M2 卡点）。**两者是同一个瓶颈。**
 - **旧 `NJ/Cherry.lean` 保留**（`CONCEPTS.md` §「库与算法分离」：新库 `Phylo/` 通用，`NJ/` 作为算法应用独立保留）
 
-## Git / 远程（2026-10-02）
+## 连续推进批次（2026-10-06 晚，老师「自主决策、只 commit 不 push」）
 
+### ✅ 已完成
+1. **`Iso.trans`**（`Phylo/Core.lean`）—— 同构传递性，`Iso` 构成等价关系（M1 欠账）+ `trans_apply`
+2. **`Phylo/Distance.lean`（新）** —— `symmDiffCard` 通用对称差距离 + 度量三性质；`Split.rfDistance` 改为其 abbrev（去重复）
+3. **`Phylo/Algorithm/UPGMA.lean`（新）** —— `Dissimilarity.Ultrametric` + **★ `ball_trans`（`≤ r` 是等价关系，分层聚类核心）** + `le_of_le`（等腰性）/ `eq_of_lt` / `ultrametric_triangle`
+   - ⚠️ **超度量 + 零对角 ⟹ 非负**是**假的**（`δ ≡ -1` 于非对角是反例）→ `triangle` 显式带非负假设
+4. **`Split.swap_swap`**（★ 对合）+ `swap_injective`
+5. **`quartetDistance`**（`Phylo/Quartet.lean`，**固定支撑集**版 + 度量三性质）+ `Cladogram.displaysSet`
+   - 全局 `Finset (QuartetTopology X)` 需**依赖型 `DecidableEq`**（`top : Topology supp` 依赖 `supp`）→ 绕开
+6. **★★ 连通性（`Phylo/Laminar.lean`）** —— 「相容 ⟹ 存在树」的地基
+
+### ★★ 连通性：关键发现与修复
+- **发现真问题**：`laminarGraph F` 的顶点是**所有** `Finset α`（族外者孤立）⟹ **图不连通**！
+  → 新增 **`LaminarVertex F := ↥F ⊕ α`**（族成员 + 元素）与 **`treeGraph F`**（经 `coerceV` 复用 `laminarAdj`，无重复定义）
+- 新增 `instance instFintypeFinset : Fintype (Finset α)`（**本版 Mathlib 未提供**）+ `Fintype ↥F` 由 `⟨F.attach, Finset.mem_attach F⟩` 构造
+- **★ `exists_isMinClusterOf`**：含 `x` 的最小簇存在（含 `x` 的族成员中 `card` 最小者，用 `Finset.exists_mem_eq_sup` + `Finset.eq_of_subset_of_card_le`）
+- **★ `treeGraph_reachable_root`**：族成员沿 `parentOf` 链上溯到 `univ`（**强归纳 on `card univ - card A`**；`card` 严格递增保证终止）
+- `treeGraph_reachable_root_of_elem`：元素 → 最小簇 → 根
+- **★★ `connected_treeGraph`**：`treeGraph F` 连通 ✓
+- `lake build` **1321 jobs**，无 sorry，`Laminar.lean` **614 行**
+
+### ⬜ 剩余（isTree 的最后一步 + 后续）
+- **数边数**：`Nat.card (treeGraph F).edgeSet = (F.card - 1) + Fintype.card α`
+  （`|F| - 1` 条父边 —— 每个非根簇恰一条父边，`parentOf` 严格增卡保证不重；`|α|` 条叶边 —— 每个元素恰一条）；
+  再用 **`SimpleGraph.isTree_iff_connected_and_card`** ⟹ `IsTree`
+- 替代路线：`IsAcyclic` 用**唯一父（rank 势函数）+ 无环论证**，或 `isAcyclic_iff_forall_adj_isBridge`
+- 之后：**① `univ` 的度**（`deg = m + |U|`，两种退化子情形）· **③ `Σ(树) = 规范 cluster 集`** · 再把 `three_le_degree_of_ne_univ` 从全图**移植到 `treeGraph`**（度数相同）
+
+## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
 - **⚠️ 关键：认证只在 WSL 侧**！Windows 侧**没有 SSH key**（`~/.ssh` 只有 known_hosts），WSL 侧 `~/.ssh/id_ed25519` 已配到 GitHub 账号 `chaoszhang`。  
