@@ -221,9 +221,15 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
       - `k = 1`（孩子 `B`）：`B ⊊ A` ⟹ 取 `t ∈ A∖B`；若 `t` 非直接元素，则另有含 `t` 的孩子 `≠ B`，与 `k = 1` 矛盾
       - `k ≥ 2`：显然
     - 前置：**`exists_isChildOf` / `exists_isChildOf_mem`（极大真子集存在性，用 `Finset.exists_mem_eq_sup`）** · `exists_ssubset_of_not_mem_directElems` · **`isParentOf_parentOf`（`parentOf` 改用 `Finset.inf` + `Finset.inf_mem`）** · `isChildOf_isParentOf`
-  - **⬜ 剩余：`univ` 自身的度**。退化时 `deg(univ) = 1(ρ) + #(极大簇)`，当 **`F` 恰有 1 个极大簇且只有 `ρ` 挂 `univ`** 时 = 2。
-    - 此时那个极大簇就是 **`X∖{ρ}`**（因所有 `x ≠ ρ` 都被 `{x}` 覆盖，而 `{x}` 已被删）—— **它是平凡 split `{ρ}|X∖{ρ}` 的另一侧**。
-    - **两条出路**：**(i)** 令 `univ` 与 `X∖{ρ}` **合并**（同一条边的两侧不该都是内部顶点）；**(ii)** 一般 `suppress`（压缩所有度 2 顶点）。
+  - **⬜ 剩余：`univ` 自身的度** —— **精确形态已分析清楚**：
+    - 记 `m` = 极大簇个数，`U` = 未被任何簇覆盖的元素（`U ∋ ρ`）。则 **`deg(univ) = m + |U|`**（`univ` 无父）。
+    - **`m + |U| ≥ 3` 时**：`univ` 作根即可（度 ≥ 3 ✓）。
+    - **`m = 0`（`F' = {univ}`）**：星形树，`deg(univ) = |X|`；`|X| ≥ 3` 时 ✓。
+    - **`m + |U| = 2` 的两种退化子情形**（**唯一真正需要处理的点**）：
+      - **(m=1, |U|=1)**：唯一极大簇 `A` + 唯一未覆盖元素 `t`。**出路**：`univ` 与 `A` 合并（`A` 升为根），`t` 变成 `A` 的直接元素 ⟹ `deg(A) = dirs + kids ≥ 3` ✓。
+      - **(m=2, |U|=0)**：两个极大簇 `A₁ ⊔ A₂ = X`（如 `X={a,b,c,d}`、簇 `{a,b},{c,d}`）。**出路**：`univ` 与 `A₂` 合并 ⟹ `A₂` 为根、`A₁` 是 `A₂` 的孩子；`deg(A₂) = 1 + dirs + kids ≥ 3` ✓。
+    - **更干净的替代**：直接写**一般 suppress**（压缩所有度 2 顶点）—— 但工作量更大（M1 曾刻意绕开）。
+  - **⬜ 之后两步**：**`isTree`**（连通：`parentOf` 链上溯到根，`card` 严格递增保证终止；无环：**数边数** `|E| = |V| - 1` + 连通 ⟹ `IsTree`，或找势函数）；**`Σ(树) = 规范 cluster 集`**（回到 `Split`/`splits` 收口）。
   - **相关**：`Finset.min'_mem` / `min'_le` / `exists_min_image` / `max'_mem` / `le_max'` / `exists_max_image` **本版 Mathlib 全不存在** —— 极值一律走 **`Finset.exists_mem_eq_sup`**（`[LinearOrder] [OrderBot]`）。
 - **（原记录）三条候选出路**：(i) 压缩度 2 顶点 / (ii) 加强假设 `Σ ⊇ Σ_triv` / (iii) 弱化结论。**现走 (i) 的思路但用「删单元素簇」实现，已绕过大半。**
 - **已完成（2026-10-06 晚）**：修正构造全部构件 + 度 ≥ 3 主定理。`lake build` **1319 jobs**，无 sorry，`Phylo/Laminar.lean` **482 行**。
