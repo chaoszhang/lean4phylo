@@ -603,6 +603,53 @@ Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
 6. **`rw` 链里 `mul_div_assoc` / `div_mul_cancel₀` 的方向**：`L * (Y/L) = Y` 用
    `rw [mul_comm, div_mul_cancel₀ _ hL]` 两步，比 `mul_div_cancel₀` 稳。
 
+## ★★★★ Aho / 共识 / 超度量 / SVDQuartets 层（2026-10-07 深夜）
+
+老师 2026-10-07 指令：**逆否拆分 `QuartetDecidesTree`**（不同构 → 存在不兼容的 split → 存在不兼容的 quartet）、
+**binary 树单独描述**；随后「尽可能长跑」证明 **SVDQuartets** 等经典工具算法。
+
+### 交付（7 个新文件，全部零 `sorry`，`lake build` 3184 jobs）
+
+| 文件 | 行 | 内容 |
+|---|---|---|
+| `Phylo/Binary.lean` | 240 | `Split.Incompatible`（= `¬Compatible`）+ 四交刻画 · ★★ `exists_four_of_incompatible` · **★★★ `exists_restrict_ne_of_incompatible`**（不兼容 split ⟹ 同一 4-叶集上两个不同 quartet —— **老师路线第三步**）· binary 专门层 `IsBinary.card_neighborFinset` / `exists_two_adj` / `degree_ne_two` + `BinaryCladogram` 结构 |
+| `Phylo/Stat/SVDQuartets.lean` | 258 | 三展平 `flatAB/flatAC/flatAD`（κ²×κ²）· ★★ `rank_le_of_row_symm`（行成对相同 ⟹ rank ≤ `C(κ+1,2)`，用 `Sym2.card`）· ★★ `rank_flatAB_le` · ★ `rank_flatAB_le_four`（DNA ≤ 10 < 16）· ★★ `choose_two_lt_sq` · **★★★ `svdquartets_selects_true`** · **★★★ 分离性**：`sepFreq c := c[i=j][k=l]` 使**错展平满秩** ⟹ **无条件**正确性 `svdquartets_concrete` |
+| `Phylo/Aho.lean` | 131 | **★★★ `compatible_exists_rootedTree`（Aho–Buneman）**：两两相容的非平凡 split 系统必被某棵树展示。构造 = 规范 cluster ⟹ 镶嵌 ⟹ 正规化 ⟹ `toRootedTreeOfCard` ⟹ `leafSide_parentEdge_of_card` |
+| `Phylo/Consensus.lean` | 127 | **★★ `majority_compatible`**（鸽笼：两个 `> n/2` 支持集必相交 + `pairwiseCompatible`）· **★★★ `majority_consensus_exists`**（Margush–McMorris 1981 + Aho）· `isMajority_of_forall` |
+| `Phylo/Dendrogram.lean` | 123 | UPGMA 结构定理：★★ `ball_subset_of_mem_of_le` · **★★★ `ball_subset_or_disjoint`**（超度量 ⟹ 球族镶嵌）· ★★★ `laminarFamily_ballImage` · **★★★ `exists_rootedTree_displays_balls`** |
+| `Phylo/QuartetUnique.lean` | 136 | **★★★ `Cladogram.displaysSplitOn_unique`**：二叉树在 4-元集上 quartet **唯一（模 `swap`）** ⟹ `q_T` 良定义（补 `QuartetTree.q` 的存在性缺口）· `Split.eq_of_sideA_eq` |
+| `Phylo/Algorithm/BinaryCount.lean` | 72 | 二叉树计数：★★ `ℓ = i + 2` · `|V| = 2ℓ − 2` · `|E| = 2ℓ − 3` · `card_eq_of_leaf_card_eq` |
+
+### 剩余缺口的精确位置（诚实记录）
+
+1. **`QuartetDecidesTree` 的第 1、2 步**（「不同构 ⟹ `Σ` 不同」、「`Σ` 不同 ⟹ 存在不兼容对」）
+   ⟺ **binary 树 split 系统的极大性**。标准证法：若 `s` 与 `Σ(T)` 全相容，则 `Σ(T) ∪ {s}` 相容，
+   由 Aho 得树 `T''`；`T''` 严格更多 split ⟹ `T` 是 `T''` 的**收缩** ⟹ `T` 有度 ≥ 4 顶点，与 binary 矛盾。
+   ⇒ **需要 refinement / contraction 理论**（本库尚无）。
+2. **「`≥ 2` 叶」引理**（Cladogram 每条内部边两侧各 ≥ 2 叶）是**多处的共同前置**
+   （quartet→split 恢复、KF 距离的 `Split` 构造、maximality）。**未做**。
+   - 计数路线需要「`T − e` 的 `u` 侧分量诱导子图是树」：无环用 `IsAcyclic.induce` ✓；
+     **连通需 `SimpleGraph.Walk.induce`**（`Combinatorics/SimpleGraph/Walk/Maps.lean:225` 存在）。
+   - `SimpleGraph.dist` 极大性路线**不成立**（最长距离顶点的邻居距离可能相等）——
+     需「无环 ⟹ 至多一个前驱」的深引理。
+   - **下次从这里攻**。
+3. `Phylo/Stat/SVDQuartets.lean` 的**统计一致性**（非仅正确性）：SVDQuartets 用的是
+   **奇异值之和**（连续），不是秩（下半连续，扰动下会跳）。Mathlib 有
+   `Analysis/InnerProductSpace/SingularValues.lean`，但要把矩阵装上内积空间结构，工作量中等偏大。
+
+### Lean 踩坑（本轮，重点）
+
+- **⚠️⚠️ `omega` 遇到 ℕ 减法会整体失效**（报 `omega could not prove the goal: No usable constraints found`）。
+  把 `c = |V| - 1` 改写成 `c + 1 = |V|` 即可。**本轮的坑王**。
+- `Laminar.lean` **整体在 `namespace Phylo` 里**；`Split` / `Cladogram` / `RootedTree` 在根 ⟹ 新文件需 `open Phylo`。
+- **`Σ` 是保留记号**，不能当变量名（用 `fam`）。
+- `omit [Fintype X] [DecidableEq X]` 若变量真被引用 → `cannot omit referenced section variable`。
+- `RootedTree X` 的**顶点宇宙**：`RootedTree.{u,u} X` 必须显式（`LaminarVertex F : Type u`）。
+- `rw [if_pos h]` 可能**先作用到 RHS**：用项模式 `exact if_pos (Prod.ext_iff.mp h)` 更稳。
+- `extends Cladogram` 的 `BinaryCladogram` **不能**写 `attribute [instance] BinaryCladogram.fintypeV`（不存在）——
+  `extends` 会沿 `toCladogram` 自动找到（同 `Phylogram` 的惯例）。
+- `Finset.mem_image.mp` 后用 `obtain ⟨p, -, rfl⟩` 有时失败（非归纳变量报错）→ 改 `obtain ⟨p,-,hp⟩` + `rw [← hp]`。
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
