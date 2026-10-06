@@ -155,3 +155,104 @@ theorem svdquartets_selects_true (P : SiteFreq κ) (h : SymmAB P ∨ SymmCD P)
     (hκ : 2 ≤ Fintype.card κ) :
     (flatAB P).rank < (flatAC P).rank ∧ (flatAB P).rank < (flatAD P).rank :=
   ⟨rank_lt_full_of_symm P h hfullAC hκ, rank_lt_full_of_symm P h hfullAD hκ⟩
+
+/-! ## ★★★ 分离性：对称性**不**限制"错"展平的秩（具体实例）
+
+`rank_flatAB_le` 只给出真展平秩的上界；要得到 SVDQuartets 的**正确性**，还需要
+"错展平满秩"是**可实现**的（论文的 generic 论证给的是"存在一个满秩点"）。
+
+下面给出一个**显式张量族**：取
+
+```
+P_c(i,j,k,l) = c · [i = j] · [k = l]      (c ≠ 0)
+```
+
+* `P_c` 对 `a,b` 与 `c,d` **都**交换对称；
+* `Flat_ac|bd(P_c) = Flat_ad|bc(P_c) = diagonal (fun _ => c)`，秩恰为 `κ²`（**满秩**）；
+* `Flat_ab|cd(P_c)` 的行 `(i,j)` 等于 `c·[i=j]·(k=l 的指示向量)`，故秩为 `1`
+  （`c ≠ 0` 时），自然 `≤ C(κ+1,2)`。
+
+⇒ 由 `svdquartets_selects_true`，SVDQuartets 在该分布上**无条件**选中真拓扑 `ab|cd`。
+
+（`P_c` 各项非负；`c = 1/κ²` 时总和为 1，即一个真正的位点模式分布。） -/
+
+/-- **分离性例**：`P i j k l = c · [i = j] · [k = l]`（`c ≠ 0`）。 -/
+noncomputable def sepFreq (c : ℝ) : SiteFreq κ :=
+  fun i j k l => if i = j ∧ k = l then c else 0
+
+/-- `sepFreq c` 对 `a,b` 交换对称。 -/
+theorem sepFreq_symmAB (c : ℝ) : SymmAB (sepFreq (κ := κ) c) := by
+  intro i j k l
+  by_cases h : i = j
+  · subst h; rfl
+  · have h' : ¬ (j = i) := fun hh => h hh.symm
+    simp only [sepFreq, h, h', false_and, if_false]
+
+/-- `sepFreq c` 对 `c,d` 交换对称。 -/
+theorem sepFreq_symmCD (c : ℝ) : SymmCD (sepFreq (κ := κ) c) := by
+  intro i j k l
+  by_cases h : k = l
+  · subst h; rfl
+  · have h' : ¬ (l = k) := fun hh => h hh.symm
+    simp only [sepFreq, h, h', and_false, if_false]
+
+/-- `Flat_ac|bd(sepFreq c)` 是对角矩阵 `diagonal (fun _ => c)`。 -/
+theorem sepFreq_flatAC (c : ℝ) :
+    flatAC (sepFreq (κ := κ) c) = Matrix.diagonal (fun _ : κ × κ => c) := by
+  funext p q
+  obtain ⟨i, k⟩ := p
+  obtain ⟨j, l⟩ := q
+  show (if i = j ∧ k = l then c else 0)
+      = Matrix.diagonal (fun _ : κ × κ => c) (i, k) (j, l)
+  rw [Matrix.diagonal_apply]
+  by_cases h : (i, k) = (j, l)
+  · rw [if_pos h]
+    exact if_pos (Prod.ext_iff.mp h)
+  · rw [if_neg h]
+    exact if_neg fun hh => h (Prod.ext_iff.mpr hh)
+
+/-- `Flat_ad|bc(sepFreq c)` 是对角矩阵 `diagonal (fun _ => c)`。 -/
+theorem sepFreq_flatAD (c : ℝ) :
+    flatAD (sepFreq (κ := κ) c) = Matrix.diagonal (fun _ : κ × κ => c) := by
+  funext p q
+  obtain ⟨i, l⟩ := p
+  obtain ⟨j, k⟩ := q
+  show (if i = j ∧ k = l then c else 0)
+      = Matrix.diagonal (fun _ : κ × κ => c) (i, l) (j, k)
+  rw [Matrix.diagonal_apply]
+  by_cases h : (i, l) = (j, k)
+  · rw [if_pos h]
+    refine if_pos ?_
+    exact ⟨(Prod.ext_iff.mp h).1, (Prod.ext_iff.mp h).2.symm⟩
+  · rw [if_neg h]
+    refine if_neg fun hh => h ?_
+    exact Prod.ext_iff.mpr ⟨hh.1, hh.2.symm⟩
+
+/-- ★★ **"错"展平满秩 `κ²`**（分离性：`SymmAB` 对 `ac|bd` 展平的秩无任何限制）。 -/
+theorem sepFreq_flatAC_rank (c : ℝ) (hc : c ≠ 0) :
+    (flatAC (sepFreq (κ := κ) c)).rank = Fintype.card κ * Fintype.card κ := by
+  rw [sepFreq_flatAC, Matrix.rank_diagonal]
+  have hf : (Finset.univ.filter fun _ : κ × κ => c ≠ 0) = Finset.univ :=
+    Finset.filter_true_of_mem fun _ _ => hc
+  rw [Fintype.card_subtype, hf, Finset.card_univ, Fintype.card_prod]
+
+/-- ★★ `ad|bc` 展平也满秩 `κ²`。 -/
+theorem sepFreq_flatAD_rank (c : ℝ) (hc : c ≠ 0) :
+    (flatAD (sepFreq (κ := κ) c)).rank = Fintype.card κ * Fintype.card κ := by
+  rw [sepFreq_flatAD, Matrix.rank_diagonal]
+  have hf : (Finset.univ.filter fun _ : κ × κ => c ≠ 0) = Finset.univ :=
+    Finset.filter_true_of_mem fun _ _ => hc
+  rw [Fintype.card_subtype, hf, Finset.card_univ, Fintype.card_prod]
+
+/-- ★★★ **SVDQuartets 正确性的无条件实例**。
+
+对 `P_c(i,j,k,l) = c[i=j][k=l]`（`c ≠ 0`，`κ ≥ 2`），真拓扑 `ab|cd` 的展平秩
+**严格小于**两个"错"展平 —— 故 SVDQuartets 选中真拓扑。
+
+（这就是论文"构造一个满秩点"那一步在库内的落地；一般参数下的版本是
+`svdquartets_selects_true`，其"满秩"假设由本条说明**并非空**。） -/
+theorem svdquartets_concrete (c : ℝ) (hc : c ≠ 0) (hκ : 2 ≤ Fintype.card κ) :
+    (flatAB (sepFreq (κ := κ) c)).rank < (flatAC (sepFreq (κ := κ) c)).rank ∧
+      (flatAB (sepFreq (κ := κ) c)).rank < (flatAD (sepFreq (κ := κ) c)).rank :=
+  svdquartets_selects_true (sepFreq (κ := κ) c) (Or.inl (sepFreq_symmAB c))
+    (sepFreq_flatAC_rank c hc) (sepFreq_flatAD_rank c hc) hκ
