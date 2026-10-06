@@ -325,6 +325,76 @@ def splits (T : Cladogram X) : Set (Split X) :=
 def PairwiseCompatible (T : Cladogram X) : Prop :=
   ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t
 
+/-! ### 「同侧」关系 —— 树层面相容性证明的地基 -/
+
+/-- `v` 与 `u` 在删去边 `e` 后**同侧**（可达）——`sideLeaves` 的顶点版。 -/
+def inSide (T : Cladogram X) (e : Sym2 T.V) (u v : T.V) : Prop :=
+  (T.graph.deleteEdges {e}).Reachable u v
+
+theorem inSide_self (T : Cladogram X) (e : Sym2 T.V) (u : T.V) : T.inSide e u u :=
+  Reachable.refl _
+
+theorem inSide_comm (T : Cladogram X) (e : Sym2 T.V) (u v : T.V) :
+    T.inSide e u v ↔ T.inSide e v u :=
+  reachable_comm
+
+theorem inSide_trans (T : Cladogram X) (e : Sym2 T.V) {u v w : T.V}
+    (huv : T.inSide e u v) (hvw : T.inSide e v w) : T.inSide e u w :=
+  huv.trans hvw
+
+/-- `sideLeaves` 与 `inSide` 的一致性。 -/
+theorem mem_sideLeaves_iff_inSide (T : Cladogram X) {e : Sym2 T.V} {u : T.V} {x : X} :
+    x ∈ T.sideLeaves e u ↔ T.inSide e u (T.leaf x) := by
+  rw [T.mem_sideLeaves]
+  exact reachable_comm
+
+/-- **`c,d` 分居边 `e₁` 两侧 ⟹ `⟦c,d⟧ = e₁`**。
+
+（`T - e₁` 的两侧之间没有边，故跨越该割的 `T`-边只能是 `e₁`。） -/
+theorem eq_of_adj_of_not_inSide (T : Cladogram X) {e₁ : Sym2 T.V} {u₁ c d : T.V}
+    (hcd : T.graph.Adj c d) (hc : T.inSide e₁ u₁ c) (hd : ¬ T.inSide e₁ u₁ d) :
+    s(c, d) = e₁ := by
+  by_contra hne
+  have hadj' : (T.graph.deleteEdges {e₁}).Adj c d :=
+    deleteEdges_adj.mpr ⟨hcd, by simpa using hne⟩
+  exact hd (hc.trans hadj'.reachable)
+
+/-- **关键观察**：若 `⟦c,d⟧ ≠ e₁` 且 `c,d` 相邻，则 `c,d` 在 `e₁` 的**同一侧**。
+
+于是两条边 `e₁`、`e₂` 的相对位置只有两种互斥情形 —— 分析量减半。 -/
+theorem inSide_congr_of_adj (T : Cladogram X) {e₁ : Sym2 T.V} {u₁ c d : T.V}
+    (hcd : T.graph.Adj c d) (hne : s(c, d) ≠ e₁) :
+    T.inSide e₁ u₁ c ↔ T.inSide e₁ u₁ d := by
+  constructor
+  · intro hc
+    by_contra hd
+    exact hne (T.eq_of_adj_of_not_inSide hcd hc hd)
+  · intro hd
+    by_contra hc
+    have h := T.eq_of_adj_of_not_inSide hcd.symm hd hc
+    rw [Sym2.eq_swap] at h
+    exact hne h
+
+/-- **旁侧连通性（引理 C）**：若 `u₁` 关于 `e₁` 的一侧**不含** `e₂ = ⟦c,d⟧` 的端点，
+则该侧内任意两点在 `T - e₂` 中仍可达。
+
+证明：该侧在 `T - e₁` 中的 walk 提升到 `T`（`Walk.mapLe`）后，其支持集仍落在该侧，
+故不含 `c,d`，从而删去 `e₂` 不影响 —— 用 `reachable_deleteEdges_of_support_notMem`。 -/
+theorem inSide_deleteEdges_of_not_inSide (T : Cladogram X)
+    {e₁ e₂ : Sym2 T.V} {u₁ c d p q : T.V} (he₂ : e₂ = s(c, d))
+    (hc : ¬ T.inSide e₁ u₁ c) (hd : ¬ T.inSide e₁ u₁ d)
+    (hp : T.inSide e₁ u₁ p) (hq : T.inSide e₁ u₁ q) :
+    T.inSide e₂ p q := by
+  obtain ⟨p'⟩ := (Reachable.symm hp).trans hq
+  refine reachable_deleteEdges_of_support_notMem (p'.mapLe (deleteEdges_le {e₁})) ?_
+  rw [SimpleGraph.Walk.support_mapLe_eq_support]
+  intro w hw
+  have hwX : T.inSide e₁ u₁ w := hp.trans (reachable_of_mem_support p' hw)
+  rw [he₂, Sym2.mem_iff]
+  rintro (rfl | rfl)
+  · exact hc hwX
+  · exact hd hwX
+
 end Cladogram
 
 /-! ## 两侧的相容性（不依赖 `Split`，便于在树上直接证明） -/
