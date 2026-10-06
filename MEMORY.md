@@ -391,6 +391,33 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - **避开 `Finset.image` 基数论证**（该路线在 `↥(F.filter p)` vs `↥F` 上有 `Sum.inl_injective` 类型推断障碍）
 - `lake build` **1321 jobs**，无 sorry，`Phylo/Laminar.lean` **907 行**
 
+### ★★★ 2026-10-06 深夜：`toCladogram` —— 「相容 ⟹ 存在树」的构造层完成！
+
+**`Phylo/Laminar.lean` → 1069 行**，1321 jobs，零 sorry。
+
+```lean
+noncomputable def toCladogram (hl : LaminarFamily F) (hne : ∀ B ∈ F, B.Nonempty)
+    (huniv : univ ∈ F) (hcard : ∀ B ∈ F, B = univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ |univ 的孩子| + |univ 的直接元素|) : Cladogram α
+```
+
+**所有字段都填上了**：`V := LaminarVertex F` · `graph := treeGraph F` · `leaf := Sum.inr`
+· `isTree` · `no_degree_two` · `leaf_iff_degree_one` · `decAdj := Classical.decRel _`
+
+**完整链条**（本批新增，全部零 sorry）：
+| 引理 | 内容 |
+|---|---|
+| `neighborFinset_inr` / `degree_inr_eq_one` | 元素的邻居 = 最小簇，**度 = 1** |
+| **★ `three_le_degree_treeGraph`** | 非 `univ` 簇度 **≥ 3**（三元素方案：父 + 两个孩子/元素） |
+| `kidVOf` + **★ `three_le_degree_rootV`** | 根 `univ` 度 **≥ 3**（`if B ∈ F` 嵌入 + `dif_pos` 展开；取 `min |kids| 3` 个孩子 + `3 - min |kids| 3` 个元素） |
+| **★★ `no_degree_two_treeGraph`** | 无度 2 顶点（三种顶点分治） |
+| **★★★ `toCladogram`** | 组装成 `Cladogram` |
+
+**⚠️ 四个假设（诚实记录）**：`F` 镶嵌 · `univ ∈ F` · 族元素非空 · `F` 已正规化（无单元素簇）· **根非退化 `|kids(univ)| + |dirs(univ)| ≥ 3`**。
+最后一个对应 `MEMORY.md` 早先记录的「`deg(univ) = 2` 退化情形」（需合并 `univ` 与某簇）。
+
+**⬜ 剩余**：① 退化情形（合并 `univ` 与某簇）· ② `Σ(toCladogram F) = 规范 cluster 集`（收口 Bunatic/NJ）· ③ `leaf_iff_degree_one` 已随 `toCladogram` 完成 ✓
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
