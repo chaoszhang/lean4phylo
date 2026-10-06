@@ -181,6 +181,20 @@ def symm (e : Iso T T') : Iso T' T where
     have := congrArg e.gIso.symm h
     simpa using this.symm
 
+/-- **同构关系传递**（`(e.trans e') (T.leaf x) = e' (e (T.leaf x))`）。
+
+有了它 `Iso` 构成等价关系（`refl` / `symm` / `trans`）—— M1 的欠账。 -/
+def trans (e : Iso T T') (e' : Iso T' T'') : Iso T T'' where
+  gIso := e.gIso.trans e'.gIso
+  leaf_compat := fun x => by
+    have h1 : e.gIso (T.leaf x) = T'.leaf x := e.leaf_compat x
+    have h2 : e'.gIso (T'.leaf x) = T''.leaf x := e'.leaf_compat x
+    rw [show (e.gIso.trans e'.gIso) (T.leaf x) = e'.gIso (e.gIso (T.leaf x)) from rfl, h1, h2]
+
+/-- 同构像唯一决定：`gIso` 与 `leaf_compat` 一起锁定了顶点对应。 -/
+theorem trans_apply (e : Iso T T') (e' : Iso T' T'') (v : T.V) :
+    (e.trans e').gIso v = e'.gIso (e.gIso v) := rfl
+
 end Iso
 
 /-! ## restriction：`T|Y` 的顶点集（§3.7 第一步） -/
