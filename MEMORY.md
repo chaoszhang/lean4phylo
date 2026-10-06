@@ -158,15 +158,34 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **⚠️ 发现更短路径（待老师定）**：文献定义 restriction 的标准方式是 **split 层面** ——
   `Cl(T|Y) = {C ∩ Y : C ∈ Cl(T), C ∩ Y ≠ ∅}`（Bryant–Steel；Semple & Steel §3.9）。
   ⇒ **先做 `Split` 类型 + `splits : T → Finset (Split X)`（M2 前置），restrict 直接定义在 split 上，不必造新树**；且 `splits` 本来就是 M2（Splits-Equivalence）的必备地基，一举两得。
-- **M2 进度（2026-10-06）**：`Phylo/Split.lean` 已完成并编译通过 ——
-  - `KPartition α n`（划分族共享基础）· `Split α := KPartition α 2` · `sideA`/`sideB`/`disjoint_sides`/`union_sides`
-  - **`Split.Compatible`**（四个交至少一空）+ `compatible_comm`
-  - **`Split.restrictSide`** / `disjoint_restrictSide` / **`Split.restrict`**（`A|B ↦ (A∩Y)|(B∩Y)`）——**route B 的核心：restriction 定义在 split 层面，不造新树**
-  - `Cladogram.sideLeaves`（删边后叶集）· `splitOfEdge`（边 → Split）· **`IsSplitOf`** / **`splits`** / `PairwiseCompatible`
-  - `lake build` → **1259 jobs 通过**；`scripts/check_file_imports.sh` 通过
-  - ⬜ 剩：`Split.swap`（unordered 判定）· **Splits-Equivalence 定理**（需劈顶点引理）
-- **Lean 4 坑（M2 新踩）**：`Finset.biUnion_fin_two` 不存在 → 手写 `fin_cases` 或 `ext`；`Fin 2` 上的 `simp only` 易残留 `Quot.lift` 形式 → 改用 `simpa [Def, ...] using h` 显式给出引用；`s.restrictSide Y 0` **不**定义等于 `s.sideA`（`sideA` 是 def 不自动展开）→ `simp` 集里要带 `sideA`/`sideB`。
-- **未 commit 前状态**：HEAD = `3b41475`（M2 前半）。
+- **M2 进度（2026-10-06）**：`Phylo/Split.lean`（282 行）编译通过，**无 sorry** ——
+  - 结构：`KPartition α n` · `Split α := KPartition α 2` · `sideA`/`sideB`/`disjoint_sides`/`union_sides` · **`Split.swap`**（`i ↦ i+1`，即 `Fin 2` 模 2 加法）+ `swap_sideA`/`swap_sideB`
+  - 相容性：**`Split.Compatible`**（四个交至少一空）+ `compatible_comm`
+  - restriction（route B 核心）：`restrictSide` / `disjoint_restrictSide` / **`Split.restrict`**（`A|B ↦ (A∩Y)|(B∩Y)`）——**定义在 split 层面，不造新树**
+  - 树 → split：`sideLeaves`（**`Reachable` 版**）· `mem_sideLeaves` · **`not_reachable_deleteEdges_of_adj`（★ 树中每条边都是桥 —— 白蹭 `isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`）** · `not_mem_sideLeaves_of_adj` · `mem_sideLeaves_self` · `isIsolated_leaf_deleteEdges` · **`sideLeaves_leaf_edge`（叶边 → 平凡 split `{x}`）** · `splitOfEdge` · `IsSplitOf` / `splits` / `PairwiseCompatible`
+  - 自建 helper：`reachable_eq_of_isIsolated`（孤立点只与自身可达；将来迁 `Phylo/Mathlib/`）
+  - `lake build` → **1259 jobs 通过**；`check_file_imports.sh` 通过
+  - ⬜ 剩：**Splits-Equivalence 定理**（见下）
+- **Splits-Equivalence 证明路线（已推演，待实现）**：设 e₁=⟦a,b⟧、e₂=⟦c,d⟧，A={x | x ~₁ a}（~₁ = `T-e₁` 中可达）。
+  - **K1**：`c,d` 同在 `T-e₁` 的**同一**分量（因 `T.Adj c d` 且 e₂≠e₁）。
+  - **K2**（关键）：若连通集 `S` 不含 e₂ 的端点，则 `S` 含于 `T-e₂` 的**一个**分量内（S 在 T-e₂ 中仍连通）。
+  - **推论**：`S := a 在 T-e₁ 中的分量`若不 ∋ c,d，则 `A ⊆ A'` 或 `A ⊆ B'` ⇒ 四个交之一为空 ⇒ **相容**。两类情形（c,d 在 b 侧 / 在 a 侧）分别给出 `A∩A'`/`A∩B'` 与 `B∩B'`/`B∩A'` 之一为空。
+  - 实现要点：需「可达类」的传递性 + 「从 T-e₁ 的 walk 避开 e₂ 端点 ⇒ 也是 T-e₂ 的 walk」。属**可做但工程量大**。
+- **Splits-Equivalence 进展（2026-10-06 续）**：
+  - ✅ **新建 `Phylo/Mathlib/Walk.lean`**（61 行，**无 sorry**）——Mathlib 缺、本库自建的 walk/可达性引理，含 **★ `reachable_deleteEdges_of_support_notMem`：若 walk 的支持集不含边 `e` 的端点，则删 `e` 后仍可达**（这是「连通集避开某边则仍连通」的核心）。另两条：`start_mem_adj_edge`、`reachable_of_mem_support`（支持集 ⊆ 起点可达类）。
+  - ✅ **`Phylo/Split.lean` 接口层**（344 行，无 sorry）：`sideB_eq_sdiff`（`sideB = univ \ sideA`）· `compatible_of_subset_left` / `_right` / `_disjoint` / `_union`（把「包含/不交/并=全集」翻译成 `Compatible` 的四个析取项）· **`SidesCompatible A B := A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = univ`** · `Split.compatible_of_sides`。
+  - `lake build` → **1260 jobs 通过**；`check_file_imports.sh` 通过（**它抓到过我漏加 `Phylo.Mathlib.Walk` 到根模块** —— 脚本有用）。
+  - ⬜ **未完成：树层面的 `SidesCompatible (sideLeaves e₁ u₁) (sideLeaves e₂ u₂)`**（即 `PairwiseCompatible T`）。
+- **树层面证明结构（已推演清楚，待实现）**：
+  - 前置：把 `IsSplitOf` 加上 `e ∈ T.graph.edgeSet`（§3.4 的「valid split」），从 `mem_edgeSet` 取 `e₁ = s(a,b)`、`e₂ = s(c,d)` 及相邻性 `Adj a b`、`Adj c d`。
+  - 设 X = `u₁` 关于 `e₁` 的一侧（`inSide e₁ u₁` 的可达类）、A = `sideLeaves e₁ u₁`；B 同理。
+  - **关键观察 1**：`c`、`d` 不可能分居 `e₁` 两侧（否则 `e₂` 跨越 `e₁` 的割 —— 但唯一的跨割边是 `e₁`，与 `e₁ ≠ e₂` 矛盾）。故只有「c,d 同在 X」或「c,d 同在另一侧」两情形。
+  - **关键观察 2**：`a ~ b` 在 `T - e₂` 中（唯一 `T`-路径就是边 `e₁ ≠ e₂`）。
+  - **情形「c,d 都在 X」**：`e₂` 把 X 切成 X_c/X_d；另一侧 Y 不含 c,d，故由 `reachable_deleteEdges_of_support_notMem`，Y 在 `T-e₂` 中连通 ⇒ Y ⊆ Z 或 Y ⊆ W（`T-e₂` 的两个分量，Z ∋ c、W ∋ d）⇒ 若 Y ⊆ Z 则 W ⊆ X，此时 `u₂ ∈ W ⇒ B ⊆ A`；`u₂ ∈ Z ⇒ A ∪ B = univ`。✓
+  - **情形「c,d 都在 Y」**：对称。
+  - 需要的两条辅助引理：① **「T-e₁ 的任一侧若不含 e₂ 端点，则它在 T-e₂ 中仍连通，且任意两点互达」**（由 `reachable_deleteEdges_of_support_notMem` + `Reachable` 的幂等/传递，**已可写**）；② **`sideLeaves e c ∪ sideLeaves e d = univ`（Adj c d）** ——「删边后每个叶落在两端点之一那侧」（需「T-path 若用 e₂ 则必经 d→c」的路径论证）。
+- **Lean 4 踩坑（本轮）**：`SidesCompatible` 里的 `∪` / `Finset.univ` **必须显式带 `[Fintype α] [DecidableEq α]`**（否则报 `Union (Finset α)` / `Fintype α` synthInstanceFailed）；`Set.mem_singleton_iff` 可用（`Set.not_mem_singleton` 不存在）；`List.mem_zipWith` 不存在（改用 `Walk.edges_eq_zipWith_support` 需另找成员引理 —— 最终绕开，用 `reachable_of_mem_support` + `Walk.start_mem_support` 的路线）。
+- **未 commit / 未 push**（遵老师「完全做完之前无需再push」）。
 
 ## Git / 远程（2026-10-02）
 

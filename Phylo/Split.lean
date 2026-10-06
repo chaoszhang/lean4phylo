@@ -7,6 +7,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Fintype.Basic
 import Mathlib.Tactic.FinCases
 import Phylo.Core
+import Phylo.Mathlib.Walk
 
 /-!
 # `Phylo.Split` —— 划分族与 split（M2 地基）
@@ -22,6 +23,16 @@ import Phylo.Core
 -/
 
 variable {α : Type*}
+
+/-! ## 自建小引理（Mathlib 缺；将来可迁入 `Phylo/Mathlib/`） -/
+
+/-- **孤立点只与自身可达**。 -/
+theorem reachable_eq_of_isIsolated {V : Type*} {G : SimpleGraph V} {a u : V}
+    (h : G.IsIsolated a) (hr : G.Reachable a u) : u = a := by
+  obtain ⟨p⟩ := hr
+  induction p with
+  | nil => rfl
+  | cons hadj _ _ => exact absurd hadj (h _)
 
 /-- **`k`-块划分**：把 `α` 分成 `n` 个**两两不交、非空、并为全体**的块。
 
@@ -84,6 +95,51 @@ theorem compatible_comm (s t : Split α) : Compatible s t ↔ Compatible t s := 
   simp only [Compatible, disjoint_comm]
   tauto
 
+/-- `sideB = univ \ sideA`（由「并 = 全集 + 不交」立得）。 -/
+theorem sideB_eq_sdiff (s : Split α) : s.sideB = Finset.univ \ s.sideA := by
+  ext x
+  rw [Finset.mem_sdiff]
+  constructor
+  · intro hx
+    refine ⟨Finset.mem_univ _, fun hA => ?_⟩
+    exact (Finset.disjoint_left.mp s.disjoint_sides) hA hx
+  · rintro ⟨_, hx⟩
+    have h : x ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ x
+    rcases Finset.mem_union.mp h with h' | h'
+    · exact absurd h' hx
+    · exact h'
+
+/-- **一侧包含 ⟹ 相容**（`A ⊆ A'` 给出 `A ∩ B' = ∅`）。 -/
+theorem compatible_of_subset_left {s t : Split α} (h : s.sideA ⊆ t.sideA) : Compatible s t := by
+  refine Or.inr (Or.inl ?_)
+  rw [Finset.disjoint_left]
+  intro x hx hx'
+  rw [t.sideB_eq_sdiff] at hx'
+  exact (Finset.mem_sdiff.mp hx').2 (h hx)
+
+/-- **一侧包含 ⟹ 相容**（`A' ⊆ A` 给出 `B ∩ A' = ∅`）。 -/
+theorem compatible_of_subset_right {s t : Split α} (h : t.sideA ⊆ s.sideA) : Compatible s t := by
+  refine Or.inr (Or.inr (Or.inl ?_))
+  rw [Finset.disjoint_left]
+  intro x hx hx'
+  rw [s.sideB_eq_sdiff] at hx
+  exact (Finset.mem_sdiff.mp hx).2 (h hx')
+
+/-- **两侧不交 ⟹ 相容**。 -/
+theorem compatible_of_disjoint {s t : Split α} (h : Disjoint s.sideA t.sideA) : Compatible s t :=
+  Or.inl h
+
+/-- **两侧并 = 全集 ⟹ 相容**（`B ∩ B' = ∅`）。 -/
+theorem compatible_of_union {s t : Split α} (h : s.sideA ∪ t.sideA = Finset.univ) :
+    Compatible s t := by
+  refine Or.inr (Or.inr (Or.inr ?_))
+  rw [Finset.disjoint_left, s.sideB_eq_sdiff, t.sideB_eq_sdiff]
+  intro x hx hy
+  have hmem : x ∈ s.sideA ∪ t.sideA := by rw [h]; exact Finset.mem_univ x
+  rcases Finset.mem_union.mp hmem with h' | h'
+  · exact (Finset.mem_sdiff.mp hx).2 h'
+  · exact (Finset.mem_sdiff.mp hy).2 h'
+
 /-- 把 split 的第 `i` 侧限制到子集 `Y`（得到 `↥Y` 上的子集）。 -/
 noncomputable def restrictSide (s : Split α) (Y : Finset α) (i : Fin 2) : Finset ↥Y :=
   Finset.univ.filter fun a => (a : α) ∈ s.parts i
@@ -128,6 +184,32 @@ noncomputable def restrict (s : Split α) (Y : Finset α)
     · simpa [restrictSide] using hA
     · simpa [restrictSide] using hB
 
+/-- **交换两侧**。`Fin 2` 索引把两侧有序化，`swap` 给出反向 —— 判等需商掉它（§3.4）。
+
+用 `i ↦ i + 1`（`Fin 2` 上的模 2 加法即对换）实现，避免 `Equiv` 带来的噪音。 -/
+def swap (s : Split α) : Split α where
+  parts := fun i => s.parts (i + 1)
+  pairwise_disjoint := by
+    intro i j hij
+    refine s.pairwise_disjoint (i + 1) (j + 1) (fun h => hij ?_)
+    revert h; fin_cases i <;> fin_cases j <;> simp
+  union_eq_univ := by
+    have h2 : ∀ i : Fin 2, (i + 1 : Fin 2) + 1 = i := by intro i; fin_cases i <;> rfl
+    rw [← s.union_eq_univ]
+    ext x
+    simp only [Finset.mem_biUnion, Finset.mem_univ, true_and]
+    constructor
+    · rintro ⟨i, hi⟩; exact ⟨i + 1, hi⟩
+    · rintro ⟨i, hi⟩; exact ⟨i + 1, by rw [h2 i]; exact hi⟩
+  nonempty := fun i => s.nonempty (i + 1)
+
+/-- `swap` 把 `sideA` 与 `sideB` 对调。 -/
+@[simp] theorem swap_sideA (s : Split α) : s.swap.sideA = s.sideB := rfl
+
+@[simp] theorem swap_sideB (s : Split α) : s.swap.sideB = s.sideA := by
+  show s.parts ((1 : Fin 2) + 1) = s.parts 0
+  norm_num
+
 end Split
 
 /-! ## 树 → split 系统 -/
@@ -135,16 +217,68 @@ end Split
 namespace Cladogram
 
 open Classical
+open SimpleGraph
 
 variable {X : Type*} [Fintype X] [DecidableEq X]
 
-/-- 删去边 `e` 后，与顶点 `u` 同侧（落在同一连通分量）的**叶集**。
+/-- 删去边 `e` 后，与顶点 `u` **同侧**（在 `T - e` 中可达）的**叶集**。
 
-§3.4：这是「删边 ⟹ bipartition」的直接实现。 -/
+§3.4：这是「删边 ⟹ bipartition」的直接实现。用 `Reachable` 表述，
+以便接上 Mathlib 的 `IsBridge`（树中每条边都是桥）。 -/
 noncomputable def sideLeaves (T : Cladogram X) (e : Sym2 T.V) (u : T.V) : Finset X :=
-  Finset.univ.filter fun x =>
-    (T.graph.deleteEdges {e}).connectedComponentMk (T.leaf x) =
-      (T.graph.deleteEdges {e}).connectedComponentMk u
+  Finset.univ.filter fun x => (T.graph.deleteEdges {e}).Reachable (T.leaf x) u
+
+/-- `sideLeaves` 的成员判定（定义展开）。 -/
+theorem mem_sideLeaves (T : Cladogram X) {e : Sym2 T.V} {u : T.V} {x : X} :
+    x ∈ T.sideLeaves e u ↔ (T.graph.deleteEdges {e}).Reachable (T.leaf x) u := by
+  simp [sideLeaves]
+
+/-- **树中每条边都是桥**：删去边 `⟦u,v⟧` 后，`u` 与 `v` 在 `T - e` 中不再可达。
+
+（白蹭 Mathlib：`isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`。） -/
+theorem not_reachable_deleteEdges_of_adj (T : Cladogram X) {u v : T.V}
+    (h : T.graph.Adj u v) :
+    ¬ (T.graph.deleteEdges {s(u, v)}).Reachable u v :=
+  isBridge_iff.mp ((isAcyclic_iff_forall_adj_isBridge.mp T.isTree.isAcyclic) h)
+
+/-- 端点不在**对方**一侧（由「边是桥」立得）—— 边侧分离性的核心。 -/
+theorem not_mem_sideLeaves_of_adj (T : Cladogram X) {u v : T.V}
+    (h : T.graph.Adj u v) {x : X} (hx : T.leaf x = v) :
+    x ∉ T.sideLeaves s(u, v) u := by
+  rw [T.mem_sideLeaves, hx]
+  exact fun hr => T.not_reachable_deleteEdges_of_adj h (reachable_comm.mpr hr)
+
+/-- 叶标签落在自己所在的那一侧 —— 给出边侧**非空性**的来源。 -/
+theorem mem_sideLeaves_self (T : Cladogram X) (e : Sym2 T.V) (x : X) :
+    x ∈ T.sideLeaves e (T.leaf x) :=
+  T.mem_sideLeaves.mpr
+    (SimpleGraph.Walk.nil : (T.graph.deleteEdges {e}).Walk (T.leaf x) (T.leaf x)).reachable
+
+/-- 叶 `T.leaf x` 在**删去它的边**后成为孤立点（度为 1 ⇒ 唯一邻居）。 -/
+theorem isIsolated_leaf_deleteEdges (T : Cladogram X) {x : X} {b : T.V}
+    (h : T.graph.Adj (T.leaf x) b) :
+    (T.graph.deleteEdges {s(T.leaf x, b)}).IsIsolated (T.leaf x) := by
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf x)).mp ⟨x, rfl⟩
+  obtain ⟨b', _hb', huniq⟩ := degree_eq_one_iff_existsUnique_adj.mp hdeg
+  intro w hw
+  rw [deleteEdges_adj] at hw
+  obtain ⟨hadj, hnotin⟩ := hw
+  rw [huniq w hadj, (huniq b h).symm] at hnotin
+  exact hnotin (by simp)
+
+/-- **叶边给出平凡 split**：若 `a = T.leaf x` 且 `a` 与 `b` 相邻，
+则 `a` 一侧的叶集恰为 `{x}`（删边后 `a` 孤立）。
+
+这是 §3.4「边 ↔ bipartition」在叶边上的退化情形，也是 `Σ(T) ∪ Σ_triv(T)` 里平凡 split 的来源。 -/
+theorem sideLeaves_leaf_edge (T : Cladogram X) {x : X} {b : T.V}
+    (h : T.graph.Adj (T.leaf x) b) :
+    T.sideLeaves s(T.leaf x, b) (T.leaf x) = {x} := by
+  refine Finset.eq_singleton_iff_unique_mem.mpr ⟨T.mem_sideLeaves_self _ x, ?_⟩
+  intro y hy
+  rw [T.mem_sideLeaves] at hy
+  exact T.leaf.injective
+    (reachable_eq_of_isIsolated (T.isIsolated_leaf_deleteEdges h) (reachable_comm.mpr hy))
 
 /-- 边 `e`（取 `u` 侧）给出的 **split**：两侧为「`u` 侧的叶」与「其余叶」。
 
@@ -192,3 +326,20 @@ def PairwiseCompatible (T : Cladogram X) : Prop :=
   ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t
 
 end Cladogram
+
+/-! ## 两侧的相容性（不依赖 `Split`，便于在树上直接证明） -/
+
+/-- **两侧的相容性**（§3.4：相容 ⟺ 一侧包含另一侧，或互补）。
+
+不依赖 `Split` 结构 —— 便于在树上直接证明后，再经 `compatible_of_sides` 抬到 `Split`。 -/
+def SidesCompatible {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) : Prop :=
+  A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = Finset.univ
+
+/-- 两侧相容 ⟹ 对应 split 相容。 -/
+theorem Split.compatible_of_sides {α : Type*} [Fintype α] [DecidableEq α]
+    {s t : Split α} (h : SidesCompatible s.sideA t.sideA) : Split.Compatible s t := by
+  rcases h with h | h | h | h
+  · exact Split.compatible_of_subset_left h
+  · exact Split.compatible_of_subset_right h
+  · exact Split.compatible_of_disjoint h
+  · exact Split.compatible_of_union h
