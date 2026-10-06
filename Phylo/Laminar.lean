@@ -1421,4 +1421,23 @@ theorem mem_iff_reachable {F : Finset (Finset α)} (hl : LaminarFamily F)
     exact mem_subtreeVerts_inr.mp (walk_mem_subtreeVerts hl hne huniv hB hBuniv p.reverse
       (mem_subtreeVerts_inl.mpr (Finset.Subset.refl B)))
 
+/-- `toCladogram` 的 `sideLeaves` 的**裸形式**（尚未包装成 `Cladogram`，与 `Phylo.Split` 里
+`sideLeaves` 的定义式一致：`leaf = Sum.inr`、`graph = treeGraph F`）。 -/
+noncomputable def leafSide (F : Finset (Finset α)) (e : Sym2 (LaminarVertex F))
+    (u : LaminarVertex F) : Finset α :=
+  Finset.univ.filter fun x => ((treeGraph F).deleteEdges {e}).Reachable (Sum.inr x) u
+
+/-- ★★★ **`B` 的边侧恰为 `B`**：`B` 对应的 split 的另一侧就是 `X ∖ B`。
+
+即规范 cluster 集 `F` 的每个非 `univ` 成员都对应 `Σ(toCladogram F)` 中的一条 split。 -/
+theorem leafSide_parentEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    leafSide F (parentEdge hl hne huniv B hB hBuniv) (Sum.inl (⟨B, hB⟩ : ↥F)) = B := by
+  classical
+  ext x
+  rw [leafSide]
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  exact (mem_iff_reachable hl hne huniv hB hBuniv x).symm
+
 end Phylo
