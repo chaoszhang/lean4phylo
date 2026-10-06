@@ -7,6 +7,11 @@ import Mathlib.Data.Finset.Powerset
 import Mathlib.Data.Fintype.Basic
 import Phylo.Split
 
+/-! 供 `↥F` 使用的 `Fintype`（本版 Mathlib 未为 `Finset α` 提供实例）。 -/
+instance instFintypeFinset {α : Type*} [Fintype α] [DecidableEq α] : Fintype (Finset α) where
+  elems := (Finset.univ : Finset α).powerset
+  complete := fun S => Finset.mem_powerset.mpr (Finset.subset_univ S)
+
 /-!
 # `Phylo.Laminar` —— 镶嵌族 ⟹ 树（「相容 ⟹ 存在树」的构造层）
 
@@ -478,5 +483,132 @@ theorem three_le_degree_of_ne_univ (hl : LaminarFamily F) [Nonempty α]
         hcard3
     _ ≤ ((laminarGraph F').neighborFinset (Sum.inl A)).card := Finset.card_le_card hsub
     _ = (laminarGraph F').degree (Sum.inl A) := SimpleGraph.card_neighborFinset_eq_degree _ _
+
+/-! ### 受限顶点类型的图（连通性 / `isTree` 用）
+
+`laminarGraph F` 的顶点是**所有** `Finset α`（族外者孤立）⟹ 不连通。
+故另给**顶点受限**的版本：顶点 = 族成员 + 元素 —— 这才是真正的树。 -/
+
+/-- **受限顶点类型**：`F` 的成员（内部顶点）+ 元素（叶）。 -/
+abbrev LaminarVertex (F : Finset (Finset α)) := ↥F ⊕ α
+
+/-- 到「无限顶点」版本顶点的强制映射。 -/
+def coerceV (F : Finset (Finset α)) : LaminarVertex F → TreeVertex α
+  | Sum.inl A => Sum.inl A.1
+  | Sum.inr x => Sum.inr x
+
+@[simp] theorem coerceV_inl (F : Finset (Finset α)) (A : ↥F) :
+    coerceV F (Sum.inl A) = Sum.inl A.1 := rfl
+
+@[simp] theorem coerceV_inr (F : Finset (Finset α)) (x : α) :
+    coerceV F (Sum.inr x) = Sum.inr x := rfl
+
+/-- **受限图**：顶点 = 族成员 + 元素；边经 `coerceV` 由 `laminarAdj` 给出。 -/
+def treeGraph (F : Finset (Finset α)) : SimpleGraph (LaminarVertex F) where
+  Adj u v := laminarAdj F (coerceV F u) (coerceV F v)
+  symm := ⟨fun u v h => by
+    match u, v with
+    | Sum.inl _, Sum.inl _ => exact h.symm
+    | Sum.inl _, Sum.inr _ => exact h
+    | Sum.inr _, Sum.inl _ => exact h
+    | Sum.inr _, Sum.inr _ => exact h⟩
+  loopless := ⟨fun u h => by
+    match u with
+    | Sum.inl A =>
+      rcases h with h | h
+      · exact h.2.1.2 (Finset.Subset.refl A.1)
+      · exact h.2.1.2 (Finset.Subset.refl A.1)
+    | Sum.inr _ => exact h⟩
+
+@[simp] theorem treeGraph_adj_inl_inl (F : Finset (Finset α)) (A B : ↥F) :
+    (treeGraph F).Adj (Sum.inl A) (Sum.inl B) ↔
+      IsParentOf F A.1 B.1 ∨ IsParentOf F B.1 A.1 := Iff.rfl
+
+@[simp] theorem treeGraph_adj_inl_inr (F : Finset (Finset α)) (A : ↥F) (x : α) :
+    (treeGraph F).Adj (Sum.inl A) (Sum.inr x) ↔ IsMinClusterOf F x A.1 := Iff.rfl
+
+@[simp] theorem treeGraph_adj_inr_inl (F : Finset (Finset α)) (x : α) (A : ↥F) :
+    (treeGraph F).Adj (Sum.inr x) (Sum.inl A) ↔ IsMinClusterOf F x A.1 := Iff.rfl
+
+/-! ### 连通性：一切顶点可达根 `univ` -/
+
+/-- **含 `x` 的最小簇存在**（假设 `x` 被某族成员含）：取含 `x` 的族成员中 `card` 最小者。 -/
+theorem exists_isMinClusterOf {F : Finset (Finset α)} (hl : LaminarFamily F) {x : α}
+    (h : ∃ A ∈ F, x ∈ A) : ∃ A, IsMinClusterOf F x A := by
+  classical
+  have hne : (F.filter fun A => x ∈ A).Nonempty := h.imp fun A hA => Finset.mem_filter.mpr hA
+  obtain ⟨A, hA, hAmax⟩ := Finset.exists_mem_eq_sup (F.filter fun A => x ∈ A) hne
+    (fun A => (Finset.univ : Finset α).card - A.card)
+  obtain ⟨hAF, hxA⟩ := Finset.mem_filter.mp hA
+  refine ⟨A, hAF, hxA, fun C hC hxC => ?_⟩
+  have hCS : C ∈ F.filter fun A => x ∈ A := Finset.mem_filter.mpr ⟨hC, hxC⟩
+  have h1 : (Finset.univ : Finset α).card - C.card ≤ (Finset.univ : Finset α).card - A.card :=
+    hAmax ▸ Finset.le_sup (f := fun A => (Finset.univ : Finset α).card - A.card) hCS
+  have hcA := Finset.card_le_card (Finset.subset_univ A)
+  have hcC := Finset.card_le_card (Finset.subset_univ C)
+  have hCA : A.card ≤ C.card := by omega
+  rcases hl A hAF C hC with hsub | hsub | hdisj
+  · exact hsub
+  · have hEq : C = A := Finset.eq_of_subset_of_card_le hsub hCA
+    rw [hEq]
+  · exfalso
+    rw [Finset.disjoint_iff_inter_eq_empty] at hdisj
+    have : x ∈ A ∩ C := Finset.mem_inter.mpr ⟨hxA, hxC⟩
+    rw [hdisj] at this
+    exact Finset.notMem_empty x this
+
+/-- **族成员可达根**（沿 `parentOf` 链上溯；`card` 严格递增保证终止）。 -/
+theorem treeGraph_reachable_root {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) :
+    ∀ A : ↥F, (treeGraph F).Reachable (Sum.inl A) (Sum.inl ⟨Finset.univ, huniv⟩) := by
+  suffices h : ∀ n, ∀ A : ↥F, (Finset.univ : Finset α).card - A.1.card ≤ n →
+      (treeGraph F).Reachable (Sum.inl A) (Sum.inl ⟨Finset.univ, huniv⟩) by
+    intro A; exact h _ A le_rfl
+  intro n
+  induction n with
+  | zero =>
+    intro A hle
+    have hcard : A.1.card = (Finset.univ : Finset α).card := by
+      have := Finset.card_le_card (Finset.subset_univ A.1); omega
+    have hAuniv : A.1 = Finset.univ := Finset.eq_univ_of_card _ hcard
+    have : A = ⟨Finset.univ, huniv⟩ := Subtype.ext hAuniv
+    rw [this]
+  | succ n ih =>
+    intro A hle
+    by_cases hAuniv : A.1 = Finset.univ
+    · have : A = ⟨Finset.univ, huniv⟩ := Subtype.ext hAuniv
+      rw [this]
+    · have hPA := isParentOf_parentOf (F := F) (A := A.1) hl hne huniv A.2 hAuniv
+      have hcard : A.1.card < (parentOf F A.1).card := Finset.card_lt_card hPA.2.1
+      have hle' : (Finset.univ : Finset α).card - (parentOf F A.1).card ≤ n := by
+        have := Finset.card_le_card (Finset.subset_univ (parentOf F A.1)); omega
+      have hadj : (treeGraph F).Adj (Sum.inl A) (Sum.inl ⟨parentOf F A.1, hPA.1⟩) :=
+        (treeGraph_adj_inl_inl F A ⟨parentOf F A.1, hPA.1⟩).mpr (Or.inl hPA)
+      exact hadj.reachable.trans (ih ⟨parentOf F A.1, hPA.1⟩ hle')
+
+/-- **元素可达根**（元素连到其最小簇，再沿父链上溯）。 -/
+theorem treeGraph_reachable_root_of_elem {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) (x : α) :
+    (treeGraph F).Reachable (Sum.inr x) (Sum.inl ⟨Finset.univ, huniv⟩) := by
+  obtain ⟨A, hA⟩ := exists_isMinClusterOf (F := F) hl ⟨Finset.univ, huniv, Finset.mem_univ x⟩
+  have hadj : (treeGraph F).Adj (Sum.inr x) (Sum.inl ⟨A, hA.1⟩) :=
+    (treeGraph_adj_inr_inl F x ⟨A, hA.1⟩).mpr hA
+  exact hadj.reachable.trans (treeGraph_reachable_root hl hne huniv ⟨A, hA.1⟩)
+
+/-- **★ 受限图连通**（一切顶点经根 `univ` 互达）。 -/
+theorem connected_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) :
+    (treeGraph F).Connected := by
+  haveI : Nonempty (LaminarVertex F) := ⟨Sum.inl ⟨Finset.univ, huniv⟩⟩
+  refine ⟨fun u v => ?_⟩
+  have hu : (treeGraph F).Reachable u (Sum.inl ⟨Finset.univ, huniv⟩) := by
+    match u with
+    | Sum.inl A => exact treeGraph_reachable_root hl hne huniv A
+    | Sum.inr x => exact treeGraph_reachable_root_of_elem hl hne huniv x
+  have hv : (treeGraph F).Reachable v (Sum.inl ⟨Finset.univ, huniv⟩) := by
+    match v with
+    | Sum.inl A => exact treeGraph_reachable_root hl hne huniv A
+    | Sum.inr x => exact treeGraph_reachable_root_of_elem hl hne huniv x
+  exact hu.trans hv.symm
 
 end Phylo
