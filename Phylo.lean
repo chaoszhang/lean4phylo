@@ -18,6 +18,7 @@ import Phylo.Laminar
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
 import Phylo.QuartetUnique
+import Phylo.SideSubtree
 import Phylo.Split
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER
