@@ -124,6 +124,11 @@ end MSCFreq
 def FreqClose (D D' : QuartetFreq X) (ε : ℝ) : Prop :=
   ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S), |D.p S hS q - D'.p S hS q| < ε
 
+/-- `FreqClose` 对称。 -/
+theorem FreqClose_symm {D D' : QuartetFreq X} {ε : ℝ} (h : FreqClose D D' ε) :
+    FreqClose D' D ε :=
+  fun S hS q => by rw [abs_sub_comm]; exact h S hS q
+
 /-- **物种树估计量**：从 quartet 频率给出一个树。
 
 （ASTRAL / CASTER 是这一形状；NJst / parsimony 经各自的「再参数化」也归结到这里。） -/
