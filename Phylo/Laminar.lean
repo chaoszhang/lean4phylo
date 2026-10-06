@@ -810,4 +810,98 @@ theorem degree_inr_eq_one {F : Finset (Finset α)} (hl : LaminarFamily F)
   obtain ⟨A, hA⟩ := neighborFinset_inr hl huniv x
   rw [← SimpleGraph.card_neighborFinset_eq_degree, hA, Finset.card_singleton]
 
+/-! ### 非 `univ` 簇的度 ≥ 3（`no_degree_two` 的主体） -/
+
+/-- **★ `treeGraph` 中非 `univ` 簇的度 ≥ 3**。
+
+用**「三元素」方案**：显式构造父 + 两个孩子（或孩子+元素，或两个元素）三个**互异**邻居，
+避开 `Finset.image` 的基数论证。 -/
+theorem three_le_degree_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {A : ↥F} (hAuniv : A.1 ≠ Finset.univ) (hcard : 2 ≤ A.1.card) :
+    3 ≤ (treeGraph F).degree (Sum.inl A) := by
+  classical
+  have hPA := isParentOf_parentOf (A := A.1) hl hne huniv A.2 hAuniv
+  have hcount : 2 ≤ (F.filter fun B => IsChildOf F A.1 B).card
+      + (directElems F A.1).card :=
+    two_le_card_children_add_card_directElems hl A.2 hcard
+  -- 父不是任一孩子
+  have hPnotKid : ∀ {B : Finset α} (hBF : B ∈ F), IsChildOf F A.1 B →
+      (⟨B, hBF⟩ : ↥F) ≠ ⟨parentOf F A.1, hPA.1⟩ := by
+    intro B hBF hBc hEq
+    have hBeq : B = parentOf F A.1 := congrArg Subtype.val hEq
+    have h2 : A.1 ⊆ B := by rw [hBeq]; exact hPA.2.1.1
+    exact hBc.2.1.2 h2
+  have key : ∃ u₂ u₃ : LaminarVertex F, u₂ ≠ Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F) ∧
+      u₃ ≠ Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F) ∧ u₂ ≠ u₃ ∧
+      (treeGraph F).Adj (Sum.inl A) u₂ ∧ (treeGraph F).Adj (Sum.inl A) u₃ := by
+    rcases Nat.lt_or_ge (F.filter fun B => IsChildOf F A.1 B).card 2 with hk | hk
+    · have hk01 : (F.filter fun B => IsChildOf F A.1 B).card = 0 ∨
+          (F.filter fun B => IsChildOf F A.1 B).card = 1 := by omega
+      rcases hk01 with h0 | h1
+      · -- 无孩子 ⟹ 至少两个直接元素
+        obtain ⟨t₁, ht₁, t₂, ht₂, ht12⟩ :=
+          Finset.one_lt_card.mp (by omega : 1 < (directElems F A.1).card)
+        exact ⟨Sum.inr t₁, Sum.inr t₂, fun h => Sum.inr_ne_inl h,
+          fun h => Sum.inr_ne_inl h, fun h => ht12 (Sum.inr.inj h),
+          (treeGraph_adj_inl_inr F A t₁).mpr (directElems_isMinClusterOf A.2 ht₁),
+          (treeGraph_adj_inl_inr F A t₂).mpr (directElems_isMinClusterOf A.2 ht₂)⟩
+      · -- 恰一个孩子 + 至少一个直接元素
+        obtain ⟨B, hBeq⟩ := Finset.card_eq_one.mp h1
+        have hBk : B ∈ F.filter fun B => IsChildOf F A.1 B := by
+          rw [hBeq]; exact Finset.mem_singleton_self B
+        obtain ⟨hBF, hBchild⟩ := Finset.mem_filter.mp hBk
+        obtain ⟨t, ht⟩ := Finset.card_pos.mp (by omega : 0 < (directElems F A.1).card)
+        refine ⟨Sum.inl (⟨B, hBF⟩ : ↥F), Sum.inr t,
+          fun h => hPnotKid hBF hBchild (Sum.inl_injective h),
+          fun h => Sum.inr_ne_inl h, fun h => Sum.inl_ne_inr h,
+          (treeGraph_adj_inl_inl F A (⟨B, hBF⟩ : ↥F)).mpr
+            (Or.inr (isChildOf_isParentOf hl A.2 (hne B hBF) hBchild)),
+          (treeGraph_adj_inl_inr F A t).mpr (directElems_isMinClusterOf A.2 ht)⟩
+    · -- 至少两个孩子
+      obtain ⟨B₁, hB₁, B₂, hB₂, hB₁₂⟩ :=
+        Finset.one_lt_card.mp (by omega : 1 < (F.filter fun B => IsChildOf F A.1 B).card)
+      obtain ⟨hB₁F, hB₁c⟩ := Finset.mem_filter.mp hB₁
+      obtain ⟨hB₂F, hB₂c⟩ := Finset.mem_filter.mp hB₂
+      refine ⟨Sum.inl (⟨B₁, hB₁F⟩ : ↥F), Sum.inl (⟨B₂, hB₂F⟩ : ↥F),
+        fun h => hPnotKid hB₁F hB₁c (Sum.inl_injective h),
+        fun h => hPnotKid hB₂F hB₂c (Sum.inl_injective h),
+        fun h => hB₁₂ (congrArg Subtype.val (Sum.inl_injective h)), ?_, ?_⟩
+      · exact (treeGraph_adj_inl_inl F A (⟨B₁, hB₁F⟩ : ↥F)).mpr
+          (Or.inr (isChildOf_isParentOf hl A.2 (hne B₁ hB₁F) hB₁c))
+      · exact (treeGraph_adj_inl_inl F A (⟨B₂, hB₂F⟩ : ↥F)).mpr
+          (Or.inr (isChildOf_isParentOf hl A.2 (hne B₂ hB₂F) hB₂c))
+  obtain ⟨u₂, u₃, h21, h31, h23, ha2, ha3⟩ := key
+  have ha1 : (treeGraph F).Adj (Sum.inl A) (Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F)) :=
+    (treeGraph_adj_inl_inl F A (⟨parentOf F A.1, hPA.1⟩ : ↥F)).mpr (Or.inl hPA)
+  have hsub : ({Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F)} ∪
+      ({u₂, u₃} : Finset (LaminarVertex F))) ⊆
+      (treeGraph F).neighborFinset (Sum.inl A) := by
+    intro u hu
+    simp only [Finset.mem_union, Finset.mem_singleton,
+      Finset.mem_insert] at hu
+    rw [SimpleGraph.mem_neighborFinset]
+    rcases hu with rfl | rfl | rfl
+    · exact ha1
+    · exact ha2
+    · exact ha3
+  have hd : Disjoint ({Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F)} : Finset (LaminarVertex F))
+      ({u₂, u₃} : Finset (LaminarVertex F)) := by
+    rw [Finset.disjoint_left]
+    intro u hu hu'
+    rw [Finset.mem_singleton] at hu
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hu'
+    subst hu
+    rcases hu' with h | h
+    · exact h21 h.symm
+    · exact h31 h.symm
+  have h3card : ({Sum.inl (⟨parentOf F A.1, hPA.1⟩ : ↥F)} ∪
+      ({u₂, u₃} : Finset (LaminarVertex F))).card = 3 := by
+    rw [Finset.card_union_of_disjoint hd, Finset.card_singleton,
+      Finset.card_insert_of_notMem (by
+        simp only [Finset.mem_singleton]; exact h23), Finset.card_singleton]
+  calc 3 = _ := h3card.symm
+    _ ≤ ((treeGraph F).neighborFinset (Sum.inl A)).card := Finset.card_le_card hsub
+    _ = (treeGraph F).degree (Sum.inl A) := SimpleGraph.card_neighborFinset_eq_degree _ _
+
 end Phylo
