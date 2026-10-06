@@ -13,6 +13,8 @@ import Phylo.Laminar
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
 import Phylo.Split
+import Phylo.Stat.ASTRAL
+import Phylo.Stat.MSC
 
 /-!
 # `lean4phylo` —— 系统发生学经典算法的形式化库

@@ -8,11 +8,7 @@ import Mathlib.Data.Finset.Powerset
 import Mathlib.Data.Fintype.Basic
 import Phylo.Split
 
-/-! 供 `↥F` / `Finset α` 使用的 `Fintype`（本版 Mathlib 未为 `Finset α` 提供实例）。 -/
-instance instFintypeFinset {α : Type*} [Fintype α] [DecidableEq α] : Fintype (Finset α) where
-  elems := (Finset.univ : Finset α).powerset
-  complete := fun S => Finset.mem_powerset.mpr (Finset.subset_univ S)
-
+/-! 供 `↥F` 使用的 `Fintype`（`Finset α` 的实例已上移至 `Phylo/Split.lean`）。 -/
 instance instFintypeSubtype {α : Type*} [Fintype α] [DecidableEq α]
     (F : Finset (Finset α)) : Fintype ↥F :=
   ⟨F.attach, fun x => Finset.mem_attach F x⟩

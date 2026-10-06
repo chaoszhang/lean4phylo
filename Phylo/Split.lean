@@ -181,6 +181,21 @@ instance instDecidableEqKPartition {α : Type*} [Fintype α] [DecidableEq α] (n
     DecidableEq (KPartition α n) :=
   fun a b => decidable_of_iff (a.parts = b.parts) (KPartition.eq_iff_parts a b).symm
 
+/-- **`Finset α` 的 `Fintype`**（Mathlib 未提供；由 `univ.powerset` 给出）。
+
+有了它，`Finset (Split α)` 才有 `Fintype`，`∑ q : Split α, …` 才写得出来（统计一致性需要）。 -/
+instance instFintypeFinset {α : Type*} [Fintype α] [DecidableEq α] : Fintype (Finset α) where
+  elems := (Finset.univ : Finset α).powerset
+  complete := fun S => Finset.mem_powerset.mpr (Finset.subset_univ S)
+
+/-- **`KPartition α n` 的 `Fintype`**（经 `parts` 单射从 `Fin n → Finset α` 拉回）。
+
+正是 `Split` 上的概率分布（`∑ q : Split α, p q = 1`）所需。 -/
+noncomputable instance instFintypeKPartition {α : Type*} [Fintype α] [DecidableEq α] (n : ℕ) :
+    Fintype (KPartition α n) :=
+  Fintype.ofInjective KPartition.parts
+    (fun a b h => (KPartition.eq_iff_parts a b).mpr h)
+
 /-- **split（二分）**：`KPartition` 在 `n = 2` 的特例。
 
 §3.4：`Split` 单独立专用 API（兼容性判定 / Buneman 定理都压在它上面）。

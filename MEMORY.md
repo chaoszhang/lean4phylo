@@ -482,6 +482,66 @@ theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (
 2. 构造 `Split α`（`parts 0 = B`、`parts 1 = Bᶜ`）得 `IsSplitOf`
 3. 组装 `Σ(toCladogram F) ⊇ F` —— 之后 **Buneman 存在性 / NJ 硬核同时开门**
 
+## ★★★ 「相容 ⟹ 存在树」全线打通（2026-10-06 深夜）
+
+**结论**：Splits-Equivalence 的另一半（「相容 ⟹ 存在树」）的**构造层完成**，
+假设清单最终只剩：**`F` 镶嵌 · `univ ∈ F` · `F` 正规化（无单元素簇）· `2 ≤ |α|`**。
+
+### 关键突破 1：`univ` 度 2 不是缺陷，而是「有根树」
+
+原卡点：`|极大簇| + |未覆盖元素| = 2` 时 `deg(univ) = 2`，违反 `Cladogram.no_degree_two`。
+**老师定夺（`CONCEPTS.md` §3.3）**：无根树 → 内部节点 degree 3；**有根树 → 无根树 + root（或同构形式）**。
+
+⇒ 「root 度 2」**正是有根二叉树的根有两个孩子** —— 退化情形本来合法。落实为：
+
+| 实体 | 内容 |
+|---|---|
+| `RootedTree`（`Core.lean`） | `Cladogram` 把 `no_degree_two` 放松为 `no_degree_two_except_root` + `root : V` |
+| `Cladogram.toRootedTree (r)` | 任意 cladogram 任取顶点作 root |
+| `two_le_degree_rootV` | 根的度 ≥ 2（**由 `three_le_degree_rootV` 脚本生成、把 3 换成 2，零调试成本**） |
+| **`toRootedTree`** | 由镶嵌族构造，只需 `|kids| + |dirs| ≥ 2` |
+| **★★★ `toRootedTreeOfCard`** | **hroot 自动满足**，只需 `2 ≤ |α|` |
+
+### 关键突破 2：`2 ≤ |kids| + |dirs|` 的证明（只需 `2 ≤ |α|`）
+
+`two_le_card_kids_add_dirs`，三情形：
+* `|kids| ≥ 2` 显然；
+* `|kids| = 0` ⟹ 族里只有 `univ`（`eq_univ_of_forall_not_isChildOf_univ`）⟹ `dirs = univ` ⟹ `|dirs| = |α| ≥ 2`；
+* `|kids| = 1`（唯一孩子 `A`）⟹ 若 `dirs = ∅`，每个元素的极小簇含于某个 `univ` 的孩子
+  （`exists_isChildOf_univ_superset`，用 `Finset.exists_mem_eq_sup` 取 card 最大者）—— 孩子只有 `A` ——
+  于是 `A = univ`，与 `A ⊊ univ` 矛盾。
+
+### 完整链条（全部零 `sorry`）
+
+```
+镶嵌化简（laminar_of_sidesCompatible_of_notMem）· 规范 cluster（Split.cluster）
+  → parentOf / parV / parentEdge
+  → 连通性（connected_treeGraph，强归纳 on card univ − card A）
+  → isTree（parEdge 满射 + 夹逼 |E| = |V| − 1）
+  → 度条件（元素度 1 · 非 univ 簇度 ≥ 3 · 根度 ≥ 2）
+  → ★★★ toRootedTreeOfCard（hroot-free）
+  → ★★★ leafSide_parentEdge_of_card（hroot-free 的 Σ ⊇ F）
+```
+
+### 本轮踩坑（4 个，都值得记）
+
+1. **`Fin.cases` 在 `Fin 2` 上取 `1` `simp` 化简不了** —— 本版 Mathlib 认不出 `(1 : Fin 2)` 是 `Fin.succ 0`。
+   自建 `finCases_two_zero` / `finCases_two_one`（`:= Fin.cases_zero` / `:= Fin.cases_succ 0`）作 `@[simp]`。
+2. **`toCladogram ... .V` 投影挡住 defeq** —— `refine ⟨Sum.inl ..., ...⟩` 报 "expected to have type `(toCladogram …).V`"。
+   解法：`change ∃ (a b : LaminarVertex F) ... ` 把目标换成**裸形式**（`show`/`change` 直接做 defeq 检查，绕开 elaboration 顺序问题）。
+3. **`IsChildOf F A B` 的第三项是 `∀ C ∈ F, B ⊂ C → ¬ C ⊂ A`**（不是 `A ⊆ C`！）—— 前两次写错。
+4. **`rw` 有时自动关闭目标** —— 多写一个 `exact` 会报 "No goals to be solved"。
+5. **`Finset.mem_filter.mpr` 要 `⟨a ∈ s, p a⟩`**，而 `IsChildOf` 自带 `B ∈ F` 不是 filter 谓词的一部分 ——
+   要写 `Finset.mem_filter.mpr ⟨hC.1, hC⟩`。
+
+### ⬜ 剩余（收口 Splits-Equivalence）
+
+1. **从任意 `Finset (Split α)` 集 Σ 组装 `F`**：取规范 cluster（避开 ρ）+ `normFinset`，
+   再证 `toRootedTreeOfCard` 的假设成立（`laminar_of_compatible_clusters` / `laminarFamily_normFinset` / `normFinset` 均已有）。
+2. **Σ ⊆ Σ(T)**：`s ∈ Σ` 时 `s.cluster ρ = B ∈ F`，`leafSide_parentEdge_of_card` 给
+   `B` 是某边的一侧；`s = splitOf B` 或 `s = (splitOf B).swap`（`swap` 也对应同一条边的另一侧）。
+3. 之后：**Buneman 存在性** 与 **NJ 硬核 `MaxZCherryCore`** 同时开门。
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
