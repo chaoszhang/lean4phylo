@@ -236,7 +236,24 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `r `rw`无法进入`x ∉ s`内部** → 用`simp only [Finset.mem_compl, ...]\`。
   - `by` 块在函数参数位置**无预期类型**时会报 `invalid 'by' tactic` → 先 `have` 再应用。
   - `SidesCompatible` 的 `∪`/`Finset.univ` 需显式 `[Fintype α] [DecidableEq α]`。
-- **git 节奏（2026-10-06 老师定）**：**少 push，多 commit**。已 commit `5ad4e5a` / `c178e52` / `93724a5` / **`8504245`（主定理）**，**均未 push**。
+- **git 节奏（2026-10-06 老师定）**：**少 push，多 commit**。已 commit `5ad4e5a` / `c178e52` / `93724a5` / **`8504245`（主定理）** / `1338529` / `a06668e` / `55a820e` / `4b30498` / `5564e32`，**均未 push**。
+
+## M4 quartet / triplet 定义层（2026-10-06，转线后）
+
+- **背景**：「相容 ⟹ 存在树」遇设计卡点 → **老师决定「暂缓此线，转其它」**。
+- **✅ 新建 `Phylo/Quartet.lean`（185 行，无 sorry）**：
+  - `Quartet X := {S : Finset X // S.card = 4}`（**`abbrev` 而非 `def`** → 自动获得 `Fintype`/`DecidableEq`）· `TripletSet X := {S // S.card = 3}`
+  - **`Topology S := Split ↥S`** —— §3.5 的统一形式（quartet 2\|2 与 triplet 2\|1 同一构造）
+  - `QuartetTopology` / `TripletTopology`（`structure`：`supp` + `card_supp` + `top`）
+  - `Quartet.card_eq` / `nonempty` · `TripletSet.card_eq` / `nonempty`
+  - **`Topology.swap` + `swap_swap`**（无序性 `ab|cd = cd|ab` 所需）· `QuartetTopology.swap` / `TripletTopology.swap` + `swap_swap`
+  - `allQuartets` / `allTripletSets` 枚举 · **`card_allQuartets = C(n,4)`** · **`card_allTripletSets = C(n,3)`**
+  - `lake build` → **1262 jobs 通过**；`check_file_imports.sh` 通过
+- **⬜ 下一步（M4 续）**：`display`（quartet 被树展示）· Colonius–Schultze 推理规则 · quartet 距离 · 「split 相容 ⟺ 所有 quartet 相容」。
+- **Lean 4 坑（Quartet 新踩）**：
+  - **`abbrev Topology S := Split ↥S` 会让 `Topology.swap` 里的 `t.swap` 递归到自己**（namespace 内优先解析）→ 必须写 `Split.swap t`。
+  - `Fintype.card_subtype` 方向：`Fintype.card {x // p x} = (univ.filter p).card`；计数要以 `(Finset.univ : Finset (Quartet X)).card` → `Finset.card_univ` → `Fintype.card_subtype` 的顺序 `rw`。
+  - `Quartet` 用 **`abbrev`** 才能自动拿 `Fintype`/`DecidableEq`（`def` 不会自动派生）。
 
 ## Git / 远程（2026-10-02）
 
