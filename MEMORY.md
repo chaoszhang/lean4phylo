@@ -354,6 +354,28 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - 替代路线：`IsAcyclic` 用**唯一父（rank 势函数）+ 无环论证**，或 `isAcyclic_iff_forall_adj_isBridge`
 - 之后：**① `univ` 的度**（`deg = m + |U|`，两种退化子情形）· **③ `Σ(树) = 规范 cluster 集`** · 再把 `three_le_degree_of_ne_univ` 从全图**移植到 `treeGraph`**（度数相同）
 
+### ★★★ 里程碑：`treeGraph F` 是树（`isTree_treeGraph` 已证，2026-10-06 深夜）
+
+**「相容 ⟹ 存在树」的核心门槛已过。** `Phylo/Laminar.lean` → **784 行**，1321 jobs，零 sorry。
+
+- **`LaminarVertex F := ↥F ⊕ α`**（族成员 + 元素）+ **`treeGraph F`**（经 `coerceV` 复用 `laminarAdj`）
+- 实例：`instFintypeFinset : Fintype (Finset α)`（`univ.powerset`）· `instFintypeSubtype : Fintype ↥F`（`F.attach`）
+- **★ `exists_isMinClusterOf`**：含 `x` 的最小簇（`Finset.exists_mem_eq_sup` 最小化 card + `eq_of_subset_of_card_le`）
+- **★ `treeGraph_reachable_root`**：族成员沿 `parentOf` 链上溯（**强归纳 on `card univ - card A`**）
+- **★★ `connected_treeGraph`**：连通 ✓
+- **父顶点层**：`rootV` / `minClusterV` / `parentV` / **`parV`**（簇→父、根→自身、元素→最小簇）· `adj_parV` · `parEdge` · `parEdge_mem_edgeSet`
+- **★ `edgeSet_subset_range`（满射）**：每条边由某非根顶点的 `parEdge` 给出（四种邻接情形：簇–簇用 `isParentOf_unique`；簇–元素/元素–簇用 `isMinClusterOf_unique`；元素–元素不可能）
+- **★ `card_edgeFinset_le`**：`|E| ≤ |V| - 1`（满射 + `card_image_le` + `card_erase_of_mem`）
+- **★★★ `isTree_treeGraph`**：`IsTree` —— 上界由满射、下界由 `Connected.card_vert_le_card_edgeSet_add_one` 夹出，最后 `isTree_iff_connected_and_card`
+
+### ⬜ 剩余（「相容 ⟹ 存在树」的最后两块）
+1. **`univ` 的度** —— 精确刻画 **`deg(univ) = m + |U|`**：
+   - `univ` 的邻居 = **极大簇**（`IsChildOf F univ` 的孩子）∪ **未覆盖元素** `U = {x | IsMinClusterOf F x univ}`（两者不交，各自单射）
+   - `m + |U| ≥ 3` 或 `m = 0` ⟹ 直接可用
+   - **`m + |U| = 2` 的两种退化子情形需改构造**：(m=1,|U|=1) 合并 `univ` 与唯一极大簇；(m=2,|U|=0) 合并 `univ` 与其中一个极大簇
+2. **`Σ(树) = 规范 cluster 集`** —— 收口 Buneman 存在性 / NJ 硬核
+3. **移植**：`three_le_degree_of_ne_univ`（现关于 `laminarGraph`）→ `treeGraph`（度数相同，邻接定义一致）
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
