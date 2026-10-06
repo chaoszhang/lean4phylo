@@ -1271,4 +1271,20 @@ theorem reachable_of_subset {F : Finset (Finset α)} (hl : LaminarFamily F)
         omega
       exact hadj.reachable.trans (ih (parentV hl hne huniv A hAuniv) hle' hPsub)
 
+/-- **(c)** `T - e_B` 中 `B` 与 `parentOf F B` **不可达**（`e_B` 是桥）。
+
+一行：`IsTree ⟹ IsAcyclic ⟹ 每条边是桥`（`isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`）。 -/
+theorem not_reachable_parentEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    ¬ ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Reachable
+        (Sum.inl (⟨B, hB⟩ : ↥F)) (Sum.inl (parentV hl hne huniv ⟨B, hB⟩ hBuniv)) := by
+  have hadj : (treeGraph F).Adj (Sum.inl (⟨B, hB⟩ : ↥F))
+      (Sum.inl (parentV hl hne huniv ⟨B, hB⟩ hBuniv)) :=
+    (treeGraph_adj_inl_inl F (⟨B, hB⟩ : ↥F) (parentV hl hne huniv ⟨B, hB⟩ hBuniv)).mpr
+      (Or.inl (isParentOf_parentOf (A := B) hl hne huniv hB hBuniv))
+  exact SimpleGraph.isBridge_iff.mp
+    ((SimpleGraph.isAcyclic_iff_forall_adj_isBridge.mp
+      (isTree_treeGraph hl hne huniv).isAcyclic) hadj)
+
 end Phylo
