@@ -14,6 +14,7 @@ import Phylo.Mathlib.Walk
 import Phylo.Quartet
 import Phylo.Split
 import Phylo.Stat.ASTRAL
+import Phylo.Stat.CASTER
 import Phylo.Stat.MSC
 import Phylo.Stat.Stability
 
