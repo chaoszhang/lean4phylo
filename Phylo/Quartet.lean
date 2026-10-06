@@ -183,3 +183,125 @@ def swap (t : TripletTopology X) : TripletTopology X where
 end TripletTopology
 
 end Phylo
+
+open Phylo
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-! ## display —— 树展示 quartet / quartet 拓扑
+
+`CONCEPTS.md` §3.5 / §3.11：**「存在 cladogram 显示 Q 中所有 quartet」= Quartet Compatibility**
+（一般情形 NP-complete，故**只作存在性命题 / 算法目标，不作判据**）。 -/
+
+namespace Cladogram
+
+variable (T : Cladogram X)
+
+/-- 树 `T` **展示** quartet `ab|cd`：存在一条边（split）把 `{a,b}` 与 `{c,d}` 分到两侧。 -/
+def DisplaysQuartet (a b c d : X) : Prop :=
+  ∃ s : Split X, T.IsSplitOf s ∧ ({a, b} : Finset X) ⊆ s.sideA ∧ ({c, d} : Finset X) ⊆ s.sideB
+
+/-- 展示性对第一侧内部次序不变（`ab|cd ⟺ ba|cd`）。 -/
+theorem displaysQuartet_comm_ab (a b c d : X) :
+    T.DisplaysQuartet a b c d ↔ T.DisplaysQuartet b a c d := by
+  have h : ({a, b} : Finset X) = {b, a} := by
+    ext x
+    simp only [Finset.mem_insert, Finset.mem_singleton]
+    tauto
+  unfold DisplaysQuartet
+  rw [h]
+
+/-- 展示性对两侧交换不变（`ab|cd ⟺ cd|ab`）—— 用 `isSplitOf_swap` 换到边另一端。 -/
+theorem displaysQuartet_comm_cd (a b c d : X) :
+    T.DisplaysQuartet a b c d ↔ T.DisplaysQuartet c d a b := by
+  unfold DisplaysQuartet
+  constructor
+  · rintro ⟨s, hs, h1, h2⟩
+    exact ⟨s.swap, T.isSplitOf_swap hs,
+      by rw [Split.swap_sideA]; exact h2,
+      by rw [Split.swap_sideB]; exact h1⟩
+  · rintro ⟨s, hs, h1, h2⟩
+    exact ⟨s.swap, T.isSplitOf_swap hs,
+      by rw [Split.swap_sideA]; exact h2,
+      by rw [Split.swap_sideB]; exact h1⟩
+
+/-- **展示 ⟹ 该 split 在 4 元支撑集上恰给出 `{a,b}|{c,d}`**（§3.5 的「quartet + split」桥）。 -/
+theorem exists_split_inter_of_displaysQuartet {a b c d : X}
+    (h : T.DisplaysQuartet a b c d) :
+    ∃ s : Split X, T.IsSplitOf s ∧ s.sideA ∩ ({a, b, c, d} : Finset X) = {a, b} := by
+  obtain ⟨s, hs, h1, h2⟩ := h
+  refine ⟨s, hs, Finset.Subset.antisymm ?_ ?_⟩
+  · intro x hx
+    rw [Finset.mem_inter] at hx
+    obtain ⟨hxA, hxQ⟩ := hx
+    rw [Finset.mem_insert, Finset.mem_insert, Finset.mem_insert,
+      Finset.mem_singleton] at hxQ
+    rcases hxQ with rfl | rfl | rfl | rfl
+    · simp
+    · simp
+    · exact absurd (h2 (by simp)) fun h' => (Finset.disjoint_left.mp s.disjoint_sides) hxA h'
+    · exact absurd (h2 (by simp)) fun h' => (Finset.disjoint_left.mp s.disjoint_sides) hxA h'
+  · intro x hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    refine Finset.mem_inter.mpr ⟨?_, ?_⟩
+    · exact h1 (by rw [Finset.mem_insert, Finset.mem_singleton]; exact hx)
+    · rcases hx with hxa | hxb
+      · rw [hxa]; simp
+      · rw [hxb]; simp
+
+/-- ★ **Colonius–Schultze 推理规则**：`ab|ce ∧ ab|de ⟹ ab|cd`（`x` 取 `e`）。
+
+（`CONCEPTS.md` §3.11：full 情形下 quartet 系统的完整刻画。证明只需
+「两条相容 split 必嵌套」+「共同元素 `e` 排除交叉情形」。） -/
+theorem displaysQuartet_of_displaysQuartet_common {a b c d e : X}
+    (h1 : T.DisplaysQuartet a b c e) (h2 : T.DisplaysQuartet a b d e) :
+    T.DisplaysQuartet a b c d := by
+  obtain ⟨s1, hs1, ha1, hc1⟩ := h1
+  obtain ⟨s2, hs2, ha2, hd2⟩ := h2
+  have hcomp : Split.Compatible s1 s2 := pairwiseCompatible T s1 hs1 s2 hs2
+  rcases (Split.compatible_iff_subset.mp hcomp) with h | h | h | h
+  · -- `A₁ ⊆ A₂`：`d ∉ A₁`（因 `d ∉ A₂`），故 `d ∈ B₁`；用 `s₁`
+    refine ⟨s1, hs1, ha1, fun x hx => ?_⟩
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with hxc | hxd
+    · rw [hxc]
+      exact hc1 (by simp)
+    · rw [hxd]
+      exact Split.mem_sideB_of_not_mem_sideA s1 fun hdA =>
+        (Split.mem_sideB_iff_not_mem_sideA s2 d).mp (hd2 (by simp)) (h hdA)
+  · -- `A₁ ⊆ B₂`：`a ∈ A₁ ⊆ B₂` 与 `a ∈ A₂` 矛盾
+    have ha1' : a ∈ ({a, b} : Finset X) := by simp
+    exfalso
+    exact (Finset.disjoint_left.mp s2.disjoint_sides) (ha2 ha1') (h (ha1 ha1'))
+  · -- `B₁ ⊆ A₂`：`e ∈ B₁ ⊆ A₂` 与 `e ∈ B₂` 矛盾
+    have hc1' : e ∈ ({c, e} : Finset X) := by simp
+    have hd2' : e ∈ ({d, e} : Finset X) := by simp
+    exfalso
+    exact (Finset.disjoint_left.mp s2.disjoint_sides) (h (hc1 hc1')) (hd2 hd2')
+  · -- `B₁ ⊆ B₂`：`c ∈ B₁ ⊆ B₂`；用 `s₂`
+    have hc1' : c ∈ ({c, e} : Finset X) := by simp
+    have hd2' : d ∈ ({d, e} : Finset X) := by simp
+    exact ⟨s2, hs2, ha2, fun x hx => by
+      rw [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with hxc | hxd
+      · rw [hxc]; exact h (hc1 hc1')
+      · rw [hxd]; exact hd2 hd2'⟩
+
+/-! ### 展示 quartet 拓扑 -/
+
+/-- 树 `T` **展示** quartet 拓扑 `q`：存在 `T` 的边，在 `q.supp` 上诱导出 `q.top` 这一配对。 -/
+def DisplaysTopology (q : QuartetTopology X) : Prop :=
+  ∃ s : Split X, T.IsSplitOf s ∧
+    ∀ (x : X) (hx : x ∈ q.supp), (x ∈ s.sideA ↔ (⟨x, hx⟩ : ↥q.supp) ∈ q.top.sideA)
+
+end Cladogram
+
+universe u v
+
+/-- **Quartet 相容性**（存在性命题）。
+
+`CONCEPTS.md` §3.11：一般情形 **NP-complete**（Steel 1992），故**只能作「存在性命题 / 算法目标」**，
+**不能当判据或定义** —— 否则等于把 NP-hard 写进定义。 -/
+def QuartetCompatible {X : Type u} [Fintype X] [DecidableEq X]
+    (Q : Set (QuartetTopology X)) : Prop :=
+  ∃ T : Cladogram.{u, v} X, ∀ q ∈ Q, T.DisplaysTopology q

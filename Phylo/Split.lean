@@ -303,6 +303,61 @@ theorem compatible_iff_sides {s t : Split α} :
     Compatible s t ↔ SidesCompatible s.sideA t.sideA :=
   ⟨sidesCompatible_of_compatible, compatible_of_sides⟩
 
+/-- 不在 `sideB` 就在 `sideA`（由二者互补）。 -/
+theorem mem_sideA_of_not_mem_sideB (s : Split α) {x : α} (h : x ∉ s.sideB) : x ∈ s.sideA := by
+  have hmem : x ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ x
+  rcases Finset.mem_union.mp hmem with h' | h'
+  · exact h'
+  · exact absurd h' h
+
+/-- 不在 `sideA` 就在 `sideB`。 -/
+theorem mem_sideB_of_not_mem_sideA (s : Split α) {x : α} (h : x ∉ s.sideA) : x ∈ s.sideB :=
+  (s.mem_sideB_iff_not_mem_sideA x).mpr h
+
+/-- **相容性的「嵌套形式」**：相容 ⟺ 一侧含于另一侧（四种嵌套之一）。
+
+用于把「四个交有一为空」翻译成可操作的包含关系（Colonius–Schultze 规则需要）。 -/
+theorem compatible_iff_subset {s t : Split α} :
+    Compatible s t ↔ s.sideA ⊆ t.sideA ∨ s.sideA ⊆ t.sideB ∨
+      s.sideB ⊆ t.sideA ∨ s.sideB ⊆ t.sideB := by
+  constructor
+  · intro h
+    rcases h with h | h | h | h
+    · -- `A₁ ∩ A₂ = ∅` ⟹ `A₁ ⊆ B₂`
+      refine Or.inr (Or.inl fun x hx => ?_)
+      rw [t.sideB_eq_compl, Finset.mem_compl]
+      exact fun hx' => (Finset.disjoint_left.mp h) hx hx'
+    · -- `A₁ ∩ B₂ = ∅` ⟹ `A₁ ⊆ A₂`
+      refine Or.inl fun x hx => t.mem_sideA_of_not_mem_sideB fun hx' =>
+        (Finset.disjoint_left.mp h) hx hx'
+    · -- `B₁ ∩ A₂ = ∅` ⟹ `B₁ ⊆ B₂`
+      refine Or.inr (Or.inr (Or.inr fun x hx => t.mem_sideB_of_not_mem_sideA fun hx' =>
+        (Finset.disjoint_left.mp h) hx hx'))
+    · -- `B₁ ∩ B₂ = ∅` ⟹ `B₁ ⊆ A₂`
+      refine Or.inr (Or.inr (Or.inl fun x hx => t.mem_sideA_of_not_mem_sideB fun hx' =>
+        (Finset.disjoint_left.mp h) hx hx'))
+  · rintro (h | h | h | h)
+    · -- `A₁ ⊆ A₂` ⟹ `A₁ ∩ B₂ = ∅`
+      refine Or.inr (Or.inl ?_)
+      rw [Finset.disjoint_left]
+      intro x hx hx'
+      exact (Finset.disjoint_left.mp t.disjoint_sides) (h hx) hx'
+    · -- `A₁ ⊆ B₂` ⟹ `A₁ ∩ A₂ = ∅`
+      refine Or.inl ?_
+      rw [Finset.disjoint_left]
+      intro x hx hx'
+      exact (Finset.disjoint_left.mp t.disjoint_sides) hx' (h hx)
+    · -- `B₁ ⊆ A₂` ⟹ `B₁ ∩ B₂ = ∅`
+      refine Or.inr (Or.inr (Or.inr ?_))
+      rw [Finset.disjoint_left]
+      intro x hx hx'
+      exact (Finset.disjoint_left.mp t.disjoint_sides) (h hx) hx'
+    · -- `B₁ ⊆ B₂` ⟹ `B₁ ∩ A₂ = ∅`
+      refine Or.inr (Or.inr (Or.inl ?_))
+      rw [Finset.disjoint_left]
+      intro x hx hx'
+      exact (Finset.disjoint_left.mp t.disjoint_sides) hx' (h hx)
+
 /-- **规范 cluster**：避开 `ρ` 的那一侧（每个 split 恰有一侧不含 `ρ`）。
 
 这是「相容 ⟹ 存在树」里「选代表」的一步 —— 全部 cluster 都避开 `ρ`，于是两两镶嵌。 -/
@@ -751,6 +806,35 @@ theorem exists_isSplitOf_singleton (T : Cladogram X) [Nontrivial X] (x : X) :
     ⟨T.leaf x, b, hb, T.leaf x, rfl⟩, ?_⟩
   show T.sideLeaves s(T.leaf x, b) (T.leaf x) = {x}
   exact T.sideLeaves_leaf_edge hb
+
+/-- 边 `⟦a,b⟧` 的两侧互补：`b` 侧的补恰是 `a` 侧。 -/
+theorem compl_sideLeaves (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b) :
+    (T.sideLeaves s(a, b) b)ᶜ = T.sideLeaves s(a, b) a := by
+  ext x
+  rw [Finset.mem_compl, T.mem_sideLeaves_iff_inSide, T.mem_sideLeaves_iff_inSide]
+  constructor
+  · intro hb
+    rcases T.inSide_or_inSide hab (x := T.leaf x) with h | h
+    · exact (T.inSide_comm s(a, b) (T.leaf x) a).mp h
+    · exact absurd ((T.inSide_comm s(a, b) (T.leaf x) b).mp h) hb
+  · rintro ha hb
+    exact T.not_inSide_both hab ⟨ha, hb⟩
+
+/-- **`IsSplitOf` 对换向封闭**：`s` 是某条边给出的 split ⟹ `s.swap` 也是。
+
+（换到边的另一端取同一侧即可 —— 用 `compl_sideLeaves` 把「补集」还原成「另一端的侧」。） -/
+theorem isSplitOf_swap (T : Cladogram X) {s : Split X} (h : T.IsSplitOf s) :
+    T.IsSplitOf s.swap := by
+  obtain ⟨a, b, hab, u, hu⟩ := h
+  rcases T.inSide_or_inSide hab (x := u) with hua | hub
+  · refine ⟨a, b, hab, b, ?_⟩
+    show s.swap.sideA = T.sideLeaves s(a, b) b
+    rw [Split.swap_sideA, s.sideB_eq_compl, hu, T.sideLeaves_eq_of_inSide hua,
+      ← T.sideLeaves_compl_adj hab]
+  · refine ⟨a, b, hab, a, ?_⟩
+    show s.swap.sideA = T.sideLeaves s(a, b) a
+    rw [Split.swap_sideA, s.sideB_eq_compl, hu, T.sideLeaves_eq_of_inSide hub]
+    exact T.compl_sideLeaves hab
 
 end Cladogram
 
