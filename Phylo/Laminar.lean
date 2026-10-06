@@ -1178,4 +1178,97 @@ theorem leavesOf_eq {F : Finset (Finset α)} (hl : LaminarFamily F)
     obtain ⟨A, hmin⟩ := exists_isMinClusterOf (F := F) hl ⟨B, hB, hx⟩
     exact ⟨A, hmin.1, hmin, isMinClusterOf_subset hmin hB hx⟩
 
+/-! ### 桥接：`B` 的子树 = 删边后 `B` 所在的分量
+
+记 `e_B := ⟦inl B, inl (parentOf F B)⟧`（`B` 与其父的边）。要证
+`sideLeaves e_B (inl B) = leavesOf F B = B`。
+
+* **(a) `parentOf_subset_of_subset`**：`A ⊆ B, A ≠ B ⟹ parentOf F A ⊆ B`
+  —— 直接由 `IsParentOf` 的**最小性**（`A ⊊ B` 而 `parentOf F A` 含于任一严格超集）；
+* **(b) `reachable_of_subset`**：沿父链递推，`A ⊆ B` 的簇在 `T - e_B` 中与 `B` 可达；
+* **(c)**：跨越 `e_B` 的边只有 `e_B` 自己（需证）。 -/
+
+/-- **(a)** `A ⊆ B` 且 `A ≠ B` ⟹ `parentOf F A ⊆ B`。
+
+（`A ⊊ B` 而 `parentOf F A` 是 `A` 的最小严格超集 ⟹ 含于 `B`。） -/
+theorem parentOf_subset_of_subset {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {A B : Finset α} (hA : A ∈ F) (hB : B ∈ F) (hsub : A ⊆ B) (hneAB : A ≠ B) :
+    parentOf F A ⊆ B := by
+  have hAlt : A ⊂ B := Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hneAB⟩
+  have hAuniv : A ≠ Finset.univ := by
+    intro h
+    have hBuniv : B = Finset.univ :=
+      Finset.Subset.antisymm (Finset.subset_univ B) (by rw [← h]; exact hsub)
+    exact hneAB (by rw [h, hBuniv])
+  exact (isParentOf_parentOf (A := A) hl hne huniv hA hAuniv).2.2 B hB hAlt
+
+/-- **`B` 与其父的边**（`B ∈ F`、`B ≠ univ`）。 -/
+noncomputable def parentEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (B : Finset α) (hBF : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    Sym2 (LaminarVertex F) :=
+  s(Sum.inl (⟨B, hBF⟩ : ↥F), Sum.inl (parentV hl hne huniv (⟨B, hBF⟩ : ↥F) hBuniv))
+
+/-- **(b)** `A ⊆ B` 的簇沿父链在 `T - e_B` 中与 `B` 可达（`e_B = parentEdge`）。
+
+递推（强归纳 on `B.card - A.card`）：`A ⊊ B` 时 `parentOf F A ⊆ B`（**(a)**），
+故 `A` 的父 ≠ `B` 的父，边 `⟦A, parentOf F A⟧ ≠ e_B`，走一步再递推。 -/
+theorem reachable_of_subset {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    ∀ A : ↥F, A.1 ⊆ B →
+      ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Reachable
+        (Sum.inl A) (Sum.inl (⟨B, hB⟩ : ↥F)) := by
+  suffices h : ∀ n, ∀ A : ↥F, B.card - A.1.card ≤ n → A.1 ⊆ B →
+      ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Reachable
+        (Sum.inl A) (Sum.inl (⟨B, hB⟩ : ↥F)) by
+    intro A hsub; exact h _ A le_rfl hsub
+  intro n
+  induction n with
+  | zero =>
+    intro A hle hsub
+    have hcard : B.card = A.1.card := by
+      have := Finset.card_le_card hsub; omega
+    have heq : A.1 = B := Finset.eq_of_subset_of_card_le hsub (by omega)
+    have hAeq : A = (⟨B, hB⟩ : ↥F) := Subtype.ext heq
+    rw [hAeq]
+  | succ n ih =>
+    intro A hle hsub
+    by_cases heq : A.1 = B
+    · have hAeq : A = (⟨B, hB⟩ : ↥F) := Subtype.ext heq
+      rw [hAeq]
+    · have hAuniv : A.1 ≠ Finset.univ := by
+        intro h
+        have hBuniv' : B = Finset.univ := by
+          refine Finset.Subset.antisymm (Finset.subset_univ B) ?_
+          rw [← h]
+          exact hsub
+        exact hBuniv hBuniv'
+      have hPsub : parentOf F A.1 ⊆ B :=
+        parentOf_subset_of_subset hl hne huniv A.2 hB hsub heq
+      have hPA := isParentOf_parentOf (A := A.1) hl hne huniv A.2 hAuniv
+      have hPeq : parentV hl hne huniv A hAuniv = (⟨parentOf F A.1, hPA.1⟩ : ↥F) := rfl
+      have hne_e : s(Sum.inl A, Sum.inl (parentV hl hne huniv A hAuniv)) ≠
+          parentEdge hl hne huniv B hB hBuniv := by
+        intro h
+        rw [parentEdge] at h
+        rcases Sym2.eq_iff.mp h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+        · exact heq (congrArg Subtype.val (Sum.inl_injective h1))
+        · have hAeq : A.1 = parentOf F B := congrArg Subtype.val (Sum.inl_injective h1)
+          exact (isParentOf_parentOf (A := B) hl hne huniv hB hBuniv).2.1.2 (hAeq ▸ hsub)
+      have hadj : ((treeGraph F).deleteEdges
+          {parentEdge hl hne huniv B hB hBuniv}).Adj
+          (Sum.inl A) (Sum.inl (parentV hl hne huniv A hAuniv)) :=
+        SimpleGraph.deleteEdges_adj.mpr
+          ⟨(treeGraph_adj_inl_inl F A (parentV hl hne huniv A hAuniv)).mpr (Or.inl hPA),
+            hne_e⟩
+      have hle' : B.card - (parentV hl hne huniv A hAuniv).1.card ≤ n := by
+        have h1 : A.1.card < (parentV hl hne huniv A hAuniv).1.card :=
+          Finset.card_lt_card hPA.2.1
+        have h2 : (parentV hl hne huniv A hAuniv).1.card ≤ B.card :=
+          Finset.card_le_card hPsub
+        omega
+      exact hadj.reachable.trans (ih (parentV hl hne huniv A hAuniv) hle' hPsub)
+
 end Phylo
