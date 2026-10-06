@@ -7,6 +7,7 @@ import Phylo.Algorithm.Cherry
 import Phylo.Algorithm.NJ
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
+import Phylo.Binary
 import Phylo.Core
 import Phylo.Distance
 import Phylo.Laminar
