@@ -1287,4 +1287,138 @@ theorem not_reachable_parentEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
     ((SimpleGraph.isAcyclic_iff_forall_adj_isBridge.mp
       (isTree_treeGraph hl hne huniv).isAcyclic) hadj)
 
+/-! ### 最后组装：闭包不变式
+
+定义 `B` 的**闭包** `C := {inl A : A ⊆ B} ∪ {inr y : y ∈ B}`。则
+
+1. `C` 对 `T - e_B` 的邻接**封闭**（关键：`A.1 = B` 时不能向上走 —— 那条边正是 `e_B`）；
+2. 故 `T - e_B` 的 walk 若从 `C` 中出发，终点也在 `C` 中（`Walk.recOn`）；
+3. `inl B ∈ C`，故可达的点都在 `C` 中；而 `inr x ∈ C ⟺ x ∈ B`。 -/
+
+/-- `B` 的**闭包**：`⊆ B` 的簇 + `B` 中的元素。 -/
+noncomputable def subtreeVerts (F : Finset (Finset α)) (B : Finset α) :
+    Finset (LaminarVertex F) := by
+  classical
+  exact ((F.filter fun A => A ⊆ B).attach.image fun A =>
+      (Sum.inl (⟨A.1, (Finset.mem_filter.mp A.2).1⟩ : ↥F) : LaminarVertex F)) ∪
+    (B.image fun x => (Sum.inr x : LaminarVertex F))
+
+theorem mem_subtreeVerts_inl {F : Finset (Finset α)} {B : Finset α} {A : ↥F} :
+    (Sum.inl A : LaminarVertex F) ∈ subtreeVerts F B ↔ A.1 ⊆ B := by
+  classical
+  rw [subtreeVerts, Finset.mem_union]
+  constructor
+  · rintro (h | h)
+    · obtain ⟨C, -, hC⟩ := Finset.mem_image.mp h
+      have hCA : (⟨C.1, (Finset.mem_filter.mp C.2).1⟩ : ↥F) = A := Sum.inl_injective hC
+      rw [← hCA]
+      exact (Finset.mem_filter.mp C.2).2
+    · exact absurd (Finset.mem_image.mp h).choose_spec.2 Sum.inr_ne_inl
+  · intro h
+    exact Or.inl (Finset.mem_image.mpr
+      ⟨⟨A.1, Finset.mem_filter.mpr ⟨A.2, h⟩⟩, Finset.mem_attach _ _, rfl⟩)
+
+theorem mem_subtreeVerts_inr {F : Finset (Finset α)} {B : Finset α} {x : α} :
+    (Sum.inr x : LaminarVertex F) ∈ subtreeVerts F B ↔ x ∈ B := by
+  classical
+  rw [subtreeVerts, Finset.mem_union]
+  constructor
+  · rintro (h | h)
+    · exact absurd (Finset.mem_image.mp h).choose_spec.2 Sum.inl_ne_inr
+    · obtain ⟨y, hy, hyx⟩ := Finset.mem_image.mp h
+      rwa [Sum.inr_injective hyx] at hy
+  · intro h
+    exact Or.inr (Finset.mem_image.mpr ⟨x, h, rfl⟩)
+
+/-- **闭包对 `T - e_B` 的邻接封闭**。 -/
+theorem subtreeVerts_closed {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ)
+    {u v : LaminarVertex F} (hu : u ∈ subtreeVerts F B)
+    (hadj : ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Adj u v) :
+    v ∈ subtreeVerts F B := by
+  classical
+  obtain ⟨hadj', hne_e⟩ := SimpleGraph.deleteEdges_adj.mp hadj
+  rcases u with A | x <;> rcases v with C | y
+  · -- 簇–簇
+    rw [mem_subtreeVerts_inl] at hu ⊢
+    have hAuniv : A.1 ≠ Finset.univ := by
+      intro hh
+      refine hBuniv ?_
+      refine Finset.Subset.antisymm (Finset.subset_univ B) ?_
+      rw [← hh]
+      exact hu
+    rcases (treeGraph_adj_inl_inl F A C).mp hadj' with h | h
+    · -- `C.1` 是 `A.1` 的父
+      by_cases hAB : A.1 = B
+      · -- `A.1 = B` ⟹ 边正是 `e_B`，与「在 `T - e_B` 中」矛盾
+        exfalso
+        have hCeq : C.1 = parentOf F A.1 :=
+          isParentOf_unique h (isParentOf_parentOf (A := A.1) hl hne huniv A.2 hAuniv)
+        refine hne_e ?_
+        have h1 : A = (⟨B, hB⟩ : ↥F) := Subtype.ext hAB
+        have h2 : C = parentV hl hne huniv (⟨B, hB⟩ : ↥F) hBuniv := by
+          refine Subtype.ext ?_
+          show C.1 = parentOf F B
+          rw [← hAB]
+          exact hCeq
+        rw [h1, h2]
+        rfl
+      · have hCeq : C.1 = parentOf F A.1 :=
+          isParentOf_unique h (isParentOf_parentOf (A := A.1) hl hne huniv A.2 hAuniv)
+        rw [hCeq]
+        exact parentOf_subset_of_subset hl hne huniv A.2 hB hu hAB
+    · exact h.2.1.1.trans hu
+  · -- 簇–元素
+    rw [mem_subtreeVerts_inr]
+    exact (mem_subtreeVerts_inl.mp hu) ((treeGraph_adj_inl_inr F A y).mp hadj').2.1
+  · -- 元素–簇
+    rw [mem_subtreeVerts_inr] at hu
+    rw [mem_subtreeVerts_inl]
+    exact isMinClusterOf_subset ((treeGraph_adj_inr_inl F x C).mp hadj') hB hu
+  · exact hadj'.elim
+
+/-- **walk 不变式**：`T - e_B` 的 walk 从闭包出发，终点也在闭包中。 -/
+theorem walk_mem_subtreeVerts {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ)
+    {u v : LaminarVertex F}
+    (p : ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Walk u v)
+    (hu : u ∈ subtreeVerts F B) : v ∈ subtreeVerts F B := by
+  refine SimpleGraph.Walk.recOn
+    (motive := fun a b _ => a ∈ subtreeVerts F B → b ∈ subtreeVerts F B)
+    p (fun h => h) ?_ hu
+  intro a b c hadj q ih ha
+  exact ih (subtreeVerts_closed hl hne huniv hB hBuniv ha hadj)
+
+/-! ### ★★ 组装：`sideLeaves` 与 `leavesOf` 一致 -/
+
+/-- ★★ **`x ∈ B ⟺ x` 在 `T - e_B` 中与 `inl B` 可达** —— 桥接完成。
+
+* **⟸** 由闭包不变式（`walk_mem_subtreeVerts`）：可达点都在 `C` 中，`inr x ∈ C ⟺ x ∈ B`；
+* **⟹** `x` 的最小簇 `A ⊆ B`，边 `⟦inr x, inl A⟧ ≠ e_B`（一端是元素），再走 **(b)**。 -/
+theorem mem_iff_reachable {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) (x : α) :
+    x ∈ B ↔ ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Reachable
+        (Sum.inr x) (Sum.inl (⟨B, hB⟩ : ↥F)) := by
+  classical
+  constructor
+  · intro hx
+    have hadj : ((treeGraph F).deleteEdges {parentEdge hl hne huniv B hB hBuniv}).Adj
+        (Sum.inr x) (Sum.inl (minClusterV hl huniv x)) := by
+      refine SimpleGraph.deleteEdges_adj.mpr
+        ⟨(treeGraph_adj_inr_inl F x (minClusterV hl huniv x)).mpr
+          (minClusterV_spec hl huniv x), ?_⟩
+      intro h
+      rw [parentEdge] at h
+      rcases Sym2.eq_iff.mp h with ⟨h1, -⟩ | ⟨h1, -⟩ <;> exact Sum.inr_ne_inl h1
+    have hb := reachable_of_subset hl hne huniv hB hBuniv (minClusterV hl huniv x)
+      (isMinClusterOf_subset (minClusterV_spec hl huniv x) hB hx)
+    exact hadj.reachable.trans hb
+  · intro hr
+    obtain ⟨p⟩ := hr
+    exact mem_subtreeVerts_inr.mp (walk_mem_subtreeVerts hl hne huniv hB hBuniv p.reverse
+      (mem_subtreeVerts_inl.mpr (Finset.Subset.refl B)))
+
 end Phylo
