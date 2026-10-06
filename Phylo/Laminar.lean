@@ -84,4 +84,75 @@ theorem laminar_strictSups_pairwise {A : Finset α} (hl : LaminarFamily F)
     ∀ B ∈ strictSups F A, ∀ C ∈ strictSups F A, B ⊆ C ∨ C ⊆ B :=
   fun _ hB _ hC => laminar_strictSups hl hne hB hC
 
+/-! ### 父关系（「最小严格包含者」的特征性质）
+
+用**特征性质**而非选函数定义父关系 —— 免去 `Finset.inf'` 的选择与引理麻烦，
+且「最小性」（`∀ C ∈ F, A ⊊ C → B ⊆ C`）正是建图所需的。 -/
+
+/-- **`B` 是 `A`（在族 `F` 中）的父**：`B ∈ F`，`A ⊊ B`，且 `B` 含于任一严格包含 `A` 的族成员。 -/
+def IsParentOf (F : Finset (Finset α)) (A B : Finset α) : Prop :=
+  B ∈ F ∧ A ⊂ B ∧ ∀ C ∈ F, A ⊂ C → B ⊆ C
+
+/-- **父唯一**（两个父互相包含）。 -/
+theorem isParentOf_unique {A B B' : Finset α}
+    (h : IsParentOf F A B) (h' : IsParentOf F A B') : B = B' :=
+  Finset.Subset.antisymm (h.2.2 B' h'.1 h'.2.1) (h'.2.2 B h.1 h.2.1)
+
+/-- 父是严格包含者。 -/
+theorem isParentOf_mem_strictSups {A B : Finset α} (h : IsParentOf F A B) :
+    B ∈ strictSups F A :=
+  mem_strictSups.mpr ⟨h.1, h.2.1⟩
+
+/-- **父最小性**（直接取自定义）：父含于任一严格包含 `A` 的族成员。 -/
+theorem isParentOf_subset_of_strictSup {A B C : Finset α}
+    (h : IsParentOf F A B) (hC : C ∈ F) (hAC : A ⊂ C) : B ⊆ C :=
+  h.2.2 C hC hAC
+
+/-- **`A` 是含 `x` 的最小簇**（叶 `x` 的父簇）。 -/
+def IsMinClusterOf (F : Finset (Finset α)) (x : α) (A : Finset α) : Prop :=
+  A ∈ F ∧ x ∈ A ∧ ∀ C ∈ F, x ∈ C → A ⊆ C
+
+/-- 含 `x` 的最小簇唯一。 -/
+theorem isMinClusterOf_unique {x : α} {A A' : Finset α}
+    (h : IsMinClusterOf F x A) (h' : IsMinClusterOf F x A') : A = A' :=
+  Finset.Subset.antisymm (h.2.2 A' h'.1 h'.2.1) (h'.2.2 A h.1 h.2.1)
+
+/-- 含 `x` 的最小簇是最小的含 `x` 成员。 -/
+theorem isMinClusterOf_subset {x : α} {A C : Finset α}
+    (h : IsMinClusterOf F x A) (hC : C ∈ F) (hxC : x ∈ C) : A ⊆ C :=
+  h.2.2 C hC hxC
+
+/-! ### 镶嵌树的图
+
+顶点 = 簇 ∪ 元素；边 = 「父子」（簇之间）与「叶挂最小簇」（叶–簇）。 -/
+
+/-- **镶嵌树的邻接关系**（无向）。
+
+* 簇 `A` — 簇 `B`：一方是另一方的父（取 `∨` 使得对称）；
+* 叶 `x` — 簇 `A`：`A` 是含 `x` 的最小簇；
+* 叶 — 叶：无边。 -/
+def laminarAdj (F : Finset (Finset α)) (u v : TreeVertex α) : Prop :=
+  match u, v with
+  | Sum.inl A, Sum.inl B => IsParentOf F A B ∨ IsParentOf F B A
+  | Sum.inr x, Sum.inl A => IsMinClusterOf F x A
+  | Sum.inl A, Sum.inr x => IsMinClusterOf F x A
+  | Sum.inr _, Sum.inr _ => False
+
+/-- **镶嵌树的图**（无自环 + 对称内联证毕）。 -/
+def laminarGraph (F : Finset (Finset α)) : SimpleGraph (TreeVertex α) where
+  Adj := laminarAdj F
+  symm := ⟨fun u v h => by
+    match u, v with
+    | Sum.inl _, Sum.inl _ => exact h.symm
+    | Sum.inl _, Sum.inr _ => exact h
+    | Sum.inr _, Sum.inl _ => exact h
+    | Sum.inr _, Sum.inr _ => exact h⟩
+  loopless := ⟨fun u h => by
+    match u with
+    | Sum.inl A =>
+      rcases h with h | h
+      · exact h.2.1.2 (Finset.Subset.refl A)
+      · exact h.2.1.2 (Finset.Subset.refl A)
+    | Sum.inr _ => exact h⟩
+
 end Phylo
