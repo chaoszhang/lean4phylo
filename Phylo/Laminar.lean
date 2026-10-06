@@ -1066,4 +1066,83 @@ noncomputable def toCladogram {F : Finset (Finset α)} (hl : LaminarFamily F)
       · exact ⟨x, rfl⟩
   no_degree_two := no_degree_two_treeGraph hl hne huniv hcard hroot
 
+/-! ## 退化情形（`|孩子| + |直接元素| ≤ 2`）
+
+**方案：删掉一个极大簇 `A`**（等价于「把 `univ` 与 `A` 合并」）——
+删掉 `A` 后，`A` 的孩子直接挂 `univ`、`A` 的直接元素成为 `univ` 的直接元素，
+于是 `univ` 的度数增加。下面先证两条「删除后结构」引理。 -/
+
+/-- **删掉极大簇后，它的孩子成为 `univ` 的孩子**。 -/
+theorem isChildOf_erase_of_isChildOf (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty)
+    {A : Finset α} (hA : IsChildOf F Finset.univ A) {C : Finset α}
+    (hC : IsChildOf F A C) : IsChildOf (F.erase A) Finset.univ C := by
+  obtain ⟨hCF, hCA, hCmax⟩ := hC
+  obtain ⟨hAF, hAlt, hAmax⟩ := hA
+  have hAne : A ≠ Finset.univ := fun h => hAlt.2 (by rw [h])
+  have hCneA : C ≠ A := fun h => hCA.2 (by rw [h])
+  refine ⟨Finset.mem_erase.mpr ⟨hCneA, hCF⟩,
+    Finset.ssubset_iff_subset_ne.mpr ⟨hCA.1.trans hAlt.1, fun h => ?_⟩, ?_⟩
+  · rw [h] at hCA
+    exact hCA.2 (Finset.subset_univ A)
+  · intro B hB hCB
+    rw [Finset.mem_erase] at hB
+    obtain ⟨hBneA, hBF⟩ := hB
+    intro hBlt
+    rcases hl A hAF B hBF with hAB | hBA | hd
+    · exact (hAmax B hBF (Finset.ssubset_iff_subset_ne.mpr ⟨hAB, hBneA.symm⟩)) hBlt
+    · exact hCmax B hBF hCB (Finset.ssubset_iff_subset_ne.mpr ⟨hBA, hBneA⟩)
+    · exfalso
+      obtain ⟨c, hc⟩ := hne C hCF
+      have hmem : c ∈ A ∩ B := Finset.mem_inter.mpr ⟨hCA.1 hc, hCB.1 hc⟩
+      rw [Finset.disjoint_iff_inter_eq_empty] at hd
+      rw [hd] at hmem
+      exact Finset.notMem_empty c hmem
+
+/-- **删掉极大簇后，它的直接元素成为 `univ` 的直接元素**（因 `univ` 包含一切）。 -/
+theorem isMinClusterOf_erase_of_directElems (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) {A : Finset α}
+    (hA : IsChildOf F Finset.univ A) {x : α} (hx : x ∈ directElems F A) :
+    IsMinClusterOf (F.erase A) x Finset.univ := by
+  obtain ⟨hxA, hxmin⟩ := mem_directElems.mp hx
+  have hAne : A ≠ Finset.univ := fun h => hA.2.1.2 (by rw [h])
+  refine ⟨Finset.mem_erase.mpr ⟨fun h => hAne h.symm, huniv⟩, Finset.mem_univ x, ?_⟩
+  intro C hC hxC
+  rw [Finset.mem_erase] at hC
+  obtain ⟨hCneA, hCF⟩ := hC
+  have hAC : A ⊆ C := hxmin C hCF hxC
+  have hCuniv : C = Finset.univ := by
+    by_contra h
+    exact (hA.2.2 C hCF
+      (Finset.ssubset_iff_subset_ne.mpr ⟨hAC, fun h' => hCneA h'.symm⟩))
+      (Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_univ C, h⟩)
+  rw [hCuniv]
+
+/-- ★★ **除根外所有顶点度 ≠ 2**（`no_degree_two` 的「弱化版」）。
+
+**这就是退化情形的完整结论**：若 `|univ 的孩子| + |univ 的直接元素| = 2`，则 `deg(univ) = 2`
+（根是**唯一**的度 2 顶点）。此时树仍是合法的**实现树**（`IsTree` + 叶嵌入 + 叶度为 1），
+只是不满足 `Cladogram` 的 `no_degree_two` 正规化条件。
+
+**消除这个唯一障碍需要改图**：把 `univ` 从顶点集中去掉、让它两个「孩子」（极大簇/未覆盖元素）
+直接相连 —— 见 `MEMORY.md`（这与 `isChildOf_erase_of_isChildOf` 的思路一致）。
+使 `univ` 的度 ≥ 3（即 `hroot`）是**充分**的替代条件。 -/
+theorem no_degree_two_except_root {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card) :
+    ∀ v : LaminarVertex F, v ≠ Sum.inl (⟨Finset.univ, huniv⟩ : ↥F) →
+      (treeGraph F).degree v ≠ 2 := by
+  intro v hv
+  rcases v with A | x
+  · by_cases hAu : A.1 = Finset.univ
+    · exact absurd (congrArg Sum.inl (Subtype.ext hAu)) hv
+    · have hAc : 2 ≤ A.1.card := by
+        rcases hcard A.1 A.2 with h | h
+        · exact absurd h hAu
+        · exact h
+      have h3 := three_le_degree_treeGraph hl hne huniv hAu hAc
+      omega
+  · have h1 := degree_inr_eq_one hl huniv x
+    omega
+
 end Phylo
