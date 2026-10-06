@@ -3,14 +3,19 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
+import Mathlib.Combinatorics.SimpleGraph.Acyclic
 import Mathlib.Data.Finset.Powerset
 import Mathlib.Data.Fintype.Basic
 import Phylo.Split
 
-/-! 供 `↥F` 使用的 `Fintype`（本版 Mathlib 未为 `Finset α` 提供实例）。 -/
+/-! 供 `↥F` / `Finset α` 使用的 `Fintype`（本版 Mathlib 未为 `Finset α` 提供实例）。 -/
 instance instFintypeFinset {α : Type*} [Fintype α] [DecidableEq α] : Fintype (Finset α) where
   elems := (Finset.univ : Finset α).powerset
   complete := fun S => Finset.mem_powerset.mpr (Finset.subset_univ S)
+
+instance instFintypeSubtype {α : Type*} [Fintype α] [DecidableEq α]
+    (F : Finset (Finset α)) : Fintype ↥F :=
+  ⟨F.attach, fun x => Finset.mem_attach F x⟩
 
 /-!
 # `Phylo.Laminar` —— 镶嵌族 ⟹ 树（「相容 ⟹ 存在树」的构造层）
@@ -676,5 +681,104 @@ theorem parEdge_mem_edgeSet {F : Finset (Finset α)} (hl : LaminarFamily F)
     {v : LaminarVertex F} (hv : v ≠ rootV huniv) :
     parEdge hl hne huniv v ∈ (treeGraph F).edgeSet :=
   (SimpleGraph.mem_edgeSet (treeGraph F)).mpr (adj_parV hl hne huniv hv)
+
+/-- **★ 满射**：每条边都由某个非根顶点的 `parEdge` 给出。
+
+四种邻接情形：簇–簇（用 `isParentOf_unique`）· 簇–元素 / 元素–簇（用 `isMinClusterOf_unique`）·
+元素–元素（不可能）。 -/
+theorem edgeSet_subset_range {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {e : Sym2 (LaminarVertex F)} (he : e ∈ (treeGraph F).edgeSet) :
+    e ∈ (Finset.univ.erase (rootV huniv)).image (parEdge hl hne huniv) := by
+  refine Sym2.ind (f := fun e => e ∈ (treeGraph F).edgeSet →
+      e ∈ (Finset.univ.erase (rootV huniv)).image (parEdge hl hne huniv)) ?_ e he
+  intro u v huv
+  rw [SimpleGraph.mem_edgeSet] at huv
+  have hne' : ∀ (A : ↥F) (hA : A.1 ≠ Finset.univ),
+      parV hl hne huniv (Sum.inl A) = Sum.inl (parentV hl hne huniv A hA) := by
+    intro A hA
+    exact dif_neg hA
+  rcases u with A | x <;> rcases v with B | y
+  · -- 簇–簇
+    rcases huv with hAB | hBA
+    · have hAu : A.1 ≠ Finset.univ := fun h =>
+        hAB.2.1.2 (by rw [h]; exact Finset.subset_univ B.1)
+      have hPV : parentV hl hne huniv A hAu =
+          B := Subtype.ext (isParentOf_unique
+            (isParentOf_parentOf (A := A.1) hl hne huniv A.2 hAu) hAB)
+      refine Finset.mem_image.mpr ⟨Sum.inl A, ?_, ?_⟩
+      · rw [Finset.mem_erase]
+        exact ⟨fun h => hAu (congrArg Subtype.val (Sum.inl.inj h)), Finset.mem_univ _⟩
+      · show s(Sum.inl A, parV hl hne huniv (Sum.inl A)) = s(Sum.inl A, Sum.inl B)
+        rw [hne' A hAu, hPV]
+    · have hBu : B.1 ≠ Finset.univ := fun h =>
+        hBA.2.1.2 (by rw [h]; exact Finset.subset_univ A.1)
+      have hPV : parentV hl hne huniv B hBu =
+          A := Subtype.ext (isParentOf_unique
+            (isParentOf_parentOf (A := B.1) hl hne huniv B.2 hBu) hBA)
+      refine Finset.mem_image.mpr ⟨Sum.inl B, ?_, ?_⟩
+      · rw [Finset.mem_erase]
+        exact ⟨fun h => hBu (congrArg Subtype.val (Sum.inl.inj h)), Finset.mem_univ _⟩
+      · show s(Sum.inl B, parV hl hne huniv (Sum.inl B)) = s(Sum.inl A, Sum.inl B)
+        rw [hne' B hBu, hPV, Sym2.eq_swap]
+  · -- 簇–元素
+    have hPV : minClusterV hl huniv y = A := Subtype.ext (isMinClusterOf_unique
+      (minClusterV_spec hl huniv y) huv)
+    refine Finset.mem_image.mpr ⟨Sum.inr y, ?_, ?_⟩
+    · rw [Finset.mem_erase]
+      exact ⟨fun h => Sum.inr_ne_inl h, Finset.mem_univ _⟩
+    · show s(Sum.inr y, parV hl hne huniv (Sum.inr y)) = s(Sum.inl A, Sum.inr y)
+      rw [show parV hl hne huniv (Sum.inr y) = Sum.inl (minClusterV hl huniv y) from rfl,
+        hPV, Sym2.eq_swap]
+  · -- 元素–簇
+    have hPV : minClusterV hl huniv x = B := Subtype.ext (isMinClusterOf_unique
+      (minClusterV_spec hl huniv x) huv)
+    refine Finset.mem_image.mpr ⟨Sum.inr x, ?_, ?_⟩
+    · rw [Finset.mem_erase]
+      exact ⟨fun h => Sum.inr_ne_inl h, Finset.mem_univ _⟩
+    · show s(Sum.inr x, parV hl hne huniv (Sum.inr x)) = s(Sum.inr x, Sum.inl B)
+      rw [show parV hl hne huniv (Sum.inr x) = Sum.inl (minClusterV hl huniv x) from rfl, hPV]
+  · -- 元素–元素：不可能
+    exact absurd huv id
+
+/-- **★ 边数上界**：`|E| ≤ |V| - 1`（由满射 + 像集基数）。 -/
+theorem card_edgeFinset_le {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) :
+    (treeGraph F).edgeFinset.card ≤ Fintype.card (LaminarVertex F) - 1 := by
+  have hsub : (treeGraph F).edgeFinset ⊆
+      (Finset.univ.erase (rootV huniv)).image (parEdge hl hne huniv) :=
+    fun e he => edgeSet_subset_range hl hne huniv (SimpleGraph.mem_edgeFinset.mp he)
+  calc (treeGraph F).edgeFinset.card
+      ≤ ((Finset.univ.erase (rootV huniv)).image (parEdge hl hne huniv)).card :=
+        Finset.card_le_card hsub
+    _ ≤ (Finset.univ.erase (rootV huniv)).card := Finset.card_image_le
+    _ = (Finset.univ : Finset (LaminarVertex F)).card - 1 :=
+        Finset.card_erase_of_mem (Finset.mem_univ _)
+    _ = Fintype.card (LaminarVertex F) - 1 := by rw [Finset.card_univ]
+
+/-- ★★ **`treeGraph F` 是树**（连通 + 边数 `= |V| - 1`）。
+
+上界由满射 `edgeSet_subset_range` 给出，下界由连通性
+`Connected.card_vert_le_card_edgeSet_add_one` 给出，夹出等号后用
+`isTree_iff_connected_and_card`。 -/
+theorem isTree_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) :
+    (treeGraph F).IsTree := by
+  have hconn := connected_treeGraph hl hne huniv
+  rw [SimpleGraph.isTree_iff_connected_and_card]
+  refine ⟨hconn, ?_⟩
+  have hcardE : Nat.card (treeGraph F).edgeSet = (treeGraph F).edgeFinset.card := by
+    rw [SimpleGraph.edgeFinset_card]
+    exact Nat.card_eq_fintype_card
+  have hcardV : Nat.card (LaminarVertex F) = Fintype.card (LaminarVertex F) :=
+    Nat.card_eq_fintype_card
+  rw [hcardE, hcardV]
+  have hlow := card_edgeFinset_le hl hne huniv
+  have hhigh : Fintype.card (LaminarVertex F) ≤ (treeGraph F).edgeFinset.card + 1 := by
+    have := hconn.card_vert_le_card_edgeSet_add_one
+    rwa [hcardV, hcardE] at this
+  have hpos : 0 < Fintype.card (LaminarVertex F) :=
+    Fintype.card_pos_iff.mpr ⟨rootV huniv⟩
+  omega
 
 end Phylo
