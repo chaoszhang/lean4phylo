@@ -197,7 +197,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
     4. **★ `inSide_congr_of_adj`（关键观察）**：相邻且 ⟦c,d⟧ ≠ e₁ ⟹ c,d 在 e₁ **同侧**
     5. `eq_of_adj_of_not_inSide` · **`inSide_deleteEdges_of_inSide`（旁侧连通性，用 `Walk.mapLe` + `support_mapLe_eq_support`）** · **`inSide_or_inSide`（2 类性，用 `Walk.recOn` + 显式 motive）**
     6. **`sidesCompatible_sideLeaves_of_not_inSide`（情形 1）** · **`sidesCompatible_sideLeaves`（一般情形：用关键观察压成 2 情形，情形 2 经补侧轮换化归情形 1）**
-  - `IsSplitOf` 最终形态：`∃ (a b : T.V) (_ : T.graph.Adj a b) (u : T.V), s.sideA = T.sideLeaves s(a,b) u`
+  - `IsSplitOf` 最终形态：`∃ (a b : T.V) (_ : T.graph.Adj a b) (u : T.V), s.sideA = T.sideLeaves s(a,b) u`  
     （**以相邻点对给出**，等价于 `edgeSet` 但省去从 `Sym2` 提取端点 —— `SimpleGraph.mem_edgeSet` 只给「三角边 ↔ Adj」，不适合反向提取。）
 - **⬜ 剩余：Splits-Equivalence 的另一半「相容 ⟹ 存在树」** —— **入口已铺好（2026-10-06）**：
   - ✅ 集合层面：`sidesCompatible_comm` · `sidesCompatible_compl_right` · **★ `laminar_of_sidesCompatible_of_notMem`（相容 + 避开 `ρ` ⟹ 嵌套或相离）** · `LaminarFamily` · `laminarFamily_of_pairwise`
@@ -206,10 +206,10 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `Phylo/Split.lean` → **784 行**；`lake build` 1260 jobs；无 sorry
 - **路线（下一步）**：**「相容 ⟹ 存在树」的标准构造** ——
   1. 固定 `ρ`，取 Σ 的规范 cluster 族 `{s.cluster ρ}`（**全部避开 `ρ`，故两两镶嵌**：`laminar_of_compatible_clusters` 已证）。
-  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；`parent A = ⋂{B ∈ 族 : A ⊊ B}`；叶按「最小包含簇」挂载。
+  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；`parent A = ⋂{B ∈ 族 : A ⊊ B}`；叶按「最小包含簇」挂载。  
      ⚠️ **须验证 `no_degree_two`**：镶嵌构造可能产生度 2 顶点（当 A 恰有一个子簇且 `A∖B = ∅`）—— 需证明 `A∖B ≠ ∅` 或改取「极大簇」。
-  3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。
-  （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
+  3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。  
+     （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
 - **Lean 4 坑（本轮新增）**：
   - `<;>` 同时作用于两个方向会留下 **8 个目标**，bullet 必须写满 8 个（`sidesCompatible_comm` 就栽在这）。
   - **`rw [Finset.mem_univ]` 会把「引理名」解析成「证明项」** → 报 `Expected an equality or iff proof`；改用 `Finset.mem_univ y` 作**项**。
@@ -220,7 +220,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **Lean 4 坑（本轮新增）**：
   - **名字须先定义后使用**：`SidesCompatible` 曾放在文件末尾 → namespace 内不可见；`compatible_of_sides` 用 `theorem Split.xxx` 形式在根 namespace 定义后，**在 `namespace Cladogram` 内引用会解析成 `Cladogram.Split.xxx` 而失败** → 改为在 `namespace Split` **内部**定义，且把主定理移到根 namespace。
   - `Finset.compl_compl` **不存在** → 手证互补。
-  - `r `rw` 无法进入 `x ∉ s` 内部** → 用 `simp only [Finset.mem_compl, ...]`。
+  - `r `rw`无法进入`x ∉ s`内部** → 用`simp only [Finset.mem_compl, ...]\`。
   - `by` 块在函数参数位置**无预期类型**时会报 `invalid 'by' tactic` → 先 `have` 再应用。
   - `SidesCompatible` 的 `∪`/`Finset.univ` 需显式 `[Fintype α] [DecidableEq α]`。
 - **git 节奏（2026-10-06 老师定）**：**少 push，多 commit**。已 commit `5ad4e5a` / `c178e52` / `93724a5` / **`8504245`（主定理）**，**均未 push**。

@@ -155,4 +155,33 @@ def laminarGraph (F : Finset (Finset α)) : SimpleGraph (TreeVertex α) where
       · exact h.2.1.2 (Finset.Subset.refl A)
     | Sum.inr _ => exact h⟩
 
+/-! ### 通往连通性的阶梯：父关系是全序的「上溯」结构
+
+镶嵌性 ⟹ 两个簇若都在 `A` 之上且非嵌套，则「相离」与「都 ⊋ A」矛盾；
+于是**严格包含者链是全序** ⇒ 父链唯一 ⇒ 可沿父链上溯到根。 -/
+
+/-- **父严格单调**（用于排除回路 / 保证链有界）。 -/
+theorem isParentOf_ssubset {A B : Finset α} (h : IsParentOf F A B) : A ⊂ B :=
+  h.2.1
+
+/-- `A` 的全部**幂集意义下**的超集链：`A ⊂ B`。 -/
+theorem isParentOf_card_lt {A B : Finset α} (h : IsParentOf F A B) : A.card < B.card :=
+  Finset.card_lt_card h.2.1
+
+/-- **父链的相邻步**：`u` 是 `v` 的父（簇视角）。 -/
+def IsParentVertex (F : Finset (Finset α)) (u v : TreeVertex α) : Prop :=
+  match u, v with
+  | Sum.inl A, Sum.inl B => IsParentOf F A B
+  | Sum.inr x, Sum.inl B => IsMinClusterOf F x B
+  | _, _ => False
+
+/-- 父关系确实是图上的边（顺带确认 `laminarAdj` 与 `IsParentVertex` 相容）。 -/
+theorem isParentVertex_adj {F : Finset (Finset α)} {u v : TreeVertex α}
+    (h : IsParentVertex F u v) : (laminarGraph F).Adj u v := by
+  match u, v with
+  | Sum.inl A, Sum.inl B => exact Or.inl h
+  | Sum.inr x, Sum.inl B => exact h
+  | Sum.inl _, Sum.inr _ => exact h.elim
+  | Sum.inr _, Sum.inr _ => exact h.elim
+
 end Phylo
