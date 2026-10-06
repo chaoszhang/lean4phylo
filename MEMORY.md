@@ -199,7 +199,24 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
     6. **`sidesCompatible_sideLeaves_of_not_inSide`（情形 1）** · **`sidesCompatible_sideLeaves`（一般情形：用关键观察压成 2 情形，情形 2 经补侧轮换化归情形 1）**
   - `IsSplitOf` 最终形态：`∃ (a b : T.V) (_ : T.graph.Adj a b) (u : T.V), s.sideA = T.sideLeaves s(a,b) u`
     （**以相邻点对给出**，等价于 `edgeSet` 但省去从 `Sym2` 提取端点 —— `SimpleGraph.mem_edgeSet` 只给「三角边 ↔ Adj」，不适合反向提取。）
-- **⬜ 剩余：Splits-Equivalence 的另一半「相容 ⟹ 存在树」**（需**劈顶点引理**：存在顶点使去掉后各连通块叶集 ⊂ A 或 ⊂ B；用染色 + 极值点）。这是原计划的 M2 核心。
+- **⬜ 剩余：Splits-Equivalence 的另一半「相容 ⟹ 存在树」** —— **入口已铺好（2026-10-06）**：
+  - ✅ 集合层面：`sidesCompatible_comm` · `sidesCompatible_compl_right` · **★ `laminar_of_sidesCompatible_of_notMem`（相容 + 避开 `ρ` ⟹ 嵌套或相离）** · `LaminarFamily` · `laminarFamily_of_pairwise`
+  - ✅ `Split` 层面：**`compatible_iff_sides`（`Compatible ⟺ SidesCompatible`，双向）** · `mem_sideB_iff_not_mem_sideA` · `sideB_eq_compl` · **★ `Split.cluster`（避开 `ρ` 的规范一侧）** + `notMem_cluster` / `cluster_eq_sideA_or_compl` · `sidesCompatible_cluster` · **`laminar_of_compatible_clusters`**
+  - ✅ **平凡 split 必被展示**：`exists_isSplitOf_singleton`（`Σ(T) ⊇ Σ_triv`，用 `sideLeaves_leaf_edge`）
+  - `Phylo/Split.lean` → **784 行**；`lake build` 1260 jobs；无 sorry
+- **路线（下一步）**：**「相容 ⟹ 存在树」的标准构造** ——
+  1. 固定 `ρ`，取 Σ 的规范 cluster 族 `{s.cluster ρ}`（**全部避开 `ρ`，故两两镶嵌**：`laminar_of_compatible_clusters` 已证）。
+  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；`parent A = ⋂{B ∈ 族 : A ⊊ B}`；叶按「最小包含簇」挂载。
+     ⚠️ **须验证 `no_degree_two`**：镶嵌构造可能产生度 2 顶点（当 A 恰有一个子簇且 `A∖B = ∅`）—— 需证明 `A∖B ≠ ∅` 或改取「极大簇」。
+  3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。
+  （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
+- **Lean 4 坑（本轮新增）**：
+  - `<;>` 同时作用于两个方向会留下 **8 个目标**，bullet 必须写满 8 个（`sidesCompatible_comm` 就栽在这）。
+  - **`rw [Finset.mem_univ]` 会把「引理名」解析成「证明项」** → 报 `Expected an equality or iff proof`；改用 `Finset.mem_univ y` 作**项**。
+  - `Finset.mem_sdiff` 的 `⟨_,_⟩` 构造须显式写 `.mpr`（成员关系不是语法上的 `And`）。
+  - `Split.mem_xxx` 经**点记法**不可靠（`Split α` 是 `KPartition α 2` 的 abbrev，点记法找 `KPartition.xxx`）→ 写全 `Split.mem_xxx s ρ`。
+  - 定义**必须前置于使用处**（`mem_sideB_iff_not_mem_sideA` 曾放在使用者之后）。
+  - `contrapositive` 场景别把证明当函数用（`h (proof)` 报 `Function expected`）→ 写 `(h' : ¬P) hp`。
 - **Lean 4 坑（本轮新增）**：
   - **名字须先定义后使用**：`SidesCompatible` 曾放在文件末尾 → namespace 内不可见；`compatible_of_sides` 用 `theorem Split.xxx` 形式在根 namespace 定义后，**在 `namespace Cladogram` 内引用会解析成 `Cladogram.Split.xxx` 而失败** → 改为在 `namespace Split` **内部**定义，且把主定理移到根 namespace。
   - `Finset.compl_compl` **不存在** → 手证互补。
