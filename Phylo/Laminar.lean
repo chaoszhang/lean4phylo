@@ -1440,4 +1440,116 @@ theorem leafSide_parentEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
   simp only [Finset.mem_filter, Finset.mem_univ, true_and]
   exact (mem_iff_reachable hl hne huniv hB hBuniv x).symm
 
+/-! ### ② 收尾：`leafSide` 对齐 `Cladogram.sideLeaves`，并构造 `Split` -/
+
+set_option maxHeartbeats 800000 in
+/-- `toCladogram` 的 `sideLeaves` **就是**裸形式 `leafSide`（定义相等：`graph := treeGraph F`、`leaf := ⟨Sum.inr, _⟩`）。 -/
+theorem sideLeaves_toCladogram {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card)
+    (e : Sym2 (LaminarVertex F)) (u : LaminarVertex F) :
+    (toCladogram hl hne huniv hcard hroot).sideLeaves e u = leafSide F e u :=
+  rfl
+
+/-! ### 构造 `B | (X ∖ B)` 的 `Split` 并组装 `IsSplitOf` -/
+
+/-- `Fin.cases` 在 `Fin 2` 上取 `0`（本版 `simp` 无此引理，自建）。 -/
+@[simp] theorem finCases_two_zero {α : Type*} (A C : Finset α) :
+    ((Fin.cases A fun _ : Fin 1 => C) : Fin 2 → Finset α) 0 = A :=
+  Fin.cases_zero
+
+/-- `Fin.cases` 在 `Fin 2` 上取 `1`（本版 `simp` 无此引理，自建）。 -/
+@[simp] theorem finCases_two_one {α : Type*} (A C : Finset α) :
+    ((Fin.cases A fun _ : Fin 1 => C) : Fin 2 → Finset α) 1 = C :=
+  Fin.cases_succ 0
+
+/-- 由 `B` 与 `Bᶜ` 二分的 `Split`。 -/
+noncomputable def splitOf {α : Type*} [Fintype α] [DecidableEq α]
+    (B : Finset α) (hB : B.Nonempty) (hBc : Bᶜ.Nonempty) : Split α where
+  parts := Fin.cases B fun _ => Bᶜ
+  pairwise_disjoint := by
+    intro i j hij
+    fin_cases i <;> fin_cases j <;>
+      simp_all [Finset.disjoint_left, Finset.mem_compl]
+  union_eq_univ := by
+    rw [← Finset.union_compl B]
+    ext x
+    simp only [Finset.mem_biUnion, Finset.mem_univ, true_and, Finset.mem_union]
+    constructor
+    · rintro ⟨i, hi⟩
+      fin_cases i
+      · exact Or.inl (by simpa using hi)
+      · exact Or.inr (by simpa [Finset.mem_compl] using hi)
+    · rintro (h | h)
+      · exact ⟨(0 : Fin 2), by simpa using h⟩
+      · exact ⟨(1 : Fin 2), by simpa [Finset.mem_compl] using h⟩
+  nonempty := by
+    intro i
+    fin_cases i
+    · simpa using hB
+    · simpa using hBc
+
+@[simp] theorem splitOf_sideA {α : Type*} [Fintype α] [DecidableEq α]
+    (B : Finset α) (hB : B.Nonempty) (hBc : Bᶜ.Nonempty) :
+    (splitOf B hB hBc).sideA = B := by
+  simp only [Split.sideA, splitOf, finCases_two_zero]
+
+@[simp] theorem splitOf_sideB {α : Type*} [Fintype α] [DecidableEq α]
+    (B : Finset α) (hB : B.Nonempty) (hBc : Bᶜ.Nonempty) :
+    (splitOf B hB hBc).sideB = Bᶜ := by
+  simp only [Split.sideB, splitOf, finCases_two_one]
+
+/-- `B ≠ univ ⟹ Bᶜ` 非空。 -/
+theorem compl_nonempty_of_ne_univ {α : Type*} [Fintype α] [DecidableEq α]
+    {B : Finset α} (h : B ≠ Finset.univ) : Bᶜ.Nonempty := by
+  rw [Finset.nonempty_iff_ne_empty]
+  intro hc
+  exact h (Finset.eq_univ_of_forall fun x => by
+    by_contra hx
+    have hmem : x ∈ Bᶜ := Finset.mem_compl.mpr hx
+    rw [hc] at hmem
+    exact Finset.notMem_empty x hmem)
+
+@[simp] theorem toCladogram_graph {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card) :
+    (toCladogram hl hne huniv hcard hroot).graph = treeGraph F := rfl
+
+set_option maxHeartbeats 800000 in
+/-- ★★★ **规范 cluster 集 `F` 的每个非 `univ` 成员都给出 `Σ(toCladogram F)` 中的一条 split**。 -/
+theorem isSplitOf_splitOf {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    (toCladogram hl hne huniv hcard hroot).IsSplitOf
+      (splitOf B (hne B hB) (compl_nonempty_of_ne_univ hBuniv)) := by
+  change ∃ (a b : LaminarVertex F) (_ : (treeGraph F).Adj a b) (u : LaminarVertex F),
+      (splitOf B (hne B hB) (compl_nonempty_of_ne_univ hBuniv)).sideA =
+        leafSide F s(a, b) u
+  exact ⟨Sum.inl (⟨B, hB⟩ : ↥F),
+    Sum.inl (parentV hl hne huniv (⟨B, hB⟩ : ↥F) hBuniv),
+    (treeGraph_adj_inl_inl F (⟨B, hB⟩ : ↥F)
+      (parentV hl hne huniv (⟨B, hB⟩ : ↥F) hBuniv)).mpr
+      (Or.inl (isParentOf_parentOf (A := B) hl hne huniv hB hBuniv)),
+    Sum.inl (⟨B, hB⟩ : ↥F),
+    by rw [splitOf_sideA]; exact (leafSide_parentEdge hl hne huniv hB hBuniv).symm⟩
+
+set_option maxHeartbeats 800000 in
+/-- **`Σ(toCladogram F) ⊇` 规范 cluster 集**（`univ` 除外）。 -/
+theorem splitOf_mem_splits {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ C ∈ F, C.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card)
+    (hroot : 3 ≤ (F.filter fun B => IsChildOf F Finset.univ B).card
+        + (directElems F Finset.univ).card)
+    {B : Finset α} (hB : B ∈ F) (hBuniv : B ≠ Finset.univ) :
+    splitOf B (hne B hB) (compl_nonempty_of_ne_univ hBuniv) ∈
+      (toCladogram hl hne huniv hcard hroot).splits :=
+  isSplitOf_splitOf hl hne huniv hcard hroot hB hBuniv
+
 end Phylo
