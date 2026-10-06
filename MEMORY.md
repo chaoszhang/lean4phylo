@@ -453,6 +453,35 @@ noncomputable def toCladogram (hl : LaminarFamily F) (hne : ∀ B ∈ F, B.Nonem
   - 三条子引理已推演清楚：**(a)** `A ⊆ B, A ≠ B ⟹ parent(A) ⊆ B`；**(b)** 子树连通（父链）；**(c)** 唯一跨越边就是 `e`
   - 然后 `sideLeaves e (inl B) = leavesOf F B = B` ⟹ `IsSplitOf` + `Σ(toCladogram F) ⊇ F`
 
+## ② 簇 ↔ split 字典 —— ✅ **核心完成**（2026-10-06 深夜）
+
+**`Phylo/Laminar.lean` → 1443 行**，1321 jobs，零 sorry。
+
+### ★★★ 主结果
+```lean
+theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (Sum.inl ⟨B,hB⟩) = B
+```
+> **规范 cluster 集 `F` 的每个非 `univ` 成员 `B`，都对应 `Σ(toCladogram F)` 中的一条 split —— 其叶侧恰为 `B`。**
+
+### 完整链条（全部零 sorry）
+| 步骤 | 引理 | 要点 |
+|---|---|---|
+| **(a)** | `parentOf_subset_of_subset` | `A ⊆ B, A ≠ B ⟹ parentOf F A ⊆ B` —— **只用 `IsParentOf` 的最小性，不需要镶嵌性** |
+| **(b)** | `reachable_of_subset` | `A ⊆ B` 的簇沿父链在 `T - e_B` 中与 `B` 可达（**强归纳 on `B.card - A.card`**）；关键：`A ⊊ B ⟹ parentOf F A ⊆ B ⟹ ≠ parentOf F B ⟹ 边 ≠ e_B` |
+| **(c)** | `not_reachable_parentEdge` | `T - e_B` 中 `B` 与父不可达 —— **一行**：`IsTree ⟹ IsAcyclic ⟹ 边是桥`（`isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`） |
+| **闭包** | `subtreeVerts` `C := {inl A : A ⊆ B} ∪ {inr y : y ∈ B}` | `mem_subtreeVerts_inl` / `mem_subtreeVerts_inr` |
+| **★** | `subtreeVerts_closed` | `C` 对 `T - e_B` 的邻接封闭 —— **关键：`A.1 = B` 时向上走的那条边正是 `e_B`，被 `deleteEdges` 排除** |
+| **★** | `walk_mem_subtreeVerts` | `SimpleGraph.Walk.recOn` + motive `a ∈ C → b ∈ C` |
+| **★★** | `mem_iff_reachable` | `x ∈ B ⟺ x` 在 `T - e_B` 中与 `inl B` 可达 |
+| **★★★** | `leafSide` + `leafSide_parentEdge` | 包装成 `sideLeaves` 的裸形式 |
+
+**命名定义**：`parentEdge`（`B` 与其父的边）· `minClusterV`（选函数版最小簇）· `leafSide`
+
+### ⬜ 剩余（② 收尾，机械工作）
+1. 把 `leafSide` 对齐 `Cladogram.sideLeaves`（**definitional 相同**：`leaf = Sum.inr`、`graph = treeGraph F`）
+2. 构造 `Split α`（`parts 0 = B`、`parts 1 = Bᶜ`）得 `IsSplitOf`
+3. 组装 `Σ(toCladogram F) ⊇ F` —— 之后 **Buneman 存在性 / NJ 硬核同时开门**
+
 ## Git / 远程（2026-10-02）
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
