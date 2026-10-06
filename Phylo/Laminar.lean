@@ -611,4 +611,70 @@ theorem connected_treeGraph {F : Finset (Finset α)} (hl : LaminarFamily F)
     | Sum.inr x => exact treeGraph_reachable_root_of_elem hl hne huniv x
   exact hu.trans hv.symm
 
+/-! ### 边数（`isTree` 的最后一环）
+
+**省力关键**：只需 `parEdge` **满射**（不必双射）——
+配合连通性 `Connected.card_vert_le_card_edgeSet_add_one`（`|V| ≤ |E| + 1`）
+即可夹出 `|E| = |V| - 1`，再用 `isTree_iff_connected_and_card` 得 `IsTree`。 -/
+
+/-- **根顶点**。 -/
+def rootV {F : Finset (Finset α)} (huniv : (Finset.univ : Finset α) ∈ F) :
+    LaminarVertex F := Sum.inl ⟨Finset.univ, huniv⟩
+
+/-- 元素的最小簇（选函数版本，边数计数用）。 -/
+noncomputable def minClusterV {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) (x : α) : ↥F :=
+  let h := exists_isMinClusterOf (F := F) hl ⟨Finset.univ, huniv, Finset.mem_univ x⟩
+  ⟨h.choose, h.choose_spec.1⟩
+
+theorem minClusterV_spec {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (huniv : (Finset.univ : Finset α) ∈ F) (x : α) :
+    IsMinClusterOf F x (minClusterV hl huniv x).1 :=
+  (exists_isMinClusterOf (F := F) hl ⟨Finset.univ, huniv, Finset.mem_univ x⟩).choose_spec
+
+/-- 簇的父顶点（`A ≠ univ`）。 -/
+noncomputable def parentV {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) (A : ↥F)
+    (hA : A.1 ≠ Finset.univ) : ↥F :=
+  ⟨parentOf F A.1, (isParentOf_parentOf (A := A.1) hl hne huniv A.2 hA).1⟩
+
+/-- **父顶点函数**：簇 ↦ 其父（根 ↦ 自身）；元素 ↦ 其最小簇。 -/
+noncomputable def parV {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F) :
+    LaminarVertex F → LaminarVertex F
+  | Sum.inl A => if h : A.1 = Finset.univ then Sum.inl A
+      else Sum.inl (parentV hl hne huniv A h)
+  | Sum.inr x => Sum.inl (minClusterV hl huniv x)
+
+/-- **`v` 与其父顶点相邻**（`v ≠ root`）。 -/
+theorem adj_parV {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {v : LaminarVertex F} (hv : v ≠ rootV huniv) :
+    (treeGraph F).Adj v (parV hl hne huniv v) := by
+  rcases v with A | x
+  · show (treeGraph F).Adj (Sum.inl A) _
+    rw [show parV hl hne huniv (Sum.inl A) =
+        (if h : A.1 = Finset.univ then Sum.inl A
+          else Sum.inl (parentV hl hne huniv A h)) from rfl]
+    split_ifs with h
+    · exact absurd (congrArg Sum.inl (Subtype.ext h)) hv
+    · exact (treeGraph_adj_inl_inl F A (parentV hl hne huniv A h)).mpr
+        (Or.inl (isParentOf_parentOf (A := A.1) hl hne huniv A.2 h))
+  · show (treeGraph F).Adj (Sum.inr x) _
+    exact (treeGraph_adj_inr_inl F x (minClusterV hl huniv x)).mpr
+      (minClusterV_spec hl huniv x)
+
+/-- `v` 的**父边**。 -/
+noncomputable def parEdge {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    (v : LaminarVertex F) : Sym2 (LaminarVertex F) :=
+  s(v, parV hl hne huniv v)
+
+/-- **父边是图的边**（`v ≠ root`）—— 即 `range parEdge ⊆ edgeSet`。 -/
+theorem parEdge_mem_edgeSet {F : Finset (Finset α)} (hl : LaminarFamily F)
+    (hne : ∀ B ∈ F, B.Nonempty) (huniv : (Finset.univ : Finset α) ∈ F)
+    {v : LaminarVertex F} (hv : v ≠ rootV huniv) :
+    parEdge hl hne huniv v ∈ (treeGraph F).edgeSet :=
+  (SimpleGraph.mem_edgeSet (treeGraph F)).mpr (adj_parV hl hne huniv hv)
+
 end Phylo
