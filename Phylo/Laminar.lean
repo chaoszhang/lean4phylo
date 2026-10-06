@@ -1145,4 +1145,37 @@ theorem no_degree_two_except_root {F : Finset (Finset α)} (hl : LaminarFamily F
   · have h1 := degree_inr_eq_one hl huniv x
     omega
 
+/-! ## ② 簇 ↔ split 的字典：`B` 的子树叶集恰为 `B`
+
+「规范 cluster 集 `F` 的每个非 `univ` 成员 `B` 对应一条边，其两侧为 `B` 与 `X ∖ B`」。
+
+第一步（本段）：**`B` 的子树叶集 = `B`**。用「最小簇含于 `B`」刻画子树叶集 ——
+由镶嵌性 + 最小簇性，`x ∈ B` ⟺ `x` 的最小簇 `⊆ B`。 -/
+
+/-- `B` 的**子树叶集**：最小簇含于 `B` 的叶。 -/
+noncomputable def leavesOf (F : Finset (Finset α)) (B : Finset α) : Finset α :=
+  Finset.univ.filter fun x => ∃ A ∈ F, IsMinClusterOf F x A ∧ A ⊆ B
+
+theorem mem_leavesOf {F : Finset (Finset α)} {B : Finset α} {x : α} :
+    x ∈ leavesOf F B ↔ ∃ A ∈ F, IsMinClusterOf F x A ∧ A ⊆ B := by
+  classical
+  simp [leavesOf]
+
+/-- ★★ **`B` 的子树叶集恰为 `B`**（`B ∈ F`）。
+
+* `⊆`：最小簇 `A ⊆ B` ⟹ `x ∈ A ⊆ B`；
+* `⊇`：`x ∈ B` ⟹ 取 `x` 的最小簇 `A`；由镶嵌性 `A ⊆ B`，或 `B ⊆ A`（此时 `A ⊆ B` 由最小簇性）。 -/
+theorem leavesOf_eq {F : Finset (Finset α)} (hl : LaminarFamily F)
+    {B : Finset α} (hB : B ∈ F) : leavesOf F B = B := by
+  classical
+  ext x
+  constructor
+  · intro hx
+    obtain ⟨A, -, hmin, hAB⟩ := mem_leavesOf.mp hx
+    exact hAB hmin.2.1
+  · intro hx
+    refine mem_leavesOf.mpr ?_
+    obtain ⟨A, hmin⟩ := exists_isMinClusterOf (F := F) hl ⟨B, hB, hx⟩
+    exact ⟨A, hmin.1, hmin, isMinClusterOf_subset hmin hB hx⟩
+
 end Phylo
