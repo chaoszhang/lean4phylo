@@ -34,6 +34,12 @@ theorem reachable_eq_of_isIsolated {V : Type*} {G : SimpleGraph V} {a u : V}
   | nil => rfl
   | cons hadj _ _ => exact absurd hadj (h _)
 
+/-- **两侧的相容性**（§3.4：相容 ⟺ 一侧包含另一侧，或互补）。
+
+不依赖 `Split` 结构 —— 便于先在树上证明，再经 `Split.compatible_of_sides` 抬到 `Split`。 -/
+def SidesCompatible {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) : Prop :=
+  A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = Finset.univ
+
 /-- **`k`-块划分**：把 `α` 分成 `n` 个**两两不交、非空、并为全体**的块。
 
 §3.4：这是「划分族」的共享基础。 -/
@@ -375,35 +381,78 @@ theorem inSide_congr_of_adj (T : Cladogram X) {e₁ : Sym2 T.V} {u₁ c d : T.V}
     rw [Sym2.eq_swap] at h
     exact hne h
 
-/-- **旁侧连通性（引理 C）**：若 `u₁` 关于 `e₁` 的一侧**不含** `e₂ = ⟦c,d⟧` 的端点，
-则该侧内任意两点在 `T - e₂` 中仍可达。
+/-- **旁侧连通性（引理 C）**：若 `p,q` 在 `e₁` 同侧，且该侧**不含** `e₂ = ⟦c,d⟧` 的端点，
+则 `p,q` 在 `T - e₂` 中仍可达。
 
-证明：该侧在 `T - e₁` 中的 walk 提升到 `T`（`Walk.mapLe`）后，其支持集仍落在该侧，
+证明：`T - e₁` 中的 walk 提升到 `T`（`Walk.mapLe`）后，其支持集仍落在 `p` 的可达类内，
 故不含 `c,d`，从而删去 `e₂` 不影响 —— 用 `reachable_deleteEdges_of_support_notMem`。 -/
-theorem inSide_deleteEdges_of_not_inSide (T : Cladogram X)
-    {e₁ e₂ : Sym2 T.V} {u₁ c d p q : T.V} (he₂ : e₂ = s(c, d))
-    (hc : ¬ T.inSide e₁ u₁ c) (hd : ¬ T.inSide e₁ u₁ d)
-    (hp : T.inSide e₁ u₁ p) (hq : T.inSide e₁ u₁ q) :
+theorem inSide_deleteEdges_of_inSide (T : Cladogram X)
+    {e₁ e₂ : Sym2 T.V} {c d p q : T.V} (he₂ : e₂ = s(c, d))
+    (hside : T.inSide e₁ p q) (hc : ¬ T.inSide e₁ p c) (hd : ¬ T.inSide e₁ p d) :
     T.inSide e₂ p q := by
-  obtain ⟨p'⟩ := (Reachable.symm hp).trans hq
+  obtain ⟨p'⟩ := hside
   refine reachable_deleteEdges_of_support_notMem (p'.mapLe (deleteEdges_le {e₁})) ?_
   rw [SimpleGraph.Walk.support_mapLe_eq_support]
   intro w hw
-  have hwX : T.inSide e₁ u₁ w := hp.trans (reachable_of_mem_support p' hw)
+  have hwX : T.inSide e₁ p w := reachable_of_mem_support p' hw
   rw [he₂, Sym2.mem_iff]
   rintro (rfl | rfl)
   · exact hc hwX
   · exact hd hwX
 
+/-- **主引理（情形 1）**：若 `e₂` 的端点 `c,d` **都不在** `u₁` 侧，
+则 `sideLeaves e₁ u₁` 与 `sideLeaves e₂ u₂` 相容。
+
+（该侧在 `T - e₂` 中连通 ⟹ 整个侧要么落在 `u₂` 侧、要么落在其补侧。） -/
+theorem sidesCompatible_sideLeaves_of_not_inSide (T : Cladogram X)
+    {e₁ e₂ : Sym2 T.V} {u₁ u₂ c d : T.V} (he₂ : e₂ = s(c, d))
+    (hc : ¬ T.inSide e₁ u₁ c) (hd : ¬ T.inSide e₁ u₁ d) :
+    SidesCompatible (T.sideLeaves e₁ u₁) (T.sideLeaves e₂ u₂) := by
+  by_cases h : ∃ p, T.inSide e₁ u₁ p ∧ T.inSide e₂ u₂ p
+  · -- 存在点同时在两侧：整侧 ⊆ u₂ 侧 ⟹ A ⊆ A'
+    obtain ⟨p, hp₁, hp₂⟩ := h
+    refine Or.inl fun y hy => ?_
+    rw [T.mem_sideLeaves_iff_inSide] at hy ⊢
+    have hc' : ¬ T.inSide e₁ (T.leaf y) c := fun h' => hc (hy.trans h')
+    have hd' : ¬ T.inSide e₁ (T.leaf y) d := fun h' => hd (hy.trans h')
+    have hside : T.inSide e₁ (T.leaf y) p := hy.symm.trans hp₁
+    exact hp₂.trans ((T.inSide_comm e₂ (T.leaf y) p).mp
+      (T.inSide_deleteEdges_of_inSide he₂ hside hc' hd'))
+  · -- 无交 ⟹ Disjoint
+    refine Or.inr (Or.inr (Or.inl ?_))
+    rw [Finset.disjoint_left]
+    intro y hy hy'
+    rw [T.mem_sideLeaves_iff_inSide] at hy hy'
+    exact h ⟨T.leaf y, hy, hy'⟩
+
+/-- **删边后每点与端点之一同侧**（树中删边恰得两个连通分量）。
+
+对 `a — b` 相邻，任意 `x` 在 `T - ⟦a,b⟧` 中与 `a` 或 `b` 可达。
+
+证明：取 `T` 中 `x → a` 的 walk 归纳。若某步正是边 `⟦a,b⟧`，则该步只能通向终点 `a`
+（否则 `a` 在路径中重复），故其前缀已到 `b`。 -/
+theorem inSide_or_inSide (T : Cladogram X) {a b x : T.V} (hab : T.graph.Adj a b) :
+    T.inSide s(a, b) x a ∨ T.inSide s(a, b) x b := by
+  obtain ⟨p⟩ := T.isTree.connected x a
+  refine SimpleGraph.Walk.recOn (motive := fun u v _ =>
+    v = a → T.inSide s(a, b) u a ∨ T.inSide s(a, b) u b) p ?_ ?_ rfl
+  · intro u hu
+    subst hu
+    exact Or.inl (Reachable.refl _)
+  · intro u v w hadj q ih hw
+    by_cases h : s(u, v) = s(a, b)
+    · rcases Sym2.eq_iff.mp h with ⟨rfl, _⟩ | ⟨rfl, _⟩
+      · exact Or.inl (Reachable.refl _)
+      · exact Or.inr (Reachable.refl _)
+    · have hadj' : (T.graph.deleteEdges {s(a, b)}).Adj u v :=
+        deleteEdges_adj.mpr ⟨hadj, by simpa using h⟩
+      rcases ih hw with ih | ih
+      · exact Or.inl (hadj'.reachable.trans ih)
+      · exact Or.inr (hadj'.reachable.trans ih)
+
 end Cladogram
 
-/-! ## 两侧的相容性（不依赖 `Split`，便于在树上直接证明） -/
-
-/-- **两侧的相容性**（§3.4：相容 ⟺ 一侧包含另一侧，或互补）。
-
-不依赖 `Split` 结构 —— 便于在树上直接证明后，再经 `compatible_of_sides` 抬到 `Split`。 -/
-def SidesCompatible {α : Type*} [Fintype α] [DecidableEq α] (A B : Finset α) : Prop :=
-  A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = Finset.univ
+/-! ## 两侧相容 ⟹ split 相容 -/
 
 /-- 两侧相容 ⟹ 对应 split 相容。 -/
 theorem Split.compatible_of_sides {α : Type*} [Fintype α] [DecidableEq α]
