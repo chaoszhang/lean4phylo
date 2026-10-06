@@ -158,7 +158,15 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **⚠️ 发现更短路径（待老师定）**：文献定义 restriction 的标准方式是 **split 层面** ——
   `Cl(T|Y) = {C ∩ Y : C ∈ Cl(T), C ∩ Y ≠ ∅}`（Bryant–Steel；Semple & Steel §3.9）。
   ⇒ **先做 `Split` 类型 + `splits : T → Finset (Split X)`（M2 前置），restrict 直接定义在 split 上，不必造新树**；且 `splits` 本来就是 M2（Splits-Equivalence）的必备地基，一举两得。
-- **下一步**：等老师选 **A**（硬做 `suppress`，树版 restrict）或 **B**（先 `Split`+`splits`，restrict 走 split 版 —— 我推荐）。
+- **M2 进度（2026-10-06）**：`Phylo/Split.lean` 已完成并编译通过 ——
+  - `KPartition α n`（划分族共享基础）· `Split α := KPartition α 2` · `sideA`/`sideB`/`disjoint_sides`/`union_sides`
+  - **`Split.Compatible`**（四个交至少一空）+ `compatible_comm`
+  - **`Split.restrictSide`** / `disjoint_restrictSide` / **`Split.restrict`**（`A|B ↦ (A∩Y)|(B∩Y)`）——**route B 的核心：restriction 定义在 split 层面，不造新树**
+  - `Cladogram.sideLeaves`（删边后叶集）· `splitOfEdge`（边 → Split）· **`IsSplitOf`** / **`splits`** / `PairwiseCompatible`
+  - `lake build` → **1259 jobs 通过**；`scripts/check_file_imports.sh` 通过
+  - ⬜ 剩：`Split.swap`（unordered 判定）· **Splits-Equivalence 定理**（需劈顶点引理）
+- **Lean 4 坑（M2 新踩）**：`Finset.biUnion_fin_two` 不存在 → 手写 `fin_cases` 或 `ext`；`Fin 2` 上的 `simp only` 易残留 `Quot.lift` 形式 → 改用 `simpa [Def, ...] using h` 显式给出引用；`s.restrictSide Y 0` **不**定义等于 `s.sideA`（`sideA` 是 def 不自动展开）→ `simp` 集里要带 `sideA`/`sideB`。
+- **未 commit 前状态**：HEAD = `3b41475`（M2 前半）。
 
 ## Git / 远程（2026-10-02）
 

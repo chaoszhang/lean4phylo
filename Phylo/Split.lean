@@ -56,7 +56,7 @@ def sideB (s : Split α) : Finset α := s.parts 1
 theorem disjoint_sides (s : Split α) : Disjoint s.sideA s.sideB :=
   s.pairwise_disjoint 0 1 (by decide)
 
-/-- 两侧并为全集。 -/
+/-- 两侧并为全集。§3.4：`Fin 2` 索引把两侧有序化，判等需商掉 `swap`（见 `Split.swap`）。 -/
 theorem union_sides (s : Split α) : s.sideA ∪ s.sideB = Finset.univ := by
   have h := s.union_eq_univ
   rw [← h]
@@ -71,6 +71,63 @@ theorem union_sides (s : Split α) : s.sideA ∪ s.sideB = Finset.univ := by
     · exact Or.inl hi
     · exact Or.inr hi
 
+/-- **相容（compatible）**：两个 split `A|B` 与 `A'|B'` 的四个交
+`A∩A'`、`A∩B'`、`B∩A'`、`B∩B'` 中**至少一个为空**。
+
+（文献：Semple & Steel；平凡 split 与任何 split 相容。） -/
+def Compatible (s t : Split α) : Prop :=
+  Disjoint s.sideA t.sideA ∨ Disjoint s.sideA t.sideB ∨
+  Disjoint s.sideB t.sideA ∨ Disjoint s.sideB t.sideB
+
+/-- 相容性对称。 -/
+theorem compatible_comm (s t : Split α) : Compatible s t ↔ Compatible t s := by
+  simp only [Compatible, disjoint_comm]
+  tauto
+
+/-- 把 split 的第 `i` 侧限制到子集 `Y`（得到 `↥Y` 上的子集）。 -/
+noncomputable def restrictSide (s : Split α) (Y : Finset α) (i : Fin 2) : Finset ↥Y :=
+  Finset.univ.filter fun a => (a : α) ∈ s.parts i
+
+/-- `restrictSide` 保持不交性。 -/
+theorem disjoint_restrictSide (s : Split α) (Y : Finset α) :
+    Disjoint (s.restrictSide Y 0) (s.restrictSide Y 1) := by
+  rw [Finset.disjoint_left]
+  intro a ha hb
+  simp only [restrictSide, Finset.mem_filter, Finset.mem_univ, true_and] at ha hb
+  exact (Finset.disjoint_left.mp s.disjoint_sides) ha hb
+
+/-- **restriction（限制到 `Y`）**：`A|B ↦ (A∩Y)|(B∩Y)`。
+
+§3.7 / Bryant–Steel、Semple & Steel §3.9：**restriction 的标准定义就在 split 层面**
+（`Cl(T|Y) = {C∩Y : C ∈ Cl(T), C∩Y ≠ ∅}`），因此**不需要造新的树** —— 这正是选
+route B 的收益。
+
+（两侧各与 `Y` 相交非空的要求，作为假设传入；退化情形 `A∩Y=∅` 对应平凡 split。） -/
+noncomputable def restrict (s : Split α) (Y : Finset α)
+    (hA : (s.restrictSide Y 0).Nonempty) (hB : (s.restrictSide Y 1).Nonempty) :
+    Split ↥Y where
+  parts := fun i => s.restrictSide Y i
+  pairwise_disjoint := by
+    intro i j hij
+    fin_cases i <;> fin_cases j
+    · exact absurd rfl hij
+    · exact s.disjoint_restrictSide Y
+    · exact disjoint_comm.mp (s.disjoint_restrictSide Y)
+    · exact absurd rfl hij
+  union_eq_univ := by
+    ext a
+    refine ⟨fun _ => Finset.mem_univ _, fun _ => ?_⟩
+    have hmem : (a : α) ∈ s.sideA ∪ s.sideB := by
+      rw [s.union_sides]; exact Finset.mem_univ _
+    rcases Finset.mem_union.mp hmem with h | h
+    · exact Finset.mem_biUnion.mpr ⟨0, by simpa [restrictSide, sideA] using h⟩
+    · exact Finset.mem_biUnion.mpr ⟨1, by simpa [restrictSide, sideB] using h⟩
+  nonempty := by
+    intro i
+    fin_cases i
+    · simpa [restrictSide] using hA
+    · simpa [restrictSide] using hB
+
 end Split
 
 /-! ## 树 → split 系统 -/
@@ -79,7 +136,7 @@ namespace Cladogram
 
 open Classical
 
-variable {X : Type*} [Fintype X]
+variable {X : Type*} [Fintype X] [DecidableEq X]
 
 /-- 删去边 `e` 后，与顶点 `u` 同侧（落在同一连通分量）的**叶集**。
 
@@ -115,5 +172,23 @@ noncomputable def splitOfEdge (T : Cladogram X) (e : Sym2 T.V) (u : T.V)
     fin_cases i
     · exact hA
     · exact hB
+
+/-- `s` 是树 `T` 的**一条边的 split**：`s` 的某一侧恰是「删某条边后某一侧的叶集」。
+
+§3.4：删边 `e` ⟹ bipartition。`u` 取边的两端点即得两个方向。 -/
+def IsSplitOf (T : Cladogram X) (s : Split X) : Prop :=
+  ∃ (e : Sym2 T.V) (u : T.V), s.sideA = T.sideLeaves e u
+
+/-- 树 `T` 的**全部边的 split 集**（§3.4 的三级对应之一：边 ↔ bipartition）。
+
+⚠️ 这是**无序 split 的有序表示**：每条边的两个方向都出现在这个集合里
+（`Split.sideA`/`sideB` 的 `Fin 2` 索引所致）。因 `Compatible` 对换侧不变，
+这对「两两相容」与后续的 Splits-Equivalence 陈述均无影响。 -/
+def splits (T : Cladogram X) : Set (Split X) :=
+  {s | T.IsSplitOf s}
+
+/-- 树的 split 系统**两两相容**（这就是 Splits-Equivalence 的判据）。 -/
+def PairwiseCompatible (T : Cladogram X) : Prop :=
+  ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t
 
 end Cladogram
