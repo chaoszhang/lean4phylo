@@ -33,6 +33,7 @@ import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
+import Phylo.TreeDistance
 
 /-!
 # `lean4phylo` —— 系统发生学经典算法的形式化库
