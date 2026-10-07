@@ -33,6 +33,8 @@ import Phylo.QuartetInhabitation
 import Phylo.QuartetUnique
 import Phylo.SideSubtree
 import Phylo.Split
+import Phylo.SplitsDetermineTree
+import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER

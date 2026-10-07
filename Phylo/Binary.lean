@@ -26,9 +26,21 @@ T ≇ T'   ⟹   Σ(T) ≠ Σ(T')   ⟹   ∃ 不兼容的 split 对   ⟹   ∃
   （= 两个不同的 quartet）。**这就是老师路线的最后一步**；
 * ★★ binary 树的专门描述（`IsBinary` 的度/邻居推论 + `BinaryCladogram`）。
 
-⬜ **路线第 1、2 步**（「不同构 ⟹ Σ 不同」、「Σ 不同 ⟹ 存在不兼容对」）不在本文件，
-见 `Phylo/Stat/QuartetDecides.lean` 的 `QuartetDecidesRoute`：它们等价于
-**binary 树 split 系统是极大相容族**（⟺ Buneman 存在性）。
+✅ **路线第 1、2 步**（「不同构 ⟹ Σ 不同」、「Σ 不同 ⟹ 存在不兼容对」）**不**在本文件 ——
+2026-10-08 已由别处补齐：
+
+* **第 1 步**（「相同 Σ ⟹ 同构」，逆否即「不同构 ⟹ Σ 不同」）见
+  `Phylo/SplitsDetermineTree.lean` 的 ★★★ `Cladogram.iso_of_isSplitOf_iff`
+  （`3 ≤ |X|`）与 `Phylo/SplitsDetermineTreeBase.lean` 的 ★★ `Cladogram.iso_of_card_le_two`
+  （`|X| ≤ 2`）—— 即 Semple & Steel §3.8 的「同构版」；
+* **第 2 步**（「Σ 不同 ⟹ 存在不兼容对」）等价于 **binary 树 split 系统是极大相容族**
+  （⟺ Buneman 存在性）：由 ★★ `Phylo/InternalEdge.lean` 的
+  `Cladogram.compatible_of_sameQuartetSystem` 与 ★★★ `Phylo/SplitsMaximal.lean` 的
+  `binarySplitsMaximal` 拼出（见 `Phylo/Stat/QuartetDecides.lean` 的 ★★★
+  `Cladogram.isSplitOf_iff_of_sameQuartetSystem`）。
+
+⚠️ **更正（2026-10-08）**：本段旧文引用的 `QuartetDecidesRoute` **在库内从不曾存在**
+（本项目第 10 处「文档说错」），已删。
 -/
 
 universe u v
