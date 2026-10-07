@@ -48,6 +48,7 @@ import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
+import Phylo.Supertree
 import Phylo.TreeDistance
 
 /-!
