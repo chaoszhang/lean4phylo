@@ -706,6 +706,66 @@ theorem notMem_quartetSlice_right {a c d : X} : d ∉ T.quartetSlice a c d := by
   rw [mem_quartetSlice]
   exact fun h => T.not_displaysQuartet_of_mem_inter h (x := d) (by simp) (by simp)
 
+/-- **quartet 的「对内」顺序也可换**：`ab|cd ⟺ ab|dc`（纯集合记号，`{c,d} = {d,c}`）。 -/
+theorem displaysQuartet_pair_comm {a b c d : X} :
+    T.DisplaysQuartet a b c d ↔ T.DisplaysQuartet a b d c := by
+  constructor
+  · rintro ⟨s, hs, hab, hcd⟩
+    exact ⟨s, hs, hab, by rwa [Finset.pair_comm] at hcd⟩
+  · rintro ⟨s, hs, hab, hdc⟩
+    exact ⟨s, hs, hab, by rwa [Finset.pair_comm] at hdc⟩
+
+/-- ★★★ **BD Prop 2 的收尾：`Y := {E : AE|CD}` 是 clan**（即「由 quartet 恢复出来的 cluster」）。
+
+BD 原文（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md` **715–720 行**）：
+
+> *"If `E ∈ Y` and `F ∈ Ȳ`, then `AE∥CF` **by substitution**. Hence for `E₁, E₂ ∈ Y` and
+> `F₁, F₂ ∈ Ȳ` we get `AEᵢ∥CFⱼ` (i,j = 1,2). Then by **further transitivity**,
+> `E₁E₂∥CFⱼ` (j = 1,2), and `E₁E₂∥F₁F₂`."*
+
+三步：
+1. **替换**：`AEᵢ|CD` + 第五点 `Fⱼ` ⟹ `AEᵢ|CFⱼ ∨ AFⱼ|CD`，而 `Fⱼ ∉ Y` 即 `¬AFⱼ|CD`
+   ⟹ `AEᵢ|CFⱼ`（用 ★★★ `displaysQuartet_substitution`）；
+2. **传递**：由 `AE₁|CFⱼ`、`AE₂|CFⱼ` 得 `E₁E₂|CFⱼ`（★★★ `displaysQuartet_of_displaysQuartet_common`，
+   形状 `ab|ce ∧ ab|de ⟹ ab|cd`）。**关键**是先用 ★★ `displaysQuartet_comm` +
+   `displaysQuartet_pair_comm` 把 quartet 旋成 `cF|Eᵢa`，使**第四位同为 `a`**、第三位才是变化的 `Eᵢ`；
+3. 再由 `E₁E₂|CF₁`、`E₁E₂|CF₂` 用同一传递性得 `E₁E₂|F₁F₂` ✓。 -/
+theorem isClan_quartetSlice_aux (a c d : X) : T.IsClan (T.quartetSlice a c d) := by
+  classical
+  intro E₁ hE₁ E₂ hE₂ F₁ hF₁ F₂ hF₂
+  rw [mem_quartetSlice] at hE₁ hE₂ hF₁ hF₂
+  have hsub : ∀ E F : X, T.DisplaysQuartet a E c d → ¬ T.DisplaysQuartet a F c d →
+      T.DisplaysQuartet a E c F := by
+    intro E F hE hF
+    rcases T.displaysQuartet_substitution hE with h' | h'
+    · exact h'
+    · exact absurd h' hF
+  have key : ∀ E E' F : X, T.DisplaysQuartet a E c F → T.DisplaysQuartet a E' c F →
+      T.DisplaysQuartet E E' c F := by
+    intro E E' F h1 h2
+    have e1 : T.DisplaysQuartet c F E a :=
+      T.displaysQuartet_pair_comm.mp (T.displaysQuartet_comm.mp h1)
+    have e2 : T.DisplaysQuartet c F E' a :=
+      T.displaysQuartet_pair_comm.mp (T.displaysQuartet_comm.mp h2)
+    exact T.displaysQuartet_comm.mp
+      (T.displaysQuartet_of_displaysQuartet_common (a := c) (b := F) (c := E) (d := E')
+        (e := a) e1 e2)
+  have k1 : T.DisplaysQuartet E₁ E₂ F₁ c :=
+    T.displaysQuartet_pair_comm.mp (key E₁ E₂ F₁ (hsub E₁ F₁ hE₁ hF₁) (hsub E₂ F₁ hE₂ hF₁))
+  have k2 : T.DisplaysQuartet E₁ E₂ F₂ c :=
+    T.displaysQuartet_pair_comm.mp (key E₁ E₂ F₂ (hsub E₁ F₂ hE₁ hF₂) (hsub E₂ F₂ hE₂ hF₂))
+  exact T.displaysQuartet_of_displaysQuartet_common (a := E₁) (b := E₂) (c := F₁) (d := F₂)
+    (e := c) k1 k2
+
+/-- ★★★ **BD Prop 2 的收尾（完整形式）**：`Y := {E : AE|CD}` 是 clan，且**分离 `A,B` 与 `C,D`**
+（BD 原文 *"Therefore `Y` is indeed a cluster which separates `A, B` from `C, D`"*）。 -/
+theorem isClan_quartetSlice {a b c d : X} (h : T.DisplaysQuartet a b c d) :
+    T.IsClan (T.quartetSlice a c d) ∧ a ∈ T.quartetSlice a c d ∧ b ∈ T.quartetSlice a c d ∧
+      c ∉ T.quartetSlice a c d ∧ d ∉ T.quartetSlice a c d :=
+  ⟨T.isClan_quartetSlice_aux a c d, T.mem_quartetSlice_self h,
+   T.mem_quartetSlice_of_displaysQuartet h, T.notMem_quartetSlice_left,
+   T.notMem_quartetSlice_right⟩
+
 /-- ★★ **clan 系统对补闭合**：`A` 是 clan ⟹ `Aᶜ` 也是 clan。
 
 **出处**：Bandelt & Dress 1986, Prop 2(b) 的证明（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
