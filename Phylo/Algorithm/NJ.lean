@@ -190,6 +190,40 @@ theorem two_mul_z (i j : X) :
   ring
 
 omit [DecidableEq X] in
+/-- ★★ **Weller 2023 Observation 2**（`Weller2023_..md:143`；此处限制在**标签**上，2026-10-08 补登记）：
+
+路径的叶状态等于两端**叶状态**（行和 `S`）的平均减去 `|X|·δ(i,j)/2`：
+`ℓ(i,j) = ½ (S(i) + S(j) − |X| · δ(i,j))`。
+
+✦ **接口说明**（`HANDOVER.md` §4.2 T0.3 的对齐表）：`δ.S i` **就是** Weller 的叶状态
+`ℓ_T(i) = Σ_{x∈L(T)} d(i,x)`（`x = i` 那一项为 `0`，故「对叶求和」与「对标签求和」一致）；
+`δ.ell i j` **就是** `ℓ_T(p) = Σ_{x∈L(T)} d(x,p)`（`p` = `i`-`j` 路径）。
+
+（原式此前只以 `two_mul_z` **证明内部**的步骤 `hsum` 形式存在 —— 本定理把它**提出并命名**，
+以便 T0.3 的转录显式引用；两处各留一份同型证明，换取不动既有证明。） -/
+theorem ell_eq_S (i j : X) :
+    δ.ell i j = (δ.S i + δ.S j - (Fintype.card X : ℝ) * δ.val i j) / 2 := by
+  have hsum : (∑ k, (δ.val i k + δ.val j k - δ.val i j))
+      = δ.S i + δ.S j - (Fintype.card X : ℝ) * δ.val i j := by
+    simp only [S]
+    rw [Finset.sum_sub_distrib, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ]
+    simp only [nsmul_eq_mul]
+  simp only [ell, hsum]
+
+omit [DecidableEq X] in
+/-- ★★ **`z` 的闭形式**（Weller 2023 的 eq (3)，`Weller2023_..md:304–324`；限制在标签上）：
+
+`z(i,j) = ½ (S(i) + S(j) − (|X|−2)·δ(i,j))`。
+
+即 `two_mul_z` 两边同除 `2`；单列出来是为了让 T0.3 的转录能直接引用「**叶状态形式**」
+（Weller 的 `z` 是「路径叶状态 + 路径长度」，本式把它换成纯 `S`/`δ` 的组合）。 -/
+theorem z_eq_S (i j : X) :
+    δ.z i j = (δ.S i + δ.S j - ((Fintype.card X : ℝ) - 2) * δ.val i j) / 2 := by
+  have h := two_mul_z δ i j
+  rw [show δ.z i j = 2 * δ.z i j / 2 by ring, h]
+  ring
+
+omit [DecidableEq X] in
 /-- **门控恒等式**：`z(a,b)+z(i,j) − (z(a,i)+z(b,j)) = ((2−n)/2)·(P − Q₁)`，其中
 `P = δ(a,b)+δ(i,j)`、`Q₁ = δ(a,i)+δ(b,j)`。
 
