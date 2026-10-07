@@ -50,6 +50,9 @@ dsh 首轮在 `NNI.lean` 第 50–51 行的「本文件做到哪」成果清单�
 但这两个定理**在文件里根本不存在**（只有段注释里的证明思路）；同文件后面的 `⬜ 未完成` 段
 又自相矛盾地承认它们没做。这种「成绩单注水」比留一个 `sorry` 更危险 —— 后续 agent 会当真。
 
+> ✅ **2026-10-08 已收口**：两条都真证出来了（且发现「相容」那条本身是**假命题**，已改证不相容），
+> 另加 ★★★ `nniResolvent_three_incompatible`。docstring 已同步为真实清单，见 §4 T9.1。
+
 **规则**：
 - 未证明的命题**一律**落成显式 `def ⟨名字⟩ : Prop := …` 缺口（本库既有惯例：
   `MaxZCherryCore` / `QuartetDecidesTree`），**而不是**在 docstring 里标 ★。
@@ -160,7 +163,8 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 | 17 | **Colonius–Schultze 推理规则** | `displaysQuartet_of_displaysQuartet_common` | `Phylo/Quartet.lean` | ✅ 无条件 |
 | 18 | **不兼容 split ⟹ 不同 quartet** | `exists_restrict_ne_of_incompatible` | `Phylo/Binary.lean` | ✅ 无条件 |
 | 19 | **侧分量子树是树**（阶段 1） | `isTree_induce_sideVertices` | `Phylo/SideSubtree.lean` | ✅ 无条件 |
-| 20 | **NNI 分解**（split 层，🔄 dsh 首轮） | `Split.nniResolvent` / `nniParts_zero` / `nniResolvent_sideA/sideB` | `Phylo/Algorithm/NNI.lean` | 🔄 定义 + 分块引理；相容/不相容未做 |
+| 20 | **NNI 分解**（split 层） | `Split.nniResolvent` / `nniParts_zero` / `nniResolvent_sideA/sideB` / ★★ `nniResolvent_incompatible_parent` / ★★★ `nniResolvent_swap_incompatible` / ★★★ `nniResolvent_three_incompatible` | `Phylo/Algorithm/NNI.lean` | ✅ 无条件（**3 个分解两两不相容** ⟹ NNI 邻域恰 3 个成员） |
+| 21 | **边的侧集合 ≥ 2 叶**（阶段 2 = **T2**） | ★★ `two_le_card_sideLeaves` / `two_le_card_sideLeaves_both` / `two_le_card_degree_one_of_side` / `degree_induce_eq_card_inter` | `Phylo/InternalEdge.lean` | ✅ 无条件（`no_degree_two` + 端点非叶） |
 
 > **一句话总结给老师看的**：**ASTRAL、CASTER、parsimony、SVDQuartets 四个算法的核心正确性已经形式化**；NJst 拿到第一步；NJ 拿到全部代数骨架，剩一条**经典定理的形式化缺口**（`MaxZCherryCore`，见 T4 的定性说明 —— **不是**数学开放问题）。
 
@@ -452,28 +456,54 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 
 ---
 
-### T2 ★★ 「内部边两侧各 ≥ 2 叶」（阶段 2）—— 基础设施，建议最先动手
+### T2 ★★ 「内部边两侧各 ≥ 2 叶」（阶段 2）—— ✅ **已完成（2026-10-08）**
+
+> ✅ **状态**：完成于 `Phylo/InternalEdge.lean`（297 行）。零 `sorry`，`lake build` 3187 jobs 通过。
+>
+> ⚠️ **本节的原始骨架第 2 步是假命题 —— 已修正，务必读「修正记录」再动手别的东西。**
 
 | 项 | 内容 |
 |---|---|
-| **位置** | `Phylo/SideSubtree.lean`（132 行，阶段 1 已完成） |
-| **目标** | `theorem two_le_card_sideLeaves`：`Cladogram.IsBinary`（或至少 `no_degree_two`）的**内部边**两侧各含 ≥ 2 个叶 |
+| **位置** | `Phylo/InternalEdge.lean`（阶段 1 仍在 `Phylo/SideSubtree.lean`） |
+| **主定理** | ★★ `Cladogram.two_le_card_sideLeaves`：`degree u ≠ 1`（端点非叶）⟹ `2 ≤ (T.sideLeaves s(u,v) u).card` |
+| **对称形式** | ★★ `two_le_card_sideLeaves_both`：内部边两侧**各**含 ≥ 2 叶 |
+| **一般形式** | ★★ `two_le_card_degree_one_of_side`：对**不透明** `U : Finset T.V` 陈述（见下面性能注记） |
 | **为什么重要** | 是 **T1 第 1 步**、**quartet→split 恢复**、**KF 距离**三处的共同前置 |
-| **阶段 1 已完成** | `sideVertices` · `mem_sideVertices` · ★★ `isTree_induce_sideVertices`（侧分量诱导子图是树）· `card_edgeFinset_induce_sideVertices`（`#边 + 1 = \|U\|`，**无减法**形式） |
 
-**已知卡点（实测，务必先读）**：
-- `T.graph.induce ↑(T.sideVertices …)` 这个**类型每次 `whnf` 都极贵**，`maxHeartbeats 1600000` 仍超时（编译 2 分半）。
-- `degree_induce_of_neighborSet_subset` 还需要 `Fintype ↑(G.neighborSet v)` 实例，雪上加霜。
+**⚠️ 修正记录 #1（骨架第 2 步是假命题）**
 
-**建议的两条出路**：
-1. 把 `sideVertices` 从 `def` 改 **`abbrev`**，让类型透明（减少 `whnf` 展开层数）；
-2. **直接在子类型 `↥(sideVertices …)` 上定义图**，绕开 `Finset → Set → induce` 的三层转换。
+原骨架第 2 步写的是「`x ∈ U`、`x ≠ u` ⟹ `N(x) ⊆ U`」。**假**：取 `T` 为路径
+`u—x—w`、`e = {x,w}`，则 `w ∉ U` 却是 `x` 的邻居。正确形式是 `N(x) ⊆ U ∪ {u}`
+（`u` 单独用握手引理处理，见下）。由该骨架还派生两条**等价的死路**：
 
-**已有可用 API**：`SimpleGraph.degree_induce_of_neighborSet_subset` · `SimpleGraph.Walk.induce`（`Walk/Maps.lean:225`）· `Walk.mapLe` · `IsAcyclic.induce` · `IsTree.card_edgeFinset`（形式为 `#边 + 1 = |V|`，**无减法**）。
+* 「`e = s(x,w)` ⟹ 删边后 `x`、`w` 仍相邻」：`Sym2.eq_swap` 给出 `s(w,x) = s(x,w)`，
+  与 `e = s(x,w)` 合起来**证明了** `s(w,x) = e` —— 命题为假；
+* 「`u ∈ e`」：路径反例中 `u` 只是 `e` 的邻居侧点。
 
-**已排除的路线**：`SimpleGraph.dist` 极大性 —— 最长距离顶点的邻居距离可能相等，不成立。
+**实际使用的骨架（已验证）**：`U := T.sideVertices s(u,v) u`，`G' := T.graph.induce ↑U`。
 
-**验收**：`two_le_card_sideLeaves` 编译通过，全库零 `sorry`。
+1. 只有 `e` 跨越 `U`（`eq_edge_of_adj_of_mem_sideVertices_of_notMem`）；
+2. `x ∈ U`、`x ≠ u` ⟹ `N_T(x) ⊆ U` ⟹ `deg_{G'}(x) = deg_T(x)`
+   （叶 ⟹ `= 1`；非叶 ⟹ `≥ 3`）；
+3. `N_T(u) ⊆ U ∪ {v}`、`v ∉ U` ⟹ `deg_{G'}(u) ≥ deg_T(u) − 1 ≥ 2`；
+4. 握手引理 `∑ deg_{G'} = 2·#边` + `#E(T[U]) + 1 = |U|` 夹逼得
+   `ℓ_U + 3(i_U − 1) + 2 ≤ 2(|U| − 1)`，代入 `|U| = ℓ_U + i_U` ⟹ **`ℓ_U ≥ i_U + 1 ≥ 2`**。
+
+**⚠️ 修正记录 #2（性能 —— 原「两条出路」都不必要）**
+
+原建议是「`sideVertices` 改 `abbrev`」或「直接在子类型上定义图」。**实测更好的办法**：
+把计数引理对**不透明的 `U : Finset T.V`** 陈述，`sideVertices` **只在最后实例化一次** ——
+这样 `whnf` 根本不会去展开 `sideVertices`。另外：
+
+* `SimpleGraph.degree_induce_of_neighborSet_subset` / `map_neighborFinset_induce` 在本环境里
+  会**超时**或 `rw` 匹配失败（`Set.toFinset` 的 `Fintype` 实例不 defeq，而 `rw` 要求 defeq）。
+  ⇒ 改用自证的 `degree_induce_eq_card_inter`（`Finset.card_bij`，完全不碰 `Set.toFinset`）。
+* `Fintype.card ↥(↑U : Set T.V) = U.card` 走 `rw [← Set.toFinset_card]; congr 1; ext x; simp`
+  （`Fintype.card_coe` 对 `↥(↑U : Set T.V)` 不匹配）。
+* `obtain ⟨x, hx⟩ := hA`（`hA : s.Nonempty`）会**把 `hA` 代入目标**（因为 `hA` 出现在
+  `nniResolvent … hA …` 里），导致随后的 `rw` 失配。⇒ 用 `hA.mono fun x hx => …`。
+
+**验收**：✅ `two_le_card_sideLeaves` 编译通过，全库零 `sorry`（3187 jobs）。
 
 ---
 
@@ -605,23 +635,28 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 | **长枝吸引** | Felsenstein zone 的定量刻画（需 MSC 概率层） | 高 |
 | **UPGMA 的分子钟一致性** | 超度量数据下 UPGMA 恢复真树 | 中（依赖 T3/Dendrogram 已有） |
 
-### T9.1 NNI 的现状（🔄 dsh 首轮做了定义层，**下一步很明确**）
+### T9.1 NNI 的现状（✅ **split 层已完成**，2026-10-08）
 
-**已做**（`Phylo/Algorithm/NNI.lean`，207 行）：`Split.nniParts` / `nniResolvent`（split 层 NNI 分解
-`A|B → (A₁∪B₁)|(A₂∪B₂)`）+ `nniParts_zero/one` + `nniResolvent_sideA/sideB`。
+**已做**（`Phylo/Algorithm/NNI.lean`，288 行）：`Split.nniParts` / `nniResolvent`（split 层 NNI 分解
+`A|B → (A₁∪B₁)|(A₂∪B₂)`）+ `nniParts_zero/one` + `nniResolvent_sideA/sideB`；
+★★ `nniResolvent_incompatible_parent`；★★★ `nniResolvent_swap_incompatible`；
+★★★ `nniResolvent_three_incompatible`（**三个分解两两不相容** ⟹ NNI 邻域恰 3 个成员）。
 
-**⬜ 下一步（文件里已写清思路，直接接）**：
-1. ★★ `nniResolvent_compatible`：分解与母 split 相容。
-   思路（文件 §⬜ 已给）：分解第二块 `A₂∪B₂ = (A\A₁)∪(B\B₁)` 落在 `B` 内 ⟹ 与 `A` 不交。
-   所需假设：`s.sideA \ A₁ ⊆ s.sideB`、`s.sideB \ B₁ ⊆ s.sideB`。
-2. ★★★ `nniResolvent_swap_incompatible`：同一母 split 的两个互补分解互不相容
-   （叶层面：`{a,c}|{b,d}` 与 `{a,d}|{b,c}`）。取 `x ∈ A₂` 逐一击破四个「分侧不交」条件。
-3. 树层操作 `nniT'`（真的构造第二棵树）+ NNI 邻域关系的对称性 + 局部相容性引理 +
-   `QuartetDecidesTree` 的 NNI 证书。
+**⚠️ 修正记录：原计划第 1 项是假命题**
 
-> ⚠️ **注意**：`NNI.lean` 现在的 docstring 第 50–51 行**虚报**了上面 1、2 两项
-> （把它们列进「本文件做到哪」，实际不存在）。接手时**先修正 docstring**（纪律 12），
-> 或在真正证出后把 ★ 落实。
+原计划写「★★ `nniResolvent_compatible`：分解与母 split **相容**，思路：分解第二块落在 `B` 内 ⟹ 与 `A` 不交」。
+**这是假的**：`S₁ = A₁B₁|A₂B₂` 与 `S₀ = A₁A₂|B₁B₂` 的四个交分别含 `A₁`、`A₂`、`B₁`、`B₂`，全非空
+⟹ **不**相容。叶层面即 quartet 的 `{a,b}|{c,d}` 与 `{a,c}|{b,d}` 是两个**不同**拓扑 ——
+这正是「NNI 恰好改动 `e` 的 split」。（原思路的错误在于：`A \ A₁ ⊆ A` 与 `A` 不交的是 `B₂`，
+但 `A₂ = A \ A₁` 本身就在 `A` 内，所以第二个交永远非空。）已改证**不相容**。
+
+**⬜ 下一步**：
+1. 树层操作 `nniT'`（真的构造第二棵树）+ NNI 邻域关系的对称性 + `QuartetDecidesTree` 的 NNI 证书。
+2. 局部相容性引理：刻画「与 `S₀,S₁,S₂` 全相容」的 split。
+   ⚠️ **已排除的弱形式**：「与 `S₀` 相容且 `≠ S₀`」**不够** —— 反例（四块各取
+   `A₁={a₁,a₂}`、`A₂={a₃}`、`B₁={b₁,b₂}`、`B₂={b₃}`，另有一块 `R={r}` 在 `e` 之外）：
+   `t = A₁A₂B₁ | B₂R` 与 `S₀`、`S₁` 都相容却与 `S₂` 不相容。
+   ⇒ 该引理**必须**用到「`t` 是 `T` 的 split」（来自树中某条边），不能只在四块上做组合。
 
 ---
 

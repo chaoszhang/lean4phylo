@@ -109,24 +109,20 @@ theorem card_edgeFinset_induce_sideVertices {e : Sym2 T.V} {u : T.V} :
   T.isTree_induce_sideVertices.card_edgeFinset
 
 end Cladogram
-/-! ## ⬜ 未完成：两侧各 ≥ 2 叶（计数部分）
+/-! ## 阶段 2 已完成 —— 见 `Phylo/InternalEdge.lean`
 
 **目标**：`2 ≤ (T.sideLeaves s(u,v) u).card`（`u` 非叶）。
 
-**已就位**：侧分量的诱导子图是树（`isTree_induce_sideVertices`）⟹ `#边 = |U| − 1`（`card_edgeFinset_induce_sideVertices`）。
+✅ **2026-10-08 完成**：`Phylo.InternalEdge` 的 ★★ `two_le_card_sideLeaves`
+（对称形式 `two_le_card_sideLeaves_both`）。阶段 1 的两条引理
+（`isTree_induce_sideVertices`、`card_edgeFinset_induce_sideVertices`）在那里被直接使用。
 
-**计划**（握手 + 度数，路线已在 `MEMORY.md` 记录）：
-* `deg_{T[U]}(x) = deg_T(x)` 当 `x ≠ u`（`SimpleGraph.degree_induce_of_neighborSet_subset`
-  + 「跨越 `U` 的边只有 `e`」），`deg_{T[U]}(u) ≥ 2`；
-* 于是 `Σ_{x∈U} deg_{T[U]} ≥ ℓ_U + 3(i_U − 1) + 2`，配合 `#边 = |U| − 1` 得 `ℓ_U ≥ i_U + 1 ≥ 2`。
+**⚠️ 旧注释里「`deg_{T[U]}(x) = deg_T(x)` 当 `x ≠ u`」所依赖的 `N(x) ⊆ U` 是假命题**：
+取 `T` 为路径 `u—x—w`、`e = {x,w}`，则 `w ∉ U` 却是 `x` 的邻居。
+正确形式是 `N(x) ⊆ U ∪ {u}`（`u` 单独处理）。详见 `InternalEdge.lean` 文件头的修正记录。
 
-**为什么暂缓**（2026-10-07 深夜的实测结论，避免重复踩坑）：
-* `T.sideVertices` 出现在 `T.graph.induce ↑(…)` 的类型里，**每次 `whnf` 都极贵**；
-  `set_option maxHeartbeats 1600000` 仍会在 `degree_induce_of_neighborSet_subset`
-  的应用处超时（2 分半 compile）。
-* 引入简写 `sideInduce` 可缓解，但还需 `Fintype ↑(G.neighborSet v)` 实例与
-  `Set`/`Finset` 单元素记号的强制统一（`deleteEdges_adj` 接受 `Set`，
-  `Finset.mem_singleton` 给 `Finset`）。
-* **建议下次**：(i) 用 `abbrev` 让 `sideVertices` 透明；(ii) 或在**子类型上直接定义图**
-  （不经过 `Finset → Set → induce`），把类型复杂度降到最低。
+**⚠️ 性能问题的实际解法**（也不需要「`abbrev`」或「在子类型上直接定义图」）：
+把计数引理对**不透明的 `U : Finset T.V`** 陈述，`sideVertices` 只在最后实例化一次 ——
+这样 `whnf` 根本不会展开 `sideVertices`。另外 `degree_induce_of_neighborSet_subset` 在本
+环境里会超时，改用 `Finset.card_bij` 自证的 `InternalEdge.degree_induce_eq_card_inter`。
 -/
