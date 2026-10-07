@@ -7,6 +7,7 @@ import Phylo.Aho
 import Phylo.Algorithm.BinaryCount
 import Phylo.Algorithm.Cherry
 import Phylo.Algorithm.NJ
+import Phylo.Algorithm.NNI
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
 import Phylo.Binary
