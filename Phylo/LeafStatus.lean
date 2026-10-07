@@ -62,6 +62,9 @@ import Mathlib.Tactic
    * ★★★ `eq_dist_add_pathLeafStatus_iff` —— **等号的精确刻画**：等号 ⟺ 每个第三者叶 `x`
      到 `w` 的距离等于它到路径的距离（`w` 是 `x` 的投影）；
    * ★★★ `eq_of_adj_adj` —— 文献的**几何条件 ⟹ 等号**（`w` 同时邻接两片叶，即 `p = (u,w,v)`）；
+   * ★★★ `eq_imp_adj_adj`（§12）—— **几何反向**：等号（且 `w` 非叶）⟹ `w` 同时邻接两片叶
+     （引擎 ★★★ `exists_distToPath_lt_of_not_adj` + ★★★ `mem_support_of_inSide_of_inSide`
+     + ★★ `exists_adj_crossing` + ★★ `distToPath_comm`）；**Lemma 3 至此两向皆完成**；
    * 辅助：★★ `sum_eq_add_add_sum_erase`、`leafStatus_sub_dist_add_pathLeafStatus`、
      `dist_eq_add_of_mem_path_support`、★★ `eq_of_adj_leaf`、`support_eq_of_adj_adj`、
      `eq_or_eq_or_eq_of_mem_support_of_adj_adj`、`distToPath_nonneg`。
@@ -72,23 +75,18 @@ import Mathlib.Tactic
   （⚠️ `ω < 0` 时 Lemma 1 的恒等式**为假**）；
 * `leafStatus_minimizer_not_isLeaf` / `pos_walkDist_of_ne` / `pos_dist_of_ne` /
   `eq_add_dist_of_min_support` / `exists_median_eq_half` / `pathLeafStatus_eq` /
-  `leafStatus_strict_mono` 及其 §7–§9 地基：全局正边权
-  `∀ e : Edge T.toCladogram, 0 < T.w e`（文献 `:124` 的 `ω : E(T) → ℕ⁺`；
+  `leafStatus_strict_mono` 及其 §7–§9 地基 / §12 的 `eq_imp_adj_adj`（其引擎用 `0 < d(p,w)`）：
+  全局正边权 `∀ e : Edge T.toCladogram, 0 < T.w e`（文献 `:124` 的 `ω : E(T) → ℕ⁺`；
   `:397–402` 说其实内部边正权已够）；
 * §7 的 ★★ `dist_le_dist_of_inSide` / `inSide_of_dist_lt` **不需要正权**（只用 `w_nonneg`）；
-  §8 的侧集嵌套也**不需要正权**。
+  §8 的侧集嵌套、§12 的 ★★ `exists_adj_crossing` / ★★★ `mem_support_of_inSide_of_inSide`
+  也**不需要正权**。
 
 ## ⬜ 未完成（未虚报）
 
-* **Lemma 3 的等号条件的「几何反向」**：等号 ⟹ `p = (u,w,v)`（即 `w` 同时邻接两片叶）。
-  已有的是投影式刻画 ★★★ `eq_dist_add_pathLeafStatus_iff` 与几何正向 ★★★ `eq_of_adj_adj`；
-  反向需要「路径 `p` 上某内部顶点的第三条分支必含一片**投影恰落在该顶点**的叶」
-  （用 `T.no_degree_two` + §8 的侧集工具可做：设 `p₁` 是 `u` 在 `p` 上的邻居，
-  若 `p₁ ≠ w`，由 `deg p₁ ≥ 3` 取第三分支的叶 `z`，则 `z` 的投影是 `p₁`，故
-  `d(z,p) < d(z,w)`，与等号矛盾 —— 对 `p_{m-1}` 同理，两向夹逼得 `p = (u,w,v)`）；
-  本轮**未做**，故 Lemma 3 的几何等号条件只完成了一半（⟸）。
-* **本轮之前文献 Observation 1 的「路径」字面形式**：已处理（见第 5 节，题面字面版为假，
-  本文件证的是文献原意 `min_{y∈V(p)} d(x,y)`）。
+* **无**（本轮任务的三项与 §12 的几何反向均已落地）。
+  文献 Observation 1 的「路径」字面形式在本文件第 5 节已按**文献原意**
+  （`min_{y∈V(p)} d(x,y)`）处理，并记录了题面字面版为假的反例。
 -/
 
 universe u v
@@ -1207,6 +1205,240 @@ theorem eq_of_adj_adj {u v : X} (huv : u ≠ v) {w : T.V}
     linarith
 
 end Lemma3Adj
+
+/-! ## 12. Lemma 3 等号条件的几何反向：等号 ⟹ `p = (u,w,v)`
+
+路线（主 agent 的配方 + 本库已有件）：
+
+* ★★ `exists_adj_crossing` —— 从集合 `U` 内走到 `U` 外的 walk 必含**跨界边**（walk 归纳）；
+* ★★★ `mem_support_of_inSide_of_inSide` —— `x` 在边 `s(c,p)` 的 `c` 侧、`y` 在 `p` 侧时，
+  `x–y` 的唯一路径**必经 `p`**（用 ★★ `exists_adj_crossing` + 库的
+  `eq_of_adj_of_not_inSide`：跨界边只能是 `s(c,p)`，故 `p` 落在路径的支持集里）；
+* ★★★ `exists_distToPath_lt_of_not_adj` —— **引擎**：`T.leaf u` 是叶、它与 `w ∈ u–v 路径`
+  不相邻、`w` 非叶时，存在第三者叶 `x` 使
+  `T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) < T.dist (T.leaf x) w`
+  （取邻居 `p`、`p` 在路径上的后继 `q`、第三条边 `p—c`（`deg p ≥ 3` 来自 `no_degree_two`）
+  与 `c` 分支里的叶 `x`；`x` 的投影是 `p` 而 `w` 在 `p` 的另一侧，正权给出
+  `d(x,w) = d(x,p) + d(p,w) > d(x,p)`）；
+* ★★ `distToPath_comm` —— `distToPath` 对两端点对称（经 ★★★ `distToPath_eq_half`）；
+* ★★★ `eq_imp_adj_adj` —— **目标**：由 ★★★ `eq_dist_add_pathLeafStatus_iff` 把等号化为
+  「所有第三者叶的投影都是 `w`」，再用引擎（两个方向各一次）反证。 -/
+
+section Lemma3Conv
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **跨界 walk 必有跨界边**：若 `a ∈ U`、`b ∉ U`，则 `a–b` 的 walk 必含一条
+一端在 `U` 内、一端在 `U` 外的边（两端点都在 walk 的支持集中）。 -/
+theorem exists_adj_crossing {U : Set T.V} {a b : T.V} (p : T.graph.Walk a b)
+    (ha : a ∈ U) (hb : b ∉ U) :
+    ∃ x ∈ p.support, ∃ y ∈ p.support, T.graph.Adj x y ∧ x ∈ U ∧ y ∉ U := by
+  refine SimpleGraph.Walk.recOn (motive := fun u v q => u ∈ U → v ∉ U →
+      ∃ x ∈ q.support, ∃ y ∈ q.support, T.graph.Adj x y ∧ x ∈ U ∧ y ∉ U)
+    p ?_ ?_ ha hb
+  · intro u hu hnu
+    exact absurd hu hnu
+  · intro u v ww hadj q ih hu hnw
+    by_cases hc : v ∈ U
+    · obtain ⟨x, hx, y, hy, hadj', hxU, hyU⟩ := ih hc hnw
+      exact ⟨x, List.mem_cons_of_mem _ hx, y, List.mem_cons_of_mem _ hy, hadj', hxU, hyU⟩
+    · refine ⟨u, SimpleGraph.Walk.start_mem_support _, v, ?_, hadj, hu, hc⟩
+      rw [SimpleGraph.Walk.support_cons]
+      exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support q)
+
+/-- ★★★ **跨界路径必经端点**：`x` 在边 `s(c,p)` 的 `c` 侧、`y` 在 `p` 侧时，
+`x–y` 的唯一路径**含 `p`**。 -/
+theorem mem_support_of_inSide_of_inSide {c p x y : T.V} (hcp : T.graph.Adj c p)
+    (hx : T.inSide s(c, p) c x) (hy : T.inSide s(c, p) p y) :
+    p ∈ (T.existsUnique_path x y).choose.support := by
+  by_contra hnot
+  have hyc : ¬ T.inSide s(c, p) c y := fun hcy => T.not_inSide_both hcp ⟨hcy, hy⟩
+  obtain ⟨z₁, hz₁, z₂, hz₂, hadj, hz₁U, hz₂U⟩ :=
+    exists_adj_crossing T (U := {z : T.V | T.inSide s(c, p) c z})
+      ((T.existsUnique_path x y).choose) hx hyc
+  have hedge : s(z₁, z₂) = s(c, p) := T.eq_of_adj_of_not_inSide hadj hz₁U hz₂U
+  rcases Sym2.eq_iff.mp hedge with ⟨h1, h2⟩ | ⟨h1, h2⟩
+  · exact hnot (h2 ▸ hz₂)
+  · exact hnot (h1 ▸ hz₁)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`distToPath` 对两端点对称**（经 ★★★ `distToPath_eq_half`）。 -/
+theorem distToPath_comm (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (a b x : T.V) :
+    T.distToPath a b x = T.distToPath b a x := by
+  rw [distToPath_eq_half T hpos, distToPath_eq_half T hpos, Phylo.TreeDist.dist_comm T b a]
+  ring
+
+/-- ★★★ **引擎**：`T.leaf u` 是叶、它与 `w ∈ u–v 路径` 不相邻、`w` 非叶时，
+存在**第三者**叶 `x`（`x ≠ u`、`x ≠ v`）使它的投影离它比 `w` 更近：
+`T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) < T.dist (T.leaf x) w`。 -/
+theorem exists_distToPath_lt_of_not_adj (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {u v : X} (huv : u ≠ v) {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support)
+    (hwint : ¬ T.IsLeaf w) (hwna : ¬ T.graph.Adj (T.leaf u) w) :
+    ∃ x : X, T.leaf x ≠ T.leaf u ∧ T.leaf x ≠ T.leaf v ∧
+      T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) < T.dist (T.leaf x) w := by
+  -- `p`：路径首边的中间点（= `T.leaf u` 的唯一邻居）
+  have hdeg : T.graph.degree (T.leaf u) = 1 := (T.leaf_iff_degree_one (T.leaf u)).mp ⟨u, rfl⟩
+  obtain ⟨p, hap, P₂, hPsplit⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne
+    (fun h => huv (T.leaf.injective h)) (T.existsUnique_path (T.leaf u) (T.leaf v)).choose
+  obtain ⟨p₀, _, huniq₀⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  have huniq : ∀ y : T.V, T.graph.Adj (T.leaf u) y → y = p :=
+    fun y hy => (huniq₀ y hy).trans (huniq₀ p hap).symm
+  have hpw : p ≠ w := fun h => hwna (h ▸ hap)
+  have hP : ((T.existsUnique_path (T.leaf u) (T.leaf v)).choose).IsPath :=
+    (T.existsUnique_path (T.leaf u) (T.leaf v)).choose_spec.1
+  have hP₂ : P₂.IsPath := by
+    rw [hPsplit] at hP
+    exact SimpleGraph.Walk.IsPath.of_cons hP
+  have hPsupp : (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support
+      = T.leaf u :: P₂.support := by rw [hPsplit]; rfl
+  have hnu : T.leaf u ∉ P₂.support :=
+    (List.nodup_cons.mp (by rw [← hPsupp]; exact hP.support_nodup)).1
+  have hpP : p ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support := by
+    rw [hPsupp]
+    exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support P₂)
+  by_cases hpv : p = T.leaf v
+  · exfalso
+    -- 此时路径只有一条边，而 `w ∈ support` 且不是叶
+    have hnil : P₂.Nil := (SimpleGraph.Walk.IsPath.nil_iff_eq hP₂).mpr hpv
+    have hsupp₂ : P₂.support = [p] := SimpleGraph.Walk.nil_iff_support_eq.mp hnil
+    have hw' : w ∈ T.leaf u :: P₂.support := by rw [← hPsupp]; exact hw
+    rw [hsupp₂] at hw'
+    rcases List.mem_cons.mp hw' with h | h
+    · exact hwint (h ▸ (show T.IsLeaf (T.leaf u) from ⟨u, rfl⟩))
+    · exact hpw (List.mem_singleton.mp h).symm
+  · -- `q`：`P₂` 的首个后继
+    obtain ⟨q, hpq, Q, hP₂cons⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne hpv P₂
+    have hqP₂ : q ∈ P₂.support := by
+      rw [hP₂cons]
+      exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support Q)
+    have hqu : q ≠ T.leaf u := fun h => hnu (h ▸ hqP₂)
+    -- `deg p ≥ 3`
+    have h2deg : 2 ≤ T.graph.degree p := two_le_degree_of_adj_adj T hap hpq hqu.symm
+    have hne1 : T.graph.degree p ≠ 1 := fun h =>
+      (fun hnl : ¬ T.IsLeaf p => hnl ((T.isLeaf_iff_degree_eq_one p).mpr h))
+        (fun hleaf => by rw [(T.isLeaf_iff_degree_eq_one p).mp hleaf] at h2deg; omega)
+    have h3deg : 3 ≤ T.graph.degree p := by
+      have hne2 := T.no_degree_two p
+      omega
+    -- 第三条边 `p—c`
+    obtain ⟨c, hc, hca, hcq⟩ : ∃ c ∈ T.graph.neighborFinset p, c ≠ T.leaf u ∧ c ≠ q := by
+      by_contra hcon
+      rw [not_exists] at hcon
+      have hsub : T.graph.neighborFinset p ⊆ ({T.leaf u, q} : Finset T.V) := by
+        intro z hz
+        have hz' := hcon z
+        rw [Finset.mem_insert, Finset.mem_singleton]
+        by_contra hz''
+        rw [not_or] at hz''
+        exact hz' ⟨hz, hz''.1, hz''.2⟩
+      have hcard := Finset.card_le_card hsub
+      rw [Finset.card_pair hqu.symm, SimpleGraph.card_neighborFinset_eq_degree] at hcard
+      omega
+    have hpc : T.graph.Adj p c := (SimpleGraph.mem_neighborFinset T.graph p c).mp hc
+    have hcp : T.graph.Adj c p := hpc.symm
+    -- `s(p,c) ∉ P₂.edges`（`P₂` 是路径，`p` 只出现一次）
+    have he_not : s(p, c) ∉ P₂.edges := by
+      rw [hP₂cons, SimpleGraph.Walk.edges_cons]
+      intro hmem
+      rcases List.mem_cons.mp hmem with h | h
+      · rcases Sym2.eq_iff.mp h with ⟨-, h2⟩ | ⟨h1, -⟩
+        · exact hcq h2
+        · exact hpq.ne h1
+      · have hpQ : p ∈ Q.support := SimpleGraph.Walk.fst_mem_support_of_mem_edges Q h
+        have hQnot : p ∉ Q.support := by
+          have hnd := hP₂.support_nodup
+          rw [hP₂cons] at hnd
+          exact (List.nodup_cons.mp hnd).1
+        exact hQnot hpQ
+    -- `c` 分支里的叶 `x`
+    obtain ⟨x, hx⟩ := T.sideLeaves_nonempty_of_adj hpc.symm
+    have hxC : T.inSide s(c, p) c (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+    -- `p` 侧的三片已知叶：`u`、`v`，以及 `w`
+    have hsideU : T.inSide s(c, p) p (T.leaf u) :=
+      (SimpleGraph.deleteEdges_adj.mpr ⟨hap.symm, by
+        intro hmem
+        rcases Sym2.eq_iff.mp (Set.mem_singleton_iff.mp hmem) with ⟨-, h2⟩ | ⟨-, h2⟩
+        · exact hap.ne h2
+        · exact hca h2.symm⟩).reachable
+    have hsideV : T.inSide s(c, p) p (T.leaf v) :=
+      (SimpleGraph.Walk.toDeleteEdges {s(c, p)} P₂ (by
+        intro e' he' hmem
+        have h' : s(c, p) ∈ P₂.edges := Set.mem_singleton_iff.mp hmem ▸ he'
+        rw [Sym2.eq_swap] at h'
+        exact he_not h')).reachable
+    have hsideW : T.inSide s(c, p) p w := by
+      have hwP₂ : w ∈ P₂.support := by
+        have h1 : w ∈ T.leaf u :: P₂.support := by rw [← hPsupp]; exact hw
+        rcases List.mem_cons.mp h1 with h | h
+        · exact absurd (h ▸ (show T.IsLeaf (T.leaf u) from ⟨u, rfl⟩)) hwint
+        · exact h
+      obtain ⟨M₁, M₂, hM⟩ := SimpleGraph.Walk.mem_support_iff_exists_append.mp hwP₂
+      exact (SimpleGraph.Walk.toDeleteEdges {s(c, p)} M₁ (by
+        intro e' he' hmem
+        have h' : e' = s(c, p) := Set.mem_singleton_iff.mp hmem
+        have h2 : s(p, c) ∈ P₂.edges := by
+          rw [hM, SimpleGraph.Walk.edges_append]
+          rw [h', Sym2.eq_swap] at he'
+          exact List.mem_append_left _ he'
+        exact he_not h2)).reachable
+    -- `x` 不在 `p` 侧（否则与 `u`/`v` 同侧矛盾）
+    have hxnot : x ∉ T.sideLeaves s(c, p) p := by
+      rw [T.sideLeaves_compl_adj hcp]
+      exact fun hcon => (Finset.mem_compl.mp hcon) hx
+    have hxu : T.leaf x ≠ T.leaf u := fun h => hxnot (by
+      rw [T.leaf.injective h]
+      exact (T.mem_sideLeaves_iff_inSide).mpr hsideU)
+    have hxv : T.leaf x ≠ T.leaf v := fun h => hxnot (by
+      rw [T.leaf.injective h]
+      exact (T.mem_sideLeaves_iff_inSide).mpr hsideV)
+    -- `p` 在 `x–w` 路径上 ⟹ `d(x,w) = d(x,p) + d(p,w) > d(x,p)`
+    have hp_mem : p ∈ (T.existsUnique_path (T.leaf x) w).choose.support :=
+      mem_support_of_inSide_of_inSide T hcp hxC hsideW
+    have hxw : T.dist (T.leaf x) w = T.dist (T.leaf x) p + T.dist p w :=
+      Phylo.TreeDist.dist_eq_add_of_mem_support T _
+        (T.existsUnique_path (T.leaf x) w).choose_spec.1 hp_mem
+    have hwpos : 0 < T.dist p w := pos_dist_of_ne T hpos hpw
+    exact ⟨x, hxu, hxv, by
+      have hle : T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) ≤ T.dist (T.leaf x) p :=
+        distToPath_le T hpP
+      linarith⟩
+
+/-- ★★★ **Lemma 3 等号条件的几何反向**（文献 `:328–329`）：`u ≠ v` 是两片叶、`w` 是
+`u–v` 路径上的**内部**结点（`¬ T.IsLeaf w`），且 `z(u,v) = ℓ(w)` 取得等号 —— 则
+`w` **同时邻接**两片叶（即 `p = (u,w,v)`，路径只有三点）。
+
+证明：由 ★★★ `eq_dist_add_pathLeafStatus_iff`，等号给出「所有第三者叶的投影都是 `w`」；
+若 `T.leaf u` 与 `w` 不相邻，则由 ★★★ `exists_distToPath_lt_of_not_adj` 得到一片
+投影不是 `w` 的第三者叶，矛盾；对 `T.leaf v` 用 ★★ `distToPath_comm` 与路径反向同理。 -/
+theorem eq_imp_adj_adj (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {u v : X} (huv : u ≠ v)
+    {w : T.V} (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support)
+    (hwint : ¬ T.IsLeaf w)
+    (heq : T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v)
+      = T.leafStatus w) :
+    T.graph.Adj (T.leaf u) w ∧ T.graph.Adj w (T.leaf v) := by
+  have hforall := (eq_dist_add_pathLeafStatus_iff T huv hw).mp heq
+  by_contra hcon
+  rw [not_and_or] at hcon
+  rcases hcon with hna | hnb
+  · obtain ⟨x, hxu, hxv, hlt⟩ := exists_distToPath_lt_of_not_adj T hpos huv hw hwint hna
+    exact absurd (hforall x hxu hxv) (ne_of_lt hlt)
+  · have hrev : (T.existsUnique_path (T.leaf v) (T.leaf u)).choose
+        = ((T.existsUnique_path (T.leaf u) (T.leaf v)).choose).reverse :=
+      ((T.existsUnique_path (T.leaf v) (T.leaf u)).choose_spec.2 _
+        (SimpleGraph.Walk.IsPath.reverse
+          (T.existsUnique_path (T.leaf u) (T.leaf v)).choose_spec.1)).symm
+    have hw' : w ∈ (T.existsUnique_path (T.leaf v) (T.leaf u)).choose.support := by
+      rw [hrev, SimpleGraph.Walk.support_reverse]
+      exact List.mem_reverse.mpr hw
+    obtain ⟨x, hxv, hxu, hlt⟩ :=
+      exists_distToPath_lt_of_not_adj T hpos huv.symm hw' hwint (fun h => hnb h.symm)
+    rw [distToPath_comm T hpos] at hlt
+    exact absurd (hforall x hxu hxv) (ne_of_lt hlt)
+
+end Lemma3Conv
 
 end
 
