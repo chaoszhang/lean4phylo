@@ -1,14 +1,19 @@
 # HANDOVER.md —— `lean4phylo` 交接文档
 
 > **生成时间**：2026-10-07 10:20（Asia/Shanghai）
-> **最后更新**：2026-10-07 12:40（老师核查 dsh 首轮后加约束 + 要求回写）
+> **最后更新**：2026-10-07 13:10（**新增 §4 的 T0 批：把 `references/` 里的原始证明搬进 Lean，列为最高优先级**）
 > **面向**：接手继续长时自主执行的 agent（下文称「你」）
-> **当前快照**：`main` @ `a241c99`（含 dsh 的 NNI 批），**3186 jobs `lake build` 通过**（WSL 增量 ~10s），**库内零 `sorry`**
-> **规模**：27 个 `.lean` 文件 / **~6760 行** / **~390 个顶层声明**
-> **未推送**：`origin/main` 落后 12 个 commit（老师指示「途中只 commit 不 push」）
+> **当前快照**：`main` @ `5c2dad0`，**3186 jobs `lake build` 通过**（WSL 增量 ~10s），**库内零 `sorry`**
+> **规模**：26 个 `Phylo/**/*.lean` / **6750 行** / **386 个顶层声明**
+> **未推送**：0（已同步 `origin/main`）
+
+> 🚀 **下轮第一件事：读 §4 开头的「T0」整节** —— 原始文献已抓齐并转成可读 Markdown
+> （`references/README.md` 有「缺口 → 证明出处 + md 内精确行号」速查表）。
+> **T0 的核心变化：这些缺口不再是「探索性工作」，而是「照着已有证明写 Lean」。**
+> 其中 **T0.1（`QuartetDecidesTree`）是最高优先级** —— 它三个条件里的 `transitive` 库里已有。
 
 > ⚠️ **2026-10-07 12:40 老师加的三条硬约束（纪律 11–13）—— 见下方「⚠️ 必读」节** —— 上一轮 dsh 因违反它们
-> 造成一次静默数据丢失（`MEMORY.md` 被回退 383 行）+ 一次 docstring 虚报。见 §6.1。
+> 造成一次静默数据丢失（`MEMORY.md` 被回退 383 行）+ 一次 docstring 虚报。
 
 ---
 
@@ -64,9 +69,12 @@ dsh 首轮在 `NNI.lean` 第 50–51 行的「本文件做到哪」成果清单�
 
 **已经做完的**：树/分裂/quartet 三层的定义与基础定理；**Splits-Equivalence 两个方向**（树 ⟹ 相容、相容 ⟹ 存在树）；Aho–Buneman 建树；多数共识树；UPGMA 结构定理；cherry 存在性；RF 距离度量性；二叉树计数与 quartet 唯一性；**ASTRAL / CASTER / parsimony 三者的 quartet-MSC 统计一致性**；**SVDQuartets 的正确性**；以及最近的 **NNI 的 split 层分解**。
 
-**现在卡在哪**：**一个共享缺口**——`QuartetDecidesTree`（「两棵 binary 树 quartet 系统相同 ⟹ 同构」）。它是 4 个算法从「逐 quartet 一致」升级到「同构」的最后一步，也是逆否路线（老师 2026-10-07 定的）的收口点。围绕它还有 **3 个硬骨头**（见 §3）。
+**现在卡在哪**：**一个共享缺口**——`QuartetDecidesTree`（「两棵 binary 树 quartet 系统相同 ⟹ 同构」）。它是 4 个算法从「逐 quartet 一致」升级到「同构」的最后一步。围绕它还有 **3 个硬骨头**（见 §3）。
 
-**你的第一件事**：读开头「⚠️ 必读」节的纪律 11–13（**刚有人踩过**），读 §2 确认「已完成，别重做」，然后从 **T2 → T1** 开始（见 §4 的执行顺序建议）。
+**你的第一件事**：读开头「⚠️ 必读」节的纪律 11–13（**刚有人踩过**），读 §2 确认「已完成，别重做」，
+然后**直接做 §4 的 T0 批（最高优先级）**：原始证明已抓齐在 `references/`，
+`references/README.md` 有「缺口 → 证明出处 → md 内精确行号」速查表。
+**T0 是「照抄证明」，不是探索** —— 起点是 **T2 → T0.1**。
 
 
 ---
@@ -172,28 +180,38 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 
 | 文件 | 用途 |
 |---|---|
-| `MEMORY.md`（66KB，680 行） | **工作日志**：每轮的进展、踩坑、决策。**改动前必查**——很可能有人已经试过并失败了。 |
+| **`references/README.md`** | ★ **`references/` 文献汇编的索引**：缺口 → 证明出处速查表（带 md 内精确行号）。**做 T0 前必读。** |
+| `MEMORY.md`（~72KB，715 行） | **工作日志**：每轮的进展、踩坑、决策。**改动前必查**——很可能有人已经试过并失败了。 |
 | `CONCEPTS.md`（76KB，1003 行） | **概念设计**：每个定义的选择理由（§3.1–§3.11 的「已定方案」）+ 文献先例。**不要重新发明定义。** |
 | `DESIGN.md` | 库设计：Mathlib 现状实测表 / 分层架构 / 决策 D1–D4 |
 | `SCAFFOLD.md` | 工程骨架与四条实践（文件头规范、docstring、根模块同步、linter） |
 | `README.md` | 环境搭建 |
 
+> **`references/` 目录**（本地，`pdf/md/img/ocr` 因版权**未入库**）：
+> `README.md` + `pdf/` 8 篇原文 + `md/` 可读 Markdown + 转换脚本。
+> 派生物只在老师本机，**新会话若看不到 `pdf/`、`md/` 是正常的** —— 用 `README.md` 里
+> §7 的复现命令重跑（脚本已入库）。
+
 ---
 
 ## 3. 三处共享瓶颈（一张依赖图）
 
+> 📌 图中的 `T1 / T3 / T4 / T5 / T8` 标签是**旧编号**；它们现已并入 **§4 的 T0 批**（最高优先级）：
+> `T1→T0.1`（quartet 决定树）、`T3→T0.2`（Buneman）、`T4→T0.3`（NJ 硬核）、
+> `T5→T0.5`（SVDQuartets）、`T8→T0.4`（NJst）。**`T2` 保持原编号**（T0.1 的前置）。
+
 ```
                     ┌──────────────────────────────────────┐
-                    │  T2  「内部边两侧各 ≥ 2 叶」          │  ← 基础设施，最该先做
+                    │  T2  「内部边两侧各 ≥ 2 叶」          │  ← T0.1 的前置，开工第一站
                     │      (SideSubtree 阶段 2)             │
                     └───────────────┬──────────────────────┘
                                     │
        ┌────────────────────────────┼────────────────────────────┐
        ▼                            ▼                            ▼
 ┌──────────────┐          ┌──────────────────┐         ┌──────────────────┐
-│ T1           │          │ T6 KF 距离        │         │ T1 第 1 步        │
-│ QuartetDecides│         │ (需要 split 构造) │         │ split 系统极大性   │
-│ Tree          │◄─────────┤                  │         │                  │
+│ T0.1 ★★★★    │          │ T6 KF 距离        │         │ T0.1 第 5 步      │
+│ QuartetDecides│         │ (需要 split 构造) │         │ 内部边叶侧由      │
+│ Tree          │◄─────────┤                  │         │ quartet 见证      │
 └──────┬───────┘          └──────────────────┘         └──────────────────┘
        │ 解锁
        ▼
@@ -202,25 +220,197 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 │ 只等 QuartetDecidesTree 从 def 变 theorem）           │
 └──────────────────────────────────────────────────────┘
 
-独立支线：
+独立支线（现为 T0.2 → T0.3 → T0.4）：
 ┌──────────────────┐     ┌──────────────────┐
-│ T3 Buneman 存在性 │────►│ T4 MaxZCherryCore │───► NJ / NJst 完整正确性
-│ (四点条件⟹实现树) │     │ (经典定理的形式化  │
-│  Buneman 1971 经典│     │  缺口, 非开放问题)│
+│ T0.2 Buneman 存在性│───►│ T0.3 MaxZCherryCore│─► T0.4 NJst 完整正确性
+│ (四点条件⟹实现树) │     │ (照抄 Weller Thm 2)│
+│ Buneman 1971/1974 │     │                    │
 └──────────────────┘     └──────────────────┘
 
 可独立推进：
 ┌──────────────────┐     ┌──────────────────┐
-│ T5 SVDQuartets    │     │ T7 restriction    │
+│ T0.5 SVDQuartets  │     │ T7 restriction    │
 │ 统计一致性(非正确性)│    │ T|Y (suppress)    │
 └──────────────────┘     └──────────────────┘
 ```
 
 ---
 
-## 4. 剩余任务（按建议执行顺序编号）
+## 4. 剩余任务
 
-### T1 ★★★ 头号目标：把 `QuartetDecidesTree` 从缺口变成定理
+> **执行顺序**：**T0 批（最高优先级）** → T2（T0.1 的前置）→ 余下 T6/T7/T9 → 最后是长线。
+> **T0 是老师 2026-10-07 亲自排到首位的任务**：原始证明已抓齐（见 `references/`），
+> 这一批就是**照抄证明**，不是探索。
+> 老的 T1/T3/T4/T5/T8 **已并入 T0**（各自标题下有 `→ 已升为 T0.x` 的指引），保留原编号仅为对照。
+
+---
+
+## 4.0 🚀【最高优先级】T0 —— 把 `references/` 里的原始证明搬进 Lean
+
+> **老师指令（2026-10-07）**：「把证明这些引理也作为下轮 dsh 的任务，**放在优先级首位**。」
+>
+> **前置准备已完成**：`references/` 已收 8 篇原始文献的 PDF + 可读 Markdown，
+> `references/README.md` 给出「**缺口 → 证明出处 → md 内精确行号**」速查表。
+> ⇒ **动工前必做**：打开 `references/README.md` 找到对应那一行，再打开 md 看定理原文与证明。
+
+### T0 总览（内部顺序即建议执行顺序）
+
+| 子任务 | 内容 | 依据（`references/md/`） | 依赖 |
+|---|---|---|---|
+| **T0.1 ★★★★** | **`QuartetDecidesTree`**（路线 B：thin + transitive + saturated） | `HuberEtAl2017_*.md` **315 行**（Thm 6）；`Huber2018_*.md` **412 行**（Thm 1） | T2 |
+| **T0.2 ★★★** | **Buneman 存在性**（四点条件 ⟹ 树度量） | `Buneman1974_*.md`（3 页全文） | 无 |
+| **T0.3 ★★★** | **`MaxZCherryCore`**（NJ 樱桃引理） | `Weller2023_*.md` **378 行**（Thm 2） | **T0.2** |
+| **T0.4 ★★** | **NJst 完整一致性** | `AllmanDegnanRhodes2016_*.md` **610 行**（Thm 4.1） | T0.3 |
+| **T0.5 ★★** | **SVDQuartets 统计一致性** | `ChifmanKubatko2015_*.md` | 无 |
+
+**依赖链**：`T2 → T0.1` ／ `T0.2 → T0.3 → T0.4` ／ `T0.5` 独立。
+
+---
+
+### T0.1 ★★★★ `QuartetDecidesTree` —— 用「thin + transitive + saturated」路线（**最高中的最高**）
+
+> ✦ **为什么它排第一**：三个条件里**一个库里已经有了**（`transitive`），
+> 一个是 binary 树的免费推论（`thin`），只剩 `saturated` 是真正的新工程量。
+> 这是全表**性价比最高**的一格。
+
+**依据原文**（`references/md/HuberEtAl2017_SymbolicTernaryMetrics.md` **第 301–316 行**）：
+
+> A quartet system `Q` is **thin** if for every 4-subset `{a,b,c,d}`, at most one of
+> `ab|cd`, `ac|bd`, `ad|bc` is contained in `Q`.
+> It is **transitive** if for any 5 distinct `a,b,c,d,e ∈ X`, the quartet `ab|cd` is in `Q`
+> whenever both `ab|ce` and `ab|de` are in `Q`.
+> It is **saturated** if for any five distinct `a,b,c,d,e ∈ X` with `ab|cd ∈ Q`,
+> at least one of `ae|cd` and `ab|ce` is also in `Q`.
+>
+> **Theorem 6.** `Q ⊆ Q(X)` is of the form `Q = Q(T)` for some phylogenetic tree `T`
+> **if and only if** `Q` is thin, transitive and saturated.
+
+等价出处：`Huber2018_*.md` **第 412 行**（**Theorem 1**，**两条件版**）：
+> A quartet system `Q` is of the form `Q = Q(T)` for a **(necessarily unique)** phylogenetic X-tree `T`
+> **if and only if** `Q` is **thin and saturated**.
+
+**分解步骤**：
+
+1. **建载体**：把「full quartet 系统」（每个 4-元集恰一个 quartet 选择）显式建模 ——
+   库内 `QuartetChoice X` 已是这个形状，先确认接口。
+2. **`thin`**（预计免费）：对 **binary** 树，每个 4-元集恰展示一个 quartet。
+   ⇒ **核对 `Phylo/QuartetUnique.lean` 的 `Cladogram.displaysSplitOn_unique`（★★★）是否直接给出**。
+3. **`transitive`**（**已免费**）：`ab|ce ∧ ab|de ⟹ ab|cd`
+   = `Phylo/Quartet.lean` 的 `Cladogram.displaysQuartet_of_displaysQuartet_common`。
+   ⇒ 只需把它**接到「full quartet 系统」语境**（现在是 `DisplaysQuartet a b c d` 形式）。
+4. **`saturated`**（★ 主要工程量）：五元集条件。**优先试「两条件版」**
+   （`Huber2018_*.md` 第 412 行的 thin + saturated）—— 少一条要证。
+5. **唯一性收口**（`T ≅ T'`）：两条路任选
+   - **(a) 走 split**：由 `Q(T) = Q(T')` 恢复 `Σ(T) = Σ(T')`（每条内部边的叶侧由 quartet 见证），
+     再接 `Phylo/Aho.lean` 的 `compatible_exists_rootedTree` + `Phylo/Laminar.lean` 的
+     `splitOf`/`splitOf_mem_splits`/`toRootedTreeOfCard`。
+   - **(b) 直接用** Thm 1 的「**necessarily unique**」—— 需把唯一性本身形式化。
+
+**前置 T2**：第 5(a) 步「内部边的叶侧由 quartet 见证」要用到
+「内部边两侧各 ≥ 2 叶」—— 即 `Phylo/SideSubtree.lean` 的阶段 2（见 **T2**）。
+
+**验收**：`Phylo/Stat/QuartetDecides.lean` 里的 `def QuartetDecidesTree` 变成 `theorem`
+（或降级为别名）；`astral_iso` / `caster_iso` / `parsimony_iso` **去掉 `hQD` 假设**。
+**全库仍零 `sorry`。**
+
+---
+
+### T0.2 ★★★ Buneman 存在性（四点条件 ⟹ 存在实现加权树）
+
+**依据原文**：`references/md/Buneman1974_MetricPropertiesOfTrees.md`（3 页全文，扫描件 OCR）
++ `references/md/Buneman1971_RecoveryOfTreesFromDissimilarity.md`（9 页全文）。
+⚠️ **公式请回看 `references/pdf/` 的原始扫描件**（OCR 对下标/符号有误差）。
+
+| 项 | 内容 |
+|---|---|
+| **建议位置** | 新文件 `Phylo/Buneman.lean` |
+| **陈述** | `Dissimilarity.FourPoint δ ⟹ ∃ (加权树 T), ∀ i j, δ i j = T.dist (leaf i) (leaf j)` |
+| **模板（现成）** | `Phylo/Dendrogram.lean`：超度量 ⟹ 球族 `ball_subset_or_disjoint` 镶嵌 ⟹ `laminarFamily_ballImage` ⟹ `exists_rootedTree_displays_balls` |
+| **建议路线** | 照抄该模板 —— 把 `FourPoint δ` 化作一族镶嵌的 `Finset`（Buneman 的「团 / cluster」），再走 `Phylo/Laminar.lean` 的 `toRootedTreeOfCard` |
+| **RHS 已备好** | `Phylogram.dist`（唯一路径边权和） |
+
+**解锁下游**：**T0.3**、NJ 完整正确性、KF 距离（原 T6）、距离→树的整套算法。
+
+---
+
+### T0.3 ★★★ `MaxZCherryCore`（NJ 樱桃引理）
+
+**依据原文**：`references/md/Weller2023_NeighborJoining_LeafStatus.md`：
+
+| md 行号 | 内容 |
+|---|---|
+| **124** | **Theorem 1（Neighbor Joining Theorem）** —— 主定理陈述 |
+| 142–144 | **leaf-status 定义**：`ℓ_T(u) := Σ_{x∈L(T)} d(u,x)`（到**叶**的距离和） |
+| **154** | **Lemma 1**：`ℓ(u) − ℓ(v) = ω(uv)·(\|L^←\| − \|L^→\|)` |
+| 213 | **Corollary 1**：最小化 leaf-status 的节点不是叶 |
+| **219** | **Lemma 2**：沿路径的 leaf-status 单调性 |
+| **334** | **Lemma 3**：cherry 中点 `w` 使 `d(x,p) ≤ d(x,w)` |
+| **378** | **Theorem 2**（= 我们的 `MaxZCherryCore`） |
+| **381** | **Theorem 2 的证明**（反证：取最小化 `ℓ` 的节点 `c`，导出矛盾） |
+
+**依赖**：**T0.2**（Weller 的证明显式使用实现树 `T`）。
+
+**先做的一次「对接口」**：Weller 用
+`q(u,v) := (n−2)·d(u,v) − Σ_x d(u,x) − Σ_x d(v,x)` 与 leaf-status `ℓ`；
+库内 `Phylo/Algorithm/NJ.lean` 用 `Q` / `ell` / `z := δ + ell`。
+⇒ **先证两边的定义逐条对齐**（尤其 `ell` 与 `ℓ_T` 的「路径距离和」vs「到叶距离和」），
+这是个**具体、机械但必须先做**的小任务，做完才能照搬 Weller 的引理。
+
+**已备好的代数骨架**（`Phylo/Algorithm/NJ.lean`，可直接用）：
+`Q_eq_neg_two_ell`（最小化 Q ⟺ 最大化 z）· `two_mul_z` · `z_hinge` ·
+★★ `four_point_z_iff`（`n≥4` 时「四点和最小」⟺「z 的和最大」）。
+
+**已排除的朴素路线**（有数值反例，**别再试**）：
+1. 「最近距离对是樱桃」—— 假（1822 反例）；
+2. 「局部 quartet `ui|vj` ⟹ `z(u,i) ≥ z(u,v)`」—— 假；
+3. 「`(u,v)` 非樱桃 ⟹ `∃m, z(u,m) > z(u,v)`」—— 假。
+
+**交叉验证**：`MihaescuLevyPachter2006_WhyNeighborJoiningWorks.md`（另一条完整证明，视角不同）。
+
+**验收**：`def MaxZCherryCore` 变成 `theorem`；`nj_cherry` 去掉 `hcore`；
+`Phylo/Stat/NJst.lean` 的 `NJstData.core` 字段可删。
+
+---
+
+### T0.4 ★★ NJst 完整一致性
+
+**依据原文**：`references/md/AllmanDegnanRhodes2016_NJst_StatisticalConsistency.md`：
+**Thm 4.1**（第 610 行，主定理）· **Thm 4.2**（636，USTAR 相异性）· **Thm 5.1**（831）。
+第 760 行有 **Theorem 4.1 的完整证明**。
+
+**现在做到哪**：`Phylo/Stat/NJst.lean` 只有 `njst_cherry`（**第一步正确**）。
+
+**还缺两条**：
+1. **T0.3**（`MaxZCherryCore`）；
+2. **NJ 的归纳正确性** —— 合并 cherry 后新距离矩阵**仍是树度量**（四点条件保持），从而可归纳。
+
+> 📌 **备选路线**：ADR 2016 真实走法是把 NJst **归约到 generalized STAR**（clade 共识），
+> 而 STAR 的一致性最终需要「**clade 系统决定树**」—— 与 **T0.1** 同一类定理。
+> ⇒ 若 T0.1 先完成，T0.4 可能可以直接复用。
+
+---
+
+### T0.5 ★★ SVDQuartets 的**统计一致性**（正确性已完成）
+
+**依据原文**：`references/md/ChifmanKubatko2015_IdentifiabilityarXiv1406.4811.md`。
+
+**已完成**（`Phylo/Stat/SVDQuartets.lean`）：★★★ **正确性**，且**无条件**
+（`svdquartets_selects_true` + 分离性实例 `svdquartets_concrete`）。
+
+**缺口**：**统计一致性** —— 实用的是**奇异值之和**（连续量），**不是秩**
+（秩下半连续，扰动下会跳）。
+**依赖**：`Mathlib/Analysis/InnerProductSpace/SingularValues.lean`。
+**策略提示**：可复用 `Phylo/Stat/Stability.lean` 的通用引擎（`exists_gap` + `stable_argmax`）
+—— 只要把「奇异值和最大」也表达成一个 `Finset` 上的得分函数。
+
+**验收**：`svdquartets_statisticallyConsistent`，全库零 `sorry`。
+
+---
+
+### 4.1 T1 ★★★ `QuartetDecidesTree`（→ **已升为 T0.1，最高优先级**，见上）
+
+> ⬆️ **本任务已并入 T0.1。** 下面保留原始记录供对照（定性说明 + 路线 A 细节）。
+> **执行时以 T0.1 为准**（thin + transitive + saturated 路线）。
 
 > ✦ **定性：这是「形式化缺口」，不是学术开放问题。** 定理本身是 **Colonius–Schultze (1981)**
 > 与 **Steel (1992)** 的经典结果（教科书 Semple & Steel, *Phylogenetics* (2003) §6.4），
@@ -285,6 +475,8 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 
 ### T3 ★★★ Buneman 存在性（四点条件 ⟹ 存在实现加权树）—— 经典定理的形式化
 
+> ⬆️ **已升为 T0.2（最高优先级），见上。** 保留原始记录供对照。
+
 > ✦ **定性**：这也是**经典已证定理** —— **Buneman (1971)**, *The recovery of trees from measures of dissimilarity*；
 > 亦见 Semple & Steel, *Phylogenetics* (2003) §7.2 与 Buneman 定理的标准证明。
 > 不是开放问题；同样是**形式化工作量**问题。
@@ -311,6 +503,8 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 ---
 
 ### T4 ★★★ `MaxZCherryCore`（NJ 定理的纯度量表述，**形式化缺口**）
+
+> ⬆️ **已升为 T0.3，见上。** 保留原始记录供对照。
 
 > ✦ **定性：不是学术开放问题。** NJ 的正确性**早已证明** ——
 > **Studier–Keppler (1988)** 给出首个正确证明（并指出 Saitou–Nei 1987 原始证明有误），
@@ -343,6 +537,8 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 ---
 
 ### T5 ★★ SVDQuartets 的**统计一致性**（正确性已完成）
+
+> ⬆️ **已升为 T0.5，见上。** 保留原始记录供对照。
 
 | 项 | 内容 |
 |---|---|
@@ -380,6 +576,8 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 ---
 
 ### T8 ★ NJst 完整一致性（等 T4）
+
+> ⬆️ **已升为 T0.4，见上。** 保留原始记录供对照。
 
 `Phylo/Stat/NJst.lean` 的 `njst_cherry` 只是**第一步**。完整一致性还缺**两条**：
 1. `MaxZCherryCore`（T4）；
@@ -525,23 +723,35 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 
 ## 7. 建议的执行节奏
 
+> 🚀 **2026-10-07 13:10 更新（老师指示）**：把 T0 整批列为**最高优先级**。
+> 原始证明已抓齐（`references/`），这批是**照抄证明**，不再是探索。
+
 ```
-第 1 批（1–2 轮）：T2  → 把「两侧各 ≥ 2 叶」打下来（基础设施）
-                      ↓ 立刻
-第 2 批（2–4 轮）：T1  → QuartetDecidesTree（第 1 步需要 refinement/contraction）
-                      ↓ 收口
-                      astral_iso / caster_iso / parsimony_iso 全部去假设化
-                      ↓
-第 3 批（并行）：    T5（SVDQuartets 统计一致性）或 T6（KF 距离）
-                      ↓
-第 4 批（长线）：    T3 → T4（Buneman → NJ 硬核），风险最高，放最后
-                      ↓
-余力：              T9 的可选课题（NNI/SPR、NP-hard）
+第 0 批（最高优先级）★ T0 —— 把 references/ 里的原始证明搬进 Lean
+   │
+   ├─ 0.0  T2   「内部边两侧各 ≥ 2 叶」（T0.1 收口的前置，机械但卡过 whnf 超时）
+   │            ↓ 立刻
+   ├─ 0.1  T0.1 ★★★★ QuartetDecidesTree（thin + transitive + saturated）
+   │            ↑ transitive 库里已有；先做「对接口」：把三种条件接到 full quartet 系统
+   │            ↓ 收口 → astral_iso / caster_iso / parsimony_iso 全部去假设化
+   │
+   ├─ 0.2  T0.2 ★★★ Buneman 存在性（照抄 Dendrogram 的「镶嵌族 ⟹ 树」模板）
+   │            ↓ 立刻
+   ├─ 0.3  T0.3 ★★★ MaxZCherryCore（照抄 Weller 2023 Lemma 1–3 + Thm 2）
+   │            ↓ 立刻
+   ├─ 0.4  T0.4 ★★ NJst 完整一致性（照抄 ADR 2016 Thm 4.1 + NJ 归纳正确性）
+   │
+   └─ 0.5  T0.5 ★★ SVDQuartets 统计一致性（可并行，独立）
+
+后续（T0 完成后再做）：
+   第 1 批：T6（KF 距离，等 T0.2 的 split 构造）
+   第 2 批：T9 的 NNI 补全（`nniResolvent_compatible` / `_swap_incompatible`，思路已写好）
+   第 3 批：T7（`suppress`，低优先级）
+   余力：  T9 其余课题（SPR、NP-hard、长枝吸引…）
 ```
 
 > 📌 **2026-10-07 实况**：dsh 首轮**跳过了 T2/T1，直接做了 T9 的 NNI**（产出合格但未按建议顺序）。
-> 若你再选择 T9 方向，请在 §4 的 T9 下**写明理由**，并**至少先完成 T2** —— 它是 T1 的前置，
-> 且是所有路径的共同瓶颈。
+> **本轮起以 T0 为准**：若你选择偏离 T0 顺序，必须**在 §4 写明理由**（纪律 13 回写清单要求）。
 
 **每轮结束的自检清单**：
 - [ ] `wsl -e bash -lc 'cd ~/lean4phylo && ~/.elan/bin/lake build'` 通过（**3186 jobs 是当前基线，新增文件后会涨**）
@@ -576,33 +786,42 @@ C–S 给出的是**完整推理系统**（对 full quartet 系统完备），�
 ### 7.5.1 回写后头部应该长的样子
 
 ```
-> **最后更新**：2026-10-08 03:20（dsh 第 2 批：T2 完成）
+> **最后更新**：2026-10-08 03:20（dsh 第 2 批：T0.1 进行中，thin 已落地）
 > **当前快照**：`main` @ `b7f3a12`，3189 jobs 通过，27 文件 / 6810 行 / 397 声明
 > **未推送**：13 个 commit
 ```
 
-并在 §4 的 T2 标题旁标 `✅ 已完成（2026-10-08）`。
+并在 §4 的对应任务标题旁标 `🔄 进行中（2026-10-08）` 或 `✅ 已完成（2026-10-08）`。
 
 ---
 
 ## 8. 参考文献
 
-| 主题 | 文献 |
-|---|---|
-| Splits-Equivalence / 树↔split | Semple & Steel, *Phylogenetics* (2003), §3.8；Buneman 1971 |
-| 相容 ⟹ 树 | Aho, Sagiv, Szymanski, Ullman (1981) |
-| 多数共识 | Margush & McMorris (1981) |
-| quartet 决定树 | Steel (1992)；Colonius & Schultze (1981) |
-| quartet 距离 / display | Bryant & Steel (2001) |
-| ASTRAL | Mirarab et al. (2014)；Sayyari & Mirarab (2016) |
-| ASTRAL 一致性 | Shekhar, Roch, Mirarab (2018) |
-| CASTER | Rabiee, Sayyari, Mirarab (2019) |
-| parsimony 一致性 | Felsenstein (1978)；Roch & Steel (2015) |
-| SVDQuartets | Chifman & Kubatko (2014)；Allman, Degnan, Rhodes (2016) |
-| NJst | Liu & Yu (2011)；**Allman–Degnan–Rhodes 2016 (arXiv:1604.05364) Thm 4.1** |
-| NJ | Saitou & Nei (1987)；Studier & Keppler (1988)；**Weller 2023 (arXiv:2305.18866)**；Mihaescu–Levy–Pachter 2006 (arXiv:cs/0602041) |
-| UPGMA | Sokal & Michener (1958)；Mihaescu et al. |
-| MSC | Kingman (1982) coalescent |
+> 📚 **本库已把各缺口对应的原始文献抓下来并转成可读 Markdown**：
+> 见 **`references/README.md`**（缺口 → 出处速查表，带 md 内精确行号）。
+> 下表是书目信息；**要读证明原文请用 `references/md/`**（若目录为空，用 `references/README.md` §7 的
+> 复现命令重跑 —— 派生物因版权未入库）。
+
+| 主题 | 文献 | `references/md/` |
+|---|---|---|
+| **quartet 决定树**（T0.1） | **Colonius & Schulze (1981)**；**Steel (1992)**；转述见 **Huber et al. (2017) Thm 6**、**Huber et al. (2018) Thm 1** | `HuberEtAl2017_*.md`、`Huber2018_*.md` |
+| **NJ 樱桃引理**（T0.3） | **Studier & Keppler (1988)**；**Weller (2023)**；**Mihaescu–Levy–Pachter (2009)** | `Weller2023_*.md`、`MihaescuLevyPachter2006_*.md` |
+| **四点条件 / Buneman 存在性**（T0.2） | **Buneman (1971)**；**Buneman (1974)** | `Buneman1971_*.md`、`Buneman1974_*.md` |
+| **NJst 一致性**（T0.4） | **Allman–Degnan–Rhodes (2016), Thm 4.1** | `AllmanDegnanRhodes2016_*.md` |
+| **SVDQuartets 可识别性**（T0.5） | **Chifman & Kubatko (2015)** | `ChifmanKubatko2015_*.md` |
+| Splits-Equivalence / 树↔split | Semple & Steel, *Phylogenetics* (2003), §3.8；Buneman 1971 | 同上（Buneman） |
+| 相容 ⟹ 树 | Aho, Sagiv, Szymanski, Ullman (1981) | 付费墙 |
+| **多数共识** | Margush & McMorris (1981) | 付费墙 |
+| quartet 距离 / display | Bryant & Steel (2001) | — |
+| ASTRAL | Mirarab et al. (2014)；Sayyari & Mirarab (2016) | — |
+| ASTRAL 一致性 | Shekhar, Roch, Mirarab (2018) | — |
+| CASTER | Rabiee, Sayyari, Mirarab (2019) | — |
+| parsimony 一致性 | Felsenstein (1978)；Roch & Steel (2015) | — |
+| SVDQuartets（方法原文） | Chifman & Kubatko (2014) | 付费墙（PMC4296144） |
+| NJst | Liu & Yu (2011) | — |
+| NJ（原算法） | Saitou & Nei (1987) | 付费墙（其证明有误，见 Studier–Keppler） |
+| UPGMA | Sokal & Michener (1958)；Mihaescu et al. | — |
+| MSC | Kingman (1982) coalescent | — |
 
 ---
 

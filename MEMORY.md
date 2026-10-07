@@ -765,3 +765,32 @@ WSL `tesseract 5.3.4`（扫描件 OCR，`--psm 6`）。
 ② OUP CDN 对 `academic.oup.com/.../article-pdf/...` 会返回**错误论文**（实测下到过胸外科 letter 与流行病学论文）；
 ③ PMC 有 reCAPTCHA；④ paperity 被 Cloudflare 拦。
 **版权**：`references/{pdf,md,img,ocr}/` 已入 `.gitignore`，**仅本地保留、不入库**。
+
+## 🚀 2026-10-07 13:10 老师指令：T0 批列为**最高优先级**
+
+> 「把证明这些引理也作为下轮 dsh 的任务，**放在优先级首位**。」
+
+**动作**：`HANDOVER.md`（595 → 841 行）新增 **§4.0 T0 批**，置于 §4 最前，并把旧的
+T1/T3/T4/T5/T8 **并入 T0**（各自标题下加 `→ 已升为 T0.x` 指引，保留原编号仅作对照）。
+
+| 子任务 | 内容 | 依据（md 行号） | 依赖 |
+|---|---|---|---|
+| **T0.1 ★★★★** | `QuartetDecidesTree`（thin + transitive + saturated） | Huber2017 **315**、Huber2018 **412** | T2 |
+| **T0.2 ★★★** | Buneman 存在性（四点条件 ⟹ 树） | Buneman1974 全文 | 无 |
+| **T0.3 ★★★** | `MaxZCherryCore`（NJ 樱桃引理） | Weller2023 **378** | T0.2 |
+| **T0.4 ★★** | NJst 完整一致性 | ADR2016 **610** | T0.3 |
+| **T0.5 ★★** | SVDQuartets 统计一致性 | ChifmanKubatko2015 | 无 |
+
+**依赖链**：`T2 → T0.1` ／ `T0.2 → T0.3 → T0.4` ／ `T0.5` 独立。
+
+**同步更新**：头部快照（`5c2dad0` / 3186 jobs / 6750 行 / 386 声明 / 未推送 0）·
+§0 三十秒「第一件事」改为 T2→T0.1 · §2.3 加 `references/README.md` 为必读 ·
+§3 瓶颈图改标 T0.x 并加旧编号对照 · §7 加「第 0 批 T0」执行节奏 ·
+§8 参考文献表加 `references/md/` 列 · §7.5.1 回写示例改为 T0.x。
+
+**关键判断（写进 T0.1 的理由）**：三条件里 **`transitive` 库里已有**
+（`displaysQuartet_of_displaysQuartet_common`）、**`thin` 是 binary 树的免费推论**
+（待核对 `displaysSplitOn_unique`）、只剩 **`saturated`** 是新工程量
+⟹ **T0.1 是全表性价比最高的一格**，故列为首位中的首位。
+T0.3 开工前先做一次「**对接口**」：Weller 的 leaf-status `ℓ_T(u) = Σ_{x∈L(T)} d(u,x)`
+与库内 `NJ.ell` 的定义需逐条对齐（机械但必须先做）。
