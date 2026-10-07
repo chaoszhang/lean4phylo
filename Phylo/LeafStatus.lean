@@ -861,7 +861,7 @@ end SideNesting
   —— **等价式 (2)**：`ℓ(u) ≤ ℓ(v) ⟺ |L(T)| ≤ 2|u 侧叶|`（`<` 同理）；
 * ★★★ `leafStatus_lt_of_leafStatus_le_of_adj` —— **局部一步**（用 ★★★ `sideLeaves_card_lt_of_adj`
   的严格嵌套 + 等价式 (2) 的算术）；
-* ★★★ `leafStatus_strict_mono_of_walk` —— **Lemma 2 本体**
+* ★★★ `leafStatus_strict_mono` —— **Lemma 2 本体**
   （路径用 `v : ℕ → T.V` 在 `{0,…,k}` 上「相继相邻 + 单射」表述）。 -/
 
 section Lemma2
