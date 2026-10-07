@@ -22,6 +22,7 @@ import Phylo.Core
 import Phylo.Dendrogram
 import Phylo.DissimilarityPerturb
 import Phylo.Distance
+import Phylo.DistanceCorrection
 import Phylo.InductiveAssembly
 import Phylo.InternalEdge
 import Phylo.Laminar
