@@ -37,7 +37,13 @@ import Phylo.Buneman
 * ✅ ★★★ `z_addConst`（附 `S_addConst`）
 * ✅ ★★ `fourSum_addConst`
 * ✅ ★★ `fourPoint_addConst`（+ `0 ≤ ε`）
-* ✅ ★★ `positiveDefinite_addConst`（+ 非负性）（**零 `sorry` / 零 `axiom`**）
+* ✅ ★★ `positiveDefinite_addConst`（+ 非负性）
+* ✅ **§6 ADR 2016 式 (2)(3)(5)**：★★ `fourSum_sub_eq_of_pendant` + ★★ `fourPoint_of_pendant`
+  —— **USTAR 的配对可加修正** `δ(x,y) = δr(x,y) + u x + u y`（`x ≠ y`）：四个标签互异时
+  三对和的**差额逐项不变** ⇒ 四点条件保持（`u x = 1 − w x` 即 ADR 的 `2 − (w_x + w_y)`）；
+* ✅ **§7 阴性结论**：★★★ `not_fourPoint_of_pendant_naive` —— 若不额外假设 `δ` 的**三角不等式**，
+  上述朴素传递是**假命题**（`Fin 4` 显式见证；形制同 `Phylo/BunemanShrinkPD.lean`）
+  （**零 `sorry` / 零 `axiom`**）
 -/
 
 universe u
@@ -328,6 +334,160 @@ theorem positiveDefinite_addConst (δ : Dissimilarity X) {ε : ℝ} (hε : 0 < �
     (hnn : ∀ x y : X, 0 ≤ δ.val x y) (h : δ.PositiveDefinite) :
     (δ.addConst ε).PositiveDefinite :=
   positiveDefinite_addConst_aux δ hε hnn h
+
+/-! ## 6. USTAR 的**挂边修正**（ADR 2016 式 (2)(3)(5)）
+
+ADR 2016（`AllmanDegnanRhodes2016_NJst_StatisticalConsistency.md`）把 NJst 的相异度
+`D = E_σ(D_T)`（**USTAR**）与 STAR 相异度 `D^r = E_σ(D^r_{T^r})` 用
+
+`D(x,y) = D^r(x,y) + 2 − (w_x + w_y)`　　　（式 (2)(3)，`:682–689`、`:704–714`）
+
+联系起来（`w_x = E_σ(w_x)` 是根被抑制后 `x` 的挂边长度的期望；上式对 `x ≠ y`）。
+本节把这个**配对可加修正**抽成纯代数：取 `u x = 1 − w x`，即 `δ(x,y) = δr(x,y) + u x + u y`。
+
+ADR 随后（`:716–735`）说明：**四个标签互异**时，三对和
+`{a,b}|{c,d}`、`{a,c}|{b,d}`、`{a,d}|{b,c}` 各覆盖四个标签恰好一次，故**同加**
+`u a + u b + u c + u d` ⇒ 四点条件（式 (4)）**保持**为式 (5)。这正是 ★★ `fourSum_sub_eq_of_pendant`
++ ★★ `fourPoint_of_pendant` 的内容。
+
+⚠️ **重复下标的情形是另一回事**（ADR `:737–746` 也是另行处理）：那时不能用上述「同加常数」，
+必须回到「每个 `D_T` 都是树度量」（⇒ 三角不等式）。故 ★★ `fourPoint_of_pendant` 显式要求
+`δ` 的**三角不等式** `htri` —— 见 §7 的 ★★★ 阴性结论。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- **配对可加修正**：`δ(x,y) = δr(x,y) + u x + u y`（`x ≠ y`）。
+
+取 `u x = 1 − w x` 即 ADR 2016 的 `D(x,y) = D^r(x,y) + 2 − (w_x + w_y)`。 -/
+def IsPendantCorrected (δ δr : Dissimilarity X) (u : X → ℝ) : Prop :=
+  ∀ x y : X, x ≠ y → δ.val x y = δr.val x y + u x + u y
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **式 (5) 的差额恒等式**：配对可加修正使四点**三对和的差额逐项不变**（四个标签互异）。
+
+右端 `(a,b)` 与 `(c,d)` 覆盖四个标签恰好一次，故「三对和」中的每一对都加上同一个
+`u a + u b + u c + u d` —— 正是 ADR「only added `2 − E(w_a+w_b+w_c+w_d)` to the three sums」
+（`:726–735`）的代数内容。 -/
+theorem fourSum_sub_eq_of_pendant {δ δr : Dissimilarity X} {u : X → ℝ}
+    (h : IsPendantCorrected δ δr u) {a b c d : X}
+    (hab : a ≠ b) (hcd : c ≠ d) (hac : a ≠ c) (hbd : b ≠ d) :
+    (δ.val a b + δ.val c d) - (δ.val a c + δ.val b d)
+      = (δr.val a b + δr.val c d) - (δr.val a c + δr.val b d) := by
+  rw [h a b hab, h c d hcd, h a c hac, h b d hbd]
+  ring
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **重复下标（互异数 `≤ 3`）的四点条件**：只要 `δ` 满足**三角不等式**即自动成立
+（四个下标里必有一对相等，此时恰有一个析取支由对称性或 `diag` 立即成立）。
+
+⚠️ 这一条**不能**由挂边修正的代数得到（见 ★★★ `not_fourPoint_of_pendant_naive`）；
+ADR 在 `:737–746` 用「每个 `D_T` 都是树度量」另行处理这一情形。 -/
+theorem fourPoint_of_triangle_of_not_pairwise {δ : Dissimilarity X}
+    (htri : ∀ a k l : X, δ.val k l ≤ δ.val a k + δ.val a l) {i j k l : X}
+    (h : ¬ (i ≠ j ∧ i ≠ k ∧ i ≠ l ∧ j ≠ k ∧ j ≠ l ∧ k ≠ l)) :
+    (δ.val i j + δ.val k l ≤ δ.val i k + δ.val j l) ∨
+    (δ.val i j + δ.val k l ≤ δ.val i l + δ.val j k) := by
+  by_cases hij : i = j
+  · left; rw [hij, δ.diag j, zero_add]; exact htri j k l
+  by_cases hik : i = k
+  · right; rw [hik]; linarith [δ.symm k j]
+  by_cases hil : i = l
+  · left; rw [hil]; linarith [δ.symm l j, δ.symm k l]
+  by_cases hjk : j = k
+  · left; rw [hjk]
+  by_cases hjl : j = l
+  · right; rw [hjl]; linarith [δ.symm k l]
+  by_cases hkl : k = l
+  · left; rw [hkl, δ.diag l, add_zero]; linarith [htri l i j, δ.symm i l, δ.symm j l]
+  · exact absurd ⟨hij, hik, hil, hjk, hjl, hkl⟩ h
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **式 (4)(5)：配对可加修正保持四点条件**（ADR 2016 Thm 4.2 证明的代数核心）。
+
+* 四个标签**互异**：三对和同加 `u a + u b + u c + u d` ⇒ 用 ★★ `fourSum_sub_eq_of_pendant`
+  把 `δr.FourPoint`（式 (4)）搬到 `δ`（式 (5)）；
+* 有**重复**下标：用 `htri`（`δ` 的三角不等式）经 ★★ `fourPoint_of_triangle_of_not_pairwise`。
+
+⚠️ **`htri` 不可省**（★★★ `not_fourPoint_of_pendant_naive`），且它不是纯代数结论：
+库内由**实现树**（`Phylogram.dist_triangle`）或由「期望保不等式」给出。 -/
+theorem fourPoint_of_pendant {δ δr : Dissimilarity X} {u : X → ℝ}
+    (h : IsPendantCorrected δ δr u) (hr : δr.FourPoint)
+    (htri : ∀ a k l : X, δ.val k l ≤ δ.val a k + δ.val a l) : δ.FourPoint := by
+  intro i j k l
+  by_cases h4 : i ≠ j ∧ i ≠ k ∧ i ≠ l ∧ j ≠ k ∧ j ≠ l ∧ k ≠ l
+  · rcases h4 with ⟨hij, hik, hil, hjk, hjl, hkl⟩
+    rcases hr i j k l with h' | h'
+    · left
+      have hsub := fourSum_sub_eq_of_pendant h hij hkl hik hjl
+      linarith
+    · right
+      have hsub := fourSum_sub_eq_of_pendant h hij (fun hh => hkl hh.symm) hil hjk
+      linarith [δ.symm l k, δr.symm l k]
+  · exact fourPoint_of_triangle_of_not_pairwise htri h4
+
+/-! ## 7. ★★★ 阴性结论：**朴素**的挂边传递是**假命题**
+
+「`δ = δr + u x + u y` 且 `δr.FourPoint` ⇒ `δ.FourPoint`」若**不**额外假设 `δ` 的三角不等式，
+则**为假**。本节的机器可查见证（形制同 `Phylo/BunemanShrinkPD.lean`）：
+
+* `δr` = `Fin 4` 上非对角恒为 `2` 的常数相异度（`FourPoint` ✓，三对和都等于 `4`）；
+* `u 0 = −10`、`u k = +10`（`k ≠ 0`）⇒ `δ(0,k) = 2`、`δ(k,l) = 22`（`k,l ≠ 0`，互异）。
+  **注意 `δ` 的非对角项全为正** ⇒ 「非负性」也不够；
+* 取四点 `(0,0,1,2)`：`δ(0,0) + δ(1,2) = 22 > 4 = δ(0,1) + δ(0,2) = δ(0,2) + δ(1,0)`
+  ⇒ `FourPoint` 两个析取支**都不成立**。
+
+⇒ 这正是 `fourPoint_of_pendant` 里 `htri` 不可省的原因（ADR 在 `:737–746` 另行处理该情形）。 -/
+
+/-- 常数相异度的值函数（`Fin 4`，非对角恒为 `2`）。 -/
+def constTwoVal : Fin 4 → Fin 4 → ℝ
+  | 0, 0 => 0 | 1, 1 => 0 | 2, 2 => 0 | 3, 3 => 0 | _, _ => 2
+
+/-- 常数相异度 `δr`（非对角恒为 `2`）。 -/
+def constTwo : Dissimilarity (Fin 4) where
+  val := constTwoVal
+  symm := by intro i j; fin_cases i <;> fin_cases j <;> rfl
+  diag := by intro i; fin_cases i <;> rfl
+
+/-- 常数相异度满足四点条件（三对和都等于 `4` ⇒ 两个析取支都成立）。 -/
+theorem constTwo_fourPoint : constTwo.FourPoint := by
+  intro i j k l
+  fin_cases i <;> fin_cases j <;> fin_cases k <;> fin_cases l <;>
+    simp only [constTwo, constTwoVal] <;> norm_num
+
+/-- 「坏修正」函数：`u 0 = −10`、其余 `+10`。 -/
+def badUVal : Fin 4 → ℝ
+  | 0 => -10 | _ => 10
+
+/-- 被修正的相异度 `δ = δr + u x + u y`：非对角为 `2`（一端是 `0`）或 `22`（两端都非 `0`）。 -/
+def badPendantVal : Fin 4 → Fin 4 → ℝ
+  | 0, 0 => 0 | 1, 1 => 0 | 2, 2 => 0 | 3, 3 => 0
+  | 0, _ => 2 | _, 0 => 2
+  | _, _ => 22
+
+/-- 被修正的相异度 `δ`（见 `badPendantVal`）。 -/
+def badPendant : Dissimilarity (Fin 4) where
+  val := badPendantVal
+  symm := by intro i j; fin_cases i <;> fin_cases j <;> rfl
+  diag := by intro i; fin_cases i <;> rfl
+
+/-- `badPendant` 与 `constTwo` 确实相差一个**配对可加修正**（`u = badUVal`）。 -/
+theorem badPendant_isPendantCorrected : IsPendantCorrected badPendant constTwo badUVal := by
+  intro x y h
+  fin_cases x <;> fin_cases y <;>
+    first
+      | exact absurd rfl h
+      | (simp only [badPendant, constTwo, badPendantVal, constTwoVal, badUVal]; norm_num)
+
+/-- ★★★ **阴性结论**：「`δr.FourPoint` + 配对可加修正 ⇒ `δ.FourPoint`」**是假命题**
+（缺少 `δ` 的三角不等式时）。见证与数值见本节开头。 -/
+theorem not_fourPoint_of_pendant_naive :
+    ¬ (∀ (δ δr : Dissimilarity (Fin 4)) (u : Fin 4 → ℝ),
+        IsPendantCorrected δ δr u → δr.FourPoint → δ.FourPoint) := by
+  intro h
+  have hbad : badPendant.FourPoint :=
+    h badPendant constTwo badUVal badPendant_isPendantCorrected constTwo_fourPoint
+  have h0 := hbad 0 0 1 2
+  simp only [badPendant, badPendantVal] at h0
+  norm_num at h0
 
 end Dissimilarity
 
