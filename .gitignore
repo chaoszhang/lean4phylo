@@ -7,3 +7,10 @@
 
 # 编辑器
 /.vscode/*.log
+
+# 参考文献原文（版权考虑，不入库；本地保留）
+references/pdf/
+references/md/
+references/img/
+references/ocr/
+references/.venvpython
