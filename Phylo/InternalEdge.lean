@@ -657,6 +657,55 @@ theorem displaysQuartet_substitution {a b c d x : X} (h : T.DisplaysQuartet a b 
   · exact Or.inr ⟨s, hs, Finset.insert_subset_iff.mpr ⟨ha, Finset.singleton_subset_iff.mpr hx⟩, hcd⟩
   · exact Or.inl ⟨s, hs, hab, Finset.insert_subset_iff.mpr ⟨hc, Finset.singleton_subset_iff.mpr hx⟩⟩
 
+/-! ### BD Prop 2「recover ∥ from clusters」的构造：`Y := {E : AE|CD}`
+
+Bandelt & Dress 1986 Prop 2 的证明（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
+**709–721 行**）从任意展示的 quartet `AB|CD` 出发构造
+`Y := {E : AE∥CD}`，再证 `Y` 是**分离 `A,B` 与 `C,D` 的 cluster**。
+先落地「集合 + 成员性」那一半（用刚证的 ★★★ `displaysQuartet_substitution`）。 -/
+
+/-- BD Prop 2 构造里的集合 `Y := {E : AE|CD}`。 -/
+noncomputable def quartetSlice (a c d : X) : Finset X := by
+  classical
+  exact Finset.univ.filter (fun E => T.DisplaysQuartet a E c d)
+
+/-- `Y` 的成员刻画。 -/
+theorem mem_quartetSlice {a c d E : X} :
+    E ∈ T.quartetSlice a c d ↔ T.DisplaysQuartet a E c d := by
+  classical
+  simp [quartetSlice]
+
+/-- **同一对象不能同时落在两侧**：`x ∈ {a,b}` 且 `x ∈ {c,d}` 时 `ab|cd` 不可能被展示。 -/
+theorem not_displaysQuartet_of_mem_inter {a b c d : X} (h : T.DisplaysQuartet a b c d)
+    {x : X} (hx : x ∈ ({a, b} : Finset X)) (hx' : x ∈ ({c, d} : Finset X)) : False := by
+  obtain ⟨s, hs, hab, hcd⟩ := h
+  exact (Finset.disjoint_left.mp s.disjoint_sides) (hab hx) (hcd hx')
+
+/-- ★★ **BD 的 `B ∈ Y`**：`Y := {E : AE|CD}` 在 `E := B` 处就是给定的 `AB|CD`。 -/
+theorem mem_quartetSlice_of_displaysQuartet {a b c d : X} (h : T.DisplaysQuartet a b c d) :
+    b ∈ T.quartetSlice a c d := by
+  rw [mem_quartetSlice]; exact h
+
+/-- ★★ **BD 的 `A ∈ Y`**（退化情形 `AA|CD`：由 `AB|CD` 弱化得到）。 -/
+theorem mem_quartetSlice_self {a b c d : X} (h : T.DisplaysQuartet a b c d) :
+    a ∈ T.quartetSlice a c d := by
+  obtain ⟨s, hs, hab, hcd⟩ := h
+  rw [mem_quartetSlice]
+  refine ⟨s, hs, ?_, hcd⟩
+  intro x hx
+  simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+  rcases hx with rfl | rfl <;> exact hab (by simp)
+
+/-- ★★ **BD 的 `C ∉ Y`**（`AC|CD` 会迫使 `c ∈ sideA ∩ sideB`）。 -/
+theorem notMem_quartetSlice_left {a c d : X} : c ∉ T.quartetSlice a c d := by
+  rw [mem_quartetSlice]
+  exact fun h => T.not_displaysQuartet_of_mem_inter h (x := c) (by simp) (by simp)
+
+/-- ★★ **BD 的 `D ∉ Y`**（`AD|CD` 同理）。 -/
+theorem notMem_quartetSlice_right {a c d : X} : d ∉ T.quartetSlice a c d := by
+  rw [mem_quartetSlice]
+  exact fun h => T.not_displaysQuartet_of_mem_inter h (x := d) (by simp) (by simp)
+
 /-- ★★ **clan 系统对补闭合**：`A` 是 clan ⟹ `Aᶜ` 也是 clan。
 
 **出处**：Bandelt & Dress 1986, Prop 2(b) 的证明（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
