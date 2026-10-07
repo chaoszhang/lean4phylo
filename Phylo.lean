@@ -11,6 +11,7 @@ import Phylo.Algorithm.NNI
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
 import Phylo.Binary
+import Phylo.Buneman
 import Phylo.Consensus
 import Phylo.Core
 import Phylo.Dendrogram
