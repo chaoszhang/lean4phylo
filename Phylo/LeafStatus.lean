@@ -71,6 +71,12 @@ import Mathlib.Tactic
    * 辅助：★★ `sum_eq_add_add_sum_erase`、`leafStatus_sub_dist_add_pathLeafStatus`、
      `dist_eq_add_of_mem_path_support`、★★ `eq_of_adj_leaf`、`support_eq_of_adj_adj`、
      `eq_or_eq_or_eq_of_mem_support_of_adj_adj`、`distToPath_nonneg`。
+9. ★★★ **Thm 2 本体**（§14，文献 `:372–387`）：★★★ `Cladogram.exists_isCherry_of_max_z` ——
+   `z(u,v) := d(u,v) + ℓ_T(p_uv)` 取最大的一对叶**构成樱桃**。新增件（详见 §14 与文件头 ✅ 段）：
+   * ★★ `not_adj_of_isLeaf_of_isLeaf` —— ≥3 片叶时两片叶**不相邻**；
+   * ★★★ `exists_cherry_mid_internal_max` —— **`ℓ` 在内部顶点上的最大者必是樱桃中点**
+     （这是文献 `:384` 的「`T^s` 里有樱桃」的省力替代品，无需侧子树计数/跳数论证）。
+
 
 **额外假设一览（文献 `:124` 的正边权被显式参数化；本库 `w_nonneg` 只给 `≥ 0`）**：
 
@@ -86,9 +92,9 @@ import Mathlib.Tactic
   §8 的侧集嵌套、§12 的 ★★ `exists_adj_crossing` / ★★★ `mem_support_of_inSide_of_inSide`
   也**不需要正权**。
 
-## ⬜ 未完成：Thm 2 本体（文献 `:372–387` 的步 3、5–9 与主定理）
+## ✅ Thm 2 本体（文献 `:372–387`）：已在**第 14 节**落地
 
-主定理（树层，δ-free）**本轮未落地**：
+主定理（树层，δ-free）★★★ `Cladogram.exists_isCherry_of_max_z`：
 
 ```lean
 theorem Cladogram.exists_isCherry_of_max_z {T : Phylogram X}
@@ -100,39 +106,31 @@ theorem Cladogram.exists_isCherry_of_max_z {T : Phylogram X}
     T.IsCherry a b
 ```
 
-已落地的部件见第 13 节；剩余步骤的**配方**（下一轮可直接开工）：
+**实际走的路线**（比原配方短得多：**不需要** `leafStatus_strict_mono`，也不需要侧子树上的
+计数/跳数论证 —— 关键新观察是「`ℓ` 在**内部顶点**上的最大者必是某樱桃的中点」）：
 
-1. **步 3**：`x` := `T.leaf a` 的唯一邻居（`SimpleGraph.degree_eq_one_iff_existsUnique_adj`）。
-   由 `hcard` 知两片**相邻的叶**在 ≥3 叶的树中不可能（两片叶的度都是 1 ⟹ 该边就是整棵树的连通分量
-   ⟹ 只有 2 片叶），故 `x ≠ T.leaf b`；于是 `x` 是 `a–b` 路径的第二个顶点 ⇒ **内点**；
-   `x` 不是叶：若 `x` 为叶，则它在长度 ≥ 2 的路径上有两个相异邻居。
-2. **步 4 ✓（§13）**：`dist_add_pathLeafStatus_lt_leafStatus` 给出 `z(a,b) < ℓ(x)`。
-3. **步 5**：`deg x ≥ 3`（非叶 + `no_degree_two`）给出两个相异邻居 `s, t ∉ {T.leaf a, T.leaf b}`；
-   用 `inSide_congr_of_adj` + `inSide_or_inSide` 可把 `x` 的三支认出来。
-4. **步 6**：设 `ℓ(s) ≥ ℓ(t)`（否则交换 `s,t`）；`c` := ℓ 最小者（§13 ★★★
-   `exists_not_isLeaf_leafStatus_le`，非叶）。
-   * 若 `c ∈ T^s`（:= `T.sideVertices s(x,s) s`）：对路径 `c → … → s → x → t` 用
-     ★★★ `leafStatus_strict_mono`（`v₀ = c`，`x`/`t` 的下标 ≥ 1）得 `ℓ(t) > ℓ(s)`，与
-     `ℓ(s) ≥ ℓ(t)` 矛盾 ⇒ **`c ∉ T^s`**；
-   * 于是对路径 `c → … → x → s` 同法得 **`ℓ(x) < ℓ(s)`** ✓（路径序列可用
-     `IsPath.mem_support_iff_exists_append` 在 `x` 处劈开、再拼上边 `x—s` 得到）。
-5. **步 7**（`s` 是叶）：`z(a,s) = ℓ(x)`（★★★ `eq_of_adj_adj`：`x` 同时邻接两叶 `a, s`）
-   `> z(a,b)`，与 `hmax` 矛盾 ✓。
-6. **步 8（crux，唯一的新工程量，本轮未做）**：`s` 不是叶时须找一片**中点 `m ∈ T^s` 的 T-樱桃**。
-   最省力路线（与本文件已有件兼容，且避免移植 `Phylogram.exists_isCherry` 的计数证明 ——
-   `T^s` 的诱导树在附着点 `s` 处**有度 2 顶点**，不是 `Cladogram`，故计数引理不能直接套用）：
-   * 取 `y ∈ T^s` 使**跳数距离** `T.graph.dist s y`（Mathlib 的无权图距离，`ℕ` 值）在 `T^s` 上最大；
-   * 最大跳数顶点必是叶（否则它有更深的邻居：`IsTree.dist_eq_dist_add_one_of_adj`）；
-   * 取 `z` := `y` 的「父顶点」（同一边上 `T.graph.dist s z + 1 = T.graph.dist s y`）。
-     `z` 非叶（有父与 `y` 两个相异邻居）⟹ `deg z ≠ 1, 2` ⟹ `deg z ≥ 3` ⟹ 第三邻居 `v ≠ 父, y`；
-     `v` 与 `y` **同跳数深度** ⟹ `v` 也是叶 ⟹ **`{y, v}` 是以 `z` 为中点的 T-樱桃** ✓
-     （`z = s` 时同理：`s` 的第三个邻居也同深度、也是叶）。
-7. **步 9（收口）**：`m := z ∈ T^s` ⟹ 路径 `c → … → x → s → … → m` 经过 `x` 且 `m ≠ c, x`，
-   由 ★★★ `leafStatus_strict_mono` 得 `ℓ(m) > ℓ(x)`；又 `z(y,y') = ℓ(m)`（★★★ `eq_of_adj_adj`）
-   ⟹ `z(y,y') > ℓ(x) > z(a,b)`，与 `hmax` 矛盾 ✓ ⇒ 反设不成立 ⇒ `T.IsCherry a b` ✓。
+1. ★★ `not_adj_of_isLeaf_of_isLeaf`：≥3 片叶时两片叶**不相邻**（对第三片叶用两次
+   ★★ `eq_add_dist_of_ne_of_unique_adj` + 正边权）。这条同时给出「`x := T.leaf a` 的唯一邻居
+   `≠ T.leaf b`」，从而 `x` 是 `a–b` 路径的**内点**。
+2. ★★★ `exists_cherry_mid_internal_max`：**`ℓ` 在内部顶点上的最大者同时邻接两片叶**。
+   设 `m` 为内部顶点中 `ℓ` 最大者（内部顶点的存在性由 ★★★ Cor 1 提供）。若 `m` 至多邻接一片叶，
+   则由「无度 2」得 `deg m ≥ 3`，故 `m` 至少有两个**内部**邻居 `p ≠ q`；由 `m` 的最大性
+   `ℓ(p) ≤ ℓ(m)`，★★★ `leafStatus_lt_of_leafStatus_le_of_adj` 给出 `ℓ(m) < ℓ(q) ≤ ℓ(m)`，矛盾。
+   —— 这一步替代了文献 `:384` 的「`T^s` 中存在樱桃」，**完全绕开**了「侧子树在附着点处有度 2 顶点、
+   不是 `Cladogram`」这个障碍（无需计数、无需跳数距离）。
+3. **收口**：反设 `a, b` 不是樱桃。由 1 得 `x ≠ T.leaf b`，故 `x` 是 `a–b` 路径上的内点
+   （它有 `T.leaf a` 与路径上的下一个顶点两个相异邻居 ⟹ `deg x ≥ 3` ⟹ 非叶），且 `x` 不同时邻接
+   `T.leaf a` 与 `T.leaf b`（否则 `x` 即公共邻居），于是由 ★★★ `dist_add_pathLeafStatus_lt_leafStatus`
 
-（文献 Observation 1 的「路径」字面形式在本文件第 5 节已按**文献原意**
-`min_{y∈V(p)} d(x,y)` 处理，并记录了题面字面版为假的反例。）
+       `z(a,b) < ℓ(x)`；
+
+   另一方面取 2 的樱桃 `{y, y'}`（中点 `m`）：`x` 是内部顶点故 `ℓ(x) ≤ ℓ(m)`，而
+   ★★★ `eq_of_adj_adj` 给出 `z(y,y') = ℓ(m)`。于是 `z(y,y') = ℓ(m) ≥ ℓ(x) > z(a,b)`，
+   与 `z` 的最大性 `hmax` 矛盾 ⇒ `T.IsCherry a b` ✓。
+
+⚠️ **诚实记录**：本文件为此**新增** `import Phylo.Algorithm.Cherry`，但只为拿到
+`Cladogram.IsCherry` 的**定义**；证明**未**使用该文件的任何计数引理（不存在循环 import：
+`Cherry.lean` 只依赖 `Phylo.Core`）。
 -/
 
 universe u v
@@ -1497,7 +1495,8 @@ Weller `:372–373`（证明 `:375–387`）：若 `z(u,v) := d(u,v) + ℓ_T(p_u
 * ★★ `exists_leafStatus_min` / ★★★ `exists_not_isLeaf_leafStatus_le` —— **步 2**（文献 `:375–376`）：
   `ℓ` 的最小者 `c` 存在，且由 ★★★ Cor 1 知它**不是叶**。
 
-⬜ **未完成（步 3、5–9 与主定理本体）** 见文件头 `⬜` 段（含逐步配方与步 8 的关键观察）。 -/
+主定理本体 ★★★ `Cladogram.exists_isCherry_of_max_z`（以及它用到的 ★★
+`not_adj_of_isLeaf_of_isLeaf`、★★★ `exists_cherry_mid_internal_max`）见**第 14 节**。 -/
 
 section Thm2
 
@@ -1537,6 +1536,225 @@ theorem exists_not_isLeaf_leafStatus_le (hpos : ∀ e : Edge T.toCladogram, 0 < 
 
 end Thm2
 
+/-! ## 14. Thm 2 本体（文献 `:372–387`）
+
+本节完成 Weller Thm 2 的**树层、δ-free** 形式 ★★★ `Cladogram.exists_isCherry_of_max_z`。
+与文献 `:375–387` 的路线略有不同（但同样只用 Lemma 2 的局部一步 + Lemma 3），关键观察是：
+
+* ★★ `not_adj_of_isLeaf_of_isLeaf` —— ≥3 片叶时两片叶**不相邻**（用两次 ★★
+  `eq_add_dist_of_ne_of_unique_adj` + 正边权；文献默认的树里这一步是显然的）；
+* ★★★ `exists_cherry_mid_internal_max` —— **`ℓ` 在内部顶点上的最大者必是某樱桃的中点**。
+  这正是文献 `:384` 那句「`T^s` 里有一个樱桃」的最省力替代：
+  设 `m` 是内部顶点中 `ℓ` 最大者。若 `m` 的邻居里至多一个叶，则由「无度 2」得 `m` 的度 ≥ 3，
+  故它至少有两个**内部**邻居 `p, q`；由 `m` 的最大性 `ℓ(p) ≤ ℓ(m)`，★★★
+  `leafStatus_lt_of_leafStatus_le_of_adj` 立即给出 `ℓ(m) < ℓ(q) ≤ ℓ(m)`，矛盾。
+  故 `m` 至少邻接两片叶 —— 即樱桃中点。
+* 主定理（文献 `:379–385`）：反设 `a, b` 不是樱桃。设 `x` 是 `T.leaf a` 的唯一邻居。
+  `x` 是 `a–b` 路径上的**内部**顶点（`x ≠ T.leaf b` 由 ★★ `not_adj_of_isLeaf_of_isLeaf`，
+  故 ★★★ `dist_add_pathLeafStatus_lt_leafStatus` 可用），得
+
+      `z(a,b) < ℓ(x)`。
+
+  另一方面由 ★★★ `exists_cherry_mid_internal_max` 取樱桃 `{y, y'}`，其中点 `m` 是内部顶点中
+  `ℓ` 最大者，故 `ℓ(m) ≥ ℓ(x)`；再由 ★★★ `eq_of_adj_adj` 得 `z(y,y') = ℓ(m)`。于是
+
+      `z(y,y') = ℓ(m) ≥ ℓ(x) > z(a,b)`，
+
+  与 `z(a,b)` 的最大性矛盾。∎ -/
+
+section Thm2Main
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+/-- ★★ **≥3 片叶时两片叶不相邻**：若 `T.leaf u — T.leaf v` 是边（`u ≠ v`），取第三片叶 `y`
+（`|X| ≥ 3`），对它用两次 ★★ `eq_add_dist_of_ne_of_unique_adj`（叶 `u` 的唯一邻居是 `leaf v`、
+叶 `v` 的唯一邻居是 `leaf u`）得
+
+    `d(u,y) = ω + d(v,y)` 且 `d(v,y) = ω + d(u,y)`，
+
+与正边权 `ω := ω(leaf u, leaf v) > 0` 矛盾。 -/
+theorem not_adj_of_isLeaf_of_isLeaf (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hcard : 3 ≤ Fintype.card X) {u v : X} (huv : u ≠ v) :
+    ¬ T.graph.Adj (T.leaf u) (T.leaf v) := by
+  classical
+  intro hadj
+  have hu1 : T.graph.degree (T.leaf u) = 1 := (T.leaf_iff_degree_one (T.leaf u)).mp ⟨u, rfl⟩
+  obtain ⟨u', -, huniq_u⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hu1
+  have hu' : u' = T.leaf v := (huniq_u (T.leaf v) hadj).symm
+  have hv1 : T.graph.degree (T.leaf v) = 1 := (T.leaf_iff_degree_one (T.leaf v)).mp ⟨v, rfl⟩
+  obtain ⟨v', -, huniq_v⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hv1
+  have hv' : v' = T.leaf u := (huniq_v (T.leaf u) hadj.symm).symm
+  have hy : ∃ y : X, y ∉ ({u, v} : Finset X) := by
+    by_contra hcon
+    rw [not_exists] at hcon
+    have hsub : (Finset.univ : Finset X) ⊆ {u, v} := fun z _ => by_contra fun hz => hcon z hz
+    have hcard' := Finset.card_le_card hsub
+    rw [Finset.card_univ, Finset.card_pair huv] at hcard'
+    omega
+  obtain ⟨y, hy⟩ := hy
+  simp only [Finset.mem_insert, Finset.mem_singleton, not_or] at hy
+  obtain ⟨hyu, hyv⟩ := hy
+  have h1 : T.dist (T.leaf u) (T.leaf y)
+      = T.wExt s(T.leaf u, T.leaf v) + T.dist (T.leaf v) (T.leaf y) :=
+    eq_add_dist_of_ne_of_unique_adj T (fun w hw => (huniq_u w hw).trans hu')
+      (fun h => hyu (T.leaf.injective h))
+  have h2 : T.dist (T.leaf v) (T.leaf y)
+      = T.wExt s(T.leaf v, T.leaf u) + T.dist (T.leaf u) (T.leaf y) :=
+    eq_add_dist_of_ne_of_unique_adj T (fun w hw => (huniq_v w hw).trans hv')
+      (fun h => hyv (T.leaf.injective h))
+  have hsym : T.wExt s(T.leaf v, T.leaf u) = T.wExt s(T.leaf u, T.leaf v) := by rw [Sym2.eq_swap]
+  have hω : 0 < T.wExt s(T.leaf u, T.leaf v) := pos_wExt_of_adj T hpos hadj
+  linarith
+
+/-- ★★★ **`ℓ` 在内部顶点上的最大者必是樱桃中点**（Thm 2 证明的收口件）：
+
+存在内部顶点 `m`，其 `ℓ` 在所有内部顶点中最大，且 `m` **同时邻接两片叶**。
+
+证明：设 `m` 是内部顶点中 `ℓ` 最大者（内部顶点存在，由 ★★★ `exists_not_isLeaf_leafStatus_le` ——
+即 Corollary 1）。若 `m` 的邻居里至多一个叶，则由「无度 2」得 `T.graph.degree m ≥ 3`，
+故 `m` 至少有两个**内部**邻居 `p ≠ q`；由 `m` 的最大性 `ℓ(p) ≤ ℓ(m)`，而 ★★★
+`leafStatus_lt_of_leafStatus_le_of_adj`（`p — m — q`）给出 `ℓ(m) < ℓ(q)`，
+与 `ℓ(q) ≤ ℓ(m)` 矛盾。故 `m` 至少邻接两片叶。 -/
+theorem exists_cherry_mid_internal_max (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hcard : 3 ≤ Fintype.card X) :
+    ∃ m : T.V, ¬ T.IsLeaf m ∧ (∀ w : T.V, ¬ T.IsLeaf w → T.leafStatus w ≤ T.leafStatus m) ∧
+      ∃ y y' : X, y ≠ y' ∧ T.graph.Adj (T.leaf y) m ∧ T.graph.Adj (T.leaf y') m := by
+  classical
+  obtain ⟨c₀, hc₀, -⟩ := exists_not_isLeaf_leafStatus_le T hpos hcard
+  have hSne : (Finset.univ.filter (fun v : T.V => ¬ T.IsLeaf v)).Nonempty :=
+    ⟨c₀, Finset.mem_filter.mpr ⟨Finset.mem_univ c₀, hc₀⟩⟩
+  obtain ⟨m, hmS, hmax⟩ :=
+    Finset.exists_max_image (Finset.univ.filter (fun v : T.V => ¬ T.IsLeaf v)) T.leafStatus hSne
+  have hmint : ¬ T.IsLeaf m := (Finset.mem_filter.mp hmS).2
+  have hmmax : ∀ w : T.V, ¬ T.IsLeaf w → T.leafStatus w ≤ T.leafStatus m := fun w hw =>
+    hmax w (Finset.mem_filter.mpr ⟨Finset.mem_univ w, hw⟩)
+  have hdeg : 3 ≤ T.graph.degree m := by
+    have h1 : T.graph.degree m ≠ 1 := fun h => hmint ((T.leaf_iff_degree_one m).mpr h)
+    have h2 := T.no_degree_two m
+    have h3 : 1 ≤ T.graph.degree m := by
+      obtain ⟨a₀⟩ := Fintype.card_pos_iff.mp (by omega : 0 < Fintype.card X)
+      have hne : m ≠ T.leaf a₀ := fun h => hmint ⟨a₀, h.symm⟩
+      obtain ⟨w, hmw, -⟩ :=
+        SimpleGraph.Walk.exists_eq_cons_of_ne hne (T.existsUnique_path m (T.leaf a₀)).choose
+      rw [← SimpleGraph.card_neighborFinset_eq_degree]
+      exact Finset.card_pos.mpr
+        ⟨w, (SimpleGraph.mem_neighborFinset T.graph m w).mpr hmw⟩
+    omega
+  have h3N : 3 ≤ (T.graph.neighborFinset m).card := by
+    rw [SimpleGraph.card_neighborFinset_eq_degree]
+    exact hdeg
+  have hsplit := Finset.card_filter_add_card_filter_not
+    (s := T.graph.neighborFinset m) (p := fun v : T.V => T.IsLeaf v)
+  have hIPle : ((T.graph.neighborFinset m).filter (fun v : T.V => ¬ T.IsLeaf v)).card ≤ 1 := by
+    by_contra hcon
+    obtain ⟨p, hp, q, hq, hpq⟩ := Finset.one_lt_card.mp (not_le.mp hcon)
+    have hpN : p ∈ T.graph.neighborFinset m := (Finset.mem_filter.mp hp).1
+    have hqN : q ∈ T.graph.neighborFinset m := (Finset.mem_filter.mp hq).1
+    have hpI : ¬ T.IsLeaf p := (Finset.mem_filter.mp hp).2
+    have hqI : ¬ T.IsLeaf q := (Finset.mem_filter.mp hq).2
+    have hapm : T.graph.Adj m p := (SimpleGraph.mem_neighborFinset T.graph m p).mp hpN
+    have hamq : T.graph.Adj m q := (SimpleGraph.mem_neighborFinset T.graph m q).mp hqN
+    have hlt := leafStatus_lt_of_leafStatus_le_of_adj T hpos hapm.symm hamq hpq (hmmax p hpI)
+    have hle := hmmax q hqI
+    exact absurd hle (not_le.mpr hlt)
+  have hLP : 2 ≤ ((T.graph.neighborFinset m).filter (fun v : T.V => T.IsLeaf v)).card := by omega
+  obtain ⟨y₁, hy₁, y₂, hy₂, hy₁₂⟩ := Finset.one_lt_card.mp
+    (show 1 < ((T.graph.neighborFinset m).filter (fun v : T.V => T.IsLeaf v)).card by omega)
+  obtain ⟨y, hyeq⟩ := (Finset.mem_filter.mp hy₁).2
+  obtain ⟨y', hyeq'⟩ := (Finset.mem_filter.mp hy₂).2
+  have hy1N : T.graph.Adj m y₁ :=
+    (SimpleGraph.mem_neighborFinset T.graph m y₁).mp (Finset.mem_filter.mp hy₁).1
+  have hy2N : T.graph.Adj m y₂ :=
+    (SimpleGraph.mem_neighborFinset T.graph m y₂).mp (Finset.mem_filter.mp hy₂).1
+  refine ⟨m, hmint, hmmax, y, y', ?_, ?_, ?_⟩
+  · intro h
+    exact hy₁₂ (by rw [← hyeq, ← hyeq', h])
+  · rw [hyeq]; exact hy1N.symm
+  · rw [hyeq']; exact hy2N.symm
+
+end Thm2Main
+
 end
 
 end Phylogram
+
+namespace Cladogram
+
+open Phylogram
+
+variable {X : Type u} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **Weller 2023, Theorem 2（树层、δ-free 形式）**：
+
+设 `T` 是正边权、至少三片叶的 cladogram（无度 2 顶点已由结构保证）。若互异的一对叶
+`a, b` 使
+
+    `z(a,b) := d(leaf a, leaf b) + ℓ_T(p_ab)`
+
+在所有互异对上**最大**，则 `a, b` 构成**樱桃**（有公共邻居）。
+
+证明（文献 `:375–387`）：反设 `a,b` 不是樱桃。设 `x` 是 `T.leaf a` 的唯一邻居（即 `a–b` 唯一路径
+的首边另一端）。由 ★★ `not_adj_of_isLeaf_of_isLeaf` 知 `x ≠ T.leaf b`，故 `x` 是 `a–b` 路径上的
+**内部**顶点（它有 `T.leaf a` 与路径上的下一个顶点两个相异邻居，故度 ≥ 3），且 `x` 不同时邻接
+`T.leaf a` 与 `T.leaf b`（否则 `x` 就是公共邻居），于是由 ★★★ `dist_add_pathLeafStatus_lt_leafStatus`
+
+    `z(a,b) < ℓ(x)`。
+
+另一方面，★★★ `exists_cherry_mid_internal_max` 给出樱桃 `{y, y'}`，其中点 `m` 在**内部顶点**中
+`ℓ` 最大，故 `ℓ(x) ≤ ℓ(m)`；又由 ★★★ `eq_of_adj_adj` 有 `z(y,y') = ℓ(m)`。于是
+
+    `z(y,y') = ℓ(m) ≥ ℓ(x) > z(a,b)`，
+
+与 `z(a,b)` 的最大性矛盾。 -/
+theorem exists_isCherry_of_max_z {T : Phylogram.{u, v} X}
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (hcard : 3 ≤ Fintype.card X)
+    {a b : X} (hab : a ≠ b)
+    (hmax : ∀ i j : X, i ≠ j →
+      T.dist (T.leaf i) (T.leaf j) + T.pathLeafStatus (T.leaf i) (T.leaf j)
+        ≤ T.dist (T.leaf a) (T.leaf b) + T.pathLeafStatus (T.leaf a) (T.leaf b)) :
+    T.IsCherry a b := by
+  classical
+  by_contra hnc
+  have hnel : ¬ T.graph.Adj (T.leaf a) (T.leaf b) := not_adj_of_isLeaf_of_isLeaf T hpos hcard hab
+  have hne_ab : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+  obtain ⟨x, hax, P', hPsplit⟩ :=
+    SimpleGraph.Walk.exists_eq_cons_of_ne hne_ab (T.existsUnique_path (T.leaf a) (T.leaf b)).choose
+  have hxlb : x ≠ T.leaf b := fun h => hnel (h ▸ hax)
+  have hP : ((T.existsUnique_path (T.leaf a) (T.leaf b)).choose).IsPath :=
+    (T.existsUnique_path (T.leaf a) (T.leaf b)).choose_spec.1
+  have hxmem : x ∈ (T.existsUnique_path (T.leaf a) (T.leaf b)).choose.support := by
+    rw [hPsplit, SimpleGraph.Walk.support_cons]
+    exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support P')
+  obtain ⟨w, hxw, P'', hP'split⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne hxlb P'
+  have hsupp2 : (T.existsUnique_path (T.leaf a) (T.leaf b)).choose.support
+      = T.leaf a :: x :: P''.support := by
+    simp only [hPsplit, hP'split, SimpleGraph.Walk.support_cons]
+  have hw_ne : T.leaf a ≠ w := by
+    have hnd := hP.support_nodup
+    rw [hsupp2] at hnd
+    have hmem := (List.nodup_cons.mp hnd).1
+    have hstart : w ∈ P''.support := SimpleGraph.Walk.start_mem_support P''
+    intro hw
+    exact hmem (by rw [hw]; exact List.mem_cons_of_mem x hstart)
+  have h2deg : 2 ≤ T.graph.degree x := two_le_degree_of_adj_adj T hax hxw hw_ne
+  have hwint : ¬ T.IsLeaf x := by
+    intro hleaf
+    have h1 := (T.leaf_iff_degree_one x).mp hleaf
+    omega
+  have hnot : ¬ (T.graph.Adj (T.leaf a) x ∧ T.graph.Adj x (T.leaf b)) := by
+    rintro ⟨-, hxb⟩
+    exact hnc ⟨hab, x, hax, hxb.symm⟩
+  have hlt : T.dist (T.leaf a) (T.leaf b) + T.pathLeafStatus (T.leaf a) (T.leaf b)
+      < T.leafStatus x :=
+    dist_add_pathLeafStatus_lt_leafStatus T hpos hab hxmem hwint hnot
+  obtain ⟨m, hmint, hmmax, y₁, y₂, hy₁₂, hadj₁, hadj₂⟩ :=
+    exists_cherry_mid_internal_max T hpos hcard
+  have hzy : T.dist (T.leaf y₁) (T.leaf y₂) + T.pathLeafStatus (T.leaf y₁) (T.leaf y₂)
+      = T.leafStatus m :=
+    eq_of_adj_adj T hy₁₂ hadj₁ hadj₂.symm
+  have hle := hmax y₁ y₂ hy₁₂
+  have hxle : T.leafStatus x ≤ T.leafStatus m := hmmax x hwint
+  linarith
+
+end Cladogram
