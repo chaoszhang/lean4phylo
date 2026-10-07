@@ -13,6 +13,7 @@ import Phylo.Algorithm.UPGMA
 import Phylo.Binary
 import Phylo.Buneman
 import Phylo.BunemanGraft
+import Phylo.CherryQuartet
 import Phylo.Consensus
 import Phylo.Core
 import Phylo.Dendrogram
