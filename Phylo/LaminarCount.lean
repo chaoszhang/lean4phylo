@@ -184,8 +184,8 @@ namespace Split
 
 variable {α : Type u} [Fintype α] [DecidableEq α]
 
-/-- **同一 `sideA` ⟹ split 相等**（`sideB` 是补，故 `parts` 相同）。 -/
-theorem eq_of_sideA_eq {s t : Split α} (h : s.sideA = t.sideA) : s = t := by
+/-- **同一 sideA ⟹ split 相等**（sideB 是补，故 parts 相同）。Phylo/QuartetUnique.lean 里有同名版本，但本文件为保持轻依赖不 import 它，故加撇号。 -/
+theorem eq_of_sideA_eq' {s t : Split α} (h : s.sideA = t.sideA) : s = t := by
   refine KPartition.eq_iff_parts s t |>.mpr ?_
   funext i
   fin_cases i
@@ -241,7 +241,7 @@ theorem away_idx_injective (ρ : α) :
       rw [idx_of_mem ρ ht, idx_of_notMem ρ hu] at h2
       exact absurd h2 (by decide)
     rw [away_of_mem ρ ht, away_of_mem ρ hu] at h1
-    refine Split.eq_of_sideA_eq ?_
+    refine Split.eq_of_sideA_eq' ?_
     have ht' : t.sideA = t.sideBᶜ := by rw [Split.sideB_eq_compl, compl_compl]
     have hu' : u.sideA = u.sideBᶜ := by rw [Split.sideB_eq_compl, compl_compl]
     rw [ht', hu', h1]
@@ -250,7 +250,7 @@ theorem away_idx_injective (ρ : α) :
       rw [idx_of_notMem ρ ht, idx_of_mem ρ hu] at h2
       exact absurd h2 (by decide)
     rw [away_of_notMem ρ ht, away_of_notMem ρ hu] at h1
-    exact Split.eq_of_sideA_eq h1
+    exact Split.eq_of_sideA_eq' h1
 
 /-- 相容 split 的 away-侧**相容**（`SidesCompatible`）。 -/
 theorem sidesCompatible_away (ρ : α) {t u : Split α} (h : Compatible t u) :
