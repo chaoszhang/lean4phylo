@@ -40,6 +40,10 @@ import Phylo.CherryQuartet
 * ✅ ★★ `maxZCherryCore_of_pos'`（T0.8）
 * ✅ ★★★ **`maxZCherryCore_of_exists_pos`（T0.3 收口：度量层 = 「存在全正实现树 ⟹ `MaxZCherryCore`」，
   `def` 缺口正式变成定理；正权假设显式化，理由与反例见该定理 docstring）**
+* ✅ ★★ `HasPositiveRealization`（正权实现树，可复用命题名）
+* ✅ ★★★ `maxZCherryCore_of_hasPositiveRealization`
+* ✅ ★★ `max_z_gives_split_of_hasPositiveRealization`（**T0.3 step D**：`hcore`-自由版）
+* ✅ ★★★ `nj_cherry_of_hasPositiveRealization`（**T0.3 step D 主接口**：`hcore` 从下游接口上摘掉）
 -/
 
 
@@ -201,6 +205,47 @@ theorem maxZCherryCore_of_exists_pos (δ : Dissimilarity X)
     δ.MaxZCherryCore := by
   obtain ⟨T, hpos, hT⟩ := h
   exact maxZCherryCore_of_pos' δ hpos hT
+
+/-! ## T0.3 step D：把 `hcore` 假设从 NJ 的接口上摘掉
+
+`Phylo/Algorithm/NJ.lean` 的 ★★ `max_z_gives_split` 与 ★★★ `nj_cherry` 都以
+`hcore : δ.MaxZCherryCore`（那个 `def` 缺口）为**显式假设**。本节的封装把它们换成
+**文献形态的假设**「`δ` 有一棵每条边权都严格为正的实现树」（= Weller 2023 Thm 2 的前提，
+也 = ADR 2016 里物种树的「binary 且内部边长全正」），于是 `MaxZCherryCore` 这个 `def`
+**不再出现在下游接口上**（HANDOVER §4.2 T0.3 的「D 步」）。
+
+⚠️ **为什么不在 `NJ.lean` 里直接改签名**：`NJ.lean` 不能 import 本文件（本文件 import `NJ`，会成环），
+故 `hcore`-自由版只能住在 NJ 之上 —— 就是本节。 -/
+
+/-- ★★ **正权实现树**（T0.3 的文献形态假设，可复用的命题名）。 -/
+def HasPositiveRealization (δ : Dissimilarity X) : Prop :=
+  ∃ T : Phylogram.{u, v} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
+    ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y
+
+/-- ★★★ **`HasPositiveRealization ⟹ MaxZCherryCore`**（= ★★★ `maxZCherryCore_of_exists_pos` 的打包形式）。 -/
+theorem maxZCherryCore_of_hasPositiveRealization (δ : Dissimilarity X)
+    (h : δ.HasPositiveRealization) : δ.MaxZCherryCore :=
+  maxZCherryCore_of_exists_pos δ h
+
+/-- ★★ **`max_z_gives_split` 的 `hcore`-自由版**：假设换成「正权实现树」。 -/
+theorem max_z_gives_split_of_hasPositiveRealization (δ : Dissimilarity X)
+    (h : δ.HasPositiveRealization) (hcard : 4 ≤ Fintype.card X) (hfp : δ.FourPoint)
+    (a b : X) (hab : a ≠ b)
+    (hmax : ∀ i j : X, i ≠ j → δ.z i j ≤ δ.z a b) :
+    ∀ i j : X, i ≠ j → i ≠ a → i ≠ b → j ≠ a → j ≠ b →
+      δ.val a b + δ.val i j ≤ δ.val a i + δ.val b j ∧
+      δ.val a b + δ.val i j ≤ δ.val a j + δ.val b i :=
+  max_z_gives_split δ (maxZCherryCore_of_hasPositiveRealization δ h) hcard hfp a b hab hmax
+
+/-- ★★★ **`nj_cherry` 的 `hcore`-自由版**（T0.3 step D 的主接口）：
+「`δ` 满足四点条件 + 有正权实现树 + `(a,b)` 最小化 `Q` ⟹ `(a,b)` 是樱桃」，
+**不再需要把 `MaxZCherryCore` 当假设**。 -/
+theorem nj_cherry_of_hasPositiveRealization (δ : Dissimilarity X)
+    (h : δ.HasPositiveRealization) (hfp : δ.FourPoint)
+    (a b : X) (hab : a ≠ b)
+    (hmin : ∀ i j : X, i ≠ j → δ.Q a b ≤ δ.Q i j) :
+    δ.IsCherry a b :=
+  nj_cherry δ (maxZCherryCore_of_hasPositiveRealization δ h) hfp a b hab hmin
 
 -- ===== T08 END =====
 
