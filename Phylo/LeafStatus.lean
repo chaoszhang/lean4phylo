@@ -4,6 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.TreeDistance
+import Phylo.Split
+import Phylo.InternalEdge
 import Mathlib.Tactic
 
 /-!
@@ -38,22 +40,55 @@ import Mathlib.Tactic
 4. ★★★ **Corollary 1**（文献 `:207`）：★★★ `leafStatus_minimizer_not_isLeaf` ——
    `|X| ≥ 3` 且正边权时，`ℓ` 最小的结点不是叶。
    辅助：★★ `eq_add_dist_of_ne_of_unique_adj`（叶的唯一邻居给出的距离分解）。
+5. ★★★ **Observation 2**（文献 `:138–143`，第 6 节）：★★★ `pathLeafStatus`（路径的叶状态
+   `ℓ_T(p) := Σ_{x∈X} d_T(x,p)`，其中 `d_T(x,p)` 是 ★★ `distToPath` = 到路径的最小距离，
+   用投影点 ★★ `projOnPath` 表达）、★★★ `pathLeafStatus_eq`
+   （`ℓ_T(p) = ½(ℓ_T(u) + ℓ_T(v) − |L(T)|·d(u,v))`）；
+   辅助：★★★ `distToPath_eq_half`（投影距离公式）、`distToPath_le`、`distToPath_left/right`。
+6. ★★★ **Lemma 2**（文献 `:213–214`，第 7–9 节）：★★★ `leafStatus_strict_mono` ——
+   沿以 `ℓ` 最小者 `v₀` 为起点、相继相邻且单射的序列 `(v₀,…,v_k)`：
+   `ℓ(v₀) ≤ ℓ(v₁) < ℓ(v₂) < … < ℓ(v_k)`（第一段**弱**、严格性从 `i = 1` 起）。
+   地基（同时供 Lemma 3 用）：
+   * §7 ★★ `dist_le_dist_of_inSide` / `inSide_of_dist_lt` / `eq_add_dist_of_inSide`
+     —— **边侧 ⟷ 距离比较**（文献 `:130–133` 的 `L^{uv}_u` 与删边分量版等价）；
+   * §8 ★★ `sideLeaves_subset_of_adj`、★★★ `sideLeaves_card_lt_of_adj`
+     —— 侧集**严格嵌套**（文献 `:232–249`，**「无度 2」正是这里起作用**）；
+   * §9 ★★★ `leafStatus_sub_card_sideLeaves` / `leafStatus_le_iff_card_sideLeaves` /
+     `leafStatus_lt_iff_card_sideLeaves` —— **等价式 (2)**（文献 `:251–275`）；
+   * §9 ★★★ `leafStatus_lt_of_leafStatus_le_of_adj` —— 局部一步。
+7. ★★★ **Lemma 3**（文献 `:328–329`，第 10–11 节）：**`z(u,v) ≤ ℓ(w)` 一半已完成**：
+   * ★★★ `dist_add_pathLeafStatus_le_leafStatus` ——
+     `d(leaf u, leaf v) + ℓ_T(p) ≤ ℓ_T(w)`（`w` 在 `u–v` 路径上即可）；
+   * ★★★ `eq_dist_add_pathLeafStatus_iff` —— **等号的精确刻画**：等号 ⟺ 每个第三者叶 `x`
+     到 `w` 的距离等于它到路径的距离（`w` 是 `x` 的投影）；
+   * ★★★ `eq_of_adj_adj` —— 文献的**几何条件 ⟹ 等号**（`w` 同时邻接两片叶，即 `p = (u,w,v)`）；
+   * 辅助：★★ `sum_eq_add_add_sum_erase`、`leafStatus_sub_dist_add_pathLeafStatus`、
+     `dist_eq_add_of_mem_path_support`、★★ `eq_of_adj_leaf`、`support_eq_of_adj_adj`、
+     `eq_or_eq_or_eq_of_mem_support_of_adj_adj`、`distToPath_nonneg`。
 
 **额外假设一览（文献 `:124` 的正边权被显式参数化；本库 `w_nonneg` 只给 `≥ 0`）**：
 
 * `leafStatus_leaf_sub` / `leafStatus_sub`：只需**该边**正权 `0 < T.wExt s(u,v)`
   （⚠️ `ω < 0` 时 Lemma 1 的恒等式**为假**）；
 * `leafStatus_minimizer_not_isLeaf` / `pos_walkDist_of_ne` / `pos_dist_of_ne` /
-  `eq_add_dist_of_min_support` / `exists_median_eq_half`：全局正边权
+  `eq_add_dist_of_min_support` / `exists_median_eq_half` / `pathLeafStatus_eq` /
+  `leafStatus_strict_mono` 及其 §7–§9 地基：全局正边权
   `∀ e : Edge T.toCladogram, 0 < T.w e`（文献 `:124` 的 `ω : E(T) → ℕ⁺`；
-  `:397–402` 说其实内部边正权已够）。
+  `:397–402` 说其实内部边正权已够）；
+* §7 的 ★★ `dist_le_dist_of_inSide` / `inSide_of_dist_lt` **不需要正权**（只用 `w_nonneg`）；
+  §8 的侧集嵌套也**不需要正权**。
 
-## ⬜ 未完成（本轮范围之外，未虚报）
+## ⬜ 未完成（未虚报）
 
-* **Lemma 2**（文献 `:213–214`，沿路径 `ℓ` 单调）—— 未做。
-* **Lemma 3**（文献 `:328–329`，`z(u,v) ≤ ℓ(w)`、等号 iff `p = (u,w,v)`）—— 未做。
-* **Observation 2**（文献 `:143`，`ℓ(p) = ½(ℓ(u)+ℓ(v)−|L(T)|·d(u,v))`）—— 未做
-  （可由本文件的 ★★★ `exists_median_eq_half` 加求和线性性组合，但不属本轮四项）。
+* **Lemma 3 的等号条件的「几何反向」**：等号 ⟹ `p = (u,w,v)`（即 `w` 同时邻接两片叶）。
+  已有的是投影式刻画 ★★★ `eq_dist_add_pathLeafStatus_iff` 与几何正向 ★★★ `eq_of_adj_adj`；
+  反向需要「路径 `p` 上某内部顶点的第三条分支必含一片**投影恰落在该顶点**的叶」
+  （用 `T.no_degree_two` + §8 的侧集工具可做：设 `p₁` 是 `u` 在 `p` 上的邻居，
+  若 `p₁ ≠ w`，由 `deg p₁ ≥ 3` 取第三分支的叶 `z`，则 `z` 的投影是 `p₁`，故
+  `d(z,p) < d(z,w)`，与等号矛盾 —— 对 `p_{m-1}` 同理，两向夹逼得 `p = (u,w,v)`）；
+  本轮**未做**，故 Lemma 3 的几何等号条件只完成了一半（⟸）。
+* **本轮之前文献 Observation 1 的「路径」字面形式**：已处理（见第 5 节，题面字面版为假，
+  本文件证的是文献原意 `min_{y∈V(p)} d(x,y)`）。
 -/
 
 universe u v
@@ -473,6 +508,705 @@ theorem exists_median_eq_half (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (x 
   linarith
 
 end Observation1
+
+/-! ## 6. 路径的叶状态与 ★★★ Observation 2（文献 `:138–143`）
+
+文献 `:126` 定义 **`x` 到路径 `p` 的距离**为路径上各点距离的**最小值**
+`d_T(x,p) := min_{y∈V(p)} d_T(x,y)`；文献 `:138` 定义**路径的叶状态**
+
+    `ℓ_T(p) := Σ_{x∈L(T)} d_T(x,p)`，
+
+Observation 2（`:143`）断言 `ℓ_T(p) = ½(ℓ_T(u) + ℓ_T(v) − |L(T)|·d(u,v))`。
+
+本库的实现：**不**把 `min` 做成 `def`，而是用 ★★★ `exists_median_eq_half` 给出的**投影点**
+`projOnPath u v x`（`x` 在 `u–v` 路径上取到该最小值的点）来表达：
+`distToPath u v x := d(x, projOnPath u v x)`。`|L(T)|` 就是 `Fintype.card X`。 -/
+
+section PathLeafStatus
+
+variable (T : Phylogram.{u, v} X)
+
+/-- `u–v` 路径的顶点集（`support` 的 `Finset` 形式）非空（含 `u`）。 -/
+theorem support_toFinset_nonempty (u v : T.V) :
+    ((T.existsUnique_path u v).choose.support.toFinset).Nonempty :=
+  ⟨u, List.mem_toFinset.mpr (SimpleGraph.Walk.start_mem_support _)⟩
+
+/-- **投影点的存在性**：`u–v` 路径上存在一点，使得到 `x` 的距离在路径上取最小。 -/
+theorem exists_projOnPath (u v x : T.V) :
+    ∃ y ∈ (T.existsUnique_path u v).choose.support,
+      ∀ z ∈ (T.existsUnique_path u v).choose.support, T.dist x y ≤ T.dist x z := by
+  classical
+  obtain ⟨y, hy, hmin⟩ :=
+    Finset.exists_min_image _ (fun y => T.dist x y) (support_toFinset_nonempty T u v)
+  exact ⟨y, List.mem_toFinset.mp hy, fun z hz => hmin z (List.mem_toFinset.mpr hz)⟩
+
+/-- ★★ **`x` 在 `u–v` 路径上的投影点**（取到 `d_T(x,p)` 的点）。 -/
+noncomputable def projOnPath (u v x : T.V) : T.V := (exists_projOnPath T u v x).choose
+
+/-- ★ 投影点落在路径上。 -/
+theorem projOnPath_mem (u v x : T.V) :
+    T.projOnPath u v x ∈ (T.existsUnique_path u v).choose.support :=
+  (exists_projOnPath T u v x).choose_spec.1
+
+/-- ★ 投影点使 `d(x,·)` 在路径上取最小。 -/
+theorem projOnPath_min (u v x : T.V) {z : T.V}
+    (hz : z ∈ (T.existsUnique_path u v).choose.support) :
+    T.dist x (T.projOnPath u v x) ≤ T.dist x z :=
+  (exists_projOnPath T u v x).choose_spec.2 z hz
+
+/-- ★★ **点到路径的距离** `d_T(x,p) = min_{y∈V(p)} d_T(x,y)`（文献 `:126`），
+用投影点表达。 -/
+noncomputable def distToPath (u v x : T.V) : ℝ := T.dist x (T.projOnPath u v x)
+
+/-- ★ `d_T(x,p)` 不超过路径上任一点到 `x` 的距离。 -/
+theorem distToPath_le {u v x z : T.V} (hz : z ∈ (T.existsUnique_path u v).choose.support) :
+    T.distToPath u v x ≤ T.dist x z :=
+  projOnPath_min T u v x hz
+
+/-- ★ `d_T(x,p)` 由路径上的投影点取到。 -/
+theorem exists_distToPath_eq (u v x : T.V) :
+    ∃ z ∈ (T.existsUnique_path u v).choose.support, T.distToPath u v x = T.dist x z :=
+  ⟨T.projOnPath u v x, projOnPath_mem T u v x, rfl⟩
+
+/-- ★★★ **投影点的距离公式**（= Observation 1 的内容，用于 Observation 2）：
+
+    `d_T(x,p) = ½(d(x,u) + d(x,v) − d(u,v))`。 -/
+theorem distToPath_eq_half (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (u v x : T.V) :
+    T.distToPath u v x = (T.dist x u + T.dist x v - T.dist u v) / 2 := by
+  obtain ⟨q, hq, hformula, hmin⟩ := exists_median_eq_half T hpos x u v
+  refine le_antisymm ?_ ?_
+  · exact (distToPath_le T hq).trans_eq hformula
+  · rw [← hformula]
+    exact hmin _ (projOnPath_mem T u v x)
+
+end PathLeafStatus
+
+section Observation2
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+/-- ★★★ **路径的叶状态**（文献 `:138`）：`ℓ_T(p) := Σ_{x∈X} d_T(x, p)`，
+其中 `p` 是 `u–v` 的唯一路径、`d_T(x,p)` 是 ★★ `distToPath`。 -/
+noncomputable def pathLeafStatus (u v : T.V) : ℝ := ∑ x : X, T.distToPath u v (T.leaf x)
+
+omit [DecidableEq X] in
+/-- ★★★ **Observation 2（Weller 2023 `:143`）**：
+
+    `ℓ_T(p) = ½·(ℓ_T(u) + ℓ_T(v) − |L(T)|·d(u,v))`，
+
+其中 `p` 是 `u–v` 路径、`|L(T)| = Fintype.card X`（本库的叶恰是 `X` 的像）。
+
+⚠️ **所加假设**：文献 `:124` 的正边权 `∀ e, 0 < T.w e`（经 ★★★ `distToPath_eq_half`，
+即 Observation 1，用到「`d(z,q) = 0 ⟹ z = q`」）。 -/
+theorem pathLeafStatus_eq (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (u v : T.V) :
+    T.pathLeafStatus u v
+      = (T.leafStatus u + T.leafStatus v - (Fintype.card X : ℝ) * T.dist u v) / 2 := by
+  have hpt : ∀ x : X, T.distToPath u v (T.leaf x)
+      = (T.dist (T.leaf x) u + T.dist (T.leaf x) v - T.dist u v) / 2 :=
+    fun x => distToPath_eq_half T hpos u v (T.leaf x)
+  have h1 : (∑ x : X, T.dist (T.leaf x) u) = T.leafStatus u := by
+    rw [leafStatus_def]
+    exact Finset.sum_congr rfl fun x _ => (Phylo.TreeDist.dist_comm T u (T.leaf x)).symm
+  have h2 : (∑ x : X, T.dist (T.leaf x) v) = T.leafStatus v := by
+    rw [leafStatus_def]
+    exact Finset.sum_congr rfl fun x _ => (Phylo.TreeDist.dist_comm T v (T.leaf x)).symm
+  have h3 : (∑ _x : X, T.dist u v) = (Fintype.card X : ℝ) * T.dist u v := by
+    rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  simp only [pathLeafStatus]
+  rw [Finset.sum_congr rfl fun x _ => hpt x, ← Finset.sum_div, Finset.sum_sub_distrib,
+    Finset.sum_add_distrib, h1, h2, h3]
+
+end Observation2
+
+/-! ## 7. 边侧 ⟷ 距离比较（Lemma 2 / Lemma 3 的地基）
+
+设 `u, v` **相邻**、`e := s(u,v)`。文献 `:130–133` 把 `L^{uv}_u` 定义为**距离**较近的叶集，
+而 `Phylo/Split.lean` 的 `T.inSide e u y` / `T.sideLeaves e u` 用**删边分量**表述。
+本节的桥：
+
+* ★★ `dist_le_dist_of_inSide`：在 `u` 侧 ⟹ `d(y,u) ≤ d(y,v)`；
+* ★★ `inSide_of_dist_lt`：`d(y,v) < d(y,u)` ⟹ 在 `v` 侧。
+
+两者合起来：**哪一侧 ⟺ 离谁更近**（这正是 Lemma 2 的 (2) 式里
+`L←_i` / `L→_i` 与删边叶侧集可以互换的依据）。
+
+证明都只用到一件事：若 `y → v` 的唯一路径 `W` 用了边 `e`，则由 ★★
+`dist_eq_add_of_mem_support`（取 `u ∈ W.support`）得 `d(y,v) = d(y,u) + ω ≥ d(y,u)`；
+反之 `e ∉ W.edges` 时 `W.toDeleteEdges` 给出 `T - e` 中 `y → v` 的可达性。 -/
+
+section SideDist
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **走向「远端」的路径不能用 `s(u,v)`**：`u,v` 相邻且 `d(y,v) < d(y,u)` 时，
+`y → v` 的唯一路径不含边 `s(u,v)`。
+
+（否则 `u ∈ W.support`，`d(y,v) = d(y,u) + d(u,v) ≥ d(y,u)`，与 `d(y,v) < d(y,u)` 矛盾。） -/
+theorem not_mem_edges_of_dist_lt {u v y : T.V}
+    (h : T.dist y v < T.dist y u) :
+    s(u, v) ∉ (T.existsUnique_path y v).choose.edges := by
+  intro hmem
+  have hW : ((T.existsUnique_path y v).choose).IsPath := (T.existsUnique_path y v).choose_spec.1
+  have hu : u ∈ (T.existsUnique_path y v).choose.support :=
+    SimpleGraph.Walk.fst_mem_support_of_mem_edges _ hmem
+  have hadd : T.dist y v = T.dist y u + T.dist u v :=
+    Phylo.TreeDist.dist_eq_add_of_mem_support T _ hW hu
+  have h0 : 0 ≤ T.dist u v := Phylo.TreeDist.dist_nonneg T u v
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **较近 ⟹ 在该侧**：若 `d(y,v) < d(y,u)`（`u,v` 相邻），则 `y` 在 `s(u,v)` 的 `v` 侧
+（即 `T - s(u,v)` 中 `y` 与 `v` 可达）。 -/
+theorem inSide_of_dist_lt {u v y : T.V} (h : T.dist y v < T.dist y u) :
+    T.inSide s(u, v) v y := by
+  have hne := not_mem_edges_of_dist_lt T h
+  have hreach : (T.graph.deleteEdges {s(u, v)}).Reachable y v :=
+    (SimpleGraph.Walk.toDeleteEdges {s(u, v)} _ (by
+      intro e' he' hmem
+      exact hne (Set.mem_singleton_iff.mp hmem ▸ he'))).reachable
+  exact reachable_comm.mp hreach
+
+/-- ★★ **在该侧 ⟹ 距离不大**：若 `y` 在 `s(u,v)` 的 `u` 侧（`u,v` 相邻），则 `d(y,u) ≤ d(y,v)`。
+
+（否则 `d(y,v) < d(y,u)`；由上一条 `y` 与 `v` 在 `T - s(u,v)` 中可达，与 `y` 与 `u` 可达
+合起来给出 `u` 与 `v` 在该图中可达 —— 与「边是桥」矛盾。） -/
+theorem dist_le_dist_of_inSide {u v y : T.V} (huv : T.graph.Adj u v)
+    (hy : T.inSide s(u, v) u y) : T.dist y u ≤ T.dist y v := by
+  by_contra hcon
+  rw [not_le] at hcon
+  have hne := not_mem_edges_of_dist_lt T hcon
+  have hreach : (T.graph.deleteEdges {s(u, v)}).Reachable y v :=
+    (SimpleGraph.Walk.toDeleteEdges {s(u, v)} _ (by
+      intro e' he' hmem
+      exact hne (Set.mem_singleton_iff.mp hmem ▸ he'))).reachable
+  have hyu : (T.graph.deleteEdges {s(u, v)}).Reachable y u := reachable_comm.mp hy
+  exact T.not_reachable_deleteEdges_of_adj huv (hyu.symm.trans hreach)
+
+/-- ★★ **在 `u` 侧 ⟹ 严格更近**（正边权）：`y` 在 `s(u,v)` 的 `u` 侧时
+`d(y,u) < d(y,v)`（由 `adj_dichotomy`：两侧之差恰为 `ω(s(u,v)) > 0`）。 -/
+theorem dist_lt_of_inSide {u v y : T.V} (huv : T.graph.Adj u v)
+    (hω : 0 < T.wExt s(u, v)) (hy : T.inSide s(u, v) u y) : T.dist y u < T.dist y v := by
+  have hle := dist_le_dist_of_inSide T huv hy
+  rcases adj_dichotomy T huv (y := y) with hd | hd
+  · linarith
+  · linarith
+
+/-- ★★ **在 `u` 侧的距离分解**（正边权）：`d(y,v) = d(y,u) + ω(s(u,v))`。 -/
+theorem eq_add_dist_of_inSide {u v y : T.V} (huv : T.graph.Adj u v)
+    (hω : 0 < T.wExt s(u, v)) (hy : T.inSide s(u, v) u y) :
+    T.dist y v = T.dist y u + T.wExt s(u, v) := by
+  have hle := dist_le_dist_of_inSide T huv hy
+  rcases adj_dichotomy T huv (y := y) with hd | hd
+  · exact hd
+  · exfalso; linarith
+
+end SideDist
+
+/-! ## 8. 侧集的包含与严格嵌套（Lemma 2 的「无度 2」入口）
+
+路径上相继三点 `a — x — b`（`a ≠ b`）：
+
+* ★★ `sideLeaves_subset_of_adj`：`a` 侧（关于边 `s(a,x)`）⊆ `x` 侧（关于边 `s(x,b)`）；
+* ★★★ `sideLeaves_card_lt_of_adj`：再加上「`x` 无度 2」时包含是**严格**的
+  （第三条边 `x—c` 的分支里必有叶，它落在 `x` 侧而不在 `a` 侧）。
+
+这正是文献 `:232–249` 里 `L→_i ⊂ L←_{i−1}` 那一步 —— **真包含**正是「无度 2 顶点」起作用之处。 -/
+
+section SideNesting
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+/-- ★★ **侧包含**：`a — x — b` 为路径上相继三点（`a ≠ b`）时，
+关于边 `s(a,x)` 的 `a` 侧 ⊆ 关于边 `s(x,b)` 的 `x` 侧。
+
+证明：取 `z` 在 `a` 侧。因 `b` 与 `x` 相邻且边 `s(x,b) ≠ s(a,x)`，`b` 与 `x` 关于 `s(a,x)` 同侧，
+故 `b ∉ z 侧`；于是 `z 侧` 不含 `x`、`b`，由 ★★ `inSide_deleteEdges_of_inSide`（删边不破坏同侧）
+得 `z` 与 `a` 关于 `s(x,b)` 同侧；再把基准从 `a` 换到 `x`（`s(a,x) ≠ s(x,b)` + `inSide_congr_of_adj`）。 -/
+theorem sideLeaves_subset_of_adj {a x b : T.V} (hax : T.graph.Adj a x)
+    (hxb : T.graph.Adj x b) (hab : a ≠ b) :
+    T.sideLeaves s(a, x) a ⊆ T.sideLeaves s(x, b) x := by
+  have hne : s(x, b) ≠ s(a, x) := by
+    intro h
+    have hb : b ∈ s(a, x) := h ▸ (Sym2.mem_iff.mpr (Or.inr rfl) : b ∈ s(x, b))
+    rcases Sym2.mem_iff.mp hb with h1 | h1
+    · exact hab h1.symm
+    · exact hxb.ne h1.symm
+  intro z hz
+  rw [T.mem_sideLeaves_iff_inSide] at hz ⊢
+  have hx_not : ¬ T.inSide s(a, x) (T.leaf z) x := by
+    have hboth := T.not_inSide_both hax (y := T.leaf z)
+    exact fun h => hboth ⟨hz, (T.inSide_comm _ _ _).mp h⟩
+  have hb_not : ¬ T.inSide s(a, x) (T.leaf z) b := by
+    intro hb
+    exact hx_not (((T.inSide_congr_of_adj (e₁ := s(a, x)) (u₁ := T.leaf z) hxb hne).mpr hb))
+  have h1 : T.inSide s(x, b) (T.leaf z) a :=
+    T.inSide_deleteEdges_of_inSide (e₁ := s(a, x)) (e₂ := s(x, b)) (c := x) (d := b)
+      (p := T.leaf z) (q := a) rfl ((T.inSide_comm _ _ _).mp hz) hx_not hb_not
+  have h2 : T.inSide s(x, b) (T.leaf z) x :=
+    (T.inSide_congr_of_adj (e₁ := s(x, b)) (u₁ := T.leaf z) hax hne.symm).mp h1
+  exact (T.inSide_comm _ _ _).mp h2
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`x` 有两条以上不同的相邻边 ⟹ 度 ≥ 2**。 -/
+theorem two_le_degree_of_adj_adj {a x b : T.V} (hax : T.graph.Adj a x)
+    (hxb : T.graph.Adj x b) (hab : a ≠ b) : 2 ≤ T.graph.degree x := by
+  have hsub : ({a, b} : Finset T.V) ⊆ T.graph.neighborFinset x := by
+    intro y hy
+    rw [Finset.mem_insert, Finset.mem_singleton] at hy
+    rw [SimpleGraph.mem_neighborFinset]
+    rcases hy with rfl | rfl
+    · exact hax.symm
+    · exact hxb
+  have hcard := Finset.card_le_card hsub
+  rw [Finset.card_pair hab, SimpleGraph.card_neighborFinset_eq_degree] at hcard
+  exact hcard
+
+/-- ★★★ **侧集的严格嵌套**（Lemma 2 的严格性来源，文献 `:232–249`）：
+
+`a — x — b` 相继（`a ≠ b`）且 `x` **无度 2** 时
+
+    `|a 侧(s(a,x))| < |x 侧(s(x,b))|`。
+
+证明：包含由 ★★ `sideLeaves_subset_of_adj` 给出；严格性由**第三条边** `x—c`（`c ∉ {a,b}`，
+存在性来自 `deg x ≥ 3`）的分支取叶 `z`（`sideLeaves_nonempty_of_adj`）：`z` 落在 `x` 侧
+（对边 `s(x,b)`）而不落在 `a` 侧（对边 `s(a,x)`）—— 两次都用 ★★ `sideLeaves_subset_of_adj` 加「补侧」。 -/
+theorem sideLeaves_card_lt_of_adj {a x b : T.V} (hax : T.graph.Adj a x)
+    (hxb : T.graph.Adj x b) (hab : a ≠ b) (hdeg : T.graph.degree x ≠ 2) :
+    (T.sideLeaves s(a, x) a).card < (T.sideLeaves s(x, b) x).card := by
+  have htwo := two_le_degree_of_adj_adj T hax hxb hab
+  have hthree : 3 ≤ T.graph.degree x := by omega
+  -- 第三条边 x—c
+  obtain ⟨c, hc, hca, hcb⟩ : ∃ c ∈ T.graph.neighborFinset x, c ≠ a ∧ c ≠ b := by
+    by_contra hcon
+    rw [not_exists] at hcon
+    have hsub : T.graph.neighborFinset x ⊆ ({a, b} : Finset T.V) := by
+      intro y hy
+      have hy' := hcon y
+      rw [Finset.mem_insert, Finset.mem_singleton]
+      by_contra hnb
+      rw [not_or] at hnb
+      exact hy' ⟨hy, hnb.1, hnb.2⟩
+    have hcard := Finset.card_le_card hsub
+    rw [Finset.card_pair hab, SimpleGraph.card_neighborFinset_eq_degree] at hcard
+    omega
+  have hxc : T.graph.Adj x c := (SimpleGraph.mem_neighborFinset T.graph x c).mp hc
+  -- c 分支里的叶 z
+  obtain ⟨z, hz⟩ := T.sideLeaves_nonempty_of_adj hxc.symm
+  have hzR : z ∈ T.sideLeaves s(x, b) x :=
+    sideLeaves_subset_of_adj T hxc.symm hxb hcb hz
+  have hznotL : z ∉ T.sideLeaves s(a, x) a := by
+    have hz' : z ∈ T.sideLeaves s(x, a) x :=
+      sideLeaves_subset_of_adj T hxc.symm hax.symm hca hz
+    rw [Sym2.eq_swap, T.sideLeaves_compl_adj hax] at hz'
+    exact Finset.mem_compl.mp hz'
+  refine Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr
+    ⟨sideLeaves_subset_of_adj T hax hxb hab, ?_⟩)
+  intro heq
+  exact hznotL (heq.symm ▸ hzR)
+
+end SideNesting
+
+/-! ## 9. Lemma 2（文献 `:213–214`）：沿以 `ℓ` 最小者为起点的路径，`ℓ` 弱增后严格增
+
+正文（含 (2) 式的 Lean 形式）：
+
+* ★★ `pos_wExt_of_adj` —— 相邻边的权为正（全局正边权假设）；
+* ★★★ `leafStatus_le_iff_card_sideLeaves` / ★★★ `leafStatus_lt_iff_card_sideLeaves`
+  —— **等价式 (2)**：`ℓ(u) ≤ ℓ(v) ⟺ |L(T)| ≤ 2|u 侧叶|`（`<` 同理）；
+* ★★★ `leafStatus_lt_of_leafStatus_le_of_adj` —— **局部一步**（用 ★★★ `sideLeaves_card_lt_of_adj`
+  的严格嵌套 + 等价式 (2) 的算术）；
+* ★★★ `leafStatus_strict_mono_of_walk` —— **Lemma 2 本体**
+  （路径用 `v : ℕ → T.V` 在 `{0,…,k}` 上「相继相邻 + 单射」表述）。 -/
+
+section Lemma2
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **相邻边的权为正**（文献 `:124` 的 `ω : E(T) → ℕ⁺`）。 -/
+theorem pos_wExt_of_adj (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {u v : T.V}
+    (h : T.graph.Adj u v) : 0 < T.wExt s(u, v) := by
+  rw [Phylo.TreeDist.wExt_eq_w T ((SimpleGraph.mem_edgeSet T.graph).mpr h)]
+  exact hpos ⟨s(u, v), (SimpleGraph.mem_edgeSet T.graph).mpr h⟩
+
+/-- ★★★ **Lemma 1 的「侧集」形式**（等价式 (2) 的来源）：`u, v` 相邻、`ω(s(u,v)) > 0` 时
+
+    `ℓ(u) − ℓ(v) = ω(s(u,v)) · (|L(T)| − 2·|u 侧叶|)`。
+
+证明：由 ★★★ `leafStatus_sub`，`ℓ(u) − ℓ(v) = ω(|L^{uv}_v| − |L^{uv}_u|)`；两个「更近」集互补
+（★ `adj_dichotomy` + `ω > 0`），故 `|L^{uv}_v| − |L^{uv}_u| = |L(T)| − 2|L^{uv}_u|`；
+再由 §7 的桥把 `L^{uv}_u = {x : d(x,u) < d(x,v)}` 换成删边叶侧集 `T.sideLeaves s(u,v) u`。 -/
+theorem leafStatus_sub_card_sideLeaves {u v : T.V} (huv : T.graph.Adj u v)
+    (hω : 0 < T.wExt s(u, v)) :
+    T.leafStatus u - T.leafStatus v
+      = T.wExt s(u, v) * ((Fintype.card X : ℝ) - 2 * ((T.sideLeaves s(u, v) u).card : ℝ)) := by
+  have hcompl : ∀ x : X, ¬ (T.dist (T.leaf x) v < T.dist (T.leaf x) u) ↔
+      T.dist (T.leaf x) u < T.dist (T.leaf x) v := by
+    intro x
+    constructor
+    · intro h
+      rcases adj_dichotomy T huv (y := T.leaf x) with hd | hd
+      · linarith
+      · exfalso; linarith
+    · intro h h'; linarith
+  have hcard_part :
+      ((Finset.univ.filter
+          (fun x : X => T.dist (T.leaf x) v < T.dist (T.leaf x) u)).card : ℝ)
+        + ((Finset.univ.filter
+          (fun x : X => T.dist (T.leaf x) u < T.dist (T.leaf x) v)).card : ℝ)
+        = (Fintype.card X : ℝ) := by
+    have hnat := Finset.card_filter_add_card_filter_not (s := (Finset.univ : Finset X))
+      (p := fun x : X => T.dist (T.leaf x) v < T.dist (T.leaf x) u)
+    have hf : (Finset.univ.filter
+          (fun x : X => ¬ (T.dist (T.leaf x) v < T.dist (T.leaf x) u)))
+        = Finset.univ.filter (fun x : X => T.dist (T.leaf x) u < T.dist (T.leaf x) v) :=
+      Finset.filter_congr fun x _ => hcompl x
+    rw [hf, Finset.card_univ] at hnat
+    exact_mod_cast hnat
+  have hset : (Finset.univ.filter (fun x : X => T.dist (T.leaf x) u < T.dist (T.leaf x) v))
+      = T.sideLeaves s(u, v) u := by
+    ext x
+    rw [Finset.mem_filter, T.mem_sideLeaves_iff_inSide]
+    constructor
+    · rintro ⟨_, hx⟩
+      have h := inSide_of_dist_lt T (u := v) (v := u) (y := T.leaf x) hx
+      rwa [Sym2.eq_swap] at h
+    · intro hx
+      refine ⟨Finset.mem_univ _, ?_⟩
+      have hle := dist_le_dist_of_inSide T huv hx
+      rcases adj_dichotomy T huv (y := T.leaf x) with hd | hd
+      · linarith
+      · linarith
+  rw [leafStatus_sub T huv hω]
+  have hB : ((Finset.univ.filter
+        (fun x : X => T.dist (T.leaf x) u < T.dist (T.leaf x) v)).card : ℝ)
+      = ((T.sideLeaves s(u, v) u).card : ℝ) := by rw [hset]
+  have hmain : ((Finset.univ.filter
+          (fun x : X => T.dist (T.leaf x) v < T.dist (T.leaf x) u)).card : ℝ)
+        - ((Finset.univ.filter
+          (fun x : X => T.dist (T.leaf x) u < T.dist (T.leaf x) v)).card : ℝ)
+      = (Fintype.card X : ℝ) - 2 * ((T.sideLeaves s(u, v) u).card : ℝ) := by
+    linarith [hcard_part, hB]
+  rw [hmain]
+
+/-- ★★★ **等价式 (2)**（文献 `:251–275`）：`u, v` 相邻、`ω(s(u,v)) > 0` 时
+
+    `ℓ(u) ≤ ℓ(v) ⟺ |L(T)| ≤ 2·|u 侧叶|`。 -/
+theorem leafStatus_le_iff_card_sideLeaves {u v : T.V} (huv : T.graph.Adj u v)
+    (hω : 0 < T.wExt s(u, v)) :
+    T.leafStatus u ≤ T.leafStatus v ↔
+      (Fintype.card X : ℝ) ≤ 2 * ((T.sideLeaves s(u, v) u).card : ℝ) := by
+  have hiff : T.leafStatus u ≤ T.leafStatus v ↔ T.leafStatus u - T.leafStatus v ≤ 0 := by
+    constructor <;> intro h <;> linarith
+  rw [hiff, leafStatus_sub_card_sideLeaves T huv hω]
+  constructor <;> intro h <;> nlinarith [hω, h]
+
+/-- ★★★ **等价式 (2) 的严格版**：`ℓ(u) < ℓ(v) ⟺ |L(T)| < 2·|u 侧叶|`。 -/
+theorem leafStatus_lt_iff_card_sideLeaves {u v : T.V} (huv : T.graph.Adj u v)
+    (hω : 0 < T.wExt s(u, v)) :
+    T.leafStatus u < T.leafStatus v ↔
+      (Fintype.card X : ℝ) < 2 * ((T.sideLeaves s(u, v) u).card : ℝ) := by
+  have hiff : T.leafStatus u < T.leafStatus v ↔ T.leafStatus u - T.leafStatus v < 0 := by
+    constructor <;> intro h <;> linarith
+  rw [hiff, leafStatus_sub_card_sideLeaves T huv hω]
+  constructor <;> intro h <;> nlinarith [hω, h]
+
+/-- ★★★ **局部一步**：`a — x — b` 相继（`a ≠ b`）、`x` 无度 2，且 `ℓ(a) ≤ ℓ(x)`，则
+`ℓ(x) < ℓ(b)`。
+
+证明：由等价式 (2) 得 `|L(T)| ≤ 2|a 侧|`；由 ★★★ `sideLeaves_card_lt_of_adj` 得
+`|a 侧| < |x 侧|`（**真包含**，即「无度 2」之处），故 `|L(T)| < 2|x 侧|`，
+再由等价式 (2) 的严格版得 `ℓ(x) < ℓ(b)`。 -/
+theorem leafStatus_lt_of_leafStatus_le_of_adj (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {a x b : T.V} (hax : T.graph.Adj a x) (hxb : T.graph.Adj x b) (hab : a ≠ b)
+    (hle : T.leafStatus a ≤ T.leafStatus x) : T.leafStatus x < T.leafStatus b := by
+  have h1 := (leafStatus_le_iff_card_sideLeaves T hax (pos_wExt_of_adj T hpos hax)).mp hle
+  have h2 := sideLeaves_card_lt_of_adj T hax hxb hab (T.no_degree_two x)
+  have h3 : 2 * ((T.sideLeaves s(a, x) a).card : ℝ) + 2
+      ≤ 2 * ((T.sideLeaves s(x, b) x).card : ℝ) := by
+    have h2' : (T.sideLeaves s(a, x) a).card + 1 ≤ (T.sideLeaves s(x, b) x).card :=
+      Nat.succ_le_of_lt h2
+    have h2'' : ((T.sideLeaves s(a, x) a).card : ℝ) + 1
+        ≤ ((T.sideLeaves s(x, b) x).card : ℝ) := by exact_mod_cast h2'
+    linarith
+  have h4 : (Fintype.card X : ℝ) < 2 * ((T.sideLeaves s(x, b) x).card : ℝ) := by linarith
+  exact (leafStatus_lt_iff_card_sideLeaves T hxb (pos_wExt_of_adj T hpos hxb)).mpr h4
+
+/-- ★★★ **Lemma 2（Weller 2023 `:213–214`）**：设 `T` 是正边权、无度 2 顶点的树，
+`(v₀, v₁, …, v_k)` 是 `T` 中的一条**路径**（相继相邻 + 在 `{0,…,k}` 上单射），
+且 `v₀` 的叶状态在 `T` 中最小。则
+
+    `ℓ(v₀) ≤ ℓ(v₁) < ℓ(v₂) < … < ℓ(v_k)`。
+
+⚠️ 第一段是**弱**不等式（只来自 `v₀` 的最小性）；严格性从 `i = 1` 起
+（局部一步 ★★★ `leafStatus_lt_of_leafStatus_le_of_adj` 对 `i ≥ 1` 归纳）。 -/
+theorem leafStatus_strict_mono (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {k : ℕ} (v : ℕ → T.V) (hadj : ∀ i, i < k → T.graph.Adj (v i) (v (i + 1)))
+    (hinj : ∀ i j, i ≤ k → j ≤ k → v i = v j → i = j)
+    (hmin : ∀ w : T.V, T.leafStatus (v 0) ≤ T.leafStatus w) :
+    T.leafStatus (v 0) ≤ T.leafStatus (v 1) ∧
+      ∀ i, 1 ≤ i → i < k → T.leafStatus (v i) < T.leafStatus (v (i + 1)) := by
+  refine ⟨hmin (v 1), ?_⟩
+  intro i
+  induction i with
+  | zero => intro hi _; exact absurd hi (by omega)
+  | succ j ih =>
+    intro hi hk
+    rcases Nat.eq_or_lt_of_le hi with h1 | h2
+    · have hj : j = 0 := by omega
+      subst hj
+      exact leafStatus_lt_of_leafStatus_le_of_adj T hpos (hadj 0 (by omega)) (hadj 1 (by omega))
+        (fun h => by have hc := hinj 0 2 (by omega) (by omega) h; omega) (hmin (v 1))
+    · have hj : 1 ≤ j := by omega
+      exact leafStatus_lt_of_leafStatus_le_of_adj T hpos (hadj j (by omega))
+        (hadj (j + 1) (by omega))
+        (fun h => by have hc := hinj j (j + 2) (by omega) (by omega) h; omega)
+        (le_of_lt (ih hj (by omega)))
+
+end Lemma2
+
+/-! ## 10. Lemma 3（文献 `:328–329`）
+
+> **Lemma 3.** `T` 正边权、无度 2 顶点，`u, v ∈ L(T)`，`w` 是 `u–v` 路径 `p` 的**内部**结点。
+> 则 `z(u,v) ≤ ℓ(w)`，且等号成立 ⟺ `p = (u,w,v)`（路径只有 `u, w, v` 三点）。
+
+树层版本：`z(u,v) = d(leaf u, leaf v) + ℓ_T(p)`，其中 `ℓ_T(p)` 是 ★★★ `pathLeafStatus`。
+本文件证出：
+
+* ★★★ `dist_add_pathLeafStatus_le_leafStatus` —— **`z(u,v) ≤ ℓ(w)`**（`w` 在路径上即可，不需
+  「内部」假设：不等式的证明只用 `d(x,p) ≤ d(x,w)` 与 `d(u,v) = d(u,w)+d(w,v)`）；
+* ★★★ `eq_dist_add_pathLeafStatus_iff` —— **等号的精确刻画**：等号 ⟺ 每个「第三者」叶 `x`
+  到 `w` 的距离 = 它到路径的距离（即 `w` 是 `x` 在 `p` 上的投影）。
+
+⬜ **尚未形式化**：把上一条的投影式条件换成文献的几何条件 `p = (u,w,v)`
+（即 `w` 同时邻接两片叶）⟺ 的**几何方向**（等号 ⟹ `p` 只有三点）——
+需要「路径上某内部顶点的第三条分支必含一片投影落在该顶点的叶」这一步
+（用 `no_degree_two` + ★★★ `sideLeaves_card_lt_of_adj` 那套侧集工具可行，本轮未做）。 -/
+
+section Lemma3
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+/-- 求和拆成「`u`、`v` 两项 + 其余」（`u ≠ v`）。 -/
+theorem sum_eq_add_add_sum_erase {M : Type*} [AddCommMonoid M] {u v : X} (huv : u ≠ v)
+    (f : X → M) :
+    ∑ x : X, f x = f u + f v + ∑ x ∈ (Finset.univ.erase u).erase v, f x := by
+  rw [← Finset.sum_erase_add (Finset.univ : Finset X) f (Finset.mem_univ u)]
+  rw [← Finset.sum_erase_add ((Finset.univ : Finset X).erase u) f
+    (Finset.mem_erase.mpr ⟨huv.symm, Finset.mem_univ v⟩)]
+  abel
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ `d_T(x,p) ≥ 0`。 -/
+theorem distToPath_nonneg (u v x : T.V) : 0 ≤ T.distToPath u v x :=
+  Phylo.TreeDist.dist_nonneg T x (T.projOnPath u v x)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ 路径左端点到路径的距离为 `0`（它就是投影点）。 -/
+theorem distToPath_left (u v : T.V) : T.distToPath u v u = 0 := by
+  have h1 : T.distToPath u v u ≤ T.dist u u :=
+    distToPath_le T (SimpleGraph.Walk.start_mem_support (T.existsUnique_path u v).choose)
+  rw [Phylogram.dist_self] at h1
+  have h2 := distToPath_nonneg T u v u
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ 路径右端点到路径的距离为 `0`。 -/
+theorem distToPath_right (u v : T.V) : T.distToPath u v v = 0 := by
+  have h1 : T.distToPath u v v ≤ T.dist v v :=
+    distToPath_le T (SimpleGraph.Walk.end_mem_support (T.existsUnique_path u v).choose)
+  rw [Phylogram.dist_self] at h1
+  have h2 := distToPath_nonneg T u v v
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- `w` 在 `u–v` 路径上时 `d(leaf u, leaf v) = d(leaf u, w) + d(leaf v, w)`。 -/
+theorem dist_eq_add_of_mem_path_support {u v : X} {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support) :
+    T.dist (T.leaf u) (T.leaf v) = T.dist (T.leaf u) w + T.dist (T.leaf v) w := by
+  have hP : ((T.existsUnique_path (T.leaf u) (T.leaf v)).choose).IsPath :=
+    (T.existsUnique_path (T.leaf u) (T.leaf v)).choose_spec.1
+  have h := Phylo.TreeDist.dist_eq_add_of_mem_support T _ hP hw
+  rw [h, Phylo.TreeDist.dist_comm T w (T.leaf v)]
+
+/-- **差的求和恒等式**（Lemma 3 的核心计算）：`w` 在 `u–v` 路径 `p` 上时
+
+    `ℓ(w) − (d(u,v) + ℓ(p)) = Σ_{x ∉ {u,v}} [d(leaf x, w) − d(leaf x, p)]`。 -/
+theorem leafStatus_sub_dist_add_pathLeafStatus {u v : X} (huv : u ≠ v) {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support) :
+    T.leafStatus w
+        - (T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v))
+      = ∑ x ∈ (Finset.univ.erase u).erase v,
+          (T.dist (T.leaf x) w - T.distToPath (T.leaf u) (T.leaf v) (T.leaf x)) := by
+  have hp : T.pathLeafStatus (T.leaf u) (T.leaf v)
+      = T.distToPath (T.leaf u) (T.leaf v) (T.leaf u)
+        + T.distToPath (T.leaf u) (T.leaf v) (T.leaf v)
+        + ∑ x ∈ (Finset.univ.erase u).erase v,
+            T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) := by
+    rw [pathLeafStatus]
+    exact sum_eq_add_add_sum_erase (X := X) huv _
+  rw [distToPath_left, distToPath_right, add_zero, zero_add] at hp
+  have hw' : T.leafStatus w
+      = T.dist (T.leaf u) w + T.dist (T.leaf v) w
+        + ∑ x ∈ (Finset.univ.erase u).erase v, T.dist (T.leaf x) w := by
+    rw [leafStatus_def]
+    rw [sum_eq_add_add_sum_erase (X := X) huv (fun x : X => T.dist w (T.leaf x))]
+    rw [Phylo.TreeDist.dist_comm T w (T.leaf u), Phylo.TreeDist.dist_comm T w (T.leaf v),
+      show (∑ x ∈ (Finset.univ.erase u).erase v, T.dist w (T.leaf x))
+        = ∑ x ∈ (Finset.univ.erase u).erase v, T.dist (T.leaf x) w from
+        Finset.sum_congr rfl fun x _ => Phylo.TreeDist.dist_comm T w (T.leaf x)]
+  rw [hp, hw', dist_eq_add_of_mem_path_support T hw, Finset.sum_sub_distrib]
+  ring
+
+/-- ★★★ **Lemma 3 的不等式一半（树层形式）**（文献 `:328–329`）：
+
+`u ≠ v` 是两片叶、`w` 是 `u–v` 路径 `p` 上的点，则
+
+    `z(u,v) = d(leaf u, leaf v) + ℓ_T(p) ≤ ℓ_T(w)`。 -/
+theorem dist_add_pathLeafStatus_le_leafStatus {u v : X} (huv : u ≠ v) {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support) :
+    T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v) ≤ T.leafStatus w := by
+  have hdiff := leafStatus_sub_dist_add_pathLeafStatus T huv hw
+  have hnn : 0 ≤ ∑ x ∈ (Finset.univ.erase u).erase v,
+      (T.dist (T.leaf x) w - T.distToPath (T.leaf u) (T.leaf v) (T.leaf x)) :=
+    Finset.sum_nonneg fun x _ => by
+      have := distToPath_le T (u := T.leaf u) (v := T.leaf v) (x := T.leaf x) hw
+      linarith
+  linarith
+
+/-- ★★★ **Lemma 3 的等号刻画（树层形式）**：在上一条的假设下，
+
+    `z(u,v) = ℓ(w) ⟺ 每个「第三者」叶 `x` 都是 `w` 更近`（`d(leaf x, w) = d(leaf x, p)`）。
+
+文献把右端进一步写成几何条件 `p = (u,w,v)`；两者的等价见文件头 `⬜`。 -/
+theorem eq_dist_add_pathLeafStatus_iff {u v : X} (huv : u ≠ v) {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support) :
+    T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v) = T.leafStatus w ↔
+      ∀ x : X, T.leaf x ≠ T.leaf u → T.leaf x ≠ T.leaf v →
+        T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) = T.dist (T.leaf x) w := by
+  have hdiff := leafStatus_sub_dist_add_pathLeafStatus T huv hw
+  have hnn : ∀ x ∈ (Finset.univ.erase u).erase v,
+      0 ≤ T.dist (T.leaf x) w - T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) := fun x _ => by
+    have := distToPath_le T (u := T.leaf u) (v := T.leaf v) (x := T.leaf x) hw
+    linarith
+  have hsum0 : T.leafStatus w
+        - (T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v)) = 0 ↔
+      ∀ x ∈ (Finset.univ.erase u).erase v,
+        T.dist (T.leaf x) w - T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) = 0 := by
+    rw [hdiff]
+    exact Finset.sum_eq_zero_iff_of_nonneg hnn
+  constructor
+  · intro h x hx hxv
+    have hmem : x ∈ (Finset.univ.erase u).erase v := by
+      rw [Finset.mem_erase, Finset.mem_erase]
+      exact ⟨fun hh => hxv (congrArg T.leaf hh), fun hh => hx (congrArg T.leaf hh),
+        Finset.mem_univ x⟩
+    have hz := hsum0.mp (by linarith)
+    have := hz x hmem
+    linarith
+  · intro h
+    have hz : ∀ x ∈ (Finset.univ.erase u).erase v,
+        T.dist (T.leaf x) w - T.distToPath (T.leaf u) (T.leaf v) (T.leaf x) = 0 := by
+      intro x hx
+      rw [Finset.mem_erase, Finset.mem_erase] at hx
+      have hxu : T.leaf x ≠ T.leaf u := fun hh => hx.2.1 (T.leaf.injective hh)
+      have hxv : T.leaf x ≠ T.leaf v := fun hh => hx.1 (T.leaf.injective hh)
+      have := h x hxu hxv
+      linarith
+    linarith [hsum0.mpr hz]
+
+end Lemma3
+
+/-! ## 11. Lemma 3 的等号条件：几何方向 `p = (u,w,v) ⟹ 等号`
+
+文献 `:328–329` 把等号条件写成 `p = (u,w,v)`（`w` **同时邻接**两片叶 `u, v`）。
+本节证出该几何条件 ⟹ 等号（另一半「等号 ⟹ `p = (u,w,v)`」见文件头 `⬜`）：
+
+* ★★ `eq_of_adj_leaf` —— 叶的唯一邻居；
+* ★★ `support_eq_of_adj_adj` —— `w` 同时邻接 `u, v` 时 `u–v` 路径的支持集恰为 `[leaf u, w, leaf v]`；
+* ★★★ `eq_of_adj_adj` —— 于是对每个第三者叶 `x` 都有 `d(x,w) = d(x,p)`（两片叶的唯一邻居
+  分别是 `w`，故 `d(x, leaf u) = ω(uw) + d(x,w) ≥ d(x,w)`，对 `v` 同理），
+  由 ★★★ `eq_dist_add_pathLeafStatus_iff` 得等号。 -/
+
+section Lemma3Adj
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **叶的唯一邻居**：`T.leaf u` 的邻居只能是 `w`。 -/
+theorem eq_of_adj_leaf (u : X) {w y : T.V} (huw : T.graph.Adj (T.leaf u) w)
+    (hy : T.graph.Adj (T.leaf u) y) : y = w := by
+  have hdeg : T.graph.degree (T.leaf u) = 1 := (T.leaf_iff_degree_one (T.leaf u)).mp ⟨u, rfl⟩
+  obtain ⟨w', _, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  rw [huniq y hy, huniq w huw]
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`w` 同时邻接两片叶时，`u–v` 路径的支持集恰为 `[leaf u, w, leaf v]`**
+（即 `p = (u,w,v)`）。 -/
+theorem support_eq_of_adj_adj {u v : X} (huv : u ≠ v) {w : T.V}
+    (huw : T.graph.Adj (T.leaf u) w) (hwv : T.graph.Adj w (T.leaf v)) :
+    (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support = [T.leaf u, w, T.leaf v] := by
+  have hQ : (SimpleGraph.Walk.cons huw (SimpleGraph.Walk.cons hwv SimpleGraph.Walk.nil)).IsPath := by
+    rw [SimpleGraph.Walk.cons_isPath_iff]
+    refine ⟨?_, ?_⟩
+    · rw [SimpleGraph.Walk.cons_isPath_iff]
+      exact ⟨SimpleGraph.Walk.IsPath.nil, by simp [hwv.ne]⟩
+    · intro h
+      rcases List.mem_cons.mp h with h | h
+      · exact huw.ne h
+      · exact huv (T.leaf.injective (List.mem_singleton.mp h))
+  have huniq := (T.existsUnique_path (T.leaf u) (T.leaf v)).choose_spec.2 _ hQ
+  rw [← huniq]
+  rfl
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ 若 `w` 同时邻接两片叶 `u, v`，则 `u–v` 路径上的点只有 `leaf u`、`w`、`leaf v`。 -/
+theorem eq_or_eq_or_eq_of_mem_support_of_adj_adj {u v : X} (huv : u ≠ v) {w y : T.V}
+    (huw : T.graph.Adj (T.leaf u) w) (hwv : T.graph.Adj w (T.leaf v))
+    (hy : y ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support) :
+    y = T.leaf u ∨ y = w ∨ y = T.leaf v := by
+  rw [support_eq_of_adj_adj T huv huw hwv] at hy
+  simpa using hy
+
+/-- ★★★ **Lemma 3 等号条件的几何方向（⟸）**（文献 `:328–329`）：若 `w` **同时邻接**两片叶
+`u, v`（即 `p = (u,w,v)`，路径只有三点），则 `z(u,v) = ℓ(w)`。 -/
+theorem eq_of_adj_adj {u v : X} (huv : u ≠ v) {w : T.V}
+    (huw : T.graph.Adj (T.leaf u) w) (hwv : T.graph.Adj w (T.leaf v)) :
+    T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v) = T.leafStatus w := by
+  have hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support := by
+    rw [support_eq_of_adj_adj T huv huw hwv]
+    simp
+  refine (eq_dist_add_pathLeafStatus_iff T huv hw).mpr ?_
+  intro x hxu hxv
+  have huniqU : ∀ y : T.V, T.graph.Adj (T.leaf u) y → y = w := fun y hy => eq_of_adj_leaf T u huw hy
+  have huniqV : ∀ y : T.V, T.graph.Adj (T.leaf v) y → y = w :=
+    fun y hy => eq_of_adj_leaf T v hwv.symm hy
+  show T.dist (T.leaf x) (T.projOnPath (T.leaf u) (T.leaf v) (T.leaf x)) = T.dist (T.leaf x) w
+  refine le_antisymm (distToPath_le T hw) ?_
+  have hmem := projOnPath_mem T (T.leaf u) (T.leaf v) (T.leaf x)
+  rcases eq_or_eq_or_eq_of_mem_support_of_adj_adj T huv huw hwv hmem with h | h | h
+  · rw [h]
+    have h1 := eq_add_dist_of_ne_of_unique_adj T huniqU hxu
+    rw [Phylo.TreeDist.dist_comm T (T.leaf u) (T.leaf x),
+      Phylo.TreeDist.dist_comm T w (T.leaf x)] at h1
+    have h0 : 0 ≤ T.wExt s(T.leaf u, w) := Phylo.TreeDist.wExt_nonneg T _
+    linarith
+  · rw [h]
+  · rw [h]
+    have h1 := eq_add_dist_of_ne_of_unique_adj T huniqV hxv
+    rw [Phylo.TreeDist.dist_comm T (T.leaf v) (T.leaf x),
+      Phylo.TreeDist.dist_comm T w (T.leaf x)] at h1
+    have h0 : 0 ≤ T.wExt s(T.leaf v, w) := Phylo.TreeDist.wExt_nonneg T _
+    linarith
+
+end Lemma3Adj
 
 end
 
