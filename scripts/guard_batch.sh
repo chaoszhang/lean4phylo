@@ -7,9 +7,11 @@
 #   bash scripts/guard_batch.sh 3203 QuartetDecidesTree Cladogram.iso_of_isSplitOf_iff
 #   （<期望 jobs 数> 传 0 = 不检查 job 数）
 #
-# 做 7 件事（顺序固定，任一硬失败即 exit 1）：
+# 做 8 件事（顺序固定，任一硬失败即 exit 1）：
 #   ① 正本 → 镜像同步；② 全量 lake build（并核对 job 数）；
 #   ③ 零 sorry / 零 axiom 扫描；④ 对给定声明跑 #print axioms（含 sorryAx 兜底）；
+#   ④′ **自动暂存「未登记」的在建 .lean**（并行开发时别的 agent 的在建文件不该让本批变红；
+#      验收结束（含失败退出）用 trap 自动放回；若期间被 agent 重建则保留新写的、丢弃暂存副本）；
 #   ⑤ scripts/check_file_imports.sh；⑥ scripts/list_star_claims.sh；⑦ git status。
 #
 # 环境变量 MIRROR 可覆盖镜像目录（默认 ~/lean4phylo-main）。
@@ -106,6 +108,54 @@ if [ "${#DECLS[@]}" -gt 0 ]; then
     exit 1
   fi
   echo '✓ #print axioms 全部只含 [propext, Classical.choice, Quot.sound]'
+fi
+
+# ④′ **自动暂存**「未登记」的在建 .lean（否则 check_file_imports.sh 会红）；验收结束（含失败退出）自动放回。
+#     —— 并行开发时其它 agent 的在建文件不该让本批验收变红（协调侧此前靠手工暂存，现固化）。
+#     ⚠️ `MODS`/`MODS_SP` 是**斜杠形式**（如 `Phylo/Core`），本循环的比较也一律用斜杠形式；
+#     曾因「斜杠 vs 点号」不一致把所有模块误判为未登记、把整个 Phylo/ 暂存走 —— 故加了两道保险：
+#     (a) 需暂存文件数 > 5 视为异常，立刻放回并放弃暂存；(b) 恢复以暂存目录的实际内容为准。
+STASHDIR=$(mktemp -d)
+STASHED=""
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  rel=${f#"$CANON"/}
+  [ "$rel" = "Phylo.lean" ] && continue          # 根模块本身不是「未登记文件」
+  mod=${rel%.lean}                               # 保持斜杠形式，与 MODS_SP 同形
+  case " $MODS_SP " in
+    *" $mod "*) ;;                                # 已登记 ⇒ 保留
+    *)
+      mkdir -p "$STASHDIR/$(dirname "$rel")"
+      if mv "$f" "$STASHDIR/$rel"; then STASHED="$STASHED $rel"; fi
+      ;;
+  esac
+done <<< "$(find "$CANON" -name '*.lean' -not -path '*/.lake/*' 2>/dev/null || true)"
+
+restore_stash() {
+  if [ -d "$STASHDIR" ]; then
+    while IFS= read -r p; do
+      [ -n "$p" ] || continue
+      rel=${p#"$STASHDIR"/}
+      if [ -f "$CANON/$rel" ]; then
+        rm -f "$p"                                # agent 期间重建了 ⇒ 丢弃暂存副本，保留新的
+      else
+        mkdir -p "$(dirname "$CANON/$rel")" && mv "$p" "$CANON/$rel"
+      fi
+    done <<< "$(find "$STASHDIR" -name '*.lean' 2>/dev/null || true)"
+    rm -rf "$STASHDIR"
+  fi
+}
+
+NSTASH=$(echo $STASHED | wc -w)
+if [ "$NSTASH" -gt 5 ]; then
+  echo "✗ 需暂存文件数异常（$NSTASH > 5）：疑似模块名比对出错 ⇒ 立刻放回并**放弃暂存**"
+  restore_stash
+  STASHED=""
+else
+  trap restore_stash EXIT
+  if [ -n "$STASHED" ]; then
+    echo "ℹ️ 已暂存未登记的在建文件（验收后自动放回）：$STASHED"
+  fi
 fi
 
 # ⑤/⑥ 两个既有脚本
