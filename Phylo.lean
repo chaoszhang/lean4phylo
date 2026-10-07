@@ -15,6 +15,7 @@ import Phylo.Consensus
 import Phylo.Core
 import Phylo.Dendrogram
 import Phylo.Distance
+import Phylo.InternalEdge
 import Phylo.Laminar
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
