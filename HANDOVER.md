@@ -317,6 +317,21 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 **前置 T2**：第 5(a) 步「内部边的叶侧由 quartet 见证」要用到
 「内部边两侧各 ≥ 2 叶」—— 即 `Phylo/SideSubtree.lean` 的阶段 2（见 **T2**）。
 
+> ✅ **2026-10-08 进展**：**第 2 步已完成**（T2 收口后立刻拿下）。`Phylo/InternalEdge.lean` 新增：
+>
+> * ★★ `exists_displaysQuartet_of_sideLeaves` —— 边 `s(a,b)` 的 `u` 侧与对侧各含 ≥ 2 叶
+>   ⟹ 存在互异 `x,y`（`u` 侧）与 `z,w`（对侧）使 `T.DisplaysQuartet x y z w`；
+> * ★★ `exists_displaysQuartet_of_internalEdge` —— **内部边一定有 quartet 见证**（T2 的直接推论）；
+> * 配套 `splitOfEdge_sideA/sideB`（定义相等，`@[simp]`）。
+>
+> **⬜ 剩下的**：第 3 步（`Q(T) = Q(T') ⟹ Σ(T) = Σ(T')`，需要 **clade 刻画**：
+> `A ⊆ X` 是 `T`（binary）的 clade ⟺ 对任意 `a,b ∈ A`、`c,d ∉ A` 有 `ab|cd ∈ Q(T)`）
+> 与第 5 步（`Σ` 决定 binary 树 / 唯一性收口）。
+
+⚠️ **实现注记**：`simpa` 不会用 `splitOfEdge_sideA` 归约 —— 但那两条是 **`rfl`**，
+直接 `exact`（defeq）即可。`Finset.univ \ s = sᶜ` 走
+`rw [← Finset.compl_eq_univ_sdiff]`（`Mathlib/Data/Finset/BooleanAlgebra.lean:112`）。
+
 **验收**：`Phylo/Stat/QuartetDecides.lean` 里的 `def QuartetDecidesTree` 变成 `theorem`
 （或降级为别名）；`astral_iso` / `caster_iso` / `parsimony_iso` **去掉 `hQD` 假设**。
 **全库仍零 `sorry`。**

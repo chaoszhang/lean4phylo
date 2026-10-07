@@ -45,6 +45,17 @@ import Phylo.Stat.NJst
 第 1 步需要「树的分量 / 诱导子图 / 叶存在性」的基础设施层，这是**尚未建立**的部分
 （`Phylo/SideSubtree.lean` 已做阶段 1）。
 
+## ✅ 进展（2026-10-08）
+
+* **第 1 步已完成**：`Phylo/InternalEdge.lean` 的 ★★ `two_le_card_sideLeaves` /
+  `two_le_card_sideLeaves_both`（= HANDOVER 的 **T2**）。
+* **第 2 步已完成**：同文件的 ★★ `exists_displaysQuartet_of_internalEdge` ——
+  每条内部边都有 quartet 见证。
+* **⬜ 剩**：第 3 步（`Q(T) = Q(T') ⟹ Σ(T) = Σ(T')`，需要下面这条 **clade 刻画**）
+  与第 4 步（`Σ` 决定 binary 树）：
+  > `A ⊆ X` 是 `T`（binary）的 clade ⟺ 对任意 `a,b ∈ A`、`c,d ∉ A` 皆有 `ab|cd ∈ Q(T)`。
+  这条的「⟸」方向是真正的工程量，也是 `QuartetDecidesTree` 剩下的核心。
+
 ## 下游收口
 
 * ★★★ `astral_iso` —— ASTRAL 输出与真树**同构**（假设缺口成立）；

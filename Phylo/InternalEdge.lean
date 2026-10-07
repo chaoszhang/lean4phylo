@@ -305,4 +305,64 @@ theorem two_le_card_sideLeaves_both {u v : T.V} (huv : T.graph.Adj u v)
   rw [Sym2.eq_swap]
   exact T.two_le_card_sideLeaves huv.symm hv
 
+/-! ## T0.1 第 2 步：非退化边被 quartet 见证
+
+`QuartetDecidesTree`（HANDOVER T0.1，`Phylo/Stat/QuartetDecides.lean`）的证明路线第 2 步是
+「每条内部边 `e` 的叶侧 `A|B` 由 quartet 见证」。这就是下面两条定理 ——
+它们是 **T2 的直接下游**，也是「由 `Q(T) = Q(T')` 恢复 `Σ(T) = Σ(T')`」的起点。 -/
+
+/-- `splitOfEdge` 的 `sideA`（定义相等）。 -/
+@[simp] theorem splitOfEdge_sideA (e : Sym2 T.V) (u : T.V)
+    (hA : (T.sideLeaves e u).Nonempty) (hB : (Finset.univ \ T.sideLeaves e u).Nonempty) :
+    (T.splitOfEdge e u hA hB).sideA = T.sideLeaves e u := rfl
+
+/-- `splitOfEdge` 的 `sideB`（定义相等）。 -/
+@[simp] theorem splitOfEdge_sideB (e : Sym2 T.V) (u : T.V)
+    (hA : (T.sideLeaves e u).Nonempty) (hB : (Finset.univ \ T.sideLeaves e u).Nonempty) :
+    (T.splitOfEdge e u hA hB).sideB = Finset.univ \ T.sideLeaves e u := by
+  show (if (1 : Fin 2) = 0 then T.sideLeaves e u else Finset.univ \ T.sideLeaves e u)
+    = Finset.univ \ T.sideLeaves e u
+  split_ifs with h
+  · exact absurd h (by decide)
+  · rfl
+
+/-- ★★ **侧集合非退化 ⟹ 被 quartet 见证**。
+
+边 `s(a,b)` 的 `u` 侧与对侧各含 ≥ 2 个叶时，可取互异的 `x, y`（在 `u` 侧）与 `z, w`（在对侧）
+使 `T` 展示 quartet `xy|zw`；而且见证它的 split 就是这条边给出的 `splitOfEdge`。 -/
+theorem exists_displaysQuartet_of_sideLeaves {a b : T.V} (hab : T.graph.Adj a b) (u : T.V)
+    (hA : 2 ≤ (T.sideLeaves s(a, b) u).card)
+    (hB : 2 ≤ (Finset.univ \ T.sideLeaves s(a, b) u).card) :
+    ∃ x y z w : X, x ≠ y ∧ z ≠ w ∧
+      ({x, y} : Finset X) ⊆ T.sideLeaves s(a, b) u ∧
+      ({z, w} : Finset X) ⊆ Finset.univ \ T.sideLeaves s(a, b) u ∧
+      T.DisplaysQuartet x y z w := by
+  classical
+  obtain ⟨x, hx, y, hy, hxy⟩ := Finset.one_lt_card.mp hA
+  obtain ⟨z, hz, w, hw, hzw⟩ := Finset.one_lt_card.mp hB
+  have hsubA : ({x, y} : Finset X) ⊆ T.sideLeaves s(a, b) u := fun t ht => by
+    rw [Finset.mem_insert, Finset.mem_singleton] at ht
+    exact ht.elim (fun h => h ▸ hx) (fun h => h ▸ hy)
+  have hsubB : ({z, w} : Finset X) ⊆ Finset.univ \ T.sideLeaves s(a, b) u := fun t ht => by
+    rw [Finset.mem_insert, Finset.mem_singleton] at ht
+    exact ht.elim (fun h => h ▸ hz) (fun h => h ▸ hw)
+  refine ⟨x, y, z, w, hxy, hzw, hsubA, hsubB, ?_⟩
+  exact ⟨T.splitOfEdge s(a, b) u ⟨x, hx⟩ ⟨z, hz⟩, ⟨a, b, hab, u, rfl⟩, hsubA, hsubB⟩
+
+/-- ★★ **内部边被 quartet 见证**（**T2 的直接推论**，HANDOVER T0.1 第 2 步）。
+
+两端都非叶的边 `s(a,b)`，存在 4 个互异的叶 `x,y,z,w` 使 `T` 展示 quartet `xy|zw`。 -/
+theorem exists_displaysQuartet_of_internalEdge {a b : T.V} (hab : T.graph.Adj a b)
+    (hda : T.graph.degree a ≠ 1) (hdb : T.graph.degree b ≠ 1) :
+    ∃ x y z w : X, x ≠ y ∧ z ≠ w ∧ T.DisplaysQuartet x y z w := by
+  have hb : 2 ≤ (T.sideLeaves s(a, b) b).card := by
+    rw [Sym2.eq_swap]
+    exact T.two_le_card_sideLeaves hab.symm hdb
+  have hcompl : Finset.univ \ T.sideLeaves s(a, b) a = T.sideLeaves s(a, b) b := by
+    rw [← Finset.compl_eq_univ_sdiff, ← T.sideLeaves_compl_adj hab]
+  obtain ⟨x, y, z, w, hxy, hzw, _, _, hdisp⟩ :=
+    T.exists_displaysQuartet_of_sideLeaves hab a (T.two_le_card_sideLeaves hab hda)
+      (by rw [hcompl]; exact hb)
+  exact ⟨x, y, z, w, hxy, hzw, hdisp⟩
+
 end Cladogram
