@@ -1,6 +1,6 @@
 # NEXT.md —— 下一步需求提案（计算系统发生学 · 未形式化的知名定理与算法）
 
-> **生成**：2026-10-07 ｜ **最后更新**：2026-10-07 13:45（老师重排优先级 + 文献已下载）
+> **生成**：2026-10-07 ｜ **最后更新**：2026-10-07 14:40（老师补充下载 12 篇付费墙文献，`references/` 达 30 篇）
 > **用途**：给老师挑下一批形式化目标。**不是执行计划**（执行计划见 `HANDOVER.md` §4）。
 > **原则**：只列**还没有**的；已形式化的见 §0 对照表。
 > **评级**：★ 数量 = 学术分量；**难度** = Lean 形式化工作量（不是数学难度）。
@@ -29,9 +29,14 @@
 
 ### 📚 文献已下载（老师指示「先把论文证明部分的 pdf 下载下来，然后 pdf 也留一份转化出的可读文本」）
 
-**已完成**：`references/` 现有 **18 篇**（PDF + 可读 Markdown 各一份）。
-本轮新增 **10 篇**，全部为不变量 / 溯祖 / supertree 三个方向。
-**下载失败的见 `references/README.md` §5.1**（附完整链接，老师可自行下载）。
+**已完成**：`references/` 现有 **30 篇**（PDF + 可读 Markdown 各一份）。
+- 第一轮我下载 **10 篇**（不变量 / 溯祖 / supertree）；
+- 第二轮 **老师补充下载 12 篇**（付费墙文献，2026-10-07 14:19）；
+- 其中 **3 篇为扫描件**（Buneman 1971/1974、Evans–Speed 1993），用 PDFium 渲染 + OCR 处理。
+
+**仍需下载的见 `references/README.md` §5.1**（附完整链接，老师可自行下载）。
+⚠️ 注意：**Bryant & Steel 1995 曾下错**（同卷拿到 Chamayou 1995 的 454–463 页），
+需重新下载，**页码应为 415–430**。
 
 ---
 
@@ -70,17 +75,17 @@
 2. **方向互补** —— 库里现有全是「数据 ⟹ 树」（推断）；不变量是「**树 ⟹ 数据分布**」（正向），
    补上这一半，库才完整。
 3. **公式漂亮、可读性强** —— 四点不变量就是一条多项式恒等式，适合做库的「门面」。
-4. **文献已下载**（4 篇，见下）。
+4. **文献已下载**：I3（Evans–Speed）、I5（Allman–Rhodes 2003）**已由老师补充下载**，共 6 篇在手（见 §4.1）。
 
 | # | 定理 | 陈述 | 文献 | ★ | 难度 | 文献状态 |
 |---|---|---|---|---|---|---|
 | **I1** ⭐ | **四点不变量（Cavender–Felsenstein）** | JC 模型下四元树 `12\|34` 的**多项式恒等式**（与枝长无关）：`(1−4p₁₃/3)(1−4p₂₄/3) − (1−4p₁₄/3)(1−4p₂₃/3) = 0`（`p` = 差异概率）；**另两个拓扑上该式不恒为零** | Cavender & Felsenstein (1987) | ★★★★ | **低–中** | ⚠️ 付费墙；**公式在 `Sturmfels2004_*.md` / `AllmanRhodes2006_*.md` 有完整转述** |
-| **I2** ⭐ | **Lake 线性不变量** | JC 下两条**线性**不变量（四项和 = 0），用于进化简约法 | Lake (1987) | ★★★ | **低** | ⚠️ 付费墙；**`CasanellasFernandezSanchez2011_*.md` §5.5 有完整转述** |
-| **I3** | **Evans–Speed / Hadamard 变换** | 群基模型的 Fourier 变换把不变量理想变成**二项式**（toric 理想） | Evans & Speed (1993)；Sturmfels & Sullivant (2005) | ★★★ | 中高 | ✅ **Sturmfels–Sullivant PDF 已下载** |
-| **I4** ⭐ | **边缘化 ⟹ `rank ≤ 4` ⟹ 子式为零** | 树上过一条边的条件独立性 ⟹ 展平矩阵 `rank ≤ 4` ⟹ 所有 `5×5` 子式为 0（=`binom(16,5)²` 条五阶不变量） | Allman & Rhodes (2003/2006) | ★★★ | **中（与 SVDQuartets 复用）** | ✅ **Allman–Rhodes 2006 PDF 已下载** |
-| **I5** | **不变量决定拓扑** | 不变量理想 `I(T)` 唯一决定 `T` | Allman & Rhodes (2003) | ★★★ | 高 | ⚠️ 付费墙 |
-| **I6** ⭐ | **edge invariants 足够** | 「对系统发生重建而言，只需**边不变量**」—— 这是 **Buneman Splits-Equivalence 的代数类比** | Casanellas & Fernández-Sánchez (2011) | ★★★★ | 中高 | ✅ **PDF 已下载** |
-| **I7** | **Toric 理想的 Gröbner 基** | JC / Kimura 模型的不变量理想在 Fourier 坐标下是 toric 理想，生成元次数 ≤ 4 | Sturmfels & Sullivant (2005) | ★★★ | 高 | ✅ **PDF 已下载** |
+| **I2** ⭐ | **Lake 线性不变量** | JC 下两条**线性**不变量（四项和 = 0），用于进化简约法 | Lake (1987) | ★★★ | **低** | ⚠️ 需 Lake 1987；**`CasanellasFernandezSanchez2011_*.md` §5.5 有完整转述**（可直接开工） |
+| **I3** | **Evans–Speed / Hadamard 变换** | 群基模型的 Fourier 变换把不变量理想变成**二项式**（toric 理想） | **Evans & Speed (1993)**；Sturmfels & Sullivant (2005) | ★★★ | 中高 | ✅ **EvansSpeed1993_*.md + SturmfelsSullivant2005_*.md**（均在手） |
+| **I4** ⭐ | **边缘化 ⟹ `rank ≤ 4` ⟹ 子式为零** | 树上过一条边的条件独立性 ⟹ 展平矩阵 `rank ≤ 4` ⟹ 所有 `5×5` 子式为 0（=`binom(16,5)²` 条五阶不变量） | Allman & Rhodes (2003/2006) | ★★★ | **中（与 SVDQuartets 复用）** | ✅ **AllmanRhodes2006_*.md**（在手） |
+| **I5** | **构造不变量 / 不变量决定拓扑** | 某些矩阵必须交换 ⟹ 度数 `κ+1` 的不变量；不变量理想 `I(T)` 唯一决定 `T` | **Allman & Rhodes (2003)** | ★★★ | 中–高 | ✅ **AllmanRhodes2003_*.md**（老师下载） |
+| **I6** ⭐ | **edge invariants 足够** | 「对系统发生重建而言，只需**边不变量**」—— 这是 **Buneman Splits-Equivalence 的代数类比** | Casanellas & Fernández-Sánchez (2011) | ★★★★ | 中高 | ✅ **CasanellasFernandezSanchez2011_*.md**（在手） |
+| **I7** | **Toric 理想的 Gröbner 基** | JC / Kimura 模型的不变量理想在 Fourier 坐标下是 toric 理想，生成元次数 ≤ 4 | Sturmfels & Sullivant (2005) | ★★★ | 高 | ✅ **SturmfelsSullivant2005_*.md**（在手） |
 
 > **建议起步顺序**：**I1 → I2 → I4**（三个都是「低–中」难度且文献在手），
 > I1/I2 甚至可以先在 `Fin 4 → Bool` 的 16 情形上**穷举验证**（与 `fitchCost_eq` 同一套路），
@@ -95,12 +100,12 @@
 
 | # | 定理 / 算法 | 陈述 | 文献 | ★ | 难度 | 文献状态 |
 |---|---|---|---|---|---|---|
-| **C1** ⭐ | **严格共识 / 半严格共识** | 严格共识 = **所有树共有的 split**（= split 集求交）；半严格共识 = 只保留在**每棵树中都不冲突**的 split | Day (1985) | ★★ | **低**（复用 `Consensus` + `Aho`） | ⚠️ 付费墙 |
-| **C2** | **Adams 共识** | 基于**嵌套**（nesting）的共识，比多数共识更精细（只对有根树） | Adams (1972) | ★★ | 中 | ⚠️ 付费墙 |
-| **C3** | **R\* 共识** | 「局部」多数共识；R\* 是多数共识的**精化** | Bryant (2003) | ★★ | 中高 | ⚠️ 付费墙（Bryant 2003 是综述，章节清晰） |
+| **C1** ⭐ | **严格共识 / 半严格共识** | 严格共识 = **所有树共有的 split**（= split 集求交）；半严格共识 = 只保留在**每棵树中都不冲突**的 split | **Day (1985)** | ★★ | **低**（复用 `Consensus` + `Aho`） | ✅ **Day1985_*.md**（老师下载） |
+| **C2** | **Adams 共识** | 基于**嵌套**（nesting）的共识，比多数共识更精细（只对有根树） | **Adams (1972)** | ★★ | 中 | ✅ **Adams1972_*.md**（老师下载） |
+| **C3** | **R\* 共识** | 「局部」多数共识；R\* 是多数共识的**精化** | Bryant (2003) | ★★ | 中高 | ⚠️ 需 Bryant 2003（综述） |
 | **C4** | **贪心共识** | 反复合并支持度最高的簇 | Bryant (2003) | ★★ | 中 | 同上（同一篇） |
 | **C5** | **共识的公理化刻画** | 一致性 / 匿名性 / 中立性等公理 ⟹ 唯一共识函数 | McMorris & Neumann；Steel et al. | ★★★ | 高 | ⚠️ 付费墙 |
-| **C6** ⭐ | **MinCut Supertree** | 修改 Aho 算法：图不连通时删**最小割边集**，得到 rooted supertree；**相容时输出展示所有输入树** | **Semple & Steel (2000)** | ★★★ | 中高 | ⚠️ 付费墙；**UC 仓储有全文**（链接见 `references/README.md`） |
+| **C6** ⭐ | **MinCut Supertree** | 修改 Aho 算法：图不连通时删**最小割边集**，得到 rooted supertree；**相容时输出展示所有输入树** | **Semple & Steel (2000)** | ★★★ | 中高 | ✅ **SempleSteel2000_*.md**（老师下载；算法在 182/224 行） |
 | **C7** | **Supertree 不存在性（一般情形）** | 无根情形下**不存在**「合理」的 supertree 方法 | Steel, Dress & Böcker (2000) | ★★★ | 中 | ⚠️ 付费墙 |
 
 > **建议起步**：**C1**（低垂果实，直接收口）→ **C6**（MinCut，复用 Aho；且它同时是「supertree」的代表）。
@@ -116,12 +121,12 @@
 | # | 定理 / 算法 | 陈述 | 文献 | ★ | 难度 | 文献状态 |
 |---|---|---|---|---|---|---|
 | **M1** ⭐⭐ | **4 元集 ILS 公式** | `P(ab\|cd) = 1 − ⅔e^{−t}`，`P(ac\|bd) = P(ad\|bc) = ⅓e^{−t}`（`t` = 内部枝长，**溯祖单位**） | Kingman (1982)；Tajima (1983)；Hudson (1983)；Pamilo & Nei (1988) | ★★★★★ | 中高 | ⚠️ 原文付费墙；**`ChifmanKubatko2015_*.md` / `AllmanRhodes2006_*.md` 有完整推导** |
-| **M2** ⭐ | **溯祖等待时间（Kingman 合并过程）** | `k` 个谱系合并到 `k−1` 的等待时间 ~ `Exp(C(k,2))`；故 `E[T_k] = 2/(k(k−1))`（`N` 单位下 `1/C(k,2)`）；`E[T_MRCA] = 2(1−1/n)` | Kingman (1982) | ★★★★ | 中高 | ⚠️ 付费墙；**`StadlerDegnan2012_*.md` / `AllmanDegnanRhodes2017_*.md` 有转述** |
+| **M2** ⭐ | **溯祖等待时间（Kingman 合并过程）** | `k` 个谱系合并到 `k−1` 的等待时间 ~ `Exp(C(k,2))`；故 `E[T_k] = 1/C(k,2)`；`E[T_MRCA] = 2(1−1/n)`（`N` 单位） | **Kingman (1982)** | ★★★★ | 中高 | ✅ **Kingman1982_*.md**（老师下载；n-coalescent 在 22 行、转移率在 59 行） |
 | **M3** | 异常基因树（anomalous gene trees）**反例** | 存在物种树 + 枝长，使**最可能的基因树拓扑 ≠ 物种树拓扑** | Degnan & Salter (2005)；Degnan & Rosenberg (2006) | ★★★ | 中 | ⬇️ **本轮降级** |
 | **M4** ⭐ | **site pattern 概率（MSC + JC）** | 4 元集上所有 site pattern 的**显式概率** | Chifman & Kubatko (2015) | ★★★ | 中高 | ✅ **PDF 已下载** |
 | **M5** | **ASTRAL 的局部性 / 分支长度估计** | 由 quartet 频率算**局部后验概率**与**溯祖单位枝长**（`t = −ln(1 − 1.5·(1−p̂))` 形式） | Sayyari & Mirarab (2016) | ★★★ | 中 | ✅ **PDF 已下载** |
 | **M6** | **STAR / NJst 归约与一致性** | STAR 与推广是统计一致的；NJst 归约到 generalized STAR；**用到的只是 split 分布** | ADR (2013) STAR；ADR (2016) NJst；ADR (2017) split probabilities | ★★★ | 中高 | ✅ **三篇 PDF 均已下载** |
-| **M7** | **基因树分布可算（COAL）** | 给定物种树，基因树拓扑的分布可**显式递推** | Degnan & Salter (2005) | ★★★ | 中高 | ⚠️ 付费墙 |
+| **M7** | **基因树分布可算（COAL）** | 给定物种树，基因树拓扑的分布可**显式递推** | **Degnan & Salter (2005)** | ★★★ | 中高 | ✅ **DegnanSalter2005_*.md**（老师下载） |
 | **M8** | **unrooted 基因树决定有根物种树** | ≥5 物种时，**无根**基因树分布可识别有根的物种树拓扑与全部内部枝长 | ADR (2011) | ★★★ | 中高 | ✅ **PDF 已下载** |
 
 > **建议起步顺序**：
@@ -142,13 +147,13 @@
 
 | # | 定理 | 陈述 | 文献 | ★ | 难度 | 文献状态 |
 |---|---|---|---|---|---|---|
-| **F1** ⭐ | **字符相容性定理**（pairwise compatibility theorem） | **两两相容 ⟹ 全局相容**（对「真分化」字符）；形式化为：一族字符两两相容 ⟺ 存在一棵树使全体无同塑性 | Estabrook, Johnson & McMorris (1976)；Meacham (1981) | ★★★ | **低–中** | ⚠️ 付费墙；**密歇根 Deep Blue 有全文**（链接见 README） |
-| **F2** ⭐ | **严格/半严格共识** | 见 **C1** | Day (1985) | ★★ | **低** | — |
-| **F3** ⭐ | **KF 距离（branch score）** | `KF(T,T') = √( Σ_e (w_e − w'_e)² )`（缺边算 0）；对称、非负、零 ⟺ 同树同权 | Kuhner & Felsenstein (1994) | ★★ | **低** | ⚠️ 付费墙；**公式清楚**（`references/README.md` 有转述） |
+| **F1** ⭐ | **字符相容性定理**（pairwise compatibility theorem） | **两两相容 ⟹ 全局相容**（对「真分化」字符）；形式化为：一族字符两两相容 ⟺ 存在一棵树使全体无同塑性 | **Estabrook–Johnson–McMorris (1976)**；Estabrook–Meacham (1979) | ★★★ | **低–中** | ✅ **两篇均在 `references/md/`**（老师下载） |
+| **F2** ⭐ | **严格/半严格共识** | 见 **C1** | **Day (1985)** | ★★ | **低** | ✅ `Day1985_*.md` |
+| **F3** ⭐ | **KF 距离（branch score）** | `KF(T,T') = √( Σ_e (w_e − w'_e)² )`（缺边算 0）；对称、非负、零 ⟺ 同树同权 | **Kuhner & Felsenstein (1994)** | ★★ | **低** | ✅ **KuhnerFelsenstein1994_*.md**（老师下载） |
 | **F4** ⭐ | **Jukes–Cantor 距离校正** | `d = −¾·ln(1 − (4/3)p)`（`p` = 差异比例）；`p < ¾` 时良定义 | Jukes & Cantor (1969) | ★★ | **低** | ⚠️ 书章，付费墙；**公式在 `Sturmfels2004_*.md` 有** |
 | **F5** ⭐ | **Lake 线性不变量** | 见 **I2** | Lake (1987) | ★★★ | **低** | 同上 |
-| **F6** | **Buneman 树 / split 分解** | Buneman 指数 `μ_σ(δ) > 0` 的 split 集必**相容** ⟹ 给出「保留树」`B(δ)` | Buneman (1971)；Bandelt & Dress (1986) | ★★★ | 中 | ✅ **Buneman 1971/1974 已下载**；Bandelt–Dress 付费墙 |
-| **F7** | **rooted triplet 的一致性（Aho 的有根版）** | 相容 rooted triple 集 ⟹ 存在展示它的有根树 | Aho et al. (1981)；Bryant & Steel (1995) | ★★★ | 中 | ⚠️ 付费墙 |
+| **F6** | **Buneman 树 / split 分解** | Buneman 指数 `μ_σ(δ) > 0` 的 split 集必**相容** ⟹ 给出「保留树」`B(δ)` | Buneman (1971)；**Bandelt & Dress (1986)** | ★★★ | 中 | ✅ **Buneman 1971/1974 + BandeltDress1986_*.md 三篇均在** |
+| **F7** | **rooted triplet 的一致性（Aho 的有根版）** | 相容 rooted triple 集 ⟹ 存在展示它的有根树 | **Aho et al. (1981)**；Bryant & Steel (1995) | ★★★ | 中 | ✅ **AhoSagivSzymanskiUllman1981_*.md**（老师下载）；⚠️ Bryant–Steel 1995 需重下（页码 415–430） |
 | **F8** | **Fitch 一般树推广 / Sankoff** | 把现有 4 元集 Fitch 推广到任意树 + 任意状态数；Sankoff 允许任意代价矩阵 | Fitch (1971)；Sankoff (1975) | ★★★ | 中高 | ⚠️ 付费墙 |
 | **F9** | **严格共识的「树空间」性质** | 严格共识 = split 交；与 RF 距离的关系 | Day (1985) | ★★ | 低 | ⚠️ 付费墙 |
 
@@ -220,21 +225,39 @@
 
 ### 4.1 文献状态总览
 
-**已下载（18 篇，PDF + MD）**：见 `references/README.md`。本轮新增 10 篇：
+**已下载（30 篇，PDF + MD）**：见 `references/README.md`。
+
+**第一轮新增 10 篇**（我自己下的）：
 
 | 方向 | 新增 |
 |---|---|
 | **不变量** | Sturmfels–Sullivant 2005（toric 理想）、Allman–Rhodes 2006（一般 Markov 理想）、**Casanellas–Fernández-Sánchez 2011（edge invariants）**、Sturmfels 2004（代数几何综述）、Allman–Rhodes 2011（tripod 两状态） |
 | **溯祖** | Sayyari–Mirarab 2016（ASTRAL 局部支持）、ADR 2013（STAR 推广）、ADR 2017（split 概率）、ADR 2011（unrooted ⟹ rooted）、Stadler–Degnan 2012（ranked 基因树概率） |
 
-**下载失败（附链接，老师可自行下载）**：见 `references/README.md` **§5.1**。
-关键几条：Cavender–Felsenstein 1987、Lake 1987、Evans–Speed 1993、Allman–Rhodes 2003、
-Day 1985、Adams 1972、Bryant 2003、Semple–Steel 2000、Kingman 1982、Tajima 1983、
-Hudson 1983、Degnan–Salter 2005、Estabrook et al. 1976、Meacham 1981、Kuhner–Felsenstein 1994。
+**第二轮新增 12 篇**（✅ **老师下载补充**，2026-10-07 14:19）：
 
-> ⭐ **好消息**：**多数失败条目的关键公式/证明已在上表「已下载」的文献里有完整转述** ——
-> 例如 I1/I2（四点不变量、Lake 不变量）在 `Sturmfels2004` 与 `AllmanRhodes2006` 中，
-> M1（ILS 公式）在 `ChifmanKubatko2015` 中。**故不阻塞推进**。
+| 方向 | 新增 |
+|---|---|
+| **不变量** | **Evans–Speed 1993（Hadamard/Fourier 变换）**、**Allman–Rhodes 2003（构造不变量）** |
+| **溯祖** | **Kingman 1982（The Coalescent —— M2 基座）**、**Degnan–Salter 2005（COAL）** |
+| **supertree / 共识** | **Semple–Steel 2000（MinCut Supertree）**、**Day 1985（严格共识）**、**Adams 1972（Adams 共识）** |
+| **低垂果实** | **Estabrook–Johnson–McMorris 1976（两两相容 ⟹ 全局相容）**、**Estabrook–Meacham 1979**、**Kuhner–Felsenstein 1994（KF 距离）** |
+| **T0 相关** | **Aho–Sagiv–Szymanski–Ullman 1981**（相容 ⟹ 树，`Aho.lean` 原出处）、**Bandelt–Dress 1986（split 分解）** |
+
+⇒ **P0-A（不变量）缺 Cavender–Felsenstein 1987、Lake 1987**；
+**P0-B（共识）缺 Bryant 2003**；**P0-C（溯祖）缺 Tajima 1983、Hudson 1983**。详见下表。
+
+**仍需下载（附链接，老师可自行下载）**：见 `references/README.md` **§5.1**。
+关键几条：**Bryant & Steel 1995**（曾下错，页码应为 415–430）、
+Cavender–Felsenstein 1987、Lake 1987、Steel 1992、Studier–Keppler 1988、Saitou–Nei 1987、
+Margush–McMorris 1981、Bryant 2003、Tajima 1983、Hudson 1983、Fitch 1971、Sankoff 1975、
+Atteson 1999、Jukes–Cantor 1969。
+
+> ⭐ **好消息**：**多数未下载条目的关键公式/证明已在已下载文献里有完整转述** ——
+> I1/I2（四点不变量、Lake 不变量）在 `Sturmfels2004` / `AllmanRhodes2006` / `Casanellas2011` §5.5 中，
+> M1（ILS 公式）在 `ChifmanKubatko2015` 中，D1（Atteson 定理）在 `MihaescuLevyPachter2006` Thm 2 中，
+> F4（JC 距离校正）公式已明确。**故不阻塞推进。**
+
 
 ### 4.2 关于复杂度类定理（已降级，此处仅存档理由）
 

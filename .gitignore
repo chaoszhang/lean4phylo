@@ -14,7 +14,7 @@
 references/
 #
 # 说明：references/README.md（索引：缺口 → 证明出处 → 付费墙链接）与已入库的
-#   *.py 脚本（convert / extract_img / cleanup）**仍被 git 跟踪** ——
+#   *.py 脚本（convert / extract_img / cleanup / render_pages / merge_ocr）**仍被 git 跟踪** ——
 #   .gitignore 只管未跟踪文件，不影响它们。
 #   改动这些文件后用 `git add -u references/` 暂存即可
 #   （`git add references/xxx` 会因目录被整体忽略而报 "paths are ignored"，需加 `-f`）。
