@@ -581,6 +581,30 @@ theorem sidesCompatible_of_isClan {Y Z : Finset X} (hY : T.IsClan Y) (hZ : T.IsC
   rw [Finset.mem_union, not_or] at hD
   exact key A B C D hAY hBY hCY hD.1 hAZ hCZ hBZ hD.2
 
+/-- **quartet 的两对可互换**：`ab|cd` ⟺ `cd|ab`（Bandelt–Dress 的**对称性**）。
+
+注意见证 split 要**换向**：`ab|cd` 的见证 `s` 换成 `s.swap` 才把 `{c,d}` 放到 `sideA`。 -/
+theorem displaysQuartet_comm {a b c d : X} :
+    T.DisplaysQuartet a b c d ↔ T.DisplaysQuartet c d a b :=
+  ⟨fun ⟨s, hs, hab, hcd⟩ =>
+      ⟨s.swap, T.isSplitOf_swap hs, by rwa [Split.swap_sideA], by rwa [Split.swap_sideB]⟩,
+   fun ⟨s, hs, hcd, hab⟩ =>
+      ⟨s.swap, T.isSplitOf_swap hs, by rwa [Split.swap_sideA], by rwa [Split.swap_sideB]⟩⟩
+
+/-- ★★ **clan 系统对补闭合**：`A` 是 clan ⟹ `Aᶜ` 也是 clan。
+
+**出处**：Bandelt & Dress 1986, Prop 2(b) 的证明（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
+**704–705 行**）：*"Trivially, for any such cluster `Y` the complement `Ȳ` is also a cluster."*
+
+证明即 `ab|cd ⟺ cd|ab`（上一条 `displaysQuartet_comm`）。 -/
+theorem isClan_compl {A : Finset X} (h : T.IsClan A) : T.IsClan (Aᶜ) := by
+  intro a ha b hb c hc d hd
+  have hcA : c ∈ A := by simpa using hc
+  have hdA : d ∈ A := by simpa using hd
+  have haA : a ∉ A := by simpa using ha
+  have hbA : b ∉ A := by simpa using hb
+  exact T.displaysQuartet_comm.mpr (h c hcA d hdA a haA b hbA)
+
 /-- ★★ **clan ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（T0.1 第 3 步的关键一步）。
 
 若 `sA := A|Aᶜ` 与某个 `t ∈ Σ(T)` 不相容，`Split.exists_four_of_incompatible` 给出
