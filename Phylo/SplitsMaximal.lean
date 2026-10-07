@@ -11,34 +11,42 @@ import Phylo.LaminarCount
 # `Phylo.SplitsMaximal` —— binary 树的 split 系统极大（目标 T0.1 第 3 步收尾）
 
 `Phylo/InternalEdge.lean` 把 T0.1 第 3 步隔离成**唯一**输入 `BinarySplitsMaximal`：
-`T.IsBinary ⟹ T.SplitsMaximal`。本文件补上它。
+`T.IsBinary ⟹ T.SplitsMaximal`。本文件补上它（无 `sorry`、无新公理）。
 
 ## 路线（计数 / 极大相容族）
 
-设 `ρ : X`，`S := {s : Split X // T.IsSplitOf s}`（作为 `Finset`）。两步：
+设 `S := Finset.univ.filter T.IsSplitOf`（即 `Σ(T)` 作为 `Finset`）。两步：
 
-1. **下界 `2 · #E(T) ≤ #S`**：`T` 的每条边 `e = ⟦v,u⟧` 给出**两个** split
-   （`v` 侧与 `u` 侧），且映射 `(v,u) ↦ ` 「`(v,u)` 侧的叶集」是**单射**
-   （★ `Finset.card_le_card` + ★★ `isSplitOf_sideLeaves_injective`）。
-   配合 `★ #E(T) = 2·|X| − 3`（`IsBinary.card_edgeFinset` + ★★ `card_leafFinset`）得
-   `4|X| − 6 ≤ #S`。
-2. **上界（已证）**：`Finset.card_add_six_le_four_mul_card_of_pairwise_compatible`
+1. **下界 `2 · #E(T) ≤ #S`**（★★★ `two_mul_card_edgeFinset_le_card_splits`）：`T` 的每条边
+   `⟦v,u⟧` 给出**两个**有向对 `(v,u)`、`(u,v)`，映射到「`v` 侧叶集」给出的 split；该映射单射，
+   关键在 ★★★ `eq_of_sideLeaves_eq`（**叶集决定边**）。配合 `IsBinary.card_edgeFinset`
+   （`#E = 2ℓ − 3`）与 ★★ `card_leafFinset`（`ℓ = |X|`）得 `4|X| − 6 ≤ #S`。
+2. **上界（库里已证）**：`Finset.card_add_six_le_four_mul_card_of_pairwise_compatible`
    （`Phylo/LaminarCount.lean` ★★★）：`X` 上两两相容的 split 族至多 `4|X| − 6` 条。
 
-若 `s` 与 `Σ(T)` 的每个 split 相容而 `s ∉ Σ(T)`，则 `Σ(T) ∪ {s, s.swap}` 是大小为
-`#S + 2` 的两两相容族，于是 `#S + 8 ≤ 4|X|`；与下界 `4|X| ≤ #S + 6` 矛盾。
+若 `s` 与 `Σ(T)` 的每个 split 相容而 `s ∉ Σ(T)`，则 `Σ(T) ∪ {s, s.swap}` 是大小为 `#S + 2` 的
+两两相容族，于是 `#S + 8 ≤ 4|X|`，与下界 `4|X| ≤ #S + 6` 矛盾。
 
 ## 单射性（本文件的核心）
 
-`(v,u) ↦ T.sideLeaves ⟦v,u⟧ v` 的单射性归结为**「叶集决定边侧」**：
+★★★ `eq_of_sideLeaves_eq`：若边 `⟦a,b⟧` 的 `a` 侧叶集等于边 `⟦c,d⟧` 的 `c` 侧叶集，则两边相同。
+两侧各用一次 ★★★ `subset_of_preconnected_of_leaf_subset'`（**删边分量是「包含其全部叶、且连通」
+的最小顶点集**）得两个分量相等，再用跨越引理
+`eq_edge_of_adj_of_mem_sideVertices_of_notMem`（`Phylo/SideSubtree.lean`）读出边。
 
-> ★★ `sideVertices_eq_of_sideLeaves_eq`：若 `U = T.sideVertices e w`、`W = T.sideVertices f w'`
-> 都以 `w`（分别 `w'`）为边界点，`T.leaf ρ` 不在两侧，且两侧叶集相同，则 `U = W`。
+★★★ `subset_of_preconnected_of_leaf_subset'` 的证明分两步：
 
-这由 **最小性引理** ★★ `subset_of_preconnected_of_leaf_subset` 完成：分量的顶点集是「包含其全部
-叶、且连通」的**最小**顶点集。证明用「以 `w` 为根、按唯一路径长度极大化」的论证，
-关键工具是 `IsAcyclic.eq_penultimate_of_adj_end`（叶的存在性）与
-`no_degree_two`（极大点若是内部顶点则度 ≥ 3，必有第二个「向下」的邻居 —— 矛盾）。
+* **`w ∈ W`**：`w` 是叶时平凡；`w` 是内部顶点时由 `no_degree_two` 得 `deg_T w ≥ 3`，而 `w` 至多
+  有一个邻居（对侧端点）在分量外，故 `w` 在分量内至少有 2 个邻居；两支各含一片分量内的叶
+  （★★ `leaf_in_branch`），这两片叶都在 `W` 中，而它们之间的唯一路径必经 `w`，`W` 连通 ⟹ `w ∈ W`。
+* **`U ⊆ W`**：对 `p ∈ U`，在「以 `w` 为根、按唯一路径长度极大化」的论证中取极大点 `ζ`；`ζ` 若不是
+  叶则 `deg_T ζ ≥ 3` 给出一个不在该路径上的邻居，从而是更长的路径（与极大性矛盾），故 `ζ = T.leaf x`
+  是叶，由假设落在 `W` 里；再把 `w → ζ` 的唯一路径搬进 `W`（把 `T[W]` 的 walk 映回 `T` 后 `bypass`，
+  用路径唯一性），即得 `p ∈ W`。
+
+**⚠️ `no_degree_two` 不可去**：没有它时「分支必含叶」为假（度 2 顶点处两个方向给出同一叶集），
+`eq_of_sideLeaves_eq` 随之不成立（路径 `x—y—z—w` 上 `⟦x,y⟧` 的 `x` 侧与 `⟦y,z⟧` 的 `y` 侧叶集
+都是 `{x}`）。
 -/
 
 open Phylo
