@@ -537,6 +537,50 @@ theorem isClan_of_isClade {A : Finset X} (h : T.IsClade A) : T.IsClan A := by
   obtain ⟨s, hs, rfl⟩ := h
   exact fun a ha b hb c hc d hd => T.displaysQuartet_of_clade hs ha hb hc hd
 
+/-- ★★ **任意两个 clan 集必相容**（T0.1 第 3 步的文献路线第一步）。
+
+**出处**：Bandelt & Dress 1986, **Prop 2(b) 的证明**（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
+**706–708 行**），原文：
+
+> *"any two clusters `Y`, `Y'` with respect to `∥` are compatible since `A ∈ Y ∩ Y'`,
+> `B ∈ Y ∩ Ȳ'`, `C ∈ Ȳ ∩ Y'`, `D ∈ Ȳ ∩ Ȳ'` would imply `AB∥CD` as well as `AC∥BD`,
+> **contradicting antisymmetry**."*
+
+搬到本题：若四个交都非空，取 `A,B,C,D` 分别落在 `Y∩Z`、`Y∩Zᶜ`、`Yᶜ∩Z`、`Yᶜ∩Zᶜ`；
+由 `Y` 是 clan 得 `T` 展示 `AB|CD`，由 `Z` 是 clan 得 `T` 展示 `AC|BD`
+—— 与**反对称性**（★★ `Cladogram.not_displaysQuartet_swap`）矛盾。
+故四个交至少一个为空，这正是 `SidesCompatible` 的四个选言支。 -/
+theorem sidesCompatible_of_isClan {Y Z : Finset X} (hY : T.IsClan Y) (hZ : T.IsClan Z) :
+    SidesCompatible Y Z := by
+  by_contra h
+  rw [SidesCompatible, not_or, not_or, not_or] at h
+  obtain ⟨hYZ, hZY, hdisj, huniv⟩ := h
+  have key : ∀ (A B C D : X), A ∈ Y → B ∈ Y → C ∉ Y → D ∉ Y →
+      A ∈ Z → C ∈ Z → B ∉ Z → D ∉ Z → False :=
+    fun A B C D hAY hBY hCY hDY hAZ hCZ hBZ hDZ =>
+      T.not_displaysQuartet_swap (hY A hAY B hBY C hCY D hDY)
+        (hZ A hAZ C hCZ B hBZ D hDZ)
+  have hB : ∃ B, B ∈ Y ∧ B ∉ Z := by
+    by_contra hcon
+    exact hYZ fun x hx => by by_contra hxz; exact hcon ⟨x, hx, hxz⟩
+  obtain ⟨B, hBY, hBZ⟩ := hB
+  have hC : ∃ C, C ∈ Z ∧ C ∉ Y := by
+    by_contra hcon
+    exact hZY fun x hx => by by_contra hxy; exact hcon ⟨x, hx, hxy⟩
+  obtain ⟨C, hCZ, hCY⟩ := hC
+  have hA : ∃ A, A ∈ Y ∧ A ∈ Z := by
+    by_contra hcon
+    exact hdisj (Finset.disjoint_left.mpr fun x hx hy => hcon ⟨x, hx, hy⟩)
+  obtain ⟨A, hAY, hAZ⟩ := hA
+  have hD : ∃ D, D ∉ Y ∪ Z := by
+    by_contra hcon
+    refine huniv (Finset.eq_univ_iff_forall.mpr fun x => ?_)
+    by_contra hx
+    exact hcon ⟨x, hx⟩
+  obtain ⟨D, hD⟩ := hD
+  rw [Finset.mem_union, not_or] at hD
+  exact key A B C D hAY hBY hCY hD.1 hAZ hCZ hBZ hD.2
+
 /-- ★★ **clan ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（T0.1 第 3 步的关键一步）。
 
 若 `sA := A|Aᶜ` 与某个 `t ∈ Σ(T)` 不相容，`Split.exists_four_of_incompatible` 给出
