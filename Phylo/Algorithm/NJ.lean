@@ -23,21 +23,29 @@ import Mathlib.Tactic.Ring
 * **★ `z_hinge`**：`z(a,b)+z(i,j) − (z(a,i)+z(b,j)) = ((2-n)/2)·(P − Q₁)` —— 门控恒等式
 * **★ `four_point_z_iff`**：`n ≥ 4` 时「四点和 `P` 最小」⟺「`z` 的和最大」
 
-## ⚠️ 硬核（本文件的诚实边界）
+## ⚠️ 形式化缺口（本文件的诚实边界）
 
-`nj_cherry` 依赖 **`MaxZCherryCore`**，它是 `ROADMAP.md` §0.1 记录的**开放问题**的精确陈述：
+`nj_cherry` 依赖 **`MaxZCherryCore`**。
+
+> ✦ **定性（重要，勿误传）**：这**不是学术开放问题**。NJ 的正确性**早已被证明**：
+> **Studier–Keppler (1988)** 给出首个正确证明（并指出 Saitou–Nei 1987 原始证明有误），
+> **Weller (2023)** 用 *leaf-status* 给出极简重证，Mihaescu–Levy–Pachter (2009) 亦有。
+> 本库把它留作缺口，**只是形式化路径的选择问题**，不是数学未解。
+
+**缺口究竟在哪**：
 
 > 「`z` 的最大性是**全局**的（涉及所有行和 `S`），而 quartet 分裂是**局部**的。」
-> 已知标准证明（Weller 2023 *leaf-status* / Pachter–Sturmfels Thm 2.38 / MLP 2006）
-> 都显式使用「实现树 + 中心节点 + 沿路径 leaf-status 单调 + 子树内必存在樱桃」
-> —— 即需要 **Buneman 存在性（四点条件 ⟹ 存在实现树）**。
-> 纯度量（仅用 `FourPoint`）的干净证明**尚缺**。
+> 上述标准证明都显式使用「实现树 + 中心节点 + 沿路径 leaf-status 单调 + 子树内必存在樱桃」
+> —— 即需要 **Buneman 存在性（四点条件 ⟹ 存在实现树）** 这个**本库尚未形式化**的前置。
+> 在**不引入树对象**的纯度量设定下，我们尚未找到可直接形式化的干净论证。
 
 故本文件把 `MaxZCherryCore` 作为**显式假设**（**不使用 `sorry`** —— 这样库里依然零 `sorry`），
 `nj_cherry` 表述为「**假设硬核 ⟹ NJ 樱桃引理**」，是诚实且可用的形式。
 
-走通硬核需要 **`Phylo/Laminar.lean` 那条建树路线（Buneman 存在性）** —— 该路线目前卡在
-「连通性需根 vs `no_degree_two`」的设计问题（见 `MEMORY.md`）。**解锁 Buneman，即解锁 NJ 硬核。**
+**解锁路径（明确、已知可行）**：形式化 **Buneman 存在性**（四点条件 ⟹ 存在实现树，
+见 `HANDOVER.md` 的 T3），即可照抄 Weller 的 leaf-status 论证。
+`Phylo/Dendrogram.lean` 的「超度量 ⟹ 镶嵌族 ⟹ 树」管线已经铺好，是**现成的模板**。
+**解锁 Buneman，即解锁 NJ 硬核。**
 -/
 
 open Finset
@@ -245,9 +253,15 @@ theorem four_point_z_iff (hcard : 4 ≤ Fintype.card X) (a b i j : X) :
         mul_neg_of_neg_of_pos hc (by linarith)
       linarith
 
-/-! ## 引理 3：★ 硬核命题（**开放问题**，作为显式假设） -/
+/-! ## 引理 3：★ 硬核命题（**形式化缺口**，作为显式假设）
 
-/-- **★ 硬核命题 `MaxZCherryCore`**（`ROADMAP.md` §0.1 记录的开放问题）。
+⚠️ **这是「已证定理的形式化缺口」，不是数学开放问题** —— NJ 正确性见
+Studier–Keppler (1988)、Weller (2023)、Mihaescu–Levy–Pachter (2009)；
+缺口在于本库尚未形式化其前置「**Buneman 存在性**」（四点条件 ⟹ 存在实现树）。 -/
+
+/-- **★ 硬核命题 `MaxZCherryCore`**（NJ 定理的纯度量表述）。
+
+✦ **经典已证，本库尚未形式化**（Studier–Keppler 1988；Weller 2023）—— 非开放问题。
 
 若 `(a,b)` **全局**最大化 `z`，则对任意互异且都异于 `a,b` 的 `i,j`，
 四点和 `P` 同时 ≤ 两个交叉和 —— 即所有含 `a,b` 的 quartet 都按 `ab|ij` 分裂。

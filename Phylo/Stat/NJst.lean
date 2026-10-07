@@ -23,8 +23,9 @@ Theorem 4.1 证明了 NJst 在 MSC 下对**任意大**的物种树的统计一�
 ## 诚实边界（两条，都是已知硬骨头）
 
 1. **`MaxZCherryCore`** —— 「z 最大 ⟺ cherry」在 `Phylo/Algorithm/NJ` 中记为
-   **open problem**（纯度量路线无干净证明；标准证明走 Weller 2023 的 *leaf-status*，
-   需要**实现树**）。
+   **形式化缺口**。⚠️ **注意：这不是学术开放问题** —— NJ 正确性见
+   Studier–Keppler (1988)、Weller (2023)；缺口在于本库尚未形式化其前置
+   「**实现树 / Buneman 存在性**」。
 2. **NJ 的归纳正确性** —— 合并 cherry 后新距离矩阵**仍是树度量**（四点点条件保持），
    从而可归纳。这一步在库里尚未建立。
 
@@ -52,7 +53,7 @@ structure NJstData (X : Type u) [Fintype X] [DecidableEq X] where
   tree : Cladogram.{u, v} X
   /-- ★ MSC 引理：平均距离满足四点点条件。 -/
   fourPoint : δ.FourPoint
-  /-- ★ NJ 硬核（open problem，见模块文档）。 -/
+  /-- ★ NJ 硬核（**形式化缺口，非开放问题**；NJ 正确性见 Studier–Keppler 1988）、 -/
   core : δ.MaxZCherryCore
 
 namespace NJstData

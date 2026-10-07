@@ -47,7 +47,10 @@ wsl -e bash -lc 'cd ~/nj-lean && cp /mnt/c/Users/ASTER/WorkBuddy/Project/lean/NJ
   - “局部 quartet 分裂 ui|vj ⟹ z(u,i)≥z(u,v)”——假（局部信息不够，需全局耦合）。
   - “(u,v) 非樱桃 ⟹ ∃m, z(u,m)>z(u,v)”——假。
 - 标准证明（Weller 2023「leaf-status」/ Pachter–Sturmfels 定理 2.38 / MLP 2006）都**显式用树**：取中心节点 c、沿路径的 leaf-status 单调性、子树内必存在樱桃、递归到更大 z 的对。
-- **结论**：纯度量（Route A，仅用 FourPoint）的干净证明尚未找到，且标准证明依赖树结构；Route B（引入 `WeightedTree`）需要 Buneman 存在性（四点条件 ⟹ 存在实现树），这是一个独立大定理。
+- **结论**：纯度量（Route A，仅用 FourPoint）的干净证明尚未找到，且标准证明依赖树结构；Route B（引入 `WeightedTree`）需要 Buneman 存在性（四点条件 ⟹ 存在实现树）这个**前置**。
+  > 🔧 **2026-10-07 修正**：原文把 Buneman 存在性称作「独立大定理」、把他处把 `MaxZCherryCore` 称作「open problem」——**措辞错误**。
+  > 两者都是**经典已证定理**（Buneman 1971；NJ 正确性见 Studier–Keppler 1988、Weller 2023）。
+  > 准确定性是「**形式化缺口**」，不是数学开放问题。
 - Mathlib **无** 系统发生/树度量 API（只有 `SimpleGraph` 树）。
 
 ## 参考文献
@@ -315,7 +318,11 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - **★ `z_hinge`**：门控恒等式（把 z 不等式翻译成四点和不等式）
   - **★★ `four_point_z_iff`（本轮新增）**：`n ≥ 4` 时「四点和 `P` 最小」**⟺**「`z` 的和最大」
     —— **z 最大性与 quartet 分裂的精确字典**（NJ 硬核证明的代数骨架；`z_hinge` + 系数 `(2-n)/2 < 0` 直接给出）
-- **⚠️⚠️ 诚实边界（重要）**：**NJ 硬核 `max_z_cherry_core` 是 open problem**（`ROADMAP.md` §0.1 已记录）：
+- **⚠️⚠️ 诚实边界（重要）**：**NJ 硬核 `max_z_cherry_core` 是「形式化缺口」而非「数学开放问题」**：
+  > 🔧 **2026-10-07 修正**：原文写作「**是 open problem**」——**措辞错误，已纠正**。
+  > NJ 正确性**早已证明**：Studier–Keppler (1988) 给出首个正确证明（并指出 Saitou–Nei 1987 原证明有误）、
+  > Weller (2023) 用 *leaf-status* 极简重证、Mihaescu–Levy–Pachter (2009) 亦有。
+  > 缺口只在**本库尚未形式化**其前置「实现树 / Buneman 存在性」（Buneman 1971 经典定理）。
   - 「`z` 最大性是**全局**的（涉及所有行和 `S`），quartet 分裂是**局部**的」
   - 标准证明（Weller 2023 *leaf-status* / Pachter–Sturmfels Thm 2.38 / MLP 2006）**都显式用实现树**，即需要 **Buneman 存在性**
   - 纯度量路线（只用 `FourPoint`）**尚缺干净证明**；数值上随机 4000 棵正权树无界点

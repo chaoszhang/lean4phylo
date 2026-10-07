@@ -16,26 +16,34 @@ import Phylo.Stat.NJst
 
 > ★★ **`QuartetDecidesTree`**：两棵 **binary** cladogram 若有相同的 quartet 系统，则同构。
 
-（Steel 1992；Colonius–Schultze 1981。**binary 假设不可去**：polytomy 会产生反例 ——
+✦ **定性（重要，勿误传）**：这**不是学术开放问题** —— 它是 **Colonius–Schultze (1981)**
+与 **Steel (1992)** 的**经典定理**，教科书 Semple & Steel, *Phylogenetics* (2003) §6.4 有完整叙述。
+本库把它写成缺口，**只是尚未形式化**，不是数学未解。
+
+（**binary 假设不可去**：polytomy 会产生反例 ——
 把多叉顶点 refine 成 binary 不改变任何 quartet。）
 
-## 为什么它是缺口
+## 为什么它仍是缺口
 
 本文件按库里 `MaxZCherryCore`（`Phylo/Algorithm/NJ`）的既有惯例，
-把这条**尚未形式化**的定理写成**显式 `Prop` 缺口**，而不是 `sorry` ——
+把这条**经典但尚未形式化**的定理写成**显式 `Prop` 缺口**，而不是 `sorry` ——
 于是「零 `sorry`」保持，且依赖关系**清晰可审计**。
 
-**证明路线**（将来实施）：
+**这是「形式化缺口」而非「数学开放问题」** —— 定理本身已证（1981/1992），
+证明思路也是已知的，只是工作量较大。
+
+**证明路线（已知，非探索性）**：
 
 1. **边的叶侧**：binary `T` 的每条内部边 `e`，两侧各含 `≥ 2` 个叶
    （`deg = 3` ⟹ 除 `e` 外的两个方向各有叶）；
 2. **见证 quartet**：`e` 的叶侧 `A|B` 由「被 `e` 分离的 4-元 2|2 划分」见证；
 3. **恢复 split**：由 `q ≈ q'` 得 `Σ(T) = Σ(T')`（用 Colonius–Schultze 推理规则，
-   库里已有 `Cladogram.displaysQuartet_of_displaysQuartet_common`）；
+   库里**已有** `Cladogram.displaysQuartet_of_displaysQuartet_common`）；
 4. **由 split 系统重构**：binary 树由 `Σ(T)` 唯一决定（Steel；或接 `Phylo.Laminar`
    的 `toRootedTreeOfCard` + Buneman 存在性）。
 
-第 1 步需要「树的分量 / 诱导子图 / 叶存在性」的基础设施层，这是**尚未建立**的部分。
+第 1 步需要「树的分量 / 诱导子图 / 叶存在性」的基础设施层，这是**尚未建立**的部分
+（`Phylo/SideSubtree.lean` 已做阶段 1）。
 
 ## 下游收口
 
@@ -49,10 +57,14 @@ variable {X : Type u} [Fintype X] [DecidableEq X]
 
 /-- ★★ **（缺口，显式假设）quartet 系统决定 binary 树**。
 
+✦ **经典已证定理，本库尚未形式化**（**非**学术开放问题）。
+
 **陈述**：两棵 binary cladogram `T, T'`，若存在各自展示的 quartet 选择 `q, q'`
 使得逐点一致（模 `swap`），则 `T ≅ T'`。
 
-**文献**：Steel 1992；Colonius–Schultze 1981（full 情形的完整推理系统）。
+**文献**：Colonius & Schulze (1981), *Tree structures for proximity data*；
+Steel (1992), *The complexity of reconstructing trees from qualitative characters and subtrees*；
+教科书 Semple & Steel, *Phylogenetics* (2003) §6.4（full 情形的完整推理系统）。
 
 **为什么 binary 不可去**：若 `T` 有 polytomy（内部度 `≥ 4`），把它 refine 成 binary 得到
 `T'`，则 `q = q'` 但 `T ≇ T'`。 -/

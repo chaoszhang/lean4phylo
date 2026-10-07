@@ -154,7 +154,7 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 | 19 | **侧分量子树是树**（阶段 1） | `isTree_induce_sideVertices` | `Phylo/SideSubtree.lean` | ✅ 无条件 |
 | 20 | **NNI 分解**（split 层，🔄 dsh 首轮） | `Split.nniResolvent` / `nniParts_zero` / `nniResolvent_sideA/sideB` | `Phylo/Algorithm/NNI.lean` | 🔄 定义 + 分块引理；相容/不相容未做 |
 
-> **一句话总结给老师看的**：**ASTRAL、CASTER、parsimony、SVDQuartets 四个算法的核心正确性已经形式化**；NJst 拿到第一步；NJ 拿到全部代数骨架但硬核仍是 open problem。
+> **一句话总结给老师看的**：**ASTRAL、CASTER、parsimony、SVDQuartets 四个算法的核心正确性已经形式化**；NJst 拿到第一步；NJ 拿到全部代数骨架，剩一条**经典定理的形式化缺口**（`MaxZCherryCore`，见 T4 的定性说明 —— **不是**数学开放问题）。
 
 ### 2.2 基础层（定义 + 地基，全部无条件）
 
@@ -205,7 +205,8 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 独立支线：
 ┌──────────────────┐     ┌──────────────────┐
 │ T3 Buneman 存在性 │────►│ T4 MaxZCherryCore │───► NJ / NJst 完整正确性
-│ (四点条件⟹实现树) │     │ (open problem)    │
+│ (四点条件⟹实现树) │     │ (经典定理的形式化  │
+│  Buneman 1971 经典│     │  缺口, 非开放问题)│
 └──────────────────┘     └──────────────────┘
 
 可独立推进：
@@ -221,15 +222,19 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 
 ### T1 ★★★ 头号目标：把 `QuartetDecidesTree` 从缺口变成定理
 
+> ✦ **定性：这是「形式化缺口」，不是学术开放问题。** 定理本身是 **Colonius–Schultze (1981)**
+> 与 **Steel (1992)** 的经典结果（教科书 Semple & Steel, *Phylogenetics* (2003) §6.4），
+> **证明路线是已知的**，只是工作量大。别把它当成数学难题 —— 它是一份**确定的工程量**。
+
 | 项 | 内容 |
 |---|---|
-| **位置** | `Phylo/Stat/QuartetDecides.lean:59`（现在是 `def QuartetDecidesTree (X) : Prop := ...`） |
+| **位置** | `Phylo/Stat/QuartetDecides.lean:71`（现在是 `def QuartetDecidesTree (X) : Prop := ...`） |
 | **陈述** | 两棵 **binary** cladogram `T, T'`，若逐 4-元集上展示的 quartet 一致（模 `swap`），则 `T ≅ T'` |
 | **交付** | 把 `def` 换成 `theorem`（或新证 `theorem quartetDecidesTree`，`def` 保留作别名） |
-| **文献** | Steel 1992；Colonius–Schultze 1981 |
+| **文献** | **Colonius & Schulze (1981)**, *Tree structures for proximity data*；**Steel (1992)**, *The complexity of reconstructing trees from qualitative characters and subtrees*；Semple & Steel, *Phylogenetics* (2003) §6.4 |
 | **为什么 binary 不可去** | polytomy refine 成 binary 不改任何 quartet ⟹ 反例 |
 
-**老师定的逆否路线**（`T ≇ T'` ⟹ 存在不兼容 split ⟹ 存在不兼容 quartet）：
+**路线 A：老师定的逆否路线**（`T ≇ T'` ⟹ 存在不兼容 split ⟹ 存在不兼容 quartet）：
 
 1. **`T ≇ T'` ⟹ 存在 `s ∈ Σ(T)` 与 `Σ(T')` 不相容**
    —— 等价于 **binary 树 split 系统的极大性**（库内**尚无**）。
@@ -239,10 +244,14 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
    `Phylo/Binary.lean` 的 ★★★ `exists_restrict_ne_of_incompatible`（配合 `exists_four_of_incompatible`）。
 3. **收口**：把第 2 步的「两个不同 quartet」与假设「逐点一致（模 swap）」对撞。
 
-**顺带可做的替代路线**（可能更短）：
-走 `Laminar.toRootedTreeOfCard` —— 「`Σ(T) = Σ(T')` 的 binary 树 ⟹ 由 split 系统唯一决定」。
-库里 `splitOf` / `isSplitOf_splitOf` / `splitOf_mem_splits` 已经把「split ↔ 规范簇」的字典打通，
-第 3 步只差「两棵树有同样的 split 系统 ⟹ 同构」（Splits-Equivalence 的**同构版本**）。
+**路线 B：Colonius–Schultze 推理规则（可能更短，推荐先试）**
+
+C–S 给出的是**完整推理系统**（对 full quartet 系统完备），我们库里**已经有其中一条规则**：
+`Cladogram.displaysQuartet_of_displaysQuartet_common`（`ab|ce ∧ ab|de ⟹ ab|cd`）。
+⇒ 目标可以变成「**把 C–S 的推理规则补全**」：由逐点一致的 `q ≈ q'` 逐步推出 `Σ(T) = Σ(T')`，
+再走 `Phylo/Laminar` 的 `splitOf` / `isSplitOf_splitOf` / `splitOf_mem_splits`
+（**「split ↔ 规范簇」字典已打通**）收口到 `toRootedTreeOfCard`。
+这条路线**不需要 refinement/contraction**，只需推理规则 + 已有的建树管线。
 
 **验收**：`Phylo/Stat/QuartetDecides.lean` 中 `def QuartetDecidesTree` 消失（或降级为 `theorem` 的别名），
 `astral_iso` / `caster_iso` / `parsimony_iso` 不再需要 `hQD` 假设。**全库仍零 `sorry`。**
@@ -274,13 +283,18 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 
 ---
 
-### T3 ★★★ Buneman 存在性（四点条件 ⟹ 存在实现加权树）—— 独立大定理
+### T3 ★★★ Buneman 存在性（四点条件 ⟹ 存在实现加权树）—— 经典定理的形式化
+
+> ✦ **定性**：这也是**经典已证定理** —— **Buneman (1971)**, *The recovery of trees from measures of dissimilarity*；
+> 亦见 Semple & Steel, *Phylogenetics* (2003) §7.2 与 Buneman 定理的标准证明。
+> 不是开放问题；同样是**形式化工作量**问题。
 
 | 项 | 内容 |
 |---|---|
 | **建议位置** | 新文件 `Phylo/Buneman.lean` |
 | **陈述** | `Dissimilarity.FourPoint δ ⟹ ∃ (加权树 T), ∀ i j, δ i j = T.dist (leaf i) (leaf j)` |
-| **为什么是大定理** | 这是「相容 ⟹ 存在树」的**度量版**；库里已有 `Phylogram.dist`（唯一路径边权和）可直接当 RHS |
+| **为什么工作量大** | 需要构造顶点集（Buneman 的「团 / cluster」）、边权（Gromov 积的两两差）、并验证路径和；库里已有 `Phylogram.dist`（唯一路径边权和）可直接当 RHS |
+| **文献** | Buneman (1971)；Semple & Steel, *Phylogenetics* (2003) §7.2 |
 
 **关键情报（本轮新发现，能省大量工作）**：
 - MEMORY 里记的旧卡点「连通性需根 vs `no_degree_two`」**已经被绕开了**：
@@ -296,7 +310,12 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 
 ---
 
-### T4 ★★★ `MaxZCherryCore`（NJ 硬核，**open problem**）
+### T4 ★★★ `MaxZCherryCore`（NJ 定理的纯度量表述，**形式化缺口**）
+
+> ✦ **定性：不是学术开放问题。** NJ 的正确性**早已证明** ——
+> **Studier–Keppler (1988)** 给出首个正确证明（并指出 Saitou–Nei 1987 原始证明有误），
+> **Weller (2023)** 用 *leaf-status* 极简重证，Mihaescu–Levy–Pachter (2009) 亦有。
+> 缺口在于本库**尚未形式化其前置**「Buneman 存在性」，不是数学未解。
 
 | 项 | 内容 |
 |---|---|
@@ -304,6 +323,7 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 | **陈述** | `(a,b)` 全局最大化 `z := δ + ℓ` ⟹ 对任意异于 `a,b` 的 `i,j`，`δ(a,b)+δ(i,j) ≤ δ(a,i)+δ(b,j)` 且 `≤ δ(a,j)+δ(b,i)` |
 | **现状态** | 库里处理为**显式 `Prop` 假设**（不用 `sorry`），`nj_cherry` 表述为「假设硬核 ⟹ 樱桃引理」——诚实且可审计 |
 | **数值证据** | 随机 4000 棵正权树（n=4..8），argmax `z` **恒为樱桃，0 反例** ⟹ 命题为真 |
+| **缺口性质** | 形式化路径问题：标准证明都要「实现树」，而库内还没有 ⟹ **先做 T3** |
 
 **已排除的朴素路线**（都有数值反例，别再试）：
 1. 「最近距离对是樱桃」—— 假（1822 反例）；
@@ -493,6 +513,13 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 11. **`MEMORY.md` 只许追加**，严禁精简 / 回退 / 重写历史章节。—— **见开头「⚠️ 必读」节（完整说明 + 事故复盘）**
 12. **docstring 里的 ★ 必须对应真实存在的声明**；未证明的一律落成显式 `def … : Prop` 缺口。—— 见开头「⚠️ 必读」节
 13. **每批结束回写本文件**（就地更新，不要另写第二份交接文档）。—— 见 §7.5
+14. **术语准确性：严格区分「形式化缺口」与「数学开放问题」。**
+    ⚠️ 本库的 `MaxZCherryCore`（NJ）与 `QuartetDecidesTree` 都被写成显式 `Prop` 缺口，
+    但**两者都是经典已证定理**（NJ：Studier–Keppler 1988 / Weller 2023；quartet 决定树：
+    Colonius–Schultze 1981 / Steel 1992），**不是**数学开放问题。
+    ⇒ 描述缺口时一律写「**形式化缺口 / 尚未形式化**」，**绝不写** "open problem" / "开放问题"。
+    （2026-10-07 曾误写，已在 `MEMORY.md` / `NJ.lean` / `NJst.lean` / `CONCEPTS.md` 就地修正。
+    误写会让接手方以为该方向无解而放弃，危害极大。）
 
 ---
 
