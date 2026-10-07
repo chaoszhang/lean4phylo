@@ -570,11 +570,21 @@ theorem compatible_of_sameQuartetSystem {T T' : Cladogram X}
 ⬜ **剩余的唯一输入**：`SplitsMaximal T`（「与全部 split 相容 ⟹ 自身是 split」），
 在 `T.IsBinary` 时成立 —— 见下方 `BinarySplitsMaximal` 的 docstring（含证明思路）。 -/
 
-/-- **clan 条件**：`A` 内任意两点与 `A` 外任意两点构成的 quartet 都被 `T` 展示。 -/
+/-- **clan 条件**：`A` 内任意两点与 `A` 外任意两点构成的 quartet 都被 `T` 展示。
+
+⚠️ **术语提示（2026-10-07）**：本条件是「**成为 clan 的判据**」，对应
+**Bandelt–Dress 的 cluster 条件**；而**学界的「clan」（无根树）**指
+「`A | X−A` 是树的一条 split」，即本库的 `IsClade`。
+参见 `references/md/ZhuDegnanSteel2011_*.md`（md **134 行**、**1003–1005 行**）。 -/
 def IsClan (A : Finset X) : Prop :=
   ∀ a ∈ A, ∀ b ∈ A, ∀ c ∉ A, ∀ d ∉ A, T.DisplaysQuartet a b c d
 
-/-- **clade**：`A` 恰是 `T` 某条边的某一侧。 -/
+/-- **clade**：`A` 恰是 `T` 某条边的某一侧。
+
+⚠️ **术语提示（2026-10-07）**：本库 `Cladogram` 是**无根**载体 —— 按学界惯例
+（**clan** = 无根树一条边的一侧；**clade** = 有根树的内部顶点后代叶集），
+本定义实为**学界的「clan」**。为免波及既有引用，**暂不改名**。
+参见 `references/md/ZhuDegnanSteel2011_*.md`（md **146–147 行**、**1003–1005 行**）。 -/
 def IsClade (A : Finset X) : Prop :=
   ∃ s : Split X, T.IsSplitOf s ∧ s.sideA = A
 
@@ -799,7 +809,8 @@ theorem isClan_univ : T.IsClan (Finset.univ : Finset X) :=
 
 /-- **cluster**：Bandelt–Dress 的定义 = 非空 + 真子集 + `IsClan`。
 
-必须显式带上前两条 —— 因为 `IsClan` 对 `∅`/`X` 空真（见 `isClan_empty` / `isClan_univ`）。 -/
+必须显式带上前两条 —— 因为 `IsClan` 对 `∅`/`X` 空真（见 `isClan_empty` / `isClan_univ`）。
+⇒ 本库三个术语中，**只有 `IsCluster` 与文献（Bandelt–Dress）一致**。 -/
 def IsCluster (A : Finset X) : Prop :=
   A.Nonempty ∧ A ≠ Finset.univ ∧ T.IsClan A
 
