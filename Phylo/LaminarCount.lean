@@ -265,6 +265,20 @@ theorem sidesCompatible_away (ρ : α) {t u : Split α} (h : Compatible t u) :
     exact sidesCompatible_compl_right.mpr hbase
   · rw [away_of_notMem ρ ht, away_of_notMem ρ hu]; exact hbase
 
+/-- ★ **`swap` 不改变 `away`**（这解释了「`t ↦ away ρ t` 是 2 对 1 而非单射」）。 -/
+theorem away_swap (ρ : α) (t : Split α) : t.swap.away ρ = t.away ρ := by
+  by_cases h : ρ ∈ t.sideA
+  · have hb : ρ ∉ t.sideB := fun hb => (Finset.disjoint_left.mp t.disjoint_sides) h hb
+    rw [away_of_mem ρ h,
+      away_of_notMem ρ (by rw [Split.swap_sideA]; exact hb), Split.swap_sideA]
+  · have hb : ρ ∈ t.sideB := by
+      have hmem : ρ ∈ t.sideA ∪ t.sideB := by rw [t.union_sides]; exact Finset.mem_univ ρ
+      rcases Finset.mem_union.mp hmem with h' | h'
+      · exact absurd h' h
+      · exact h'
+    rw [away_of_notMem ρ h,
+      away_of_mem ρ (by rw [Split.swap_sideA]; exact hb), Split.swap_sideB]
+
 end Split
 
 namespace Finset
