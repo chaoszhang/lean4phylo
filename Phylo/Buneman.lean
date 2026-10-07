@@ -39,6 +39,27 @@ J. Combinatorial Theory (B) **17** (1974) 48–50。
 * **★★ `Dissimilarity.fourpoint_eq_of_le_both`** —— 若某对和同时 ≤ 另两对和，
   则另两对和相等（归纳证明第 86–89 行「用四点条件得到等式」的那一步）。
 
+**Buneman 归纳步的算术核心**（第 78–95、112–113 行）
+
+* **★★ `Dissimilarity.bunemanScore`** / **`bunemanScore_comm`** —— 第 81 行被最大化的量
+  `f(a,b,c) = δ(a,c) + δ(b,c) − δ(a,b)`。
+* **★★ `Dissimilarity.exists_three_distinct`** / **`exists_max_triple`** ——
+  `|X| ≥ 3` 时**互异**极大三元组存在（第 78–81 行）。
+* **★★ `Dissimilarity.max_triple_ineq_left`** / **`max_triple_ineq_right`** ——
+  极大性给出的两条不等式（第 82–85 行）。
+* **★★★ `Dissimilarity.max_triple_fourpoint_eq`** —— 四点条件给出的等式
+  `δ(x,q) + δ(p,r) = δ(x,p) + δ(q,r)`（第 86–89 行）。
+* **★★★ `Dissimilarity.max_triple_identity_one`** —— Buneman 恒等式 (1)（第 90–91 行）。
+* **★★ `Dissimilarity.rho_p_le_val`** / **`rho_add_rho`** —— 新点 `t` 的两条边权
+  `ρ(p;q,r)`、`ρ(q;p,r)`（第 94 行；两者之和为 `δ(p,q)`）。
+* **★★★ `Dissimilarity.shrinkVal_symm`** / **`shrinkVal_self`** / **`shrinkVal_nonneg`** /
+  **`shrinkVal_fourpoint`** —— 扩张相异度 `δ'`：对称、零对角、非负、
+  **四点条件保持**（第 92–95、112–113 行）。
+* **★★★ `Dissimilarity.attach_left`** / **`attach_right`** —— (2a)/(2b)：
+  `p` 与 `q` 都挂在 `t` 上（第 106–110 行）。
+* **★★ `Dissimilarity.shrinkDissimilarity`** —— 把 `δ'` 打包成 `Dissimilarity`
+  （供归纳假设使用）。
+
 ## ⬜ 形式化缺口（本文件的诚实边界）
 
 **目标定理**（Buneman 1974, Theorem 2；`HANDOVER.md` §4 的 T0.2 验收项）：
@@ -50,15 +71,17 @@ theorem Dissimilarity.exists_phylogram_of_fourPoint
 ```
 
 **这不是学术开放问题**：Buneman 1974 已给出完整证明（Zaretskii 1965 亦有等价结果）。
-本库尚未形式化的**唯一**内容是**归纳装配**：
+上面的算术核心（选极大三元组、加入 `t`、`δ'` 仍是满足四点条件的相异度、(2a)/(2b)）
+**已全部形式化**；剩下的只有**树的图手术 + 归纳装配**：
 
 * **挂叶手术**：把 `Phylogram` 的一片叶（对应新点 `t`）改成内部顶点，再挂上两片新叶 `p,q`；
   需要新增图论引理「树上挂两个悬挂点仍是树」+ 度数记账（`t` 由度 1 变度 3，
   `no_degree_two`、`leaf_iff_degree_one` 保持）+ 唯一路径的边权和计算
-  （`dist` 沿「`p—t—…—x`」分解）；
-* **归纳**：对 `Fintype.card` 强归纳，每步用上面的手术 + 下面的算术核心。
+  （`dist` 沿「`p—t—…—x`」分解，用 `attach_left` / `attach_right`）；
+* **归纳**：对 `Fintype.card` 强归纳（基例 `|Y| ≤ 2`：单点树 / 一条边），
+  每步用上面的手术 + 上面的算术核心。
 
-本文件把整个归纳装配登记为 `Dissimilarity.InductiveAssembly`（**显式假设**，
+本文件把该装配登记为 `Dissimilarity.InductiveAssembly`（**显式假设**，
 与 `Phylo/Algorithm/NJ.lean` 的 `MaxZCherryCore` 同一房规）——
 **不使用 `sorry`**，库仍零 `sorry`，且依赖关系机器可查。
 -/
@@ -160,19 +183,19 @@ theorem fourpoint_eq_of_le_both (δ : Dissimilarity X) (hfp : δ.FourPoint) (i j
 
 ⇒ 归纳装配（`InductiveAssembly`）所缺的**只剩树的图手术**。 -/
 
-omit [DecidableEq X] in
+omit [Fintype X] [DecidableEq X] in
 /-- 四点条件 ⟹ `δ ≥ 0`（`triangle` 取两点重合）。 -/
 theorem val_nonneg (δ : Dissimilarity X) (hfp : δ.FourPoint) (x y : X) : 0 ≤ δ.val x y := by
   have h := triangle δ hfp x y y
   rw [δ.diag y] at h
   linarith
 
-omit [DecidableEq X] in
+omit [Fintype X] [DecidableEq X] in
 /-- **Buneman 得分** `f(a,b,c) = δ(a,c) + δ(b,c) − δ(a,b)`：第 81 行被最大化的量。 -/
 def bunemanScore (δ : Dissimilarity X) (a b c : X) : ℝ :=
   δ.val a c + δ.val b c - δ.val a b
 
-omit [DecidableEq X] in
+omit [Fintype X] [DecidableEq X] in
 /-- 得分对头两个自变量对称（故极大三元组可交换前两位）。 -/
 theorem bunemanScore_comm (δ : Dissimilarity X) (a b c : X) :
     δ.bunemanScore a b c = δ.bunemanScore b a c := by
@@ -217,46 +240,56 @@ theorem exists_max_triple (δ : Dissimilarity X) (h3 : 3 ≤ Fintype.card X) :
     ⟨(a₀, b₀, c₀), by simp [hab, hac, hbc]⟩
   obtain ⟨t, ht, hmax⟩ := Finset.exists_max_image _
     (fun t : X × X × X => δ.bunemanScore t.1 t.2.1 t.2.2) hne
-  obtain ⟨-, ht1, ht2, ht3⟩ := (Finset.mem_filter.mp ht).2
+  have hcond := (Finset.mem_filter.mp ht).2
+  have ht1 : t.1 ≠ t.2.1 := hcond.1
+  have ht2 : t.1 ≠ t.2.2 := hcond.2.1
+  have ht3 : t.2.1 ≠ t.2.2 := hcond.2.2
   exact ⟨t.1, t.2.1, t.2.2, ht1, ht2, ht3, fun a b c ha hb hc =>
     hmax (a, b, c) (by simp [ha, hb, hc])⟩
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★ **极大三元组的第一条不等式**（Buneman 第 83 行）：
-`x ∉ {p,q}` 时 `δ(x,r) + δ(p,q) ≤ δ(x,q) + δ(p,r)`。
+`x ≠ q` 时 `δ(x,r) + δ(p,q) ≤ δ(x,q) + δ(p,r)`
+（`x = p` 时两边相等，故不需 `x ≠ p`）。
 
 （`x = r` 的退化情形就是三角不等式，故须分情形。） -/
 theorem max_triple_ineq_left (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r x : X}
     (hqr : q ≠ r)
     (hmax : ∀ a b c : X, a ≠ b → a ≠ c → b ≠ c →
       δ.bunemanScore a b c ≤ δ.bunemanScore p q r)
-    (hxp : x ≠ p) (hxq : x ≠ q) :
+    (hxq : x ≠ q) :
     δ.val x r + δ.val p q ≤ δ.val x q + δ.val p r := by
-  rcases eq_or_ne x r with rfl | hxr
-  · have ht := triangle δ hfp p q r
-    have h1 : δ.val r r = 0 := δ.diag r
-    have h2 : δ.val r q = δ.val q r := δ.symm r q
+  rcases eq_or_ne x r with hxr | hxr
+  · rw [← hxr]
+    have ht := triangle δ hfp x p q
+    have h1 : δ.val x x = 0 := δ.diag x
+    have h2 : δ.val p x = δ.val x p := δ.symm p x
     linarith
   · have h := hmax x q r hxq hxr hqr
     simp only [bunemanScore] at h
     linarith
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★ **极大三元组的第二条不等式**（Buneman 第 85 行）：
-`x ∉ {p,q}` 时 `δ(x,r) + δ(p,q) ≤ δ(x,p) + δ(q,r)`。 -/
+`x ≠ p` 时 `δ(x,r) + δ(p,q) ≤ δ(x,p) + δ(q,r)`
+（`x = q` 时两边相等，故不需 `x ≠ q`）。 -/
 theorem max_triple_ineq_right (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r x : X}
     (hpr : p ≠ r)
     (hmax : ∀ a b c : X, a ≠ b → a ≠ c → b ≠ c →
       δ.bunemanScore a b c ≤ δ.bunemanScore p q r)
-    (hxp : x ≠ p) (hxq : x ≠ q) :
+    (hxp : x ≠ p) :
     δ.val x r + δ.val p q ≤ δ.val x p + δ.val q r := by
-  rcases eq_or_ne x r with rfl | hxr
-  · have ht := triangle δ hfp r p q
-    have h1 : δ.val r r = 0 := δ.diag r
-    have h2 : δ.val q r = δ.val r q := (δ.symm r q).symm
+  rcases eq_or_ne x r with hxr | hxr
+  · rw [← hxr]
+    have ht := triangle δ hfp x p q
+    have h1 : δ.val x x = 0 := δ.diag x
+    have h2 : δ.val q x = δ.val x q := (δ.symm x q).symm
     linarith
   · have h := hmax x p r hxp hxr hpr
     simp only [bunemanScore] at h
     linarith
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **四点条件给出的等式**（Buneman 第 86–89 行）：
 极大三元组下，对任意 `x ∉ {p,q}`，`δ(x,q) + δ(p,r) = δ(x,p) + δ(q,r)`。 -/
 theorem max_triple_fourpoint_eq (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r x : X}
@@ -265,13 +298,14 @@ theorem max_triple_fourpoint_eq (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q
       δ.bunemanScore a b c ≤ δ.bunemanScore p q r)
     (hxp : x ≠ p) (hxq : x ≠ q) :
     δ.val x q + δ.val p r = δ.val x p + δ.val q r := by
-  have h1 := max_triple_ineq_left δ hfp hqr hmax hxp hxq
-  have h2 := max_triple_ineq_right δ hfp hpr hmax hxp hxq
+  have h1 := max_triple_ineq_left δ hfp hqr hmax hxq
+  have h2 := max_triple_ineq_right δ hfp hpr hmax hxp
   have h3 := fourpoint_eq_of_le_both δ hfp x r p q
     (by rw [δ.symm r q]; exact h2) (by rw [δ.symm r p]; exact h1)
   rw [δ.symm r q, δ.symm r p] at h3
   linarith
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **Buneman 恒等式 (1)**（第 90–91 行）：对任意 `x,y ∉ {p,q}`，
 `δ(y,p) + δ(x,q) = δ(x,p) + δ(y,q)`。 -/
 theorem max_triple_identity_one (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r x y : X}
@@ -284,21 +318,21 @@ theorem max_triple_identity_one (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q
   have hy := max_triple_fourpoint_eq δ hfp hpr hqr hmax hyp hyq
   linarith
 
-omit [DecidableEq X] in
+omit [Fintype X] [DecidableEq X] in
 /-- ★★ **新点 `t` 到 `p` 的边权**：`ρ(p;q,r) ≤ δ(x,p)`（Buneman 第 94 行，
 即第 116 行的「集合缩小后 `δ` 仍是度量」所需的非负性）。 -/
 theorem rho_p_le_val (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r x : X}
-    (hpr : p ≠ r) (hqr : q ≠ r)
+    (hpr : p ≠ r)
     (hmax : ∀ a b c : X, a ≠ b → a ≠ c → b ≠ c →
       δ.bunemanScore a b c ≤ δ.bunemanScore p q r)
-    (hxp : x ≠ p) (hxq : x ≠ q) :
+    (hxp : x ≠ p) :
     δ.rho p q r ≤ δ.val x p := by
-  have h2 := max_triple_ineq_right δ hfp hpr hmax hxp hxq
+  have h2 := max_triple_ineq_right δ hfp hpr hmax hxp
   have h3 := triangle δ hfp x p r
   simp only [rho]
   linarith
 
-omit [DecidableEq X] in
+omit [Fintype X] [DecidableEq X] in
 /-- ★★ **两条挂叶边权之和**：`ρ(p;q,r) + ρ(q;p,r) = δ(p,q)`
 （把 Buneman 第 106–110 行的 (2b) 写成对称形式的关键恒等式）。 -/
 theorem rho_add_rho (δ : Dissimilarity X) (p q r : X) :
@@ -322,59 +356,65 @@ def shrinkVal (δ : Dissimilarity X) (p q r : X) : BunemanShrink p q → Buneman
   | Sum.inr _, Sum.inl y => δ.val y.1 p - δ.rho p q r
   | Sum.inr _, Sum.inr _ => 0
 
-@[simp] theorem shrinkVal_inl_inl (δ : Dissimilarity X) (p q r : X)
+omit [Fintype X] [DecidableEq X] in
+theorem shrinkVal_inl_inl (δ : Dissimilarity X) (p q r : X)
     (x y : {x : X // x ≠ p ∧ x ≠ q}) :
     δ.shrinkVal p q r (Sum.inl x) (Sum.inl y) = δ.val x.1 y.1 := rfl
 
-@[simp] theorem shrinkVal_inl_inr (δ : Dissimilarity X) (p q r : X)
+omit [Fintype X] [DecidableEq X] in
+theorem shrinkVal_inl_inr (δ : Dissimilarity X) (p q r : X)
+    (x : {x : X // x ≠ p ∧ x ≠ q}) (u : Unit) :
+    δ.shrinkVal p q r (Sum.inl x) (Sum.inr u) = δ.val x.1 p - δ.rho p q r := rfl
+
+omit [Fintype X] [DecidableEq X] in
+theorem shrinkVal_inr_inl (δ : Dissimilarity X) (p q r : X) (u : Unit)
     (x : {x : X // x ≠ p ∧ x ≠ q}) :
-    δ.shrinkVal p q r (Sum.inl x) (Sum.inr ()) = δ.val x.1 p - δ.rho p q r := rfl
+    δ.shrinkVal p q r (Sum.inr u) (Sum.inl x) = δ.val x.1 p - δ.rho p q r := rfl
 
-@[simp] theorem shrinkVal_inr_inl (δ : Dissimilarity X) (p q r : X)
-    (x : {x : X // x ≠ p ∧ x ≠ q}) :
-    δ.shrinkVal p q r (Sum.inr ()) (Sum.inl x) = δ.val x.1 p - δ.rho p q r := rfl
+omit [Fintype X] [DecidableEq X] in
+theorem shrinkVal_inr_inr (δ : Dissimilarity X) (p q r : X) (u v : Unit) :
+    δ.shrinkVal p q r (Sum.inr u) (Sum.inr v) = 0 := rfl
 
-@[simp] theorem shrinkVal_inr_inr (δ : Dissimilarity X) (p q r : X) :
-    δ.shrinkVal p q r (Sum.inr ()) (Sum.inr ()) = 0 := rfl
-
-/-- 扩张相异度**对称**。 -/
+omit [Fintype X] [DecidableEq X] in
+/-- 扩张相异度**对称**（四种情形都按定义归约）。 -/
 theorem shrinkVal_symm (δ : Dissimilarity X) (p q r : X) (a b : BunemanShrink p q) :
     δ.shrinkVal p q r a b = δ.shrinkVal p q r b a := by
-  rcases a with x | u <;> rcases b with y | v <;>
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
+  rcases a with x | u <;> rcases b with y | v
   · exact δ.symm x.1 y.1
   · rfl
   · rfl
   · rfl
 
+omit [Fintype X] [DecidableEq X] in
 /-- 扩张相异度**零对角**。 -/
 theorem shrinkVal_self (δ : Dissimilarity X) (p q r : X) (a : BunemanShrink p q) :
     δ.shrinkVal p q r a a = 0 := by
-  rcases a with x | u <;>
-    simp only [shrinkVal_inl_inl, shrinkVal_inr_inr]
+  rcases a with x | u
   · exact δ.diag x.1
   · rfl
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★ 扩张相异度**非负**（Buneman 第 113 行；用的是 `rho_p_le_val`）。 -/
 theorem shrinkVal_nonneg (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r : X}
-    (hpr : p ≠ r) (hqr : q ≠ r)
+    (hpr : p ≠ r)
     (hmax : ∀ a b c : X, a ≠ b → a ≠ c → b ≠ c →
       δ.bunemanScore a b c ≤ δ.bunemanScore p q r)
     (a b : BunemanShrink p q) : 0 ≤ δ.shrinkVal p q r a b := by
-  rcases a with x | u <;> rcases b with y | v <;>
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
+  rcases a with x | u <;> rcases b with y | v
   · exact val_nonneg δ hfp x.1 y.1
-  · exact sub_nonneg.mpr (rho_p_le_val δ hfp hpr hqr hmax x.2.1 x.2.2)
-  · exact sub_nonneg.mpr (rho_p_le_val δ hfp hpr hqr hmax y.2.1 y.2.2)
+  · exact sub_nonneg.mpr (rho_p_le_val δ hfp hpr hmax x.2.1)
+  · exact sub_nonneg.mpr (rho_p_le_val δ hfp hpr hmax y.2.1)
   · exact le_refl 0
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **(2a)：`p` 挂在 `t` 上**（Buneman 第 106 行）：`δ(x,p) = ρ(p;q,r) + δ'(t,x)`。 -/
 theorem attach_left (δ : Dissimilarity X) (p q r : X)
     (x : {x : X // x ≠ p ∧ x ≠ q}) :
     δ.val x.1 p = δ.rho p q r + δ.shrinkVal p q r (Sum.inr ()) (Sum.inl x) := by
-  simp only [shrinkVal_inr_inl]
+  show δ.val x.1 p = δ.rho p q r + (δ.val x.1 p - δ.rho p q r)
   ring
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **(2b)：`q` 也挂在 `t` 上**：`δ(x,q) = ρ(q;p,r) + δ'(t,x)`。
 
 （Buneman 第 107–110 行用恒等式 (1) 得到这一条；本文件等价地写成对称的
@@ -390,6 +430,7 @@ theorem attach_right (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r : X}
   simp only [shrinkVal_inr_inl, rho]
   linarith
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **「`t` 处的三角不等式」**（四点条件保持中最实质的一步）：
 
 `δ(x,y) ≤ δ'(t,x) + δ'(t,y)`。
@@ -412,11 +453,13 @@ theorem shrinkVal_triangle_at_t (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q
     simp only [shrinkVal_inr_inl, rho]
     linarith
 
+omit [Fintype X] [DecidableEq X] in
 /-- ★★★ **扩张后四点条件保持**（Buneman 第 112–113 行）：
 
 `δ'` 在 `S ∖ {p,q} ∪ {t}` 上仍满足四点条件。
 
-* 四个点都在旧集：原四点条件；
+* 四个点都在旧集：原四点条件（第 112 行「It also follows from the definition of d on
+  S ∪ {t} that d still satisfies the four-point condition」）；
 * 恰一个 `t`：对 `(p, 其余三点)` 用四点条件，`ρ(p;q,r)` 两边抵消；
 * 恰两个 `t`：要么两边同项（平凡），要么化归 `shrinkVal_triangle_at_t`。 -/
 theorem shrinkVal_fourpoint (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r : X}
@@ -429,67 +472,60 @@ theorem shrinkVal_fourpoint (δ : Dissimilarity X) (hfp : δ.FourPoint) {p q r :
       δ.shrinkVal p q r a b + δ.shrinkVal p q r c d ≤
         δ.shrinkVal p q r a d + δ.shrinkVal p q r b c := by
   rcases a with x | u <;> rcases b with y | v <;> rcases c with z | w <;> rcases d with t | s
-  · simpa only [shrinkVal_inl_inl] using hfp x.1 y.1 z.1 t.1
+  all_goals
+    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
+  · simpa using hfp x.1 y.1 z.1 t.1
   · rcases hfp p z.1 x.1 y.1 with h | h
     · right
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p z.1, δ.symm x.1 p, δ.symm y.1 p]
+      linarith [δ.symm p x.1, δ.symm p y.1, δ.symm p z.1, δ.symm x.1 y.1,
+        δ.symm x.1 z.1, δ.symm y.1 z.1, h]
     · left
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p z.1, δ.symm x.1 p, δ.symm y.1 p]
+      linarith [δ.symm p x.1, δ.symm p y.1, δ.symm p z.1, δ.symm x.1 y.1,
+        δ.symm x.1 z.1, δ.symm y.1 z.1, h]
   · rcases hfp p t.1 x.1 y.1 with h | h
     · left
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p t.1, δ.symm x.1 p, δ.symm y.1 p]
+      linarith [δ.symm p x.1, δ.symm p y.1, δ.symm p t.1, δ.symm x.1 y.1,
+        δ.symm x.1 t.1, δ.symm y.1 t.1, h]
     · right
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p t.1, δ.symm x.1 p, δ.symm y.1 p]
+      linarith [δ.symm p x.1, δ.symm p y.1, δ.symm p t.1, δ.symm x.1 y.1,
+        δ.symm x.1 t.1, δ.symm y.1 t.1, h]
   · left
-    simpa only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inr] using
-      shrinkVal_triangle_at_t δ hfp hpr hqr hmax x y
+    simpa only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr,
+      add_zero, zero_add] using shrinkVal_triangle_at_t δ hfp hpr hqr hmax x y
   · rcases hfp p x.1 z.1 t.1 with h | h
     · right
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p x.1, δ.symm z.1 p, δ.symm t.1 p]
+      linarith [δ.symm p x.1, δ.symm p z.1, δ.symm p t.1, δ.symm x.1 z.1,
+        δ.symm x.1 t.1, δ.symm z.1 t.1, h]
     · left
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p x.1, δ.symm z.1 p, δ.symm t.1 p]
+      linarith [δ.symm p x.1, δ.symm p z.1, δ.symm p t.1, δ.symm x.1 z.1,
+        δ.symm x.1 t.1, δ.symm z.1 t.1, h]
   · right
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · rcases hfp p y.1 z.1 t.1 with h | h
     · left
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p y.1, δ.symm z.1 p, δ.symm t.1 p]
+      linarith [δ.symm p y.1, δ.symm p z.1, δ.symm p t.1, δ.symm y.1 z.1,
+        δ.symm y.1 t.1, δ.symm z.1 t.1, h]
     · right
-      simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
-      linarith [δ.symm p y.1, δ.symm z.1 p, δ.symm t.1 p]
+      linarith [δ.symm p y.1, δ.symm p z.1, δ.symm p t.1, δ.symm y.1 z.1,
+        δ.symm y.1 t.1, δ.symm z.1 t.1, h]
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · right
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simpa only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inr] using
-      shrinkVal_triangle_at_t δ hfp hpr hqr hmax z t
+    simpa only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr,
+      add_zero, zero_add] using shrinkVal_triangle_at_t δ hfp hpr hqr hmax z t
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
   · left
-    simp only [shrinkVal_inl_inl, shrinkVal_inl_inr, shrinkVal_inr_inl, shrinkVal_inr_inr]
     linarith
 
 /-- ★★ 扩张相异度是**相异度**（打包 `shrinkVal` 的对称与零对角）。 -/
