@@ -59,6 +59,8 @@ set_option linter.unusedSectionVars false
 
 variable (T : Cladogram.{u, v} X)
 
+end Cladogram
+
 namespace Split
 
 /-- 由「真子集」构造 split：`A | Aᶜ`（要求 `A` 与 `Aᶜ` 都非空）。
@@ -109,7 +111,39 @@ noncomputable def ofCompl {α : Type*} [Fintype α] [DecidableEq α] (A : Finset
 @[simp] theorem ofCompl_sideB {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α)
     (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) : (ofCompl A hA hAc).sideB = Aᶜ := rfl
 
+/-! ### `Compatible` 在 `swap` 下的行为（T0.1 第 3 步「计数路线」的管道）
+
+「把 `s` 与 `s.swap` 加进相容族」这一步需要这几条：`Compatible` 对两侧的 `swap`
+都不变，且 `Compatible s s.swap` 恒成立（因为 `s.sideA ∩ s.swap.sideA = ∅`）。 -/
+
+/-- `s` 与自己的 `swap` **相容**（`s.sideA ∩ s.swap.sideA = s.sideA ∩ s.sideB = ∅`）。
+
+⚠️ 注意 `¬ Compatible s s`（同一侧自己与自己不交是假的）—— 故「两两相容」在
+集合语境下要按「互异元素」表述。 -/
+theorem compatible_swap_self {α : Type*} [Fintype α] [DecidableEq α] (s : Split α) :
+    Compatible s s.swap :=
+  Or.inl (by rw [swap_sideA]; exact s.disjoint_sides)
+
+/-- `Compatible` 对**右侧**的 `swap` 不变（四个选言支只是被置换）。 -/
+theorem compatible_swap_right {α : Type*} [Fintype α] [DecidableEq α] {s t : Split α} :
+    Compatible s t.swap ↔ Compatible s t := by
+  simp only [Compatible, swap_sideA, swap_sideB]
+  tauto
+
+/-- `Compatible` 对**左侧**的 `swap` 不变。 -/
+theorem compatible_swap_left {α : Type*} [Fintype α] [DecidableEq α] {s t : Split α} :
+    Compatible s.swap t ↔ Compatible s t :=
+  (compatible_comm s.swap t).trans ((compatible_swap_right (s := t) (t := s)).trans
+    (compatible_comm t s))
+
 end Split
+
+namespace Cladogram
+
+set_option linter.unusedSectionVars false
+
+variable {X : Type u} [Fintype X] [DecidableEq X]
+variable (T : Cladogram.{u, v} X)
 
 /-! ## 辅助引理：`Sym2` 端点提取 -/
 
@@ -567,7 +601,38 @@ end Cladogram
    与「真子集」矛盾，故此时必有 `U_* = U* = A` ✓。）
 
 ⚠️ **技术障碍**：第 4 步需要「`𝓤` 是沿路径的边侧」这一结构（相邻差 = 某顶点的分支叶集），
-即需要 `Walk` 上的边编号 —— 这是本轮未做的部分。 -/
+即需要 `Walk` 上的边编号 —— 这是本轮未做的部分。
+
+---
+
+**路线 B（计数 / 镶嵌族）的完整方案（2026-10-08 第 4 轮推演，**优先试这条**）**
+
+设 `ρ ∈ X`，对每条 split 取**不含 `ρ` 的那一侧**，得 `F := {t.away ρ : t ∈ Σ}`。
+由 `laminar_of_sidesCompatible_of_notMem`（`Phylo/Split.lean`，**已在库里**）
+知 `F` 是镶嵌族（两两嵌套或相离）。要点：
+
+1. `t ↦ t.away ρ` 至多 2 对 1 ⟹ `|Σ| ≤ 2·|F|`。
+2. `F` 含全部单点 `{x} (x ≠ ρ)`（来自平凡 split）。
+3. **镶嵌族基数上界（本方案的核心，需新证）**：
+   * **(基本)** 镶嵌族 `G` 满足 `Y ∈ G` ⟹ `|G| ≤ 2|Y| - 1`；
+   * **(精细)** 镶嵌族 `G` 满足 `Y ∈ G` 且 `∃ y ∈ Y, {y} ∉ G` ⟹ `|G| ≤ 2|Y| - 2`。
+   两者可**互归纳**证明（对 `|Y|` 做强归纳）：设 `A₁…A_k` 为 `Y` 的极大真成员
+   （两两不交），`G = {Y} ∪ ⋃_i G_i`（`G_i = {A ∈ G : A ⊆ Aᵢ}`，含 `Aᵢ`），
+   则 `|G| ≤ 1 + Σ_i (2|Aᵢ| - 1) = 1 + 2Σ|Aᵢ| - k`。记 `m := |Y| - Σ|Aᵢ| ≥ 0`：
+   * 基本版：`k = 0` ⟹ `|G| = 1`；`k = 1` ⟹ `A₁ ⊊ Y` 故 `≤ 2|A₁| ≤ 2|Y|-2`；
+     `k ≥ 2` ⟹ `1 + 2|Y| - k ≤ 2|Y| - 1` ✓。
+   * 精细版：对被 `{y}` 「缺失」的那个 `y` —— 若 `y ∈ Aᵢ` 则该 `i` 用精细版；
+     否则 `m ≥ 1`。逐情算得 `2m + k + |J| ≥ 3`（`J` = 用精细版的下标集），
+     其中 `m = 0` 时必有 `k ≥ 2`（因 `Aᵢ` 都是**真**成员），故成立 ✓。
+4. 于是 `|Σ| ≤ 2|F| ≤ 2(2|X| - 2) = 4|X| - 6`。
+5. 而 `T` binary 时 `|Σ(T)| = 2·#E(T) = 2(2|X| - 3) = 4|X| - 6`
+   （`Phylo/Algorithm/BinaryCount.lean` 的 `IsBinary.card_edgeFinset`，**已在库**；
+   再用 `T.leafFinset.card = Fintype.card X`）。
+6. 若 `s ∉ Σ(T)` 且与全部相容，则 `Σ(T) ∪ {s, s.swap}` 两两相容（用
+   `Split.compatible_swap_self` / `compatible_swap_left/right`，**本文件已加**）
+   且大小 `4|X| - 4 > 4|X| - 6` —— **矛盾** ✓
+
+⇒ 第 3 步（镶嵌族基数上界，两条互归纳）是**唯一**的新工程量。 -/
 def BinarySplitsMaximal (X : Type u) [Fintype X] [DecidableEq X] : Prop :=
   ∀ T : Cladogram.{u, v} X, T.IsBinary → T.SplitsMaximal
 
