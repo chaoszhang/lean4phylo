@@ -59,6 +59,58 @@ set_option linter.unusedSectionVars false
 
 variable (T : Cladogram.{u, v} X)
 
+namespace Split
+
+/-- 由「真子集」构造 split：`A | Aᶜ`（要求 `A` 与 `Aᶜ` 都非空）。
+
+用 `Fin.cases`（而非 `if i = 0`）实现，使 `parts 0` / `parts 1` 都是 **`rfl`**。 -/
+noncomputable def ofCompl {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α)
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) : Split α where
+  parts := Fin.cases A fun _ : Fin 1 => Aᶜ
+  pairwise_disjoint := by
+    intro i j hij
+    rw [Finset.disjoint_left]
+    intro x hx hy
+    by_cases hi : i = 0
+    · subst hi
+      by_cases hj : j = 0
+      · subst hj
+        exact absurd rfl hij
+      · have hj1 : j = 1 := by fin_cases j <;> simp_all
+        subst hj1
+        exact (Finset.mem_compl.mp hy) hx
+    · have hi1 : i = 1 := by fin_cases i <;> simp_all
+      subst hi1
+      by_cases hj : j = 0
+      · subst hj
+        exact (Finset.mem_compl.mp hx) hy
+      · have hj1 : j = 1 := by fin_cases j <;> simp_all
+        subst hj1
+        exact absurd rfl hij
+  union_eq_univ := by
+    ext x
+    refine ⟨fun _ => Finset.mem_univ _, fun _ => ?_⟩
+    rw [Finset.mem_biUnion]
+    by_cases h : x ∈ A
+    · exact ⟨0, Finset.mem_univ _, h⟩
+    · exact ⟨1, Finset.mem_univ _, Finset.mem_compl.mpr h⟩
+  nonempty := by
+    intro i
+    by_cases hi : i = 0
+    · subst hi; exact hA
+    · have hi1 : i = 1 := by fin_cases i <;> simp_all
+      subst hi1; exact hAc
+
+/-- `ofCompl` 的 `sideA` 就是 `A`（定义相等）。 -/
+@[simp] theorem ofCompl_sideA {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α)
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) : (ofCompl A hA hAc).sideA = A := rfl
+
+/-- `ofCompl` 的 `sideB` 就是 `Aᶜ`（定义相等）。 -/
+@[simp] theorem ofCompl_sideB {α : Type*} [Fintype α] [DecidableEq α] (A : Finset α)
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) : (ofCompl A hA hAc).sideB = Aᶜ := rfl
+
+end Split
+
 /-! ## 辅助引理：`Sym2` 端点提取 -/
 
 /-- **`Sym2` 端点提取**：`u ∈ e`、`e = s(x,w)`、`u ≠ x` ⟹ `u = w`。 -/
@@ -424,4 +476,107 @@ theorem compatible_of_sameQuartetSystem {T T' : Cladogram X}
   exact T'.not_displaysQuartet_swap
     ((h a b c d hcard).mp ⟨s, hs, hab, hcd⟩) ⟨t, ht, hac, hbd⟩
 
+/-! ## T0.1 第 3 步（正题）：**clade 刻画**
+
+> `A ⊆ X` 是 `T` 的 **clade**（= 某条边的一侧）**⟺** `A` 满足 **clan 条件**
+> （`A` 内任意两点与 `A` 外任意两点构成的 quartet 都被 `T` 展示）。
+
+本文件证出：
+
+* ★★ `isClan_of_isClade` —— 容易方向；
+* ★★ `compatible_of_isClan` —— **clan 条件 ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（关键一步）；
+* ★★ `isClade_iff_isClan` —— **模 `SplitsMaximal T` 的完整刻画**（两个方向都证完）。
+
+⬜ **剩余的唯一输入**：`SplitsMaximal T`（「与全部 split 相容 ⟹ 自身是 split」），
+在 `T.IsBinary` 时成立 —— 见下方 `BinarySplitsMaximal` 的 docstring（含证明思路）。 -/
+
+/-- **clan 条件**：`A` 内任意两点与 `A` 外任意两点构成的 quartet 都被 `T` 展示。 -/
+def IsClan (A : Finset X) : Prop :=
+  ∀ a ∈ A, ∀ b ∈ A, ∀ c ∉ A, ∀ d ∉ A, T.DisplaysQuartet a b c d
+
+/-- **clade**：`A` 恰是 `T` 某条边的某一侧。 -/
+def IsClade (A : Finset X) : Prop :=
+  ∃ s : Split X, T.IsSplitOf s ∧ s.sideA = A
+
+/-- ★★ **clade ⟹ clan**（容易方向；本质是 `displaysQuartet_of_clade`）。 -/
+theorem isClan_of_isClade {A : Finset X} (h : T.IsClade A) : T.IsClan A := by
+  obtain ⟨s, hs, rfl⟩ := h
+  exact fun a ha b hb c hc d hd => T.displaysQuartet_of_clade hs ha hb hc hd
+
+/-- ★★ **clan ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（T0.1 第 3 步的关键一步）。
+
+若 `sA := A|Aᶜ` 与某个 `t ∈ Σ(T)` 不相容，`Split.exists_four_of_incompatible` 给出
+`a,b ∈ A` 与 `c,d ∉ A` 使 `{a,c} ⊆ t.sideA`、`{b,d} ⊆ t.sideB`，于是
+`T` 既展示 `ab|cd`（clan 条件）又展示 `ac|bd`（由 `t`）—— 与
+★★ `Cladogram.not_displaysQuartet_swap` 矛盾。 -/
+theorem compatible_of_isClan {A : Finset X} (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty)
+    (h : T.IsClan A) {t : Split X} (ht : T.IsSplitOf t) :
+    Split.Compatible (Split.ofCompl A hA hAc) t := by
+  by_contra hinc
+  obtain ⟨a, b, c, d, hab, hcd, hac, hbd, _⟩ :=
+    Split.exists_four_of_incompatible (s := Split.ofCompl A hA hAc) (t := t) hinc
+  have ha : a ∈ A := hab (by simp)
+  have hb : b ∈ A := hab (by simp)
+  have hc : c ∉ A := fun hc => (Finset.mem_compl.mp (hcd (by simp))) hc
+  have hd : d ∉ A := fun hd => (Finset.mem_compl.mp (hcd (by simp))) hd
+  exact T.not_displaysQuartet_swap (h a ha b hb c hc d hd) ⟨t, ht, hac, hbd⟩
+
+/-- **split 系统极大**：与 `T` 的**每个** split 都相容的 split，本身就是 `T` 的 split。 -/
+def SplitsMaximal : Prop :=
+  ∀ s : Split X, (∀ t : Split X, T.IsSplitOf t → Split.Compatible s t) → T.IsSplitOf s
+
+/-- ★★ **clade 刻画**（**模 `SplitsMaximal T`**，两个方向都已证）。
+
+⚠️ `SplitsMaximal T` 本身在 `T.IsBinary` 时成立，但**尚未形式化** ——
+见 `BinarySplitsMaximal`。本定理把它隔离成**唯一**的输入。 -/
+theorem isClade_iff_isClan (hmax : T.SplitsMaximal) {A : Finset X}
+    (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty) :
+    T.IsClade A ↔ T.IsClan A := by
+  refine ⟨T.isClan_of_isClade, fun h => ?_⟩
+  exact ⟨Split.ofCompl A hA hAc, hmax _ (fun t ht => T.compatible_of_isClan hA hAc h ht),
+    Split.ofCompl_sideA A hA hAc⟩
+
 end Cladogram
+
+/-- ⬜ **binary 树的 split 系统极大**（**尚未形式化** —— 目标 T0.1 第 3 步的唯一剩余输入）。
+
+**陈述**：`T.IsBinary` ⟹ `T.SplitsMaximal`（即：与 `T` 的每个 split 都相容的 split，
+本身就是 `T` 的 split）。
+
+**为什么不是开放问题**：这是「binary 树的 split 系统是极大相容族」的标准事实
+（Semple & Steel §3.8 / Buneman；也等价于「binary 树由 `Σ(T)` 唯一决定」）。
+
+**证明思路（已勘定，记此省下轮时间）**：设 `s = A|Aᶜ`（`|A|, |Aᶜ| ≥ 2`；单点情形由
+`Cladogram.exists_isSplitOf_singleton` 直接给出）与所有 split 相容，取 `a₀ ∈ A`、`b₀ ∈ Aᶜ`，令
+
+`𝓤 := {T.sideLeaves e u | e 是 `T` 的边, `T.leaf a₀ ∈ ·`, `b₀ ∉ ·`}`
+（= 路径 `a₀ → b₀` 上各边的 `a₀` 侧；偏离路径的边两侧同含 `a₀, b₀`，故被排除）。
+
+1. **`𝓤` 嵌套**：`Σ(T)` 两两相容（`pairwiseCompatible`）。两条都「分开 `a₀` 与 `b₀`」的
+   相容 split，其 `a₀` 侧之交非空、补侧之交也非空，故四分之一的选言支里只剩两个
+   ⟹ 一侧包含另一侧。**不需要路径结构。**
+2. **每个 `U ∈ 𝓤` 满足 `A ⊆ U` 或 `U ⊆ A`**：相容性给四个选言支；`a₀ ∈ A ∩ U` 排除
+   `A ⊆ Uᶜ`，`b₀ ∈ Aᶜ \ U` 排除 `Aᶜ ⊆ U`（即 `U ⊆ A` 的补）。
+3. `{a₀} ∈ 𝓤`（`⊆ A`）与 `X \ {b₀} ∈ 𝓤`（`⊇ A`），故 `𝓤` 中既有含于 `A` 的也有含 `A` 的。
+4. 取 `U_* := ` 含于 `A` 的**最大**者、`U* := ` 包含 `A` 的**最小**者（嵌套 ⟹ 良定义）。
+   若 `U_* ⊊ U*`，则二者在链中**相邻**，且 `U* \ U_*` 恰是链上「两条相邻边之间那个顶点
+   `v`」处分出的叶集。此时 `A` 在 `U* \ U_*` 上取到**真子集**（既非空、又非全部），
+   于是 `v` 的**第三条边**（binary ⟹ 除两条路径边外恰有一条）对应的 split 把 `A` 与 `Aᶜ`
+   都劈开 ⟹ 与 `s` 不相容 —— 矛盾。
+   （退化情形：若 `v` 的第三条边通向**单叶**，则 `U* \ U_*` 是单点，`A` 只能是 `U_*` 或 `U*`，
+   与「真子集」矛盾，故此时必有 `U_* = U* = A` ✓。）
+
+⚠️ **技术障碍**：第 4 步需要「`𝓤` 是沿路径的边侧」这一结构（相邻差 = 某顶点的分支叶集），
+即需要 `Walk` 上的边编号 —— 这是本轮未做的部分。 -/
+def BinarySplitsMaximal (X : Type u) [Fintype X] [DecidableEq X] : Prop :=
+  ∀ T : Cladogram.{u, v} X, T.IsBinary → T.SplitsMaximal
+
+/-- ★★ **binary 树的 clade 刻画**（模 `BinarySplitsMaximal`；目标 T0.1 第 3 步的最终形式）。
+
+⚠️ `BinarySplitsMaximal` 本身尚未形式化（见其 docstring）；本定理把 T0.1 第 3 步的
+**其余部分全部证完**，只剩这一个输入。 -/
+theorem Cladogram.isClade_iff_isClan_of_binary {X : Type u} [Fintype X] [DecidableEq X]
+    (hb : BinarySplitsMaximal.{u, v} X) {T : Cladogram.{u, v} X} (hT : T.IsBinary)
+    {A : Finset X} (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty) :
+    T.IsClade A ↔ T.IsClan A :=
+  T.isClade_iff_isClan (hb T hT) hA hAc
