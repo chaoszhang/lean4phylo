@@ -11,6 +11,7 @@ import Phylo.Algorithm.NNI
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
 import Phylo.Binary
+import Phylo.Buneman
 import Phylo.Consensus
 import Phylo.Core
 import Phylo.Dendrogram
@@ -23,6 +24,7 @@ import Phylo.Quartet
 import Phylo.QuartetUnique
 import Phylo.SideSubtree
 import Phylo.Split
+import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER
 import Phylo.Stat.MSC
