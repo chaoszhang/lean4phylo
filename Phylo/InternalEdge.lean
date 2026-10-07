@@ -404,6 +404,28 @@ theorem sideLeaves_nonempty_of_adj_both {u v : T.V} (huv : T.graph.Adj u v) :
    by have := T.sideLeaves_nonempty_of_adj huv.symm
       simpa [Sym2.eq_swap] using this⟩
 
+/-- ★★ **任意顶点所在的边侧都非空**（`u` 不必是端点，只需落在某一侧）。 -/
+theorem sideLeaves_nonempty_of_adj' {a b u : T.V} (hab : T.graph.Adj a b) :
+    (T.sideLeaves s(a, b) u).Nonempty := by
+  rcases T.inSide_or_inSide hab (x := u) with h | h
+  · rw [T.sideLeaves_eq_of_inSide h]; exact (T.sideLeaves_nonempty_of_adj_both hab).1
+  · rw [T.sideLeaves_eq_of_inSide h]; exact (T.sideLeaves_nonempty_of_adj_both hab).2
+
+/-- ★★ **边侧是真子集**（对侧含叶 ⟹ 本侧 ≠ 全集）。 -/
+theorem sideLeaves_ne_univ_of_adj {a b u : T.V} (hab : T.graph.Adj a b) :
+    T.sideLeaves s(a, b) u ≠ Finset.univ := by
+  have hother : ∀ w : T.V, (T.sideLeaves s(a, b) w)ᶜ.Nonempty := by
+    intro w
+    rcases T.inSide_or_inSide hab (x := w) with h | h
+    · rw [T.sideLeaves_eq_of_inSide h, ← T.sideLeaves_compl_adj hab]
+      exact (T.sideLeaves_nonempty_of_adj_both hab).2
+    · rw [T.sideLeaves_eq_of_inSide h, T.compl_sideLeaves hab]
+      exact (T.sideLeaves_nonempty_of_adj_both hab).1
+  intro hU
+  obtain ⟨x, hx⟩ := hother u
+  rw [hU, Finset.compl_univ] at hx
+  exact Finset.notMem_empty x hx
+
 /-- ★★ **内部边两侧各含 ≥ 2 叶**（HANDOVER T2 的完整形式）。
 
 两端都非叶（`degree ≠ 1`，`no_degree_two` 下等价于「是内部顶点」）的边，其删边后的
@@ -662,6 +684,19 @@ theorem isCluster_compl {A : Finset X} (h : T.IsCluster A) : T.IsCluster (Aᶜ) 
   · intro hc
     obtain ⟨x, hx⟩ := h.1
     exact (Finset.mem_compl.mp (by rw [hc]; exact Finset.mem_univ x)) hx
+
+/-- ★★ **每条边侧都是 BD 的 cluster**（`IsClade ⟹ IsCluster`）。
+
+BD 326–333 行把 cluster 定义为「删某条边后两个分量之一的叶集」，本条即该定义的一半。
+非空性用 ★★ `sideLeaves_nonempty_of_adj'`，真子集性用 ★★ `sideLeaves_ne_univ_of_adj`
+（对侧含叶），quartet 条件用 ★★ `isClan_of_isClade`。 -/
+theorem isCluster_of_isClade {A : Finset X} (h : T.IsClade A) : T.IsCluster A := by
+  obtain ⟨s, hs, rfl⟩ := h
+  have hclan : T.IsClan s.sideA := T.isClan_of_isClade ⟨s, hs, rfl⟩
+  obtain ⟨a, b, hab, u, hu⟩ := hs
+  refine ⟨?_, ?_, hclan⟩
+  · rw [hu]; exact T.sideLeaves_nonempty_of_adj' hab
+  · rw [hu]; exact T.sideLeaves_ne_univ_of_adj hab
 
 /-- ★★ **clan ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（T0.1 第 3 步的关键一步）。
 
