@@ -163,6 +163,19 @@ theorem dist_eq_add_of_mem_support (p : T.graph.Walk a b) (hp : p.IsPath) (hc : 
     rw [walkDist_append]
   rw [h1, h2, h3, h4]
 
+/-- ★★ **拼起来仍是路径 ⟹ 距离沿拼接点可加**：
+
+若 `p.append q` 是 `IsPath`，则 `dist a c = dist a b + dist b c`。
+
+（比 `dist_eq_add_of_mem_support` 更实用：它只要**两条路能拼成一条路径**，
+不必先把拼接点从 `support` 里找出来；两方向都由主引理 + `walkDist_append` 直接给出。） -/
+theorem dist_eq_add_of_isPath_append {a b c : T.V} (p : T.graph.Walk a b) (q : T.graph.Walk b c)
+    (hpq : (p.append q).IsPath) :
+    T.dist a c = T.dist a b + T.dist b c := by
+  rw [dist_eq_walkDist_of_isPath T _ hpq, walkDist_append,
+    ← dist_eq_walkDist_of_isPath T p (SimpleGraph.Walk.IsPath.of_append_left hpq),
+    ← dist_eq_walkDist_of_isPath T q (SimpleGraph.Walk.IsPath.of_append_right hpq)]
+
 end Dist
 
 end TreeDist
