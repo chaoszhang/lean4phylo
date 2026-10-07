@@ -40,6 +40,7 @@ import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER
 import Phylo.Stat.MSC
 import Phylo.Stat.NJst
+import Phylo.Stat.NJstWitness
 import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
 import Phylo.Stat.Stability

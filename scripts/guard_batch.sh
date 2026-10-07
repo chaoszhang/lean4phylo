@@ -52,13 +52,38 @@ if [ "$EXPECT" != 0 ] && [ "$N" != "$EXPECT" ]; then
   exit 1
 fi
 
-# ③ sorry / axiom
-if grep -rqE 'sorryAx|^axiom' "$CANON/Phylo"; then
-  echo '✗ 发现 sorryAx 或 axiom：'
-  grep -rnE 'sorryAx|^axiom' "$CANON/Phylo" | head -5
+# ③ sorry / axiom（**源码级**正则；只扫「根模块可达」的模块 —— 未登记的在建文件不算库的一部分）
+MODS=$(grep -oE '^import [A-Za-z0-9_.]+' "$CANON/Phylo.lean" | sed 's/^import //' | tr '.' '/')
+MODS_SP=$(echo $MODS)
+PAT='^[[:space:]]*sorry[[:space:]]*$|:= *sorry|by *sorry|^axiom '
+BAD=""
+for m in $MODS; do
+  f="$CANON/$m.lean"
+  [ -f "$f" ] || continue
+  if grep -qE "$PAT" "$f"; then BAD="$BAD $f"; fi
+done
+if [ -n "$BAD" ]; then
+  echo "✗ 库内（根模块可达）发现 sorry/axiom："
+  for f in $BAD; do grep -nE "$PAT" "$f" | head -3; done
   exit 1
 fi
-echo '✓ 零 sorry / 零 axiom'
+echo '✓ 零 sorry / 零 axiom（根模块可达模块，源码级）'
+# 另：报告**未登记**文件里的 sorry（仅提示，不算失败 —— 那些是在建文件）
+STRAY=""
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  rel=${f#"$CANON"/}
+  mod=${rel%.lean}
+  mod=${mod//\//.}
+  case " $MODS_SP " in
+    *" $mod "*) ;;
+    *) STRAY="$STRAY $f" ;;
+  esac
+done <<< "$(grep -rlE '^[[:space:]]*sorry[[:space:]]*$|:= *sorry|by *sorry' "$CANON/Phylo" 2>/dev/null || true)"
+if [ -n "$STRAY" ]; then
+  echo 'ℹ️ 未登记文件里仍有 sorry（不算失败，但提交前应清零）：'
+  echo "$STRAY"
+fi
 
 # ④ #print axioms
 if [ "${#DECLS[@]}" -gt 0 ]; then
