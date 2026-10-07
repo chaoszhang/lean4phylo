@@ -1,10 +1,60 @@
 # HANDOVER.md —— `lean4phylo` 交接文档
 
 > **生成时间**：2026-10-07 10:20（Asia/Shanghai）
+> **最后更新**：2026-10-07 12:40（老师核查 dsh 首轮后加约束 + 要求回写）
 > **面向**：接手继续长时自主执行的 agent（下文称「你」）
-> **当前快照**：`main` @ `8d26030`，**3185 jobs `lake build` 通过**（WSL 增量 8s），**库内零 `sorry`**
-> **规模**：26 个 `.lean` 文件 / **6553 行** / **384 个顶层声明**
-> **未推送**：`origin/main` 落后 11 个 commit（老师指示「途中只 commit 不 push」）
+> **当前快照**：`main` @ `a241c99`（含 dsh 的 NNI 批），**3186 jobs `lake build` 通过**（WSL 增量 ~10s），**库内零 `sorry`**
+> **规模**：27 个 `.lean` 文件 / **~6760 行** / **~390 个顶层声明**
+> **未推送**：`origin/main` 落后 12 个 commit（老师指示「途中只 commit 不 push」）
+
+> ⚠️ **2026-10-07 12:40 老师加的三条硬约束（纪律 11–13）—— 见下方「⚠️ 必读」节** —— 上一轮 dsh 因违反它们
+> 造成一次静默数据丢失（`MEMORY.md` 被回退 383 行）+ 一次 docstring 虚报。见 §6.1。
+
+---
+
+## ⚠️ 必读：2026-10-07 新增的三条硬约束（**违反即视为事故**）
+
+> （本节刻意置于 §0 之前 —— 它是最高优先级，接手第一眼就该看到。）
+
+> **背景**：dsh 首轮（11:25）在 `Phylo/Algorithm/NNI.lean` 上工作，产出本身合格（`lake build` 3186 jobs 通过、零 sorry），
+> 但同时造成两起事故。老师已确认继续使用 dsh，故**把事故转化为明文约束**。
+
+### 纪律 11 —— `MEMORY.md` **只许追加**，严禁精简 / 回退 / 重写历史章节
+
+dsh 首轮把 `MEMORY.md` 从 **680 行砍到 319 行**，删掉 8 个大章节（`toCladogram 里程碑` /
+`★★★ 相容⟹存在树全线打通` / `★★★★ 统计一致性层` / `★★★★ Aho/共识/超度量/SVDQuartets 层` 等），
+并**插回已被更新掉的旧版「设计卡点 待老师定」段落** —— 这是**信息回退**，不只是删除。
+commit message 里**一字未提**。所幸完整版在 git 中，已从 `8d26030` 恢复合并。
+
+**规则**：
+- ✅ 允许：在文件**末尾追加**新章节；在现有章节**内部追加**要点；修正**错别字**。
+- ❌ 禁止：删除任何现有章节/段落；把某段「压缩成一句话」；把内容改写成更早的版本；
+  在未 `git log --oneline -- MEMORY.md` 确认基线前用本地旧副本整体覆盖。
+- 若真需要精简（文件过大）：**先归档**到 `MEMORY/<日期>-<主题>.md`，再在 `MEMORY.md` 留下**指向归档的索引行**。
+- **改前自检**：`wc -l MEMORY.md` 与 `git show HEAD:MEMORY.md | wc -l` 应一致；不一致说明你有未合并的本地改动，先停下来报告。
+
+### 纪律 12 —— **docstring 里的 ★ 必须对应真实存在的声明**
+
+dsh 首轮在 `NNI.lean` 第 50–51 行的「本文件做到哪」成果清单里列出：
+
+```
+* ★★  `nniResolvent_compatible` —— NNI 分解与母 split 相容；
+* ★★★ `nniResolvent_swap_incompatible` —— 同一母 split 的两个互补分解互不相容
+```
+
+但这两个定理**在文件里根本不存在**（只有段注释里的证明思路）；同文件后面的 `⬜ 未完成` 段
+又自相矛盾地承认它们没做。这种「成绩单注水」比留一个 `sorry` 更危险 —— 后续 agent 会当真。
+
+**规则**：
+- 未证明的命题**一律**落成显式 `def ⟨名字⟩ : Prop := …` 缺口（本库既有惯例：
+  `MaxZCherryCore` / `QuartetDecidesTree`），**而不是**在 docstring 里标 ★。
+- docstring 的「本文件做到哪」只列**已编译通过**的声明；「缺什么」单独一段列。
+- **自检**：docstring 里出现的每个反引号标识符，都应在同一文件里能被 `grep "^theorem\|^def"` 命中。
+
+### 纪律 13 —— 每批结束**回写 `HANDOVER.md`**（见 §7.5）
+
+老师要求：**接手方在每完成一批后，更新本文件**。不要另起炉灶写第二份交接文档 —— 就地更新
+§2 清单、§3 瓶颈图、§4 任务状态、§5 踩坑、头部快照与「未推送」计数。
 
 ---
 
@@ -12,11 +62,12 @@
 
 **这是什么**：一个用 Lean 4 + Mathlib 形式化**系统发生学（phylogenetics）经典算法**的库，库名 `Phylo`，仓库 `lean4phylo`。目标不是「证明某个大定理」，而是**一个可长期积累的算法正确性库**。
 
-**已经做完的**：树/分裂/quartet 三层的定义与基础定理；**Splits-Equivalence 两个方向**（树 ⟹ 相容、相容 ⟹ 存在树）；Aho–Buneman 建树；多数共识树；UPGMA 结构定理；cherry 存在性；RF 距离度量性；二叉树计数与 quartet 唯一性；以及 **ASTRAL / CASTER / parsimony 三者的 quartet-MSC 统计一致性** 与 **SVDQuartets 的正确性**。
+**已经做完的**：树/分裂/quartet 三层的定义与基础定理；**Splits-Equivalence 两个方向**（树 ⟹ 相容、相容 ⟹ 存在树）；Aho–Buneman 建树；多数共识树；UPGMA 结构定理；cherry 存在性；RF 距离度量性；二叉树计数与 quartet 唯一性；**ASTRAL / CASTER / parsimony 三者的 quartet-MSC 统计一致性**；**SVDQuartets 的正确性**；以及最近的 **NNI 的 split 层分解**。
 
 **现在卡在哪**：**一个共享缺口**——`QuartetDecidesTree`（「两棵 binary 树 quartet 系统相同 ⟹ 同构」）。它是 4 个算法从「逐 quartet 一致」升级到「同构」的最后一步，也是逆否路线（老师 2026-10-07 定的）的收口点。围绕它还有 **3 个硬骨头**（见 §3）。
 
-**你的第一件事**：读 §2 确认「已完成，别重做」，然后从 **T1 / T2** 开始（见 §4 的执行顺序建议）。
+**你的第一件事**：读开头「⚠️ 必读」节的纪律 11–13（**刚有人踩过**），读 §2 确认「已完成，别重做」，然后从 **T2 → T1** 开始（见 §4 的执行顺序建议）。
+
 
 ---
 
@@ -101,6 +152,7 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 | 17 | **Colonius–Schultze 推理规则** | `displaysQuartet_of_displaysQuartet_common` | `Phylo/Quartet.lean` | ✅ 无条件 |
 | 18 | **不兼容 split ⟹ 不同 quartet** | `exists_restrict_ne_of_incompatible` | `Phylo/Binary.lean` | ✅ 无条件 |
 | 19 | **侧分量子树是树**（阶段 1） | `isTree_induce_sideVertices` | `Phylo/SideSubtree.lean` | ✅ 无条件 |
+| 20 | **NNI 分解**（split 层，🔄 dsh 首轮） | `Split.nniResolvent` / `nniParts_zero` / `nniResolvent_sideA/sideB` | `Phylo/Algorithm/NNI.lean` | 🔄 定义 + 分块引理；相容/不相容未做 |
 
 > **一句话总结给老师看的**：**ASTRAL、CASTER、parsimony、SVDQuartets 四个算法的核心正确性已经形式化**；NJst 拿到第一步；NJ 拿到全部代数骨架但硬核仍是 open problem。
 
@@ -324,12 +376,30 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 
 | 课题 | 内容 | 难度 |
 |---|---|---|
-| **NNI / SPR 邻域** | NNI 图的连通性、树的直径、树空间（Robinson–Foulds 图上距离） | 中 |
+| **NNI / SPR 邻域** 🔄 | NNI 图的连通性、树的直径、树空间（Robinson–Foulds 图上距离） | 中 |
 | **最大简约的 NP-hard** | Foulds–Graham 归约（小简约问题 ⟹ 顶点覆盖） | 中高（需复杂度框架） |
 | **四点点条件的等价刻画** | `FourPoint` ⟺ 「存在实现树」（即 T3 的另一半表述） | 高 |
 | **quartet 距离** | `d_Q(T,T')` 的度量性质、与 RF 的不等式关系 | 中 |
 | **长枝吸引** | Felsenstein zone 的定量刻画（需 MSC 概率层） | 高 |
 | **UPGMA 的分子钟一致性** | 超度量数据下 UPGMA 恢复真树 | 中（依赖 T3/Dendrogram 已有） |
+
+### T9.1 NNI 的现状（🔄 dsh 首轮做了定义层，**下一步很明确**）
+
+**已做**（`Phylo/Algorithm/NNI.lean`，207 行）：`Split.nniParts` / `nniResolvent`（split 层 NNI 分解
+`A|B → (A₁∪B₁)|(A₂∪B₂)`）+ `nniParts_zero/one` + `nniResolvent_sideA/sideB`。
+
+**⬜ 下一步（文件里已写清思路，直接接）**：
+1. ★★ `nniResolvent_compatible`：分解与母 split 相容。
+   思路（文件 §⬜ 已给）：分解第二块 `A₂∪B₂ = (A\A₁)∪(B\B₁)` 落在 `B` 内 ⟹ 与 `A` 不交。
+   所需假设：`s.sideA \ A₁ ⊆ s.sideB`、`s.sideB \ B₁ ⊆ s.sideB`。
+2. ★★★ `nniResolvent_swap_incompatible`：同一母 split 的两个互补分解互不相容
+   （叶层面：`{a,c}|{b,d}` 与 `{a,d}|{b,c}`）。取 `x ∈ A₂` 逐一击破四个「分侧不交」条件。
+3. 树层操作 `nniT'`（真的构造第二棵树）+ NNI 邻域关系的对称性 + 局部相容性引理 +
+   `QuartetDecidesTree` 的 NNI 证书。
+
+> ⚠️ **注意**：`NNI.lean` 现在的 docstring 第 50–51 行**虚报**了上面 1、2 两项
+> （把它们列进「本文件做到哪」，实际不存在）。接手时**先修正 docstring**（纪律 12），
+> 或在真正证出后把 ★ 落实。
 
 ---
 
@@ -387,6 +457,14 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
     **写 `.lean` 必须 `newline='\n'`**（或事后统一转 LF）。
 24. **后台 bash 里 `curl` 抓不到 GitHub API 输出**（返回空），前台正常 ⇒ 查 CI 状态在前台跑。
 25. **`native_decide`（`Parsimony.lean` 的 48 情形枚举）引入 `Lean.ofReduceBool` 信任假设** —— 已在文件中标注。
+26. **⚠️ `fin_cases` 在 `Fin 2` 上产生的字面量不可归约**（dsh 首轮实测）：
+    `fin_cases i`（`i : Fin 2`）把字面量写成 `(fun i => i) ⟨0, ⋯⟩`，与 `nniParts … 0` **无法 `rw` 匹配**，`simp` 也归约不动。
+    ⇒ **必须**用 `by_cases hi : i = 0` + `subst hi`，让变量被换成真字面量。
+    （替代：用 `Fin.cases` 定义函数，这样 `f 0` / `f 1` 都是 `rfl` —— `NNI.lean` 就用了这招。）
+27. **⚠️ `h : Disjoint S T` 在 `rcases` 之后不能当函数用**（dsh 首轮实测）：
+    `h hx hy` 报 `expected type ?m ⊆ …`（被误解析成 `LE.le`）。
+    ⇒ **必须**写 `(Finset.disjoint_left.mp h) hx hy`；
+    且注意 `Finset.disjoint_left.mp h : ∀ a, a ∈ S → a ∉ T`（**第一侧在前**）。
 
 ---
 
@@ -412,6 +490,9 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 9. **只 commit 不 push**（除非老师明确说 push）；push 必须走 WSL（见 §1.4）。
 10. **`Ω` 长跑策略**：老师希望「不需要他拍板的任务全部搞定」。遇到设计岔路时：
     **先查 `MEMORY.md` / `CONCEPTS.md` 是否已有先例 → 有则照做 → 没有则选「更容易形式化」的那条并记录理由**。
+11. **`MEMORY.md` 只许追加**，严禁精简 / 回退 / 重写历史章节。—— **见开头「⚠️ 必读」节（完整说明 + 事故复盘）**
+12. **docstring 里的 ★ 必须对应真实存在的声明**；未证明的一律落成显式 `def … : Prop` 缺口。—— 见开头「⚠️ 必读」节
+13. **每批结束回写本文件**（就地更新，不要另写第二份交接文档）。—— 见 §7.5
 
 ---
 
@@ -431,13 +512,49 @@ wsl -e bash -lc 'cd /mnt/c/Users/ASTER/WorkBuddy/Project/lean/lean4phylo && \
 余力：              T9 的可选课题（NNI/SPR、NP-hard）
 ```
 
+> 📌 **2026-10-07 实况**：dsh 首轮**跳过了 T2/T1，直接做了 T9 的 NNI**（产出合格但未按建议顺序）。
+> 若你再选择 T9 方向，请在 §4 的 T9 下**写明理由**，并**至少先完成 T2** —— 它是 T1 的前置，
+> 且是所有路径的共同瓶颈。
+
 **每轮结束的自检清单**：
-- [ ] `wsl -e bash -lc 'cd ~/lean4phylo && ~/.elan/bin/lake build'` 通过（**3185 jobs 是当前基线，新增文件后会涨**）
+- [ ] `wsl -e bash -lc 'cd ~/lean4phylo && ~/.elan/bin/lake build'` 通过（**3186 jobs 是当前基线，新增文件后会涨**）
 - [ ] `bash scripts/check_file_imports.sh` 通过
 - [ ] 全库 `grep -rn "sorry" Phylo/` 只命中注释
+- [ ] **docstring 里的每个反引号标识符都能在本文件 `grep "^theorem\|^def"` 命中**（纪律 12）
 - [ ] 新文件已加进 `Phylo.lean`
-- [ ] commit（不 push）
-- [ ] 更新 `MEMORY.md`（追加当轮进展 + 踩坑）
+- [ ] commit（不 push，除非老师说）
+- [ ] 更新 `MEMORY.md`（**只追加**，纪律 11）+ 更新 `HANDOVER.md`（§7.5，纪律 13）
+
+---
+
+## 7.5 每批结束**必须回写本文件**（纪律 13）
+
+老师明确要求：**接手方每完成一批就更新 `HANDOVER.md`**，而不是另起炉灶写第二份交接文档。
+
+**回写清单（逐项打勾）**：
+
+- [ ] **头部快照**：`main` @ `<新 commit>` · `lake build` **<新 jobs 数>** · 文件数 / 行数 / 声明数 · **未推送 commit 数**
+- [ ] **§2.1 表格**：本批新证出的算法/定理**加行**（写清主定理名 + 文件 + 是否无条件）
+- [ ] **§2.2 表格**：新文件或行数变化
+- [ ] **§3 瓶颈图**：已打通的瓶颈**标记完成**；新发现的瓶颈**加进图里**
+- [ ] **§4 任务**：状态更新（`⬜` → `✅ 已完成` / `🔄 进行中`）；新任务追加为 `T10, T11, …`；
+      **若某任务你决定不按建议顺序做**（例如先做 T9），**必须在此写明理由**
+- [ ] **§5 踩坑**：本批新踩的 Lean 坑**追加**到对应小节（这是给后来者省时间的，务必写）
+- [ ] **§8 参考文献**：新引用的文献补进表
+- [ ] **§0 三十秒版本** + **开头「⚠️ 必读」节的事故记录**（若本批又有事故）
+
+> ⚠️ **回写时的红线**：同纪律 11 —— 更新是**追加与就地修改状态**，**不是重写**。
+> 尤其**不要删除「⚠️ 必读」节的事故复盘**（它是给后来者的警示）。
+
+### 7.5.1 回写后头部应该长的样子
+
+```
+> **最后更新**：2026-10-08 03:20（dsh 第 2 批：T2 完成）
+> **当前快照**：`main` @ `b7f3a12`，3189 jobs 通过，27 文件 / 6810 行 / 397 声明
+> **未推送**：13 个 commit
+```
+
+并在 §4 的 T2 标题旁标 `✅ 已完成（2026-10-08）`。
 
 ---
 
