@@ -11,7 +11,7 @@ import Phylo.Laminar
 **定理**（Aho–Sagiv–Szymanski 1981；Buneman 1971；Semple–Steel Thm 3.1.4）
 一个 split 系统 `fam` 能被某棵（无根）树展示 **⟺** `fam` **两两相容**。
 
-* **(⟹)** 即 `Cladogram.pairwiseCompatible`（本库已证：树的 split 系统两两相容）。
+* **(⟹)** 即 `pairwiseCompatible`（`Phylo/Split.lean:894`，root 命名空间；本库已证：树的 split 系统两两相容）。
 * **(⟸)** 本文件给出**构造**：这是 Aho 树构造算法（Aho's tree-building algorithm）的正确性。
 
 **构造思路**（与库内「相容 ⟹ 存在树」同一路线）：

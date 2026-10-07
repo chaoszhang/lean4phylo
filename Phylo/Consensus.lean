@@ -12,7 +12,7 @@ import Phylo.Aho
 
 **核心组合事实（鸽笼原理）**：若 `s`、`t` 都在**严格多数**（> n/2）的树中出现，
 则它们必在**同一棵**树中出现 —— 因为两个支持集的大小之和 > n，必相交。
-而树的 split 系统两两相容（`Cladogram.pairwiseCompatible`），
+而树的 split 系统两两相容（`pairwiseCompatible`，`Phylo/Split.lean:894`，root 命名空间），
 
 ⇒ **多数 split 两两相容**（`majority_compatible`）。
 
@@ -100,7 +100,7 @@ theorem majority_consensus_exists {ι : Type*} [Fintype ι] [DecidableEq ι]
     (h2 : 2 ≤ Fintype.card X) :
     ∃ Tr : RootedTree.{u, u} X, ∀ s ∈ majoritySplits T, Tr.DisplaysSplit s := by
   classical
-  haveI : Nonempty X := Fintype.card_pos_iff.mp (by omega)
+  have : Nonempty X := Fintype.card_pos_iff.mp (by omega)
   refine compatible_exists_rootedTree (majoritySplits T) (Classical.arbitrary X) ?_ ?_ h2
   · intro s hs t ht
     rw [mem_majoritySplits] at hs ht
