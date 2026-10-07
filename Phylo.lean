@@ -21,6 +21,7 @@ import Phylo.InductiveAssembly
 import Phylo.InternalEdge
 import Phylo.Laminar
 import Phylo.LaminarCount
+import Phylo.LeafStatus
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
 import Phylo.QuartetUnique
