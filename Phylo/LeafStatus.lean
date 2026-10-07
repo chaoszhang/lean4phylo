@@ -65,6 +65,9 @@ import Mathlib.Tactic
    * ★★★ `eq_imp_adj_adj`（§12）—— **几何反向**：等号（且 `w` 非叶）⟹ `w` 同时邻接两片叶
      （引擎 ★★★ `exists_distToPath_lt_of_not_adj` + ★★★ `mem_support_of_inSide_of_inSide`
      + ★★ `exists_adj_crossing` + ★★ `distToPath_comm`）；**Lemma 3 至此两向皆完成**；
+8. ★★★ **Thm 2 的可用件**（§13，文献 `:375–387` 的步 2 与步 4）：
+   ★★★ `dist_add_pathLeafStatus_lt_leafStatus`（`w` 内点且不同时邻接两叶 ⟹ `z(u,v) < ℓ(w)`）、
+   ★★ `exists_leafStatus_min`、★★★ `exists_not_isLeaf_leafStatus_le`（`ℓ` 最小者存在且非叶）；
    * 辅助：★★ `sum_eq_add_add_sum_erase`、`leafStatus_sub_dist_add_pathLeafStatus`、
      `dist_eq_add_of_mem_path_support`、★★ `eq_of_adj_leaf`、`support_eq_of_adj_adj`、
      `eq_or_eq_or_eq_of_mem_support_of_adj_adj`、`distToPath_nonneg`。
@@ -75,18 +78,61 @@ import Mathlib.Tactic
   （⚠️ `ω < 0` 时 Lemma 1 的恒等式**为假**）；
 * `leafStatus_minimizer_not_isLeaf` / `pos_walkDist_of_ne` / `pos_dist_of_ne` /
   `eq_add_dist_of_min_support` / `exists_median_eq_half` / `pathLeafStatus_eq` /
-  `leafStatus_strict_mono` 及其 §7–§9 地基 / §12 的 `eq_imp_adj_adj`（其引擎用 `0 < d(p,w)`）：
+  `leafStatus_strict_mono` 及其 §7–§9 地基 / §12 的 `eq_imp_adj_adj`（其引擎用 `0 < d(p,w)`）/
+  §13 的 `dist_add_pathLeafStatus_lt_leafStatus`：
   全局正边权 `∀ e : Edge T.toCladogram, 0 < T.w e`（文献 `:124` 的 `ω : E(T) → ℕ⁺`；
   `:397–402` 说其实内部边正权已够）；
 * §7 的 ★★ `dist_le_dist_of_inSide` / `inSide_of_dist_lt` **不需要正权**（只用 `w_nonneg`）；
   §8 的侧集嵌套、§12 的 ★★ `exists_adj_crossing` / ★★★ `mem_support_of_inSide_of_inSide`
   也**不需要正权**。
 
-## ⬜ 未完成（未虚报）
+## ⬜ 未完成：Thm 2 本体（文献 `:372–387` 的步 3、5–9 与主定理）
 
-* **无**（本轮任务的三项与 §12 的几何反向均已落地）。
-  文献 Observation 1 的「路径」字面形式在本文件第 5 节已按**文献原意**
-  （`min_{y∈V(p)} d(x,y)`）处理，并记录了题面字面版为假的反例。
+主定理（树层，δ-free）**本轮未落地**：
+
+```lean
+theorem Cladogram.exists_isCherry_of_max_z {T : Phylogram X}
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (hcard : 3 ≤ Fintype.card X)
+    {a b : X} (hab : a ≠ b)
+    (hmax : ∀ i j : X, i ≠ j → T.dist (T.leaf i) (T.leaf j)
+      + T.pathLeafStatus (T.leaf i) (T.leaf j)
+      ≤ T.dist (T.leaf a) (T.leaf b) + T.pathLeafStatus (T.leaf a) (T.leaf b)) :
+    T.IsCherry a b
+```
+
+已落地的部件见第 13 节；剩余步骤的**配方**（下一轮可直接开工）：
+
+1. **步 3**：`x` := `T.leaf a` 的唯一邻居（`SimpleGraph.degree_eq_one_iff_existsUnique_adj`）。
+   由 `hcard` 知两片**相邻的叶**在 ≥3 叶的树中不可能（两片叶的度都是 1 ⟹ 该边就是整棵树的连通分量
+   ⟹ 只有 2 片叶），故 `x ≠ T.leaf b`；于是 `x` 是 `a–b` 路径的第二个顶点 ⇒ **内点**；
+   `x` 不是叶：若 `x` 为叶，则它在长度 ≥ 2 的路径上有两个相异邻居。
+2. **步 4 ✓（§13）**：`dist_add_pathLeafStatus_lt_leafStatus` 给出 `z(a,b) < ℓ(x)`。
+3. **步 5**：`deg x ≥ 3`（非叶 + `no_degree_two`）给出两个相异邻居 `s, t ∉ {T.leaf a, T.leaf b}`；
+   用 `inSide_congr_of_adj` + `inSide_or_inSide` 可把 `x` 的三支认出来。
+4. **步 6**：设 `ℓ(s) ≥ ℓ(t)`（否则交换 `s,t`）；`c` := ℓ 最小者（§13 ★★★
+   `exists_not_isLeaf_leafStatus_le`，非叶）。
+   * 若 `c ∈ T^s`（:= `T.sideVertices s(x,s) s`）：对路径 `c → … → s → x → t` 用
+     ★★★ `leafStatus_strict_mono`（`v₀ = c`，`x`/`t` 的下标 ≥ 1）得 `ℓ(t) > ℓ(s)`，与
+     `ℓ(s) ≥ ℓ(t)` 矛盾 ⇒ **`c ∉ T^s`**；
+   * 于是对路径 `c → … → x → s` 同法得 **`ℓ(x) < ℓ(s)`** ✓（路径序列可用
+     `IsPath.mem_support_iff_exists_append` 在 `x` 处劈开、再拼上边 `x—s` 得到）。
+5. **步 7**（`s` 是叶）：`z(a,s) = ℓ(x)`（★★★ `eq_of_adj_adj`：`x` 同时邻接两叶 `a, s`）
+   `> z(a,b)`，与 `hmax` 矛盾 ✓。
+6. **步 8（crux，唯一的新工程量，本轮未做）**：`s` 不是叶时须找一片**中点 `m ∈ T^s` 的 T-樱桃**。
+   最省力路线（与本文件已有件兼容，且避免移植 `Phylogram.exists_isCherry` 的计数证明 ——
+   `T^s` 的诱导树在附着点 `s` 处**有度 2 顶点**，不是 `Cladogram`，故计数引理不能直接套用）：
+   * 取 `y ∈ T^s` 使**跳数距离** `T.graph.dist s y`（Mathlib 的无权图距离，`ℕ` 值）在 `T^s` 上最大；
+   * 最大跳数顶点必是叶（否则它有更深的邻居：`IsTree.dist_eq_dist_add_one_of_adj`）；
+   * 取 `z` := `y` 的「父顶点」（同一边上 `T.graph.dist s z + 1 = T.graph.dist s y`）。
+     `z` 非叶（有父与 `y` 两个相异邻居）⟹ `deg z ≠ 1, 2` ⟹ `deg z ≥ 3` ⟹ 第三邻居 `v ≠ 父, y`；
+     `v` 与 `y` **同跳数深度** ⟹ `v` 也是叶 ⟹ **`{y, v}` 是以 `z` 为中点的 T-樱桃** ✓
+     （`z = s` 时同理：`s` 的第三个邻居也同深度、也是叶）。
+7. **步 9（收口）**：`m := z ∈ T^s` ⟹ 路径 `c → … → x → s → … → m` 经过 `x` 且 `m ≠ c, x`，
+   由 ★★★ `leafStatus_strict_mono` 得 `ℓ(m) > ℓ(x)`；又 `z(y,y') = ℓ(m)`（★★★ `eq_of_adj_adj`）
+   ⟹ `z(y,y') > ℓ(x) > z(a,b)`，与 `hmax` 矛盾 ✓ ⇒ 反设不成立 ⇒ `T.IsCherry a b` ✓。
+
+（文献 Observation 1 的「路径」字面形式在本文件第 5 节已按**文献原意**
+`min_{y∈V(p)} d(x,y)` 处理，并记录了题面字面版为假的反例。）
 -/
 
 universe u v
@@ -1439,6 +1485,57 @@ theorem eq_imp_adj_adj (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {u v : X} 
     exact absurd (hforall x hxu hxv) (ne_of_lt hlt)
 
 end Lemma3Conv
+
+/-! ## 13. Thm 2 的树层形式：本轮落地的可用件
+
+Weller `:372–373`（证明 `:375–387`）：若 `z(u,v) := d(u,v) + ℓ_T(p_uv)` 在所有互异对上**最大**，
+则 `u, v` 构成樱桃。本轮把证明中**不依赖「子树里存在樱桃」**的部件先落地：
+
+* ★★★ `dist_add_pathLeafStatus_lt_leafStatus` —— **步 4**（文献 `:379`）：
+  `w` 是 `u–v` 路径上的结点、`w` 不是叶、且不同时邻接两片叶时 `z(u,v) < ℓ(w)`
+  （＝ ★★★ `dist_add_pathLeafStatus_le_leafStatus` + ★★★ `eq_imp_adj_adj` 的逆否命题）；
+* ★★ `exists_leafStatus_min` / ★★★ `exists_not_isLeaf_leafStatus_le` —— **步 2**（文献 `:375–376`）：
+  `ℓ` 的最小者 `c` 存在，且由 ★★★ Cor 1 知它**不是叶**。
+
+⬜ **未完成（步 3、5–9 与主定理本体）** 见文件头 `⬜` 段（含逐步配方与步 8 的关键观察）。 -/
+
+section Thm2
+
+variable [Fintype X] [DecidableEq X]
+variable (T : Phylogram.{u, v} X)
+
+/-- ★★★ **Lemma 3 的严格形式（Thm 2 证明的步 4）**（文献 `:379`）：
+
+设 `w` 是 `u–v` 路径上的结点、`w` 不是叶、且 `w` **不同时邻接两片叶** `leaf u, leaf v`
+（即反设「`u, v` 不以 `w` 为中点构成樱桃」），则 `z(u,v) < ℓ(w)`。 -/
+theorem dist_add_pathLeafStatus_lt_leafStatus (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {u v : X} (huv : u ≠ v) {w : T.V}
+    (hw : w ∈ (T.existsUnique_path (T.leaf u) (T.leaf v)).choose.support)
+    (hwint : ¬ T.IsLeaf w)
+    (hnot : ¬ (T.graph.Adj (T.leaf u) w ∧ T.graph.Adj w (T.leaf v))) :
+    T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v) < T.leafStatus w := by
+  rcases lt_or_eq_of_le (dist_add_pathLeafStatus_le_leafStatus T huv hw) with h | h
+  · exact h
+  · exact absurd (eq_imp_adj_adj T hpos huv hw hwint h) hnot
+
+omit [DecidableEq X] in
+/-- ★★ **`ℓ` 的最小者存在**（Thm 2 证明的步 2 前半；`T.V` 有限）。 -/
+theorem exists_leafStatus_min (hne : Nonempty X) :
+    ∃ c : T.V, ∀ w : T.V, T.leafStatus c ≤ T.leafStatus w := by
+  have hV : (Finset.univ : Finset T.V).Nonempty :=
+    ⟨T.leaf (Classical.choice hne), Finset.mem_univ _⟩
+  obtain ⟨c, -, hmin⟩ := Finset.exists_min_image (Finset.univ : Finset T.V) T.leafStatus hV
+  exact ⟨c, fun w => hmin w (Finset.mem_univ w)⟩
+
+/-- ★★★ **`ℓ` 的最小者存在且不是叶**（Thm 2 证明的步 2，文献 `:375–376`：由 Corollary 1）。 -/
+theorem exists_not_isLeaf_leafStatus_le (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hcard : 3 ≤ Fintype.card X) :
+    ∃ c : T.V, ¬ T.IsLeaf c ∧ ∀ w : T.V, T.leafStatus c ≤ T.leafStatus w := by
+  have hne : Nonempty X := Fintype.card_pos_iff.mp (by omega)
+  obtain ⟨c, hmin⟩ := exists_leafStatus_min T hne
+  exact ⟨c, fun hleaf => leafStatus_minimizer_not_isLeaf T hcard hpos hmin hleaf, hmin⟩
+
+end Thm2
 
 end
 
