@@ -51,10 +51,13 @@ import Phylo.Stat.NJst
   `two_le_card_sideLeaves_both`（= HANDOVER 的 **T2**）。
 * **第 2 步已完成**：同文件的 ★★ `exists_displaysQuartet_of_internalEdge` ——
   每条内部边都有 quartet 见证。
-* **⬜ 剩**：第 3 步（`Q(T) = Q(T') ⟹ Σ(T) = Σ(T')`，需要下面这条 **clade 刻画**）
-  与第 4 步（`Σ` 决定 binary 树）：
-  > `A ⊆ X` 是 `T`（binary）的 clade ⟺ 对任意 `a,b ∈ A`、`c,d ∉ A` 皆有 `ab|cd ∈ Q(T)`。
-  这条的「⟸」方向是真正的工程量，也是 `QuartetDecidesTree` 剩下的核心。
+* **⬜ 剩**：接线 —— 把「`QuartetTree` 逐点一致」过渡到 `SameQuartetSystem`，并补
+  「split 系统相同 ⟹ 树同构」这一步。
+  ⚠️ 已就位的零件（**均已无条件证出**，此处只是**尚未接线**）：
+  ★★★ `Cladogram.isClade_iff_isClan_of_isBinary`（clade 刻画 = T0.1 第 3 步），
+  其上游 `BinarySplitsMaximal`（`Phylo/InternalEdge.lean:937` 的 `def`）已由
+  `Phylo/SplitsMaximal.lean` 的 `binarySplitsMaximal` **无条件**证出；
+  以及 ★★★ `compatible_of_sameQuartetSystem`（quartet 系统相同 ⟹ `Σ(T) ∪ Σ(T')` 两两相容）。
 
 ## 下游收口
 
@@ -70,8 +73,9 @@ variable {X : Type u} [Fintype X] [DecidableEq X]
 
 ✦ **经典已证定理，本库尚未形式化**（**非**学术开放问题）。
 
-**陈述**：两棵 binary cladogram `T, T'`，若存在各自展示的**真 quartet**（`2|2` split）
-选择 `q, q'` 使得逐点一致（模 `swap`），则 `T ≅ T'`。
+**陈述**（**T0.6 之后的形状**）：两个 `QuartetTree` `qt, qt'`（各自带**真 `2|2`** 的字段
+`q_card` 与 `displays`），若其底层树皆 binary 且逐点一致（模 `swap`），
+则 `Nonempty (Iso qt.tree qt'.tree)`。
 
 **文献**：Colonius & Schulze (1981), *Tree structures for proximity data*；
 Steel (1992), *The complexity of reconstructing trees from qualitative characters and subtrees*；
@@ -80,7 +84,7 @@ Steel (1992), *The complexity of reconstructing trees from qualitative character
 **为什么 binary 不可去**：若 `T` 有 polytomy（内部度 `≥ 4`），把它 refine 成 binary 得到
 `T'`，则 `q = q'` 但 `T ≇ T'`。
 
-## ⚠️ 修正记录（2026-10-08）：`(q S hS).sideA.card = 2` 这条假设**不可去**
+## ⚠️ 修正记录（2026-10-08）：旧陈述**是假命题**；已由 **T0.6 治本**
 
 **本命题的旧版本（没有 `2|2` 假设）是假命题**，反例（`X = {1,2,3,4}`）：
 
@@ -96,21 +100,38 @@ Steel (1992), *The complexity of reconstructing trees from qualitative character
 但结论 `Nonempty (Iso T T')` 为**假**。
 
 **根源**：`QuartetChoice` 只要求 `Split ↥S`，而 `Split ↥S` 的两侧只须非空 —— `1|3` 也算。
-「quartet」按定义必须是 `2|2`。故补上 `2|2` 假设。
+「quartet」按定义必须是 `2|2`。
 
-⚠️ **连带影响**：`astral_iso` / `caster_iso` / `parsimony_iso` 的 `hQD` 假设
-**在旧陈述下不可满足**（假命题没有证明），故那三条定理当时是**空真**的。
-它们现在多了一条 `2|2` 假设。⚠️ **更彻底的做法**（建议下批做）：
-把 `2|2` 条件作为字段加进 `Phylo/Stat/MSC.lean` 的 `QuartetTree`（`MSCFreq` 随之继承），
-这样三个 iso 定理就不必再单独传该假设。 -/
+### ✅ 收口（**T0.6**，2026-10-08）：`2|2` 升为 `QuartetTree` 的**字段**
+
+当时的治标补丁是「给本命题多加一条 `2|2` 合取项」，并让 `astral_iso` / `caster_iso` /
+`parsimony_iso` 各自多传一条 `2|2` 假设（在旧陈述下那条假设**不可满足**，
+故三条定理当时是**空真**的）。**现已治本**：
+
+* `Phylo/Stat/MSC.lean` 的 `QuartetTree` 新增字段 ★ `q_card`
+  （`∀ S hS, (q S hS).sideA.card = 2`）；`MSCFreq` 经 `extends` **自动继承**；
+* `Phylo/Stat/Parsimony.lean` 的 `MSCSite` 同步新增 `q_card` 字段，
+  `MSCSite.asQuartetTree` 相应补上该坐标；
+* ⇒ 本 `def` **改收 `QuartetTree`**（而非裸 `QuartetChoice`）：那条 `2|2` 合取项
+  不再需要（它就是 `qt.q_card`），`qt.displays` / `qt'.displays` 亦然；
+* ⇒ 三条 `iso` 定理的 `2|2` 显式假设**已全部删除**。
+
+✦ **改陈述的反例审查**（本项目纪律：改陈述前先造反例）：
+
+* 新形状下 `q`、`q'` **都必须**带 `q_card`，故旧反例里的常函数 **`1|3` 选法不再可表达**
+  ⇒ 旧反例失效；
+* 对 binary 树，「被展示的 `2|2` split 在 4-元集上模 `swap` 唯一」
+  （`Phylo/QuartetUnique.lean` 的 ★★★ `displaysSplitOn_unique`）⇒ 新形状**恰是**
+  经典定理（Colonius–Schulze 1981 / Steel 1992）的忠实形式
+  —— 两棵树「逐点一致」正是「quartet 系统相同」；
+* `|X| ≤ 3` 时两侧假设自动空真，结论退化为「≤3 叶的 binary 树唯一」——
+  这与**旧陈述完全相同**，不是本次改动引入的新风险。 -/
 def QuartetDecidesTree (X : Type u) [Fintype X] [DecidableEq X] : Prop :=
-  ∀ (T T' : Cladogram.{u, v} X) (q q' : QuartetChoice X),
-    T.IsBinary → T'.IsBinary →
-    (∀ (S : Finset X) (hS : S.card = 4), T.DisplaysSplitOn S (q S hS)) →
-    (∀ (S : Finset X) (hS : S.card = 4), T'.DisplaysSplitOn S (q' S hS)) →
-    (∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2) →
-    (∀ (S : Finset X) (hS : S.card = 4), q S hS = q' S hS ∨ q S hS = (q' S hS).swap) →
-    Nonempty (Iso T T')
+  ∀ (qt qt' : QuartetTree.{u, v} X),
+    qt.tree.IsBinary → qt'.tree.IsBinary →
+    (∀ (S : Finset X) (hS : S.card = 4),
+      qt.q S hS = qt'.q S hS ∨ qt.q S hS = (qt'.q S hS).swap) →
+    Nonempty (Iso qt.tree qt'.tree)
 
 open Classical in
 /-- 「逐 quartet 一致」（模 `swap`）关系**对称**。 -/
@@ -130,24 +151,21 @@ theorem agreesWith_symm {q q1 : QuartetChoice X}
 /-- ★★★ **ASTRAL 恢复真树的拓扑**（在缺口 `QuartetDecidesTree` 成立时）。
 
 由 `astral_maximizer_agrees`（ASTRAL 输出与真树逐 quartet 一致）
-+ 缺口（一致 ⟹ 同构）。`hqcard` 是 `2|2` 条件（见 `QuartetDecidesTree` 的修正记录）。 -/
++ 缺口（一致 ⟹ 同构）。`2|2` 条件现为 `QuartetTree.q_card` 字段，故**不必再传**。 -/
 theorem astral_iso (hQD : QuartetDecidesTree.{u, v} X)
     (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary)
     {qt : QuartetTree.{u, v} X} (hqt : qt.tree.IsBinary)
-    (hqcard : ∀ (S : Finset X) (hS : S.card = 4), (qt.q S hS).sideA.card = 2)
     (h : IsASTRAL m.freq qt) : Nonempty (Iso qt.tree m.tree) :=
-  hQD qt.tree m.tree qt.q m.q hqt hT qt.displays m.displays hqcard
-    (fun S hS => astral_maximizer_agrees m h S hS)
+  hQD qt m.toQuartetTree hqt hT fun S hS => astral_maximizer_agrees m h S hS
 
 /-- ★★★ **CASTER 恢复真树的拓扑**（同 `astral_iso`，经 `caster_isASTRAL`）。 -/
 theorem caster_iso (hQD : QuartetDecidesTree.{u, v} X)
     (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary) (M : MultiMarkerFreq X)
     (hM : M.avg = m.freq)
     {qt : QuartetTree.{u, v} X} (hqt : qt.tree.IsBinary)
-    (hqcard : ∀ (S : Finset X) (hS : S.card = 4), (qt.q S hS).sideA.card = 2)
     (h : ∀ qt1 : QuartetTree.{u, v} X, casterScore M qt1.q ≤ casterScore M qt.q) :
     Nonempty (Iso qt.tree m.tree) :=
-  astral_iso hQD m hT hqt hqcard (hM ▸ (caster_isASTRAL M).mp h)
+  astral_iso hQD m hT hqt (hM ▸ (caster_isASTRAL M).mp h)
 
 /-- ★★★ **parsimony 恢复真树的拓扑**（在缺口 `QuartetDecidesTree` 成立时）。
 
@@ -156,11 +174,7 @@ theorem parsimony_iso (hQD : QuartetDecidesTree.{u, v} X)
     (M : MSCSite.{u, v} X) (hT : M.tree.IsBinary) (sm : SiteSampling.{u, v} X)
     {E : SiteSupport X → QuartetTree.{u, v} X} (hE : ∀ D, IsParsimony D (E D))
     (hEbin : ∀ D, (E D).tree.IsBinary)
-    (hEqcard : ∀ (D : SiteSupport X) (S : Finset X) (hS : S.card = 4),
-      ((E D).q S hS).sideA.card = 2)
     (hNE : ∃ q : QuartetChoice X, ¬ AgreesWith M.q q) :
     ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp n)).tree M.tree) := by
   obtain ⟨N, hN⟩ := parsimony_statisticallyConsistent M sm hE hNE
-  exact ⟨N, fun n hn => hQD (E (sm.emp n)).tree M.tree (E (sm.emp n)).q M.q
-    (hEbin (sm.emp n)) hT (E (sm.emp n)).displays M.displays
-    (hEqcard (sm.emp n)) (hN n hn)⟩
+  exact ⟨N, fun n hn => hQD (E (sm.emp n)) M.asQuartetTree (hEbin (sm.emp n)) hT (hN n hn)⟩

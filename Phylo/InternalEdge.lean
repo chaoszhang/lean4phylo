@@ -567,8 +567,9 @@ theorem compatible_of_sameQuartetSystem {T T' : Cladogram X}
 * ★★ `compatible_of_isClan` —— **clan 条件 ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（关键一步）；
 * ★★ `isClade_iff_isClan` —— **模 `SplitsMaximal T` 的完整刻画**（两个方向都证完）。
 
-⬜ **剩余的唯一输入**：`SplitsMaximal T`（「与全部 split 相容 ⟹ 自身是 split」），
-在 `T.IsBinary` 时成立 —— 见下方 `BinarySplitsMaximal` 的 docstring（含证明思路）。 -/
+✅ **该输入已无条件证出**（2026-10-08）：`T.IsBinary → T.SplitsMaximal` 即
+`BinarySplitsMaximal X`，由 `Phylo/SplitsMaximal.lean` 的 ★★★ `binarySplitsMaximal` 给出
+（无条件版 clade 刻画 = 同文件的 ★★★ `Cladogram.isClade_iff_isClan_of_isBinary`）。 -/
 
 /-- **clan 条件**：`A` 内任意两点与 `A` 外任意两点构成的 quartet 都被 `T` 展示。
 
@@ -933,14 +934,18 @@ end Cladogram
    `Split.compatible_swap_self` / `compatible_swap_left/right`，**本文件已加**）
    且大小 `4|X| - 4 > 4|X| - 6` —— **矛盾** ✓
 
-⇒ 第 3 步（镶嵌族基数上界，两条互归纳）是**唯一**的新工程量。 -/
+⇒ 第 3 步（镶嵌族基数上界，两条互归纳）是**唯一**的新工程量。
+
+✅ **该工程量已完成**（2026-10-08）：`Phylo/SplitsMaximal.lean` 的 ★★★ `binarySplitsMaximal`
+**无条件**证出本命题 —— 本 `def` 保留为可复用的命题名。 -/
 def BinarySplitsMaximal (X : Type u) [Fintype X] [DecidableEq X] : Prop :=
   ∀ T : Cladogram.{u, v} X, T.IsBinary → T.SplitsMaximal
 
 /-- ★★ **binary 树的 clade 刻画**（模 `BinarySplitsMaximal`；目标 T0.1 第 3 步的最终形式）。
 
-⚠️ `BinarySplitsMaximal` 本身尚未形式化（见其 docstring）；本定理把 T0.1 第 3 步的
-**其余部分全部证完**，只剩这一个输入。 -/
+⚠️ 本定理**保留了 `hb` 参数**（历史形状）。`BinarySplitsMaximal X` 现已
+**无条件证出** —— `Phylo/SplitsMaximal.lean` 的 ★★★ `binarySplitsMaximal`；
+无条件版 clade 刻画 = 同文件的 ★★★ `Cladogram.isClade_iff_isClan_of_isBinary`。 -/
 theorem Cladogram.isClade_iff_isClan_of_binary {X : Type u} [Fintype X] [DecidableEq X]
     (hb : BinarySplitsMaximal.{u, v} X) {T : Cladogram.{u, v} X} (hT : T.IsBinary)
     {A : Finset X} (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty) :

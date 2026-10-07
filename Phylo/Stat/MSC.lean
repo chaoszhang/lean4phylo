@@ -79,12 +79,20 @@ structure QuartetFreq (X : Type u) [Fintype X] [DecidableEq X] where
 
 /-- **quartet 树**：一棵树 + 每个 4-元集上一个被它展示的 quartet（选一侧）。
 
-ASTRAL 型算法的**候选空间**。（对 binary 树恒存在，见 `Phylo.Stat.QuartetDecides`。） -/
+ASTRAL 型算法的**候选空间**。（对 binary 树恒存在，见 `Phylo.Stat.QuartetDecides`。）
+
+⚠️ **`q_card` 是 2026-10-08 补的（T0.6）**：`Split ↥S` 的两侧**只须非空**，故 **`1|3` 也满足
+`Split ↥S`**。没有 `q_card` 时「quartet 树」可以拿一条**叶边**（`1|3` 平凡 split）冒充 quartet ——
+`QuartetDecidesTree` 的旧陈述正因此**是假命题**（反例见 `Phylo/Stat/QuartetDecides.lean`
+的 `QuartetDecidesTree` docstring）。把 `2|2` 提为**字段**是**治本**：凡经 `QuartetTree`
+进入的数据都自动带 `2|2`，下游不必各自打补丁。 -/
 structure QuartetTree (X : Type u) [Fintype X] [DecidableEq X] where
   /-- 底层树。 -/
   tree : Cladogram.{u, v} X
   /-- 每个 4-元集上选定的 quartet。 -/
   q : (S : Finset X) → (hS : S.card = 4) → Split ↥S
+  /-- ★ **选定的 quartet 是真正的 `2|2` 划分**（不是 `1|3`）。 -/
+  q_card : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2
   /-- 选定的 quartet 确实被树展示。 -/
   displays : ∀ (S : Finset X) (hS : S.card = 4), tree.DisplaysSplitOn S (q S hS)
 

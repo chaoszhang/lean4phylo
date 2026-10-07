@@ -156,6 +156,8 @@ structure MSCSite (X : Type u) [Fintype X] [DecidableEq X] extends SiteSupport X
   tree : Cladogram.{u, v} X
   /-- 真树的 quartet 选择。 -/
   q : QuartetChoice X
+  /-- ★ **真 quartet 是真正的 `2|2` 划分**（不是 `1|3`）—— 见 `QuartetTree.q_card`（T0.6）。 -/
+  q_card : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2
   /-- 确实被真树展示。 -/
   displays : ∀ (S : Finset X) (hS : S.card = 4), tree.DisplaysSplitOn S (q S hS)
   /-- ★ **MSC + ISM 核心**：真树 quartet 的支持位点数唯一最大（模 `swap`）。 -/
@@ -176,9 +178,12 @@ theorem cnt_le (S : Finset X) (hS : S.card = 4) (r : Split ↥S) :
     · exact (M.majorizes S hS r h1 h2).le
 
 /-- 真树作为 `QuartetTree`。 -/
-def asQuartetTree : QuartetTree.{u, v} X := ⟨M.tree, M.q, M.displays⟩
+def asQuartetTree : QuartetTree.{u, v} X := ⟨M.tree, M.q, M.q_card, M.displays⟩
 
 @[simp] theorem asQuartetTree_q : M.asQuartetTree.q = M.q := rfl
+
+@[simp] theorem asQuartetTree_q_card :
+    M.asQuartetTree.q_card = M.q_card := rfl
 
 /-- ★ 非真选择的支持得分严格小于真树。 -/
 theorem supportScore_lt_of_not_agrees {q : QuartetChoice X} (h : ¬ AgreesWith M.q q) :
