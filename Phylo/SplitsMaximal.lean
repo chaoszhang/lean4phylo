@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.InternalEdge
 import Phylo.Algorithm.BinaryCount
+import Phylo.LaminarCount
 
 /-!
 # `Phylo.SplitsMaximal` —— binary 树的 split 系统极大（目标 T0.1 第 3 步收尾）
@@ -446,4 +447,163 @@ theorem eq_of_sideLeaves_eq {a b c d : T.V} (hab : T.graph.Adj a b) (hcd : T.gra
   exact T.eq_edge_of_adj_of_mem_sideVertices_of_notMem hab
     (hU ▸ T.self_mem_sideVertices s(a, b) a) (hU ▸ T.notMem_sideVertices_of_adj hab)
 
+/-! ## 计数下界 -/
+
+/-- ★ **`u` 一侧叶集的补非空**（`splitOfEdge` 的非空性前提；由另一侧含叶 + 两侧互补）。 -/
+theorem sideLeaves_sdiff_nonempty {u v : T.V} (huv : T.graph.Adj u v) :
+    (Finset.univ \ T.sideLeaves s(u, v) u).Nonempty := by
+  obtain ⟨y, hy⟩ := T.sideLeaves_nonempty_of_adj huv.symm
+  have hy2 : y ∈ T.sideLeaves s(u, v) v := by simpa [Sym2.eq_swap] using hy
+  have hy3 : y ∉ T.sideLeaves s(u, v) u :=
+    Finset.mem_compl.mp ((T.sideLeaves_compl_adj huv) ▸ hy2)
+  exact ⟨y, Finset.mem_sdiff.mpr ⟨Finset.mem_univ _, hy3⟩⟩
+
+open Classical in
+/-- ★★★ **`S.card ≥ 2 · #E(T)`**（`S := {s // T.IsSplitOf s}` 作为 `Finset`）。
+
+每条边 `⟦v,u⟧` 贡献**两个**有向对 `(v,u)`、`(u,v)`；映射 `(v,u) ↦ `「`v` 侧的叶集给出的 split」
+落在 `S` 里，且由 ★★★ `eq_of_sideLeaves_eq` 它是**单射**：叶集相同 ⟹ 边相同；若朝向相反，
+两侧叶集互补、各自非空，不可能相等。 -/
+theorem two_mul_card_edgeFinset_le_card_splits :
+    2 * T.graph.edgeFinset.card
+      ≤ ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card := by
+  classical
+  set OE : Finset (Σ _ : T.V, T.V) :=
+    (Finset.univ : Finset T.V).sigma (fun v => T.graph.neighborFinset v) with hOE
+  have hOEcard : OE.card = 2 * T.graph.edgeFinset.card := by
+    rw [hOE, Finset.card_sigma]
+    rw [show (∑ a ∈ (Finset.univ : Finset T.V), (T.graph.neighborFinset a).card)
+        = ∑ a ∈ (Finset.univ : Finset T.V), T.graph.degree a from
+      Finset.sum_congr rfl fun a _ => card_neighborFinset_eq_degree T.graph a]
+    simpa using SimpleGraph.sum_degrees_eq_twice_card_edges T.graph
+  have hadj : ∀ p : ↥OE, T.graph.Adj p.1.1 p.1.2 := fun p =>
+    (mem_neighborFinset T.graph p.1.1 p.1.2).mp (Finset.mem_sigma.mp p.2).2
+  let f : ↥OE → Split X := fun p =>
+    T.splitOfEdge s(p.1.1, p.1.2) p.1.1 (T.sideLeaves_nonempty_of_adj (hadj p))
+      (T.sideLeaves_sdiff_nonempty (hadj p))
+  have hfS : ∀ p : ↥OE, T.IsSplitOf (f p) := fun p =>
+    ⟨p.1.1, p.1.2, hadj p, p.1.1, rfl⟩
+  have hf_inj : Function.Injective f := by
+    intro p q hpq
+    have hside : T.sideLeaves s(p.1.1, p.1.2) p.1.1
+        = T.sideLeaves s(q.1.1, q.1.2) q.1.1 := by
+      have h := congrArg Split.sideA hpq
+      simpa [f] using h
+    have hedge : s(p.1.1, p.1.2) = s(q.1.1, q.1.2) :=
+      T.eq_of_sideLeaves_eq (hadj p) (hadj q) hside
+    have hpair : p.1 = q.1 := by
+      rcases Sym2.eq_iff.mp hedge with h | h
+      · exact Sigma.ext h.1 (heq_of_eq h.2)
+      · exfalso
+        have hA₂ : T.sideLeaves s(p.1.1, p.1.2) p.1.1
+            = T.sideLeaves s(p.1.1, p.1.2) p.1.2 := by
+          calc T.sideLeaves s(p.1.1, p.1.2) p.1.1
+              = T.sideLeaves s(q.1.1, q.1.2) q.1.1 := hside
+            _ = T.sideLeaves s(p.1.2, p.1.1) p.1.2 := by rw [← h.2, ← h.1]
+            _ = T.sideLeaves s(p.1.1, p.1.2) p.1.2 :=
+                congrArg (fun e : Sym2 T.V => T.sideLeaves e p.1.2) Sym2.eq_swap
+        have hcomp := hA₂.trans (T.sideLeaves_compl_adj (hadj p))
+        obtain ⟨y, hy⟩ := T.sideLeaves_nonempty_of_adj (hadj p)
+        exact (Finset.mem_compl.mp (hcomp ▸ hy)) hy
+    exact Subtype.ext hpair
+  have hcard := Finset.card_image_of_injective (f := f) OE.attach hf_inj
+  have hle : (OE.attach.image f).card
+      ≤ ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card := by
+    refine Finset.card_le_card fun t ht => ?_
+    obtain ⟨p, -, rfl⟩ := Finset.mem_image.mp ht
+    exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hfS p⟩
+  calc 2 * T.graph.edgeFinset.card = OE.card := hOEcard.symm
+    _ = OE.attach.card := (Finset.card_attach (s := OE)).symm
+    _ = (OE.attach.image f).card := hcard.symm
+    _ ≤ ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card := hle
+
+/-! ## 主定理：binary ⟹ `SplitsMaximal` -/
+
+/-- ★★★ **binary 树的 split 系统极大**（目标 T0.1 第 3 步的唯一剩余输入）。
+
+设 `s` 与 `Σ(T)` 的每个 split 相容。若 `s ∉ Σ(T)`，则 `S' := Σ(T) ∪ {s, s.swap}` 是**两两相容**族，
+`#S' = #Σ(T) + 2`；由 ★★★ `card_add_six_le_four_mul_card_of_pairwise_compatible`
+（`Phylo/LaminarCount.lean`）`#S' + 6 ≤ 4|X|`，而由 ★★★ `two_mul_card_edgeFinset_le_card_splits`
+与 `IsBinary.card_edgeFinset`（`#E = 2ℓ − 3`）、`card_leafFinset`（`ℓ = |X|`）得 `#Σ(T) ≥ 4|X| − 6`，
+于是 `#Σ(T) + 8 ≤ 4|X| ≤ #Σ(T) + 6` —— 矛盾。 -/
+theorem splitsMaximal_of_isBinary (hT : T.IsBinary) : T.SplitsMaximal := by
+  classical
+  intro s hs
+  by_contra hsS
+  -- `s` 的两侧都非空 ⟹ `2 ≤ |X|`（并得到基点 `ρ`）
+  have hcardX : 2 ≤ Fintype.card X := by
+    have h1 : 0 < s.sideA.card := Finset.card_pos.mpr (by simpa [Split.sideA] using s.nonempty 0)
+    have h2 : 0 < s.sideB.card := Finset.card_pos.mpr (by simpa [Split.sideB] using s.nonempty 1)
+    have h := Finset.card_union_of_disjoint s.disjoint_sides
+    rw [s.union_sides, Finset.card_univ] at h
+    omega
+  obtain ⟨ρ⟩ := Fintype.card_pos_iff.mp (by omega : 0 < Fintype.card X)
+  set S : Finset (Split X) := (Finset.univ : Finset (Split X)).filter T.IsSplitOf with hS
+  -- `s ∉ S`、`s.swap ∉ S`、`s ≠ s.swap`
+  have hnotS : s ∉ S := fun h => hsS (Finset.mem_filter.mp h).2
+  have hswapNotS : s.swap ∉ S := fun h =>
+    hnotS (Finset.mem_filter.mpr ⟨Finset.mem_univ _, T.isSplitOf_swap (Finset.mem_filter.mp h).2⟩)
+  have hsne : s ≠ s.swap := by
+    intro h
+    have hAB : s.sideA = s.sideB := by
+      rw [← Split.swap_sideA]
+      exact congrArg Split.sideA h
+    obtain ⟨x, hx⟩ := s.nonempty 0
+    exact (Finset.disjoint_left.mp s.disjoint_sides) hx (hAB ▸ hx)
+  set S' : Finset (Split X) := insert s (insert s.swap S) with hS'
+  have hcardS' : S'.card = S.card + 2 := by
+    have h1 : s ∉ insert s.swap S := by
+      simp only [Finset.mem_insert, not_or]
+      exact ⟨hsne, hnotS⟩
+    rw [hS', Finset.card_insert_of_notMem h1, Finset.card_insert_of_notMem hswapNotS]
+  -- `S'` 两两相容
+  have hmemS' : ∀ t : Split X, t ∈ S' ↔ t = s ∨ t = s.swap ∨ t ∈ S := by
+    intro t
+    rw [hS', Finset.mem_insert, Finset.mem_insert]
+  have hcompat : ∀ s₁ ∈ S', ∀ s₂ ∈ S', s₁ ≠ s₂ → Split.Compatible s₁ s₂ := by
+    intro s₁ hs₁ s₂ hs₂ hne
+    rw [hmemS'] at hs₁ hs₂
+    rcases hs₁ with h₁ | h₁ | hs₁
+    · rcases hs₂ with h₂ | h₂ | hs₂
+      · exact absurd (h₁.trans h₂.symm) hne
+      · rw [h₁, h₂]; exact Split.compatible_swap_self s
+      · rw [h₁]; exact hs s₂ (Finset.mem_filter.mp hs₂).2
+    · rcases hs₂ with h₂ | h₂ | hs₂
+      · rw [h₁, h₂]
+        exact (Split.compatible_comm s.swap s).mpr (Split.compatible_swap_self s)
+      · exact absurd (h₁.trans h₂.symm) hne
+      · rw [h₁]
+        exact Split.compatible_swap_left.mpr (hs s₂ (Finset.mem_filter.mp hs₂).2)
+    · rcases hs₂ with h₂ | h₂ | hs₂
+      · rw [h₂]
+        exact (Split.compatible_comm s₁ s).mpr (hs s₁ (Finset.mem_filter.mp hs₁).2)
+      · rw [h₂]
+        exact Split.compatible_swap_right.mpr
+          ((Split.compatible_comm s₁ s).mpr (hs s₁ (Finset.mem_filter.mp hs₁).2))
+      · exact pairwiseCompatible T s₁ (Finset.mem_filter.mp hs₁).2 s₂ (Finset.mem_filter.mp hs₂).2
+  -- 下界与上界
+  have hlow : 4 * Fintype.card X ≤ S.card + 6 := by
+    have h1 := T.two_mul_card_edgeFinset_le_card_splits
+    rw [← hS] at h1
+    have h2 := hT.card_edgeFinset
+    have h3 := T.card_leafFinset
+    have h4 := hT.two_le_leafFinset_card
+    omega
+  have hhigh : S.card + 8 ≤ 4 * Fintype.card X := by
+    have h1 := Finset.card_add_six_le_four_mul_card_of_pairwise_compatible S' ρ hcardX hcompat
+    omega
+  omega
+
 end Cladogram
+
+/-- ★★★ **binary 树的 split 系统极大**（`BinarySplitsMaximal` 本身，替代原 ⬜ 陈述）。 -/
+theorem binarySplitsMaximal (X : Type u) [Fintype X] [DecidableEq X] :
+    BinarySplitsMaximal.{u, v} X :=
+  fun T hT => T.splitsMaximal_of_isBinary hT
+
+/-- ★★★ **binary 树的 clade 刻画**（目标 T0.1 第 3 步的最终形式，无条件）。 -/
+theorem Cladogram.isClade_iff_isClan_of_isBinary {X : Type u} [Fintype X] [DecidableEq X]
+    {T : Cladogram.{u, v} X} (hT : T.IsBinary) {A : Finset X}
+    (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty) :
+    T.IsClade A ↔ T.IsClan A :=
+  Cladogram.isClade_iff_isClan_of_binary (binarySplitsMaximal X) hT hA hAc

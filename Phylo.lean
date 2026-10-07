@@ -24,6 +24,7 @@ import Phylo.Quartet
 import Phylo.QuartetUnique
 import Phylo.SideSubtree
 import Phylo.Split
+import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER
 import Phylo.Stat.MSC
