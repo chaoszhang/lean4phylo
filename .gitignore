@@ -9,8 +9,6 @@
 /.vscode/*.log
 
 # 参考文献原文（版权考虑，不入库；本地保留）
-references/pdf/
-references/md/
-references/img/
-references/ocr/
-references/.venvpython
+# → 整个 references/ 目录一律忽略：pdf / md / img / ocr（版权）+ 渲染与 OCR 脚本、
+#   README 的临时拼装文件、tmpdiag/ 诊断图等全部本地产物。
+references/
