@@ -24,6 +24,7 @@ import Phylo.LaminarCount
 import Phylo.LeafStatus
 import Phylo.Mathlib.Walk
 import Phylo.Quartet
+import Phylo.QuartetInhabitation
 import Phylo.QuartetUnique
 import Phylo.SideSubtree
 import Phylo.Split
