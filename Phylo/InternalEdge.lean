@@ -637,6 +637,26 @@ theorem displaysQuartet_comm {a b c d : X} :
    fun ⟨s, hs, hcd, hab⟩ =>
       ⟨s.swap, T.isSplitOf_swap hs, by rwa [Split.swap_sideA], by rwa [Split.swap_sideB]⟩⟩
 
+/-- ★★★ **替换性质（`substitution` = Huber 的三条件之 `saturated`）**：
+`ab|cd ∈ Q(T)` 与第五点 `x` ⟹ **`ab|cx` 或 `ax|cd`**。
+
+**出处**：Bandelt & Dress 1986, **Prop 2(b)**（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
+**611 行**给出的四元关系三条件 = 反对称（`thin`）＋对称＋**替换**）；Huber et al. 2017 Thm 6
+的三条件 `thin / transitive / saturated` 里的 **`saturated`** 就是本条（在树语境下两者等价）。
+
+**证明极短**：取出见证 `ab|cd` 的 split `s`（`{a,b} ⊆ s.sideA`、`{c,d} ⊆ s.sideB`），
+第五点 `x` 必落在 `s.sideA` 或 `s.sideB` 之一：
+* `x ∈ s.sideA` ⟹ `{a,x} ⊆ s.sideA`、`{c,d} ⊆ s.sideB` ⟹ `ax|cd`；
+* `x ∈ s.sideB` ⟹ `{a,b} ⊆ s.sideA`、`{c,x} ⊆ s.sideB` ⟹ `ab|cx`。 -/
+theorem displaysQuartet_substitution {a b c d x : X} (h : T.DisplaysQuartet a b c d) :
+    T.DisplaysQuartet a b c x ∨ T.DisplaysQuartet a x c d := by
+  obtain ⟨s, hs, hab, hcd⟩ := h
+  have ha : a ∈ s.sideA := hab (by simp)
+  have hc : c ∈ s.sideB := hcd (by simp)
+  rcases Finset.mem_union.mp (by rw [s.union_sides]; exact Finset.mem_univ x) with hx | hx
+  · exact Or.inr ⟨s, hs, Finset.insert_subset_iff.mpr ⟨ha, Finset.singleton_subset_iff.mpr hx⟩, hcd⟩
+  · exact Or.inl ⟨s, hs, hab, Finset.insert_subset_iff.mpr ⟨hc, Finset.singleton_subset_iff.mpr hx⟩⟩
+
 /-- ★★ **clan 系统对补闭合**：`A` 是 clan ⟹ `Aᶜ` 也是 clan。
 
 **出处**：Bandelt & Dress 1986, Prop 2(b) 的证明（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md`
