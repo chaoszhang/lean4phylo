@@ -863,8 +863,10 @@ def SplitsMaximal : Prop :=
 
 /-- ★★ **clade 刻画**（**模 `SplitsMaximal T`**，两个方向都已证）。
 
-⚠️ `SplitsMaximal T` 本身在 `T.IsBinary` 时成立，但**尚未形式化** ——
-见 `BinarySplitsMaximal`。本定理把它隔离成**唯一**的输入。 -/
+✅ `SplitsMaximal T` 在 `T.IsBinary` 时**已无条件形式化**（2026-10-08）——
+`Phylo/SplitsMaximal.lean` 的 ★★★ `binarySplitsMaximal`；无条件版 clade 刻画见同文件的
+★★★ `Cladogram.isClade_iff_isClan_of_isBinary`。本定理保留「模 `SplitsMaximal`」的形状，
+作为**更一般**（不假设 `T.IsBinary`）的版本。 -/
 theorem isClade_iff_isClan (hmax : T.SplitsMaximal) {A : Finset X}
     (hA : A.Nonempty) (hAc : (Aᶜ).Nonempty) :
     T.IsClade A ↔ T.IsClan A := by
@@ -874,7 +876,8 @@ theorem isClade_iff_isClan (hmax : T.SplitsMaximal) {A : Finset X}
 
 end Cladogram
 
-/-- ⬜ **binary 树的 split 系统极大**（**尚未形式化** —— 目标 T0.1 第 3 步的唯一剩余输入）。
+/-- ✅ **binary 树的 split 系统极大**（**已于 2026-10-08 无条件证出** ——
+`Phylo/SplitsMaximal.lean` 的 ★★★ `binarySplitsMaximal`；本 `def` 保留为可复用的命题名）。
 
 **陈述**：`T.IsBinary` ⟹ `T.SplitsMaximal`（即：与 `T` 的每个 split 都相容的 split，
 本身就是 `T` 的 split）。
