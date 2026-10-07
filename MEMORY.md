@@ -794,3 +794,77 @@ T1/T3/T4/T5/T8 **并入 T0**（各自标题下加 `→ 已升为 T0.x` 指引，
 ⟹ **T0.1 是全表性价比最高的一格**，故列为首位中的首位。
 T0.3 开工前先做一次「**对接口**」：Weller 的 leaf-status `ℓ_T(u) = Σ_{x∈L(T)} d(u,x)`
 与库内 `NJ.ell` 的定义需逐条对齐（机械但必须先做）。
+
+---
+
+## 2026-10-08 dsh 第二轮：T2 收口 + 两处假命题修正 + NNI split 层完成 + T0.1 第 2 步
+
+> 提交：`38d80c1`（T2 基础设施）→ `e842e6d`（T2 完成 + NNI 修正）→ `fdee331`（T0.1 第 2 步）。
+> `lake build` **3187 jobs** 通过，全库零 `sorry`，`scripts/check_file_imports.sh` 通过。
+
+### ✅ 完成
+
+1. **T2（HANDOVER §4）** —— 新文件 `Phylo/InternalEdge.lean`（~370 行）
+   * ★★ `two_le_card_sideLeaves`：`degree u ≠ 1` ⟹ `2 ≤ (T.sideLeaves s(u,v) u).card`
+   * ★★ `two_le_card_sideLeaves_both`：内部边两侧**各** ≥ 2 叶
+   * ★★ `two_le_card_degree_one_of_side`：计数主体（对**不透明** `U : Finset T.V` 陈述）
+   * `degree_induce_eq_card_inter`：`deg_{T[U]}(x) = #(N_T(x) ∩ U)`（`Finset.card_bij` 自证）
+2. **NNI split 层（HANDOVER T9.1）** —— `Phylo/Algorithm/NNI.lean`
+   * ★★ `nniResolvent_incompatible_parent`
+   * ★★★ `nniResolvent_swap_incompatible` / `nniResolvent_three_incompatible`
+3. **T0.1 第 2 步** —— `Phylo/InternalEdge.lean`
+   * ★★ `exists_displaysQuartet_of_sideLeaves` / `exists_displaysQuartet_of_internalEdge`
+   * `splitOfEdge_sideA` / `splitOfEdge_sideB`（`@[simp]`，`rfl`）
+
+### ⚠️ 两处「写在文档里但其实为假」的命题（**本轮最大收获**）
+
+1. **T2 旧骨架第 2 步**「`x ∈ U`、`x ≠ u` ⟹ `N(x) ⊆ U`」**为假**。
+   反例：`T` = 路径 `u—x—w`、`e = {x,w}` ⟹ `w ∉ U` 却是 `x` 的邻居。
+   正确形式 `N(x) ⊆ U ∪ {u}`（`u` 单独处理）。连带两条**等价死路**：
+   * 「`e = s(x,w)` ⟹ 删边后 `x,w` 仍相邻」—— `Sym2.eq_swap` 让 `s(w,x) = s(x,w)`，
+     与 `e = s(x,w)` 合起来**证明了** `s(w,x) = e`，故为假；
+   * 「`u ∈ e`」—— 反例中 `u` 只是 `e` 的邻居侧点。
+2. **NNI 旧计划第 1 项**「`nniResolvent` 与母 split **相容**」**为假**。
+   `S₁ = A₁B₁|A₂B₂` 与 `S₀ = A₁A₂|B₁B₂` 的四个交分别含 `A₁,A₂,B₁,B₂`，全非空 ⟹ 不相容。
+   叶层面即 `ab|cd` 与 `ac|bd` 是两个不同 quartet。已改证 `..._incompatible_parent`。
+
+### 🔧 本轮新增的 Lean 踩坑（**务必先读**）
+
+1. **`rw` 撞上 `Fintype` 实例不 defeq ⟹ 静默失配。**
+   `Set.toFinset` 的 `[Fintype ↑s]` 实例在两处分别合成，往往**不 defeq**；`rw` 要求 defeq，
+   于是报「Did not find an occurrence」而**目标里明明有那个式子**。
+   ⇒ 要么用 `simp`，要么**干脆不碰 `Set.toFinset`**（本轮用 `Finset.card_bij` 重证
+   `degree_induce_eq_card_inter`）。
+2. **`degree_induce_of_neighborSet_subset` 与 `map_neighborFinset_induce` 在本环境会 `whnf` 超时**，
+   而且即使把 `U` 抽象成变量也超时 —— 不要在这两条上花时间。
+3. **「把重项抽象成不透明变量」是治 `whnf` 爆炸的通用招**：
+   `two_le_card_degree_one_of_side` 对 `U : Finset T.V` 陈述，`sideVertices` 只在最后实例化一次，
+   `whnf` 根本不去展开它。**比 `abbrev` / 子类型图更有效**。
+4. **`obtain ⟨x, hx⟩ := hA`（`hA : s.Nonempty`）会把 `hA` 代入目标**（当 `hA` 出现在目标里，
+   例如 `nniResolvent … hA …`），使后续 `rw` 失配，甚至产生
+   `∃ x, x ∈ s` 与 `s.Nonempty` 的**类型不匹配**（`Finset.Nonempty` 带一个 `True`）。
+   ⇒ 用 `hA.mono fun x hx => …`。
+5. **`Nonempty` 上的 `rw [Finset.mem_inter]` 找不到 `∈ ∩`**：`Nonempty` 是 `∃ x, x ∈ s`，
+   必须**先** `refine ⟨x, ?_⟩` **再** `rw`。（或用 `.mono`。）
+6. **`Finset.mem_union` 不会自动展开**：`x ∈ A₁ ∪ B₁` 不是 `x ∈ A₁ ∨ x ∈ B₁`（是 `Iff` 不是 defeq）。
+   ⇒ 用 `Finset.mem_union_left/right _ hx`（注意第一个参数是**另一个**集合）。
+7. **`simpa` 不归约「以 `rfl` 证明的 `@[simp]` 引理」**（实测 `splitOfEdge_sideA`）。
+   那类引理直接 `exact`（defeq）即可。
+8. **`Finset.univ \ s = sᶜ`** 走 `rw [← Finset.compl_eq_univ_sdiff]`
+   （`Mathlib/Data/Finset/BooleanAlgebra.lean:112`）；`Fintype.card ↥(↑U : Set T.V) = U.card`
+   走 `rw [← Set.toFinset_card]; congr 1; ext x; simp`（`Fintype.card_coe` **不**匹配）。
+9. **`if_neg` 已弃用** ⇒ `split_ifs with h`（或用 `ite_eq_right`）。
+
+### ⬜ 下一步（T0.1 剩余）
+
+* 第 3 步：`Q(T) = Q(T') ⟹ Σ(T) = Σ(T')`。核心是 **clade 刻画**：
+  `A ⊆ X` 是 binary `T` 的 clade ⟺ 对任意 `a,b ∈ A`、`c,d ∉ A` 皆有 `ab|cd ∈ Q(T)`。
+  「⟸」方向是真正的工程量。
+* 第 4 步：`Σ` 决定 binary 树（唯一性收口）。
+* ⚠️ **不要**再走「局部相容性引理」的弱形式（「与 `S₀` 相容且 `≠ S₀`」）—— 已给反例，
+  见 `NNI.lean` 文件头与 HANDOVER §4 T9.1。
+
+### 📌 仓库里的未跟踪残留（本轮**未**处理，留给老师定夺）
+
+`references/render_pages.py`、`references/tmpdiag/`（若干 PNG）——
+上一轮文献渲染的产物，`.gitignore` 未覆盖。`references/` 的 `pdf/md/img/ocr` 按版权约定不入库。
