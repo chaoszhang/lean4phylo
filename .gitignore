@@ -18,3 +18,26 @@ references/
 #   .gitignore 只管未跟踪文件，不影响它们。
 #   改动这些文件后用 `git add -u references/` 暂存即可
 #   （`git add references/xxx` 会因目录被整体忽略而报 "paths are ignored"，需加 `-f`）。
+
+# ============================================================
+# agent 专用文件（**非项目成果**，不入 GitHub）—— 2026-10-07 老师定的纪律
+#
+# 归属纪律：
+#   * 项目成果（给用户看）            → 本仓库，正常跟踪。例：README.md / LICENSE / Phylo/**
+#   * agent 专用（工作日志、交接文档） → 分两侧各自维护，**都不入 GitHub**：
+#       - WorkBuddy 侧 → `/Project/lean/`（仓库上一级）
+#       - dsh 侧      → 本目录（仓库内），由本 .gitignore 挡在 GitHub 之外
+#   * 两侧同名文件**各自维护、互不覆盖**（避免互相覆盖导致文档分叉）
+# ============================================================
+#
+# 顶层锚定（/ 前缀），避免误伤 references/README.md 与本仓库 README.md
+/MEMORY.md
+/HANDOVER.md
+/CONCEPTS.md
+/NEXT.md
+/SCAFFOLD.md
+/DESIGN.md
+/ROADMAP.md
+# 任何多层目录下的同名 agent 文件一并忽略
+**/MEMORY.md
+**/HANDOVER.md
