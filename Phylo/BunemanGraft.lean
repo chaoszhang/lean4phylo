@@ -78,6 +78,7 @@ J. Combinatorial Theory (B) **17** (1974) 48–50，
 
 * **★★★ `Phylogram.dist_eq_walkDist_of_isPath`** —— 树上 `dist` = **任一**简单路径的
   加权长度（`dist` 由唯一路径定义，而树上简单路径唯一）。
+* **★★★ `Phylogram.dist_comm`** —— 树上 `dist` **对称**。
 * **★★ `Phylogram.walkDist_cons`** / **★★ `Phylogram.walkDist_nil`** ——
   `walkDist` 沿 `Walk.cons`／`Walk.nil` 的计算规则。
 * **★★★ `Phylo.graftW_new_left`** / **`graftW_new_right`** / **`graftW_map`** ——
@@ -97,12 +98,24 @@ J. Combinatorial Theory (B) **17** (1974) 48–50，
 * **★★★ `Phylo.graftPhylogram_dist_new_new`** ——
   `dist (inr 0) (inr 1) = ρ(p;q,r) + ρ(q;p,r)`（即 `δ(p,q)`）。
 
-**与 `Dissimilarity.attach_left` / `attach_right` 的关系**：上面前两条把 `p`、`q` 到旧叶的
+**标签层（`Y` 的标签，用 ★★★ `Phylo.graftLeafFun` 的三种取值刻画 + ★★★ `Phylogram.dist_comm`）**
+
+* **★★★ `Phylo.graftPhylogram_dist_leaf_old`** —— 两个都异于 `p,q` 的标签：
+  `T.dist (T.leaf x) (T.leaf y) = T'.dist (T'.leaf x') (T'.leaf y')`。
+* **★★★ `Phylo.graftPhylogram_dist_leaf_p`** ——
+  `T.dist (T.leaf p) (T.leaf x) = ρ(p;q,r) + T'.dist (T'.leaf t) (T'.leaf x')`。
+* **★★★ `Phylo.graftPhylogram_dist_leaf_q`** ——
+  `T.dist (T.leaf q) (T.leaf x) = ρ(q;p,r) + T'.dist (T'.leaf t) (T'.leaf x')`。
+* **★★★ `Phylo.graftPhylogram_dist_leaf_pq`** ——
+  `T.dist (T.leaf p) (T.leaf q) = ρ(p;q,r) + ρ(q;p,r)`。
+
+**与 `Dissimilarity.attach_left` / `attach_right` 的关系**：上面前三条把 `p`、`q` 到旧叶的
 距离分解成「新挂边权 + `T'.dist (T'.leaf t) ·`」，而归纳假设给出
-`T'.dist (T'.leaf t) (T'.leaf (inl ⟨x,·,·⟩)) = δ'(t,x)`；把
+`T'.dist (T'.leaf a) (T'.leaf b) = δ'.val a b`；把
 `Dissimilarity.attach_left`（`δ(x,p) = ρ(p;q,r) + δ'(t,x)`）逐点代入即得
-`dist (leaf x) (leaf p) = δ.val x p`（同 `attach_right`）。
-`Phylo.graftPhylogram_dist_new_new` 配合 `Dissimilarity.rho_add_rho` 给出 `δ(p,q)`。
+`T.dist (T.leaf x) (T.leaf p) = δ.val x p`（同 `attach_right`；
+反向用 ★★★ `Phylogram.dist_comm`）。`Phylo.graftPhylogram_dist_leaf_pq`
+配合 `Dissimilarity.rho_add_rho` 给出 `δ(p,q)`。
 
 **`graftGraph_isTree` 的证法（已落地的路线）**：不直接做「环 → 桥」的图论论证，而是
 `SimpleGraph.isTree_iff_connected_and_card`：
@@ -130,18 +143,16 @@ J. Combinatorial Theory (B) **17** (1974) 48–50，
 
 ## ⬜ 诚实边界（本文件**不**声称的）
 
-* **⬜ `Phylo.graftPhylogram_dist_leaf`**（**标签层**的 `dist` 记账）——
-  **尚未**落地。本文件已把**顶点层**的全部记账做完
-  （★★★ `Phylo.graftPhylogram_dist_inl_inl`、★★★ `Phylo.graftPhylogram_dist_new_left`、
-  ★★★ `Phylo.graftPhylogram_dist_new_right`、★★★ `Phylo.graftPhylogram_dist_new_new`），
-  但要从顶点层升到标签层还差两块：
-  (i) ``Phylogram.dist`` 的**对称性** `dist u v = dist v u`（现有四条只覆盖
-  `inl—inl`、`inr 0—inl`、`inr 1—inl`、`inr 0—inr 1` 四个方向）；
-  (ii) 把 `T'.dist (T'.leaf t) (T'.leaf (Sum.inl ⟨x,·,·⟩))` 与
-  `Dissimilarity.attach_left`／`attach_right` 中的 `δ'(t,x)` 对上的
-  **归纳假设代入**（即把 `∀ a b, T'.dist (T'.leaf a) (T'.leaf b) = δ'.val a b`
-  作为假设，推出 `∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y`）。
-  本文件无 `sorry`、无 `axiom`。
+* **⬜ `Dissimilarity.InductiveAssembly`（安装的最后一步）** —— **尚未**落地。
+  TASK 3 的 `dist` 记账已**全部**落地（顶点层四条 ★★★ + 标签层四条 ★★★ + ★★★ `Phylogram.dist_comm`），
+  但「挂叶手术 ⟹ `InductiveAssembly`」还差两块：
+  (i) 把归纳假设 `∀ a b, T'.dist (T'.leaf a) (T'.leaf b) = δ'.val a b`
+  （`δ' = δ.shrinkDissimilarity p q r`，`δ'.val` 即 `Dissimilarity.shrinkVal`）
+  与 ★★★ `Phylo.graftPhylogram_dist_leaf_p`／`_q` 及
+  `Dissimilarity.attach_left`／`attach_right` 复合，得到
+  `∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y`
+  （`x = p/q` 与其余三种情形，用 `shrinkVal_inl_inl`／`Sym2` 无关的 `rfl` 归约）；
+  (ii) **基例**：`|Y| ≤ 3` 的星形构造（见下条）。
 
 * **⬜ `Dissimilarity.InductiveAssembly` 与 `Phylo/Buneman.lean` 的缺口 —— 精确边界**：
 
@@ -198,6 +209,16 @@ theorem walkDist_cons (T : Phylogram X) {u v w : T.V} (h : T.graph.Adj u v)
 theorem walkDist_nil (T : Phylogram X) (u : T.V) :
     T.walkDist (SimpleGraph.Walk.nil : T.graph.Walk u u) = 0 := by
   simp only [Phylogram.walkDist, SimpleGraph.Walk.edges_nil, List.map_nil, List.sum_nil]
+
+/-- ★★★ 树上 `dist` **对称**（沿唯一路径倒过来走，边权和不变）。 -/
+theorem dist_comm (T : Phylogram X) (u v : T.V) : T.dist u v = T.dist v u := by
+  classical
+  set c := (T.existsUnique_path u v).choose with hc
+  have hcp : c.IsPath := hc.symm ▸ (T.existsUnique_path u v).choose_spec.1
+  rw [dist_eq_walkDist_of_isPath T c hcp,
+    dist_eq_walkDist_of_isPath T c.reverse (SimpleGraph.Walk.IsPath.reverse hcp)]
+  simp only [Phylogram.walkDist, SimpleGraph.Walk.edges_reverse, List.map_reverse,
+    List.sum_reverse]
 
 end Phylogram
 namespace Phylo
@@ -1021,5 +1042,76 @@ theorem graftPhylogram_dist_new_new (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoin
     Phylogram.walkDist_cons, Phylogram.walkDist_nil, hw0, hw1, add_zero]
 
 end Dist
+
+section LeafDist
+
+open NJ.Dissimilarity
+
+variable {Y : Type u} [DecidableEq Y] {p q r : Y}
+
+/-- ★★★ **标签层（旧标签—旧标签）**：两个都异于 `p,q` 的标签之间距离不变。 -/
+theorem graftPhylogram_dist_leaf_old (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) {x y : Y}
+    (hx : x ≠ p) (hxq : x ≠ q) (hy : y ≠ p) (hyq : y ≠ q) :
+    (graftPhylogram δ hfp p q r hpq T').dist
+        ((graftPhylogram δ hfp p q r hpq T').leaf x)
+        ((graftPhylogram δ hfp p q r hpq T').leaf y)
+      = T'.dist (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) (T'.leaf (Sum.inl ⟨y, hy, hyq⟩)) := by
+  have h1 : (graftPhylogram δ hfp p q r hpq T').leaf x
+      = Sum.inl (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) := graftLeafFun_eq_inl T'.toCladogram hx hxq
+  have h2 : (graftPhylogram δ hfp p q r hpq T').leaf y
+      = Sum.inl (T'.leaf (Sum.inl ⟨y, hy, hyq⟩)) := graftLeafFun_eq_inl T'.toCladogram hy hyq
+  rw [h1, h2]
+  exact graftPhylogram_dist_inl_inl δ hfp p q r hpq T' _ _
+
+/-- ★★★ **标签层（`p`—旧标签）**：`dist (leaf p) (leaf x) = ρ(p;q,r) + T'.dist (T'.leaf t) (T'.leaf x')`，
+其中 `x' = Sum.inl ⟨x,·,·⟩` 是 `x` 在较小问题里的标签。
+（配合归纳假设 `T'.dist (T'.leaf a) (T'.leaf b) = δ'.val a b` 与
+`Dissimilarity.attach_left` 即得 `= δ.val x p`。） -/
+theorem graftPhylogram_dist_leaf_p (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) {x : Y}
+    (hx : x ≠ p) (hxq : x ≠ q) :
+    (graftPhylogram δ hfp p q r hpq T').dist
+        ((graftPhylogram δ hfp p q r hpq T').leaf p)
+        ((graftPhylogram δ hfp p q r hpq T').leaf x)
+      = δ.rho p q r + T'.dist (T'.leaf (Sum.inr ())) (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) := by
+  have h1 : (graftPhylogram δ hfp p q r hpq T').leaf p = Sum.inr 0 :=
+    graftLeafFun_eq_inr_zero T'.toCladogram rfl
+  have h2 : (graftPhylogram δ hfp p q r hpq T').leaf x
+      = Sum.inl (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) := graftLeafFun_eq_inl T'.toCladogram hx hxq
+  rw [h1, h2]
+  exact graftPhylogram_dist_new_left δ hfp p q r hpq T' _
+
+/-- ★★★ **标签层（`q`—旧标签）**：`dist (leaf q) (leaf x) = ρ(q;p,r) + T'.dist (T'.leaf t) (T'.leaf x')`
+（配合归纳假设与 `Dissimilarity.attach_right` 即得 `= δ.val x q`）。 -/
+theorem graftPhylogram_dist_leaf_q (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) {x : Y}
+    (hx : x ≠ p) (hxq : x ≠ q) :
+    (graftPhylogram δ hfp p q r hpq T').dist
+        ((graftPhylogram δ hfp p q r hpq T').leaf q)
+        ((graftPhylogram δ hfp p q r hpq T').leaf x)
+      = δ.rho q p r + T'.dist (T'.leaf (Sum.inr ())) (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) := by
+  have h1 : (graftPhylogram δ hfp p q r hpq T').leaf q = Sum.inr 1 :=
+    graftLeafFun_eq_inr_one T'.toCladogram hpq.symm rfl
+  have h2 : (graftPhylogram δ hfp p q r hpq T').leaf x
+      = Sum.inl (T'.leaf (Sum.inl ⟨x, hx, hxq⟩)) := graftLeafFun_eq_inl T'.toCladogram hx hxq
+  rw [h1, h2]
+  exact graftPhylogram_dist_new_right δ hfp p q r hpq T' _
+
+/-- ★★★ **标签层（`p`—`q`）**：`dist (leaf p) (leaf q) = ρ(p;q,r) + ρ(q;p,r)`（即 `δ(p,q)`）。 -/
+theorem graftPhylogram_dist_leaf_pq (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) :
+    (graftPhylogram δ hfp p q r hpq T').dist
+        ((graftPhylogram δ hfp p q r hpq T').leaf p)
+        ((graftPhylogram δ hfp p q r hpq T').leaf q)
+      = δ.rho p q r + δ.rho q p r := by
+  have h1 : (graftPhylogram δ hfp p q r hpq T').leaf p = Sum.inr 0 :=
+    graftLeafFun_eq_inr_zero T'.toCladogram rfl
+  have h2 : (graftPhylogram δ hfp p q r hpq T').leaf q = Sum.inr 1 :=
+    graftLeafFun_eq_inr_one T'.toCladogram hpq.symm rfl
+  rw [h1, h2]
+  exact graftPhylogram_dist_new_new δ hfp p q r hpq T'
+
+end LeafDist
 
 end Phylo
