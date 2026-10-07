@@ -25,6 +25,7 @@ import Phylo.Distance
 import Phylo.DistanceCorrection
 import Phylo.InductiveAssembly
 import Phylo.InternalEdge
+import Phylo.JukesCantor
 import Phylo.Laminar
 import Phylo.LaminarCount
 import Phylo.LeafStatus
