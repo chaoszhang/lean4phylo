@@ -37,7 +37,24 @@ theorem exists_realizingPhylogram_pos_of_addConst {X : Type u} [Fintype X] [Deci
    ⚠️ `SimpleGraph.Connected.map` **不可用**：它要全定义的图同态，而 0 权边处 `mk T u = mk T v`、
    `QG` 邻接的 `Ne` 项为假，构不出同态 —— 故连通性必须自己映射 walk（类内 0 权边那一步「停住」即可）。
 4. **里程碑 B 的第一批零件**（§4）：度 2 顶点的邻居对（★ `exists_neighbor_pair_of_degree_two`）
-   与「两个邻居不相邻」（★ `not_adj_of_adj_adj_of_degree_two`，树无三角形）。
+   与「两个邻居不相邻」（★ `not_adj_of_adj_adj_of_degree_two`，树无三角形）；
+5. **抑制的图手术定义层**（§5）：`walk_deleteEdges_of_edges_notMem`（Walk 版删边提升）、
+   `suppressSet` / `SuppV` / `suppressGraph` / `SuppG`、★★ `SuppG_adj_iff`
+   （化简成「旧 `T`-邻接 ∨ 新边 `a—b`」）、★ `leaf_ne_of_degree_two`、★★ `suppressLeaf`。
+
+## ⚠️ 一条影响计划的观察（§6 记录）
+
+**抑制步对目标定理可能根本不必要**：若「**没有 0 权边触到标签**」（= `PositiveRealization.lean`
+§四的 (A1) 前提），则商图 `QG T` **没有任何度 2 顶点**：
+* 单点类 `{u}`：`u` 是标签 ⟹ 其唯一邻边必正（否则 `v ∈ zeroClass u = {u}`）⟹ 度 = 1；
+  `u` 是内部点 ⟹ `deg_T u ≥ 3`，且两个邻居若同类会被 ★★ `edge_eq_of_sameClass` 逼成同一条边
+  ⟹ 度 = `deg_T u ≥ 3`；
+* 多点类 `C`：`|C| ≥ 2` ⟹ `C` 中无标签（标签在 `C` 里就有一条 0 权边触到它）⟹ 每个 `u ∈ C` 都是
+  内部点、`deg_T u ≥ 3`；又 `C` 诱导的子图是树（连通：零权路径；无圈：`IsAcyclic.anti`），
+  `|C|` 个顶点 ⟹ 至多 `|C| − 1` 条类内边 ⟹ 出边数 `≥ 3|C| − 2(|C|−1) = |C| + 2 ≥ 4`；
+  再由 `edge_eq_of_sameClass`，不同出边去往不同类 ⟹ 度 ≥ 4。
+⇒ 若先做 (A1)，**里程碑 B 可以整个跳过**（不必造「允许度 2 顶点」的松弛结构，
+也不必做「同时抑制所有极大度 2 链」的重构）。
 
 ## 诚实边界（**未完成的部分**）
 
@@ -422,6 +439,109 @@ theorem not_adj_of_adj_adj_of_degree_two [Fintype X] [DecidableEq X] {v a b : T.
     · exact hab hvb'.symm
 
 end DegreeTwo
+
+/-! ## 5. 抑制度 2 顶点：图手术的定义层
+
+  `suppressGraph T v a b` = 删 `v—a`、`v—b`、加 `a—b`（顶点集仍为 `T.V`，`v` 成为孤立点）；
+  `SuppG T v a b` = 它在保留顶点集 `{w | w ≠ v}` 上的**诱导子图**。
+  ★★ `SuppG_adj_iff` 把邻接化简成「旧的 `T`-邻接，或新的 `a—b` 边」——
+  两个「删掉的边」条件被 `x.1 ≠ v`、`y.1 ≠ v` 自动排除。 -/
+
+section Suppress
+
+variable (T : Phylogram.{u, v} X)
+
+/-- ★ **删边 walk 提升**：边表不过 `s` 的 walk 落在 `G.deleteEdges s` 里（Walk 版，
+比 `reachable_deleteEdges_of_edges_notMem` 强：给出 walk 本身）。 -/
+def walk_deleteEdges_of_edges_notMem {s : Set (Sym2 T.V)} {a b : T.V} (p : T.graph.Walk a b)
+    (h : ∀ f ∈ p.edges, f ∉ s) : (T.graph.deleteEdges s).Walk a b := by
+  induction p with
+  | nil => exact SimpleGraph.Walk.nil
+  | cons hadj q ih =>
+    refine SimpleGraph.Walk.cons (SimpleGraph.deleteEdges_adj.mpr ⟨hadj, ?_⟩) (ih ?_)
+    · intro hmem
+      exact h _ (by rw [SimpleGraph.Walk.edges_cons]; exact List.mem_cons_self ..) hmem
+    · intro f hf
+      exact h f (by rw [SimpleGraph.Walk.edges_cons]; exact List.mem_cons_of_mem _ hf)
+
+/-- 抑制度 2 顶点 `v` 时的**保留顶点集** `{w | w ≠ v}`。 -/
+def suppressSet (v : T.V) : Set T.V := {w | w ≠ v}
+
+/-- 保留顶点类型。 -/
+abbrev SuppV (v : T.V) : Type _ := ↥(suppressSet T v)
+
+/-- 删 `v—a`、`v—b`、加 `a—b` 后的中间图（顶点集仍为 `T.V`；`v` 成为孤立点）。 -/
+def suppressGraph (v a b : T.V) : SimpleGraph T.V :=
+  (T.graph.deleteEdges {s(v, a), s(v, b)}) ⊔ SimpleGraph.fromEdgeSet {s(a, b)}
+
+/-- **抑制后的图**：`suppressGraph` 在 `{w | w ≠ v}` 上的诱导子图。 -/
+abbrev SuppG (v a b : T.V) : SimpleGraph (SuppV T v) :=
+  (suppressGraph T v a b).induce (suppressSet T v)
+
+/-- `suppressGraph` 的邻接展开（顶点集 `T.V` 上）。 -/
+theorem suppressGraph_adj {v a b : T.V} {u w : T.V} :
+    (suppressGraph T v a b).Adj u w ↔
+      (T.graph.Adj u w ∧ s(u, w) ≠ s(v, a) ∧ s(u, w) ≠ s(v, b)) ∨
+        (s(u, w) = s(a, b) ∧ u ≠ w) := by
+  rw [suppressGraph, SimpleGraph.sup_adj, SimpleGraph.deleteEdges_adj,
+    SimpleGraph.fromEdgeSet_adj]
+  constructor
+  · rintro (⟨hadj, hmem⟩ | ⟨heq, hne⟩)
+    · refine Or.inl ⟨hadj, ?_, ?_⟩ <;>
+        · intro h
+          exact hmem (by rw [h]; simp)
+    · exact Or.inr ⟨heq, hne⟩
+  · rintro (⟨hadj, h1, h2⟩ | ⟨heq, hne⟩)
+    · refine Or.inl ⟨hadj, ?_⟩
+      rw [Set.mem_insert_iff, Set.mem_singleton_iff]
+      exact fun h => h.elim h1 h2
+    · exact Or.inr ⟨heq, hne⟩
+
+/-- ★★ **抑制后的邻接刻画**（化简版：两个删边条件被 `≠ v` 自动排除）。 -/
+theorem SuppG_adj_iff {v a b : T.V} (hab : a ≠ b) {x y : SuppV T v} :
+    (SuppG T v a b).Adj x y ↔ T.graph.Adj x.1 y.1 ∨ s(x.1, y.1) = s(a, b) := by
+  rw [SuppG, SimpleGraph.induce_adj, suppressGraph_adj]
+  have hx : x.1 ≠ v := x.2
+  have hy : y.1 ≠ v := y.2
+  constructor
+  · rintro (⟨h, -, -⟩ | ⟨h, -⟩)
+    · exact Or.inl h
+    · exact Or.inr h
+  · rintro (h | h)
+    · refine Or.inl ⟨h, ?_, ?_⟩ <;>
+        · intro heq
+          rw [Sym2.eq_iff] at heq
+          rcases heq with ⟨h1, -⟩ | ⟨-, h2⟩
+          · exact hx h1
+          · exact hy h2
+    · refine Or.inr ⟨h, ?_⟩
+      intro hxy
+      rw [hxy] at h
+      rw [Sym2.eq_iff] at h
+      rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+      · exact hab (h1.symm.trans h2)
+      · exact hab (h2.symm.trans h1)
+
+/-- 度 2 顶点**不是**标签的像（标签的度是 1）。 -/
+theorem leaf_ne_of_degree_two {v : T.V} (hv : T.graph.degree v = 2) (x : X) :
+    T.leaf x ≠ v := by
+  intro h
+  have h1 : T.graph.degree (T.leaf x) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf x)).mp ⟨x, rfl⟩
+  rw [h] at h1
+  omega
+
+/-- ★★ **标签嵌入**：标签绝不被抑制（度 1 ≠ 度 2）。 -/
+def suppressLeaf (v : T.V) (hv : T.graph.degree v = 2) : X ↪ SuppV T v where
+  toFun x := ⟨T.leaf x, leaf_ne_of_degree_two T hv x⟩
+  inj' := by
+    intro x y h
+    exact T.leaf.injective (Subtype.ext_iff.mp h)
+
+@[simp] theorem suppressLeaf_apply (v : T.V) (hv : T.graph.degree v = 2) (x : X) :
+    ((suppressLeaf T v hv x : SuppV T v) : T.V) = T.leaf x := rfl
+
+end Suppress
 
 end Contract
 
