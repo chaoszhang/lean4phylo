@@ -17,6 +17,7 @@ import Phylo.BunemanGraft
 import Phylo.BunemanShrinkPD
 import Phylo.CherryQuartet
 import Phylo.Consensus
+import Phylo.ContractCount
 import Phylo.Core
 import Phylo.Dendrogram
 import Phylo.DissimilarityPerturb
