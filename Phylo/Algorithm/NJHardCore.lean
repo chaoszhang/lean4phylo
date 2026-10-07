@@ -38,6 +38,8 @@ import Phylo.CherryQuartet
 * ✅ ★★★ `maxZCherryCore_of_pos`（T0.8 兜底）
 * ✅ ★★ `maxZCherryCore_of_card_le_three`（T0.8）
 * ✅ ★★ `maxZCherryCore_of_pos'`（T0.8）
+* ✅ ★★★ **`maxZCherryCore_of_exists_pos`（T0.3 收口：度量层 = 「存在全正实现树 ⟹ `MaxZCherryCore`」，
+  `def` 缺口正式变成定理；正权假设显式化，理由与反例见该定理 docstring）**
 -/
 
 
@@ -174,6 +176,31 @@ theorem maxZCherryCore_of_pos' {X : Type u} [Fintype X] [DecidableEq X] (δ : Di
   by_cases hcard : 4 ≤ Fintype.card X
   · exact maxZCherryCore_of_pos δ hcard hpos hT
   · exact maxZCherryCore_of_card_le_three δ (by omega)
+
+/-- ★★★ **T0.3 收口的度量层形态（正权假设显式）**：只要 `δ` **存在**一棵边权全正的实现树，
+`δ.MaxZCherryCore` 就是**定理**（不再有 `def` 缺口）。
+
+这正是 Weller (2023) **Thm 2** 在「显式带正权假设」下的写法：Weller `:397–399` 自述其证明
+只要求**正权边**，而本库 `Phylogram.w_nonneg` 只给 `≥ 0` ⇒ 正权**必须**作为假设
+（HANDOVER §4.2 T0.3 缺口③ 的原话：「T0.3 的定理必须显式带正权假设」）。
+
+⚠️ **「无条件」形式（去掉 `∃ T` 假设）不属于文献内容**，且朴素路线**已被反例堵死**：
+对星形度量 `ρ = (ρ_p,ρ_q,ρ_r,ρ_x) = (1,1,3,0)` 取 `ε = 1`、`δ_ε := δ.addConst 1`
+（六条距离 `pq=3, pr=5, qr=5, xp=2, xq=2, xr=4`），**T0.2 的构造**给出的实现树含 **0 权内边**
+（`t—t'` 权为 `0`，且第 0 层三个并列极大三元组、第 1 层两个并列选择**都躲不掉**）
+⇒ 「T0.2 的构造作用在 `δ_ε` 上各边全正」是**假命题**，不要再证。
+但**该度量确有全正实现树**：四叶星 `x : ½, p : 3/2, q : 3/2, r : 7/2`（六条距离逐条验过）
+⇒ 无条件命题**可能仍真**，只是需要超出文献的新工作（把 0 权内边收缩掉，或改造树层的 Thm 2 论证）。
+🔎 独立脚本实证（400 组随机树度量，含大量 0 权边，穷举全部并列选择 = 9244 次构造，0 次未实现 `δ_ε`）：
+`δ_ε` 下 T0.2 的构造**从不**给**实标签**（`X` 的 `Sum.inl`）0 权挂边 —— 0 权只出现在
+**合成点**（`Sum.inr ()`，即 shrink 造出的新点）之间，而合成点在最终树里都是内部点
+⇒ 打磨这条「实标签挂边恒正 + 收缩合成点间 0 权内边」即可得无条件形式（工作量 = 图收缩器械）。 -/
+theorem maxZCherryCore_of_exists_pos (δ : Dissimilarity X)
+    (h : ∃ T : Phylogram.{u, v} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
+      ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    δ.MaxZCherryCore := by
+  obtain ⟨T, hpos, hT⟩ := h
+  exact maxZCherryCore_of_pos' δ hpos hT
 
 -- ===== T08 END =====
 
