@@ -6,6 +6,11 @@ Authors: ASTER LAB
 import Phylo.PositiveRealization
 import Phylo.CherryQuartet
 import Phylo.Split
+-- ⚠️ §7 的 (A1) 需要「删边后每一侧都含叶」（★★ `Cladogram.sideLeaves_nonempty_of_adj`，
+-- `Phylo/InternalEdge.lean:393`）与「跨侧 walk 必过该边端点」（★★ `mem_pair_of_mem_sideVertices`，
+-- `Phylo/SplitsMaximal.lean:256`）——`Phylo.Split` 里有 `sideLeaves` 本身，但**没有**这两条。
+import Phylo.InternalEdge
+import Phylo.SplitsMaximal
 
 /-!
 # `Phylo.PhylogramContract` —— 收缩零权边（T0.3 收口的 (A2) 器械）
@@ -542,6 +547,275 @@ def suppressLeaf (v : T.V) (hv : T.graph.degree v = 2) : X ↪ SuppV T v where
     ((suppressLeaf T v hv x : SuppV T v) : T.V) = T.leaf x := rfl
 
 end Suppress
+
+/-! ## 6. `QG` 的树性（里程碑 A 余下：**桥判据路线**）
+
+  ⚠️ 与 `Phylo/ContractCount.lean` 的关系：那份文件 `import Phylo.PhylogramContract`，
+  **本文件不能反向 `import` 它**（成环）。故这里**不用**计数引理
+  `card_zeroEdges_eq_card_sub_card_classes`，改走**桥判据**：
+
+  * `SimpleGraph.isAcyclic_iff_forall_adj_isBridge`：只需证 `QG` 的每条边都是桥；
+  * `SimpleGraph.isBridge_iff`：`IsBridge e ↔ ¬(QG - e).Reachable u v`；
+  * 把 `QG - e` 的 walk **提升**到 `T - e'`（`e'` 是对应的正权 `T`-边）——边对应的唯一性由
+    ★★ `edge_eq_of_sameClass` 保证，于是与「`T` 的每条边都是桥」矛盾。
+
+  配 ★★ `QG_connected` 即得 ★★ `QG_isTree`（比计数路线少一条引理，且无循环依赖）。 -/
+
+section QuotTree
+
+variable [Fintype X] [DecidableEq X]
+
+variable (T : Phylogram.{u, v} X)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`QG - e` 的 walk 提升到 `T - e'`**（`e = s(mk u, mk v)`，`e' = s(u,v)` 是 `T` 的**正权**边）。
+
+  沿 walk 归纳：每一步在 `QG` 里走 `C' → C''`，取实现它的 `T`-边 `u'—v'`；
+  类内的零权 walk 负责把「当前点」搬到 `u'`，且零权 walk 必不过正权边 `e'`；
+  而 `s(u',v') ≠ s(u,v)` 由「`QG - e` 里没有 `e`」这一项 + ★★ `edge_eq_of_sameClass` 得出。 -/
+theorem QG_deleteEdges_reachable_lift {u v : T.V} (huv : T.graph.Adj u v)
+    (huvne : T.dist u v ≠ 0) :
+    ∀ {C' D' : Q T} (_q : ((QG T).deleteEdges {s(mk T u, mk T v)}).Walk C' D') {a b : T.V},
+      mk T a = C' → mk T b = D' → (T.graph.deleteEdges {s(u, v)}).Reachable a b := by
+  intro C' D' q
+  induction q with
+  | nil =>
+    intro a b ha hb
+    have hd : T.dist a b = 0 := (mk_eq_iff T).mp (ha.trans hb.symm)
+    obtain ⟨p, hp⟩ := exists_zeroWalk_of_dist_eq_zero T hd
+    refine reachable_deleteEdges_of_edges_notMem T p ?_
+    intro f hf hfe
+    have h0 : T.wExt s(u, v) = 0 := hfe ▸ hp f hf
+    rw [← Phylo.TreeDist.dist_eq_wExt_of_adj T huv] at h0
+    exact huvne h0
+  | cons hadj q' ih =>
+    intro a b ha hb
+    obtain ⟨hadjQG, hnotmem⟩ := SimpleGraph.deleteEdges_adj.mp hadj
+    obtain ⟨-, u', v', hu'v', hmu', hmv'⟩ := (QG_adj_iff T).mp hadjQG
+    have hreach1 : (T.graph.deleteEdges {s(u, v)}).Reachable a u' := by
+      have hd : T.dist a u' = 0 := (mk_eq_iff T).mp (ha.trans hmu'.symm)
+      obtain ⟨p, hp⟩ := exists_zeroWalk_of_dist_eq_zero T hd
+      refine reachable_deleteEdges_of_edges_notMem T p ?_
+      intro f hf hfe
+      have h0 : T.wExt s(u, v) = 0 := hfe ▸ hp f hf
+      rw [← Phylo.TreeDist.dist_eq_wExt_of_adj T huv] at h0
+      exact huvne h0
+    have hne' : s(u', v') ≠ s(u, v) := by
+      rw [← hmu', ← hmv'] at hnotmem
+      intro heq
+      have hmkeq : s(mk T u', mk T v') = s(mk T u, mk T v) := by
+        rcases Sym2.eq_iff.mp heq with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+        · rfl
+        · exact Sym2.eq_swap
+      exact hnotmem (Set.mem_singleton_iff.mpr hmkeq)
+    have hadj' : (T.graph.deleteEdges {s(u, v)}).Adj u' v' :=
+      SimpleGraph.deleteEdges_adj.mpr ⟨hu'v', by rw [Set.mem_singleton_iff]; exact hne'⟩
+    exact hreach1.trans (hadj'.reachable.trans (ih hmv' hb))
+
+/-- ★★ **`QG` 的每条边都是桥**。
+
+  （反证：`QG - e` 里 `C` 到 `D` 可达 ⟹ 提升到 `T - e'` 得 `u` 到 `v` 可达，与
+  ★ `Cladogram.not_reachable_deleteEdges_of_adj`（树中每条边都是桥）矛盾。） -/
+theorem QG_isBridge_of_adj {C D : Q T} (h : (QG T).Adj C D) : (QG T).IsBridge s(C, D) := by
+  rw [SimpleGraph.isBridge_iff]
+  intro hreach
+  obtain ⟨hCD, u, v, huv, huC, hvD⟩ := (QG_adj_iff T).mp h
+  have huvne : T.dist u v ≠ 0 := dist_ne_zero_of_mk_ne T (by rw [huC, hvD]; exact hCD)
+  rw [← huC, ← hvD] at hreach
+  exact T.not_reachable_deleteEdges_of_adj huv
+    (QG_deleteEdges_reachable_lift T huv huvne hreach.some rfl rfl)
+
+/-- ★★ **`QG` 无圈**（每条边都是桥）。 -/
+theorem QG_isAcyclic : (QG T).IsAcyclic := by
+  rw [SimpleGraph.isAcyclic_iff_forall_adj_isBridge]
+  intro C D h
+  exact QG_isBridge_of_adj T h
+
+/-- ★★★ **`QG` 是一棵树**（连通 ★★ `QG_connected` + 无圈 ★★ `QG_isAcyclic`）。
+
+  **里程碑 A 余下第一块**（不算计数、无循环依赖）。 -/
+theorem QG_isTree : (QG T).IsTree :=
+  SimpleGraph.IsTree.mk (QG_connected T) (QG_isAcyclic T)
+
+end QuotTree
+
+/-! ## 7. (A1)：**零权边不触叶**（在「`T` 是 `δ.addConst ε` 的实现树」前提下）
+
+  ⚠️ 关键区分（本项目已 4 次因「自创引理没造反例」白干，这里先造了反例）：
+  「标签两两距离全正」（`hpos`）**不**蕴含 (A1)。反例（4 叶 `x,y,z,t`）：
+  `x—u(0)`、`y—u(1)`、`u—v(1)`、`v—z(1)`、`v—t(1)`——所有叶间距离为正，
+  但零权边 `x—u` 触到标签 `x`。
+  该树**不是**任何「四点条件 `δ` 的 `δ_ε`」的实现树：若 `T` 实现 `δ_ε = δ + ε`，则由
+  `δ_ε(y,z) = d(y,z) = d(y,x) + d(x,z)`（`d(x,u)=0` 使 `x` 与 `u` 度量同点）得
+  `δ(y,z) = δ(y,x) + δ(x,z) + ε > δ(y,x) + δ(x,z)`，与 `δ` 的三角不等式矛盾。
+
+  下面把这条矛盾**形式化**：所需器械全部现成 ——
+  ★★ `Cladogram.sideLeaves_nonempty_of_adj_both`（删边后**两侧都含叶**，
+  正是「每个分支含一片标签」）、★★ `Cladogram.mem_pair_of_mem_sideVertices`（跨侧 walk 必过该边端点）、
+  ★★ `TreeDist.dist_eq_add_of_mem_support`（路径上取点距离可加）、
+  ★★ `Phylogram.eq_add_dist_of_ne_of_unique_adj`（叶的唯一邻居给出分解）、
+  ★★ `Dissimilarity.triangle`（四点条件 ⟹ 三角不等式）。 -/
+
+section A1
+
+variable {X : Type u} [Fintype X] [DecidableEq X]
+
+/-- **(A1) 的谓词**：每条**触到标签**的边权都严格为正。 -/
+def NoZeroAtLeaf (T : Phylogram.{u, v} X) : Prop :=
+  ∀ (x : X) {v : T.V}, T.graph.Adj (T.leaf x) v → 0 < T.wExt s(T.leaf x, v)
+
+/-- ★★★ **(A1)：`T` 是某个「四点条件 `δ` 的 `δ.addConst ε`」的实现树 ⟹ 零权边不触叶**。
+
+  （见本节文件头的反例说明：这里 `hfp` 是**必需**前提，不能去掉。） -/
+theorem noZeroAtLeaf_of_realizes_addConst (T : Phylogram.{u, v} X) (δ : NJ.Dissimilarity X)
+    (hfp : δ.FourPoint) {ε : ℝ} (hε : 0 < ε)
+    (hreal : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = (δ.addConst ε).val x y) :
+    NoZeroAtLeaf T := by
+  intro x v hxv
+  by_cases hv : T.IsLeaf v
+  · -- `v` 是叶：此时 `dist (leaf x) v` 由 `addConst_val_pos` 直接为正
+    obtain ⟨y, rfl⟩ := hv
+    by_cases hyx : y = x
+    · subst hyx
+      exact absurd hxv (fun h => h.ne rfl)
+    · have h1 : T.dist (T.leaf x) (T.leaf y) = T.wExt s(T.leaf x, T.leaf y) :=
+        Phylo.TreeDist.dist_eq_wExt_of_adj T hxv
+      rw [← h1, hreal x y]
+      exact NJ.Dissimilarity.addConst_val_pos δ hfp hε (Ne.symm hyx)
+  · -- `v` 是非叶 ⟹ 度 ≥ 3 ⟹ 取两个不同于 `leaf x` 的邻居，两个分支各取一叶 ⟹ 矛盾
+    have hdeg1 : T.graph.degree v ≠ 1 := fun h => hv ((T.isLeaf_iff_degree_eq_one v).mpr h)
+    have hdeg2 : T.graph.degree v ≠ 2 := T.no_degree_two v
+    have hmem : T.leaf x ∈ T.graph.neighborFinset v :=
+      (SimpleGraph.mem_neighborFinset T.graph v _).mpr hxv.symm
+    have hcard1 : (T.graph.neighborFinset v).card ≠ 1 := by
+      intro h
+      refine hdeg1 ?_
+      rw [← SimpleGraph.card_neighborFinset_eq_degree]
+      rw [h]
+    have hcard2 : (T.graph.neighborFinset v).card ≠ 2 := by
+      intro h
+      refine hdeg2 ?_
+      rw [← SimpleGraph.card_neighborFinset_eq_degree]
+      rw [h]
+    have herase : 1 < ((T.graph.neighborFinset v).erase (T.leaf x)).card := by
+      rw [Finset.card_erase_of_mem hmem]
+      have h0 : 0 < (T.graph.neighborFinset v).card := Finset.card_pos.mpr ⟨_, hmem⟩
+      omega
+    obtain ⟨w₁, hw₁mem, w₂, hw₂mem, hw₁₂⟩ := Finset.one_lt_card.mp herase
+    have hvw₁ : T.graph.Adj v w₁ :=
+      (SimpleGraph.mem_neighborFinset T.graph v w₁).mp (Finset.mem_of_mem_erase hw₁mem)
+    have hvw₂ : T.graph.Adj v w₂ :=
+      (SimpleGraph.mem_neighborFinset T.graph v w₂).mp (Finset.mem_of_mem_erase hw₂mem)
+    have hw₁ne : w₁ ≠ T.leaf x := Finset.ne_of_mem_erase hw₁mem
+    have hw₂ne : w₂ ≠ T.leaf x := Finset.ne_of_mem_erase hw₂mem
+    -- 两个分支各取一片叶（`sideLeaves e u` 收的是「从 `u` 出发在 `T - e` 中可达」的叶）
+    obtain ⟨i, hi⟩ := (_root_.Cladogram.sideLeaves_nonempty_of_adj_both T.toCladogram hvw₁).2
+    obtain ⟨j, hj⟩ := (_root_.Cladogram.sideLeaves_nonempty_of_adj_both T.toCladogram hvw₂).2
+    have hi' : T.inSide s(v, w₁) w₁ (T.leaf i) := (T.mem_sideLeaves_iff_inSide).mp hi
+    have hj' : T.inSide s(v, w₂) w₂ (T.leaf j) := (T.mem_sideLeaves_iff_inSide).mp hj
+    -- `T.leaf x` 在 `v` 侧
+    have hne₁ : s(v, T.leaf x) ≠ s(v, w₁) := by
+      intro h
+      have hmem' : w₁ ∈ s(v, T.leaf x) := by rw [h]; exact Sym2.mem_iff.mpr (Or.inr rfl)
+      rcases Sym2.mem_iff.mp hmem' with h1 | h1
+      · exact hvw₁.ne h1.symm
+      · exact hw₁ne h1
+    have hx₁ : T.inSide s(v, w₁) v (T.leaf x) :=
+      (SimpleGraph.deleteEdges_adj.mpr ⟨hxv.symm, by rw [Set.mem_singleton_iff]; exact hne₁⟩).reachable
+    have hne₂ : s(v, T.leaf x) ≠ s(v, w₂) := by
+      intro h
+      have hmem' : w₂ ∈ s(v, T.leaf x) := by rw [h]; exact Sym2.mem_iff.mpr (Or.inr rfl)
+      rcases Sym2.mem_iff.mp hmem' with h1 | h1
+      · exact hvw₂.ne h1.symm
+      · exact hw₂ne h1
+    have hx₂ : T.inSide s(v, w₂) v (T.leaf x) :=
+      (SimpleGraph.deleteEdges_adj.mpr ⟨hxv.symm, by rw [Set.mem_singleton_iff]; exact hne₂⟩).reachable
+    have hw₁₂ne : s(w₂, v) ≠ s(v, w₁) := by
+      intro h
+      rw [Sym2.eq_swap] at h
+      rcases Sym2.eq_iff.mp h with ⟨-, h2⟩ | ⟨h1, h2⟩
+      · exact hw₁₂ h2.symm
+      · exact hw₁₂ (h1.symm.trans h2.symm)
+    -- `w₂` 落在 `s(v,w₁)` 的 `v` 侧
+    have hw₂V : w₂ ∈ T.sideVertices s(v, w₁) v := by
+      rw [T.mem_sideVertices]
+      exact (SimpleGraph.deleteEdges_adj.mpr
+        ⟨hvw₂.symm, by rw [Set.mem_singleton_iff]; exact hw₁₂ne⟩).reachable
+    -- 三片叶两两不同
+    have hix : i ≠ x := fun h => T.not_inSide_both hvw₁ ⟨hx₁, h ▸ hi'⟩
+    have hjx : j ≠ x := fun h => T.not_inSide_both hvw₂ ⟨hx₂, h ▸ hj'⟩
+    have hjV : T.inSide s(v, w₁) v (T.leaf j) := by
+      have h1 : T.leaf j ∈ T.sideVertices s(v, w₁) v :=
+        T.sideVertices_adj_subset hvw₁ hvw₂ hw₂V
+          ((T.mem_sideVertices (e := s(v, w₂)) (u := w₂) (w := T.leaf j)).mpr
+            ((T.inSide_comm _ _ _).mpr hj'))
+      exact (T.inSide_comm _ _ _).mp
+        ((T.mem_sideVertices (e := s(v, w₁)) (u := v) (w := T.leaf j)).mp h1)
+    have hij : i ≠ j := fun h => T.not_inSide_both hvw₁ ⟨hjV, h ▸ hi'⟩
+    -- `v` 在 `leaf j → leaf i` 的唯一路径上
+    have hp : ((T.existsUnique_path (T.leaf j) (T.leaf i)).choose).IsPath :=
+      (T.existsUnique_path (T.leaf j) (T.leaf i)).choose_spec.1
+    have hiV : T.leaf i ∈ T.sideVertices s(v, w₁) w₁ :=
+      (T.mem_sideVertices (e := s(v, w₁)) (u := w₁) (w := T.leaf i)).mpr
+        ((T.inSide_comm _ _ _).mpr hi')
+    have hjV' : T.leaf j ∉ T.sideVertices s(v, w₁) w₁ := by
+      intro hmem
+      refine T.not_inSide_both hvw₁ ⟨hjV, ?_⟩
+      exact (T.inSide_comm _ _ _).mp
+        ((T.mem_sideVertices (e := s(v, w₁)) (u := w₁) (w := T.leaf j)).mp hmem)
+    have hv_path : v ∈ ((T.existsUnique_path (T.leaf j) (T.leaf i)).choose).support :=
+      T.mem_pair_of_mem_sideVertices (e := s(v, w₁)) (u := w₁) hiV hjV'
+        (T.existsUnique_path (T.leaf j) (T.leaf i)).choose (v := v)
+        (Sym2.mem_iff.mpr (Or.inl rfl))
+    have hsplit : T.dist (T.leaf j) (T.leaf i) = T.dist (T.leaf j) v + T.dist v (T.leaf i) :=
+      Phylo.TreeDist.dist_eq_add_of_mem_support T _ hp hv_path
+    -- 反证：左边权为 0
+    by_contra hcon
+    have hw0 : T.wExt s(T.leaf x, v) = 0 :=
+      le_antisymm (not_lt.mp hcon) (Phylo.TreeDist.wExt_nonneg T _)
+    -- `x` 与 `v` 度量上同点（`dist (leaf x) v = wExt s(leaf x, v) = 0`），
+    -- 于是 `dist (leaf i) (leaf x) = dist v (leaf i)`（两条三角不等式夹逼）
+    have hxv0 : T.dist (T.leaf x) v = 0 := by
+      rw [Phylo.TreeDist.dist_eq_wExt_of_adj T hxv, hw0]
+    have hxi : T.dist (T.leaf i) (T.leaf x) = T.dist v (T.leaf i) := by
+      refine le_antisymm ?_ ?_
+      · have h := Phylogram.dist_triangle T (T.leaf i) v (T.leaf x)
+        rw [Phylo.TreeDist.dist_comm T v (T.leaf x), hxv0, add_zero,
+          Phylo.TreeDist.dist_comm T (T.leaf i) v] at h
+        exact h
+      · have h := Phylogram.dist_triangle T v (T.leaf x) (T.leaf i)
+        rw [Phylo.TreeDist.dist_comm T v (T.leaf x), hxv0, zero_add] at h
+        rwa [Phylo.TreeDist.dist_comm T (T.leaf x) (T.leaf i)] at h
+    have hxj : T.dist (T.leaf x) (T.leaf j) = T.dist v (T.leaf j) := by
+      refine le_antisymm ?_ ?_
+      · have h := Phylogram.dist_triangle T (T.leaf x) v (T.leaf j)
+        rw [hxv0, zero_add] at h
+        exact h
+      · have h := Phylogram.dist_triangle T v (T.leaf x) (T.leaf j)
+        rw [Phylo.TreeDist.dist_comm T v (T.leaf x), hxv0, zero_add] at h
+        exact h
+    have hijD : T.dist (T.leaf i) (T.leaf j) = T.dist v (T.leaf i) + T.dist v (T.leaf j) := by
+      rw [Phylo.TreeDist.dist_comm T (T.leaf i) (T.leaf j), hsplit,
+        Phylo.TreeDist.dist_comm T (T.leaf j) v]
+      exact add_comm _ _
+    -- 度量恒等式 ⟹ 与三角不等式矛盾
+    have hmain : T.dist (T.leaf i) (T.leaf j)
+        = T.dist (T.leaf i) (T.leaf x) + T.dist (T.leaf x) (T.leaf j) := by
+      rw [hijD, hxi, hxj]
+    have hδ : (δ.addConst ε).val i j = (δ.addConst ε).val i x + (δ.addConst ε).val x j := by
+      rw [← hreal i j, ← hreal i x, ← hreal x j]
+      exact hmain
+    have htri : δ.val i j ≤ δ.val i x + δ.val x j := by
+      have h := NJ.Dissimilarity.triangle δ hfp x i j
+      rwa [δ.symm x i] at h
+    have hexp : δ.val i j + ε = (δ.val i x + ε) + (δ.val x j + ε) := by
+      rw [← NJ.Dissimilarity.addConst_val_ne δ ε hij,
+        ← NJ.Dissimilarity.addConst_val_ne δ ε hix,
+        ← NJ.Dissimilarity.addConst_val_ne δ ε hjx.symm]
+      exact hδ
+    linarith
+
+end A1
 
 end Contract
 
