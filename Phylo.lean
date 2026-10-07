@@ -18,6 +18,7 @@ import Phylo.CherryQuartet
 import Phylo.Consensus
 import Phylo.Core
 import Phylo.Dendrogram
+import Phylo.DissimilarityPerturb
 import Phylo.Distance
 import Phylo.InductiveAssembly
 import Phylo.InternalEdge
