@@ -380,6 +380,30 @@ theorem two_le_card_sideLeaves {u v : T.V} (huv : T.graph.Adj u v)
   rw [hleaves, hbij]
   exact hmain
 
+/-! ### ★★ 边的一侧必含叶（Bandelt–Dress 的 cluster 非空性）
+
+BD 的 cluster 定义（`references/md/BandeltDress1986_ReconstructingShapeOfTree.md` 702–703 行）
+含 `∅ ≠ Y ≠ X`；而「删一条边得到的两个分量的叶集」正是 cluster（BD 326–333 行），
+故**删边后的每一侧都必须含叶**。这里证出它（两行情形分析）。 -/
+
+/-- ★★ **删边后 `u` 所在的一侧必含叶**。
+
+* 若 `u` 是叶（`degree = 1`）：`u` 自己就是某片叶，由 `mem_sideLeaves_self` 立得；
+* 否则用已有的 ★★ `two_le_card_sideLeaves`（`2 ≤ card` ⟹ 非空）。 -/
+theorem sideLeaves_nonempty_of_adj {u v : T.V} (huv : T.graph.Adj u v) :
+    (T.sideLeaves s(u, v) u).Nonempty := by
+  by_cases hdeg : T.graph.degree u = 1
+  · obtain ⟨x, hx⟩ := T.degree_eq_one_isLeaf hdeg
+    exact ⟨x, by simpa [hx] using T.mem_sideLeaves_self s(u, v) x⟩
+  · exact Finset.card_pos.mp (by have := T.two_le_card_sideLeaves huv hdeg; omega)
+
+/-- ★★ **删边后两侧都必含叶**。 -/
+theorem sideLeaves_nonempty_of_adj_both {u v : T.V} (huv : T.graph.Adj u v) :
+    (T.sideLeaves s(u, v) u).Nonempty ∧ (T.sideLeaves s(u, v) v).Nonempty :=
+  ⟨T.sideLeaves_nonempty_of_adj huv,
+   by have := T.sideLeaves_nonempty_of_adj huv.symm
+      simpa [Sym2.eq_swap] using this⟩
+
 /-- ★★ **内部边两侧各含 ≥ 2 叶**（HANDOVER T2 的完整形式）。
 
 两端都非叶（`degree ≠ 1`，`no_degree_two` 下等价于「是内部顶点」）的边，其删边后的
