@@ -605,6 +605,40 @@ theorem isClan_compl {A : Finset X} (h : T.IsClan A) : T.IsClan (Aᶜ) := by
   have hbA : b ∉ A := by simpa using hb
   exact T.displaysQuartet_comm.mpr (h c hcA d hdA a haA b hbA)
 
+/-! ### ⚠️ 陈述层补正：BD 的 cluster 定义含 `∅ ≠ Y ≠ X`
+
+Bandelt & Dress 的 cluster 定义（md 702–703 行）是
+*"`Y ⊆ X` is a cluster … iff **`∅ ≠ Y ≠ X`** and `AB∥CD` holds for all `A, B ∈ Y`, `C, D ∈ Ȳ`"*
+—— **多了 `∅ ≠ Y ≠ X`**。而本库的 `IsClan` 只保留了 quartet 条件，于是
+**`IsClan ∅` 与 `IsClan X` 都空真**（下面两条 `isClan_empty` / `isClan_univ` 就是证据）。
+要走 BD Prop 1(b)（tree-like ⟹ 树的 cluster 系统，要求成员**非空**）就必须显式带上这两条 ——
+故加 `IsCluster`。这是本项目 §5.6「陈述层陷阱」的同型问题，记在此处避免重蹈。 -/
+
+/-- ⚠️ **`IsClan` 对空集空真**（`∅` 里取不出 `a`）。 -/
+theorem isClan_empty : T.IsClan (∅ : Finset X) :=
+  fun a ha => absurd ha (Finset.notMem_empty a)
+
+/-- ⚠️ **`IsClan` 对全集空真**（`X` 外取不出 `c`）。 -/
+theorem isClan_univ : T.IsClan (Finset.univ : Finset X) :=
+  fun _ _ _ _ c hc _ _ => absurd (Finset.mem_univ c) hc
+
+/-- **cluster**：Bandelt–Dress 的定义 = 非空 + 真子集 + `IsClan`。
+
+必须显式带上前两条 —— 因为 `IsClan` 对 `∅`/`X` 空真（见 `isClan_empty` / `isClan_univ`）。 -/
+def IsCluster (A : Finset X) : Prop :=
+  A.Nonempty ∧ A ≠ Finset.univ ∧ T.IsClan A
+
+/-- ★★ **cluster 的补也是 cluster**（BD Prop 2(b) 的 *"the complement `Ȳ` is also a cluster"*，
+带上了 `IsClan` 缺的那两条）。 -/
+theorem isCluster_compl {A : Finset X} (h : T.IsCluster A) : T.IsCluster (Aᶜ) := by
+  refine ⟨?_, ?_, T.isClan_compl h.2.2⟩
+  · by_contra hc
+    rw [Finset.not_nonempty_iff_eq_empty] at hc
+    exact h.2.1 (by rw [← compl_compl A, hc, Finset.compl_empty])
+  · intro hc
+    obtain ⟨x, hx⟩ := h.1
+    exact (Finset.mem_compl.mp (by rw [hc]; exact Finset.mem_univ x)) hx
+
 /-- ★★ **clan ⟹ `A|Aᶜ` 与 `T` 的每个 split 相容**（T0.1 第 3 步的关键一步）。
 
 若 `sA := A|Aᶜ` 与某个 `t ∈ Σ(T)` 不相容，`Split.exists_four_of_incompatible` 给出
