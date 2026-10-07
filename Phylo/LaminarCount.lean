@@ -171,3 +171,162 @@ theorem card_add_one_le_two_mul_card_of_laminar :
     omega
 
 end Finset
+
+/-! ## away-map：把相容 split 族「翻转」成镶嵌族
+
+`ρ ∈ α` 固定。对每条 split `t`，取**不含 `ρ` 的那一侧** `t.away ρ`，并记下
+`t.idx ρ ∈ Fin 2` 表明取的是 `sideA` 还是 `sideB`。于是 `t ↦ (t.away ρ, t.idx ρ)`
+是**单射**（知道「不含 `ρ` 的那侧」与「哪一侧」就还原了整条 split），
+故 `#S ≤ 2 · #(S.image away)`；而相容族的 away-image 由
+`laminar_of_sidesCompatible_of_notMem` 知是**镶嵌族**。 -/
+
+namespace Split
+
+variable {α : Type u} [Fintype α] [DecidableEq α]
+
+/-- **同一 `sideA` ⟹ split 相等**（`sideB` 是补，故 `parts` 相同）。 -/
+theorem eq_of_sideA_eq {s t : Split α} (h : s.sideA = t.sideA) : s = t := by
+  refine KPartition.eq_iff_parts s t |>.mpr ?_
+  funext i
+  fin_cases i
+  · exact h
+  · show s.sideB = t.sideB
+    rw [Split.sideB_eq_compl, Split.sideB_eq_compl, h]
+
+/-- `t` 的第 `i` 侧是否含 `ρ`。 -/
+noncomputable def idx (ρ : α) (t : Split α) : Fin 2 := if ρ ∈ t.sideA then 1 else 0
+
+/-- `t` 中**不含** `ρ` 的那一侧。 -/
+noncomputable def away (ρ : α) (t : Split α) : Finset α :=
+  if ρ ∈ t.sideA then t.sideB else t.sideA
+
+theorem away_of_mem (ρ : α) {t : Split α} (h : ρ ∈ t.sideA) : t.away ρ = t.sideB :=
+  if_pos h
+
+theorem away_of_notMem (ρ : α) {t : Split α} (h : ρ ∉ t.sideA) : t.away ρ = t.sideA :=
+  if_neg h
+
+theorem idx_of_mem (ρ : α) {t : Split α} (h : ρ ∈ t.sideA) : t.idx ρ = 1 := if_pos h
+
+theorem idx_of_notMem (ρ : α) {t : Split α} (h : ρ ∉ t.sideA) : t.idx ρ = 0 := if_neg h
+
+/-- `ρ` 不在 `t.away ρ` 里。 -/
+theorem not_mem_away (ρ : α) (t : Split α) : ρ ∉ t.away ρ := by
+  by_cases h : ρ ∈ t.sideA
+  · rw [away_of_mem ρ h]
+    exact fun hb => (Finset.disjoint_left.mp t.disjoint_sides) h hb
+  · rwa [away_of_notMem ρ h]
+
+/-- `t.away ρ` 非空。 -/
+theorem away_nonempty (ρ : α) (t : Split α) : (t.away ρ).Nonempty := by
+  by_cases h : ρ ∈ t.sideA
+  · rw [away_of_mem ρ h]; exact t.nonempty 1
+  · rw [away_of_notMem ρ h]; exact t.nonempty 0
+
+/-- `t.away ρ ⊆ univ \ {ρ}`。 -/
+theorem away_subset (ρ : α) (t : Split α) : t.away ρ ⊆ Finset.univ \ {ρ} := by
+  intro x hx
+  exact Finset.mem_sdiff.mpr
+    ⟨Finset.mem_univ x, fun hx' => t.not_mem_away ρ (Finset.mem_singleton.mp hx' ▸ hx)⟩
+
+/-- `(away ρ, idx ρ)` **单射**（故每个纤维 ≤ 2）。 -/
+theorem away_idx_injective (ρ : α) :
+    Function.Injective (fun t : Split α => (t.away ρ, t.idx ρ)) := by
+  intro t u h
+  have h1 : t.away ρ = u.away ρ := congrArg Prod.fst h
+  have h2 : t.idx ρ = u.idx ρ := congrArg Prod.snd h
+  by_cases ht : ρ ∈ t.sideA
+  · have hu : ρ ∈ u.sideA := by
+      by_contra hu
+      rw [idx_of_mem ρ ht, idx_of_notMem ρ hu] at h2
+      exact absurd h2 (by decide)
+    rw [away_of_mem ρ ht, away_of_mem ρ hu] at h1
+    refine Split.eq_of_sideA_eq ?_
+    have ht' : t.sideA = t.sideBᶜ := by rw [Split.sideB_eq_compl, compl_compl]
+    have hu' : u.sideA = u.sideBᶜ := by rw [Split.sideB_eq_compl, compl_compl]
+    rw [ht', hu', h1]
+  · have hu : ρ ∉ u.sideA := by
+      by_contra hu
+      rw [idx_of_notMem ρ ht, idx_of_mem ρ hu] at h2
+      exact absurd h2 (by decide)
+    rw [away_of_notMem ρ ht, away_of_notMem ρ hu] at h1
+    exact Split.eq_of_sideA_eq h1
+
+/-- 相容 split 的 away-侧**相容**（`SidesCompatible`）。 -/
+theorem sidesCompatible_away (ρ : α) {t u : Split α} (h : Compatible t u) :
+    SidesCompatible (t.away ρ) (u.away ρ) := by
+  have hbase : SidesCompatible t.sideA u.sideA := compatible_iff_sides.mp h
+  by_cases ht : ρ ∈ t.sideA <;> by_cases hu : ρ ∈ u.sideA
+  · rw [away_of_mem ρ ht, away_of_mem ρ hu, Split.sideB_eq_compl, Split.sideB_eq_compl]
+    exact sidesCompatible_compl_right.mpr (sidesCompatible_compl_left.mpr hbase)
+  · rw [away_of_mem ρ ht, away_of_notMem ρ hu, Split.sideB_eq_compl]
+    exact sidesCompatible_compl_left.mpr hbase
+  · rw [away_of_notMem ρ ht, away_of_mem ρ hu, Split.sideB_eq_compl]
+    exact sidesCompatible_compl_right.mpr hbase
+  · rw [away_of_notMem ρ ht, away_of_notMem ρ hu]; exact hbase
+
+end Split
+
+namespace Finset
+
+variable {α : Type u} [Fintype α] [DecidableEq α]
+
+/-- ★★ **`#S ≤ 2 · #(S.image away)`**（由 `(away, idx)` 单射 + 乘积计数）。 -/
+theorem card_le_two_mul_card_image_away (S : Finset (Split α)) (ρ : α) :
+    S.card ≤ 2 * (S.image (fun t => t.away ρ)).card := by
+  have hcard : (S.image (fun t => (t.away ρ, t.idx ρ))).card = S.card :=
+    Finset.card_image_of_injective S (Split.away_idx_injective ρ)
+  have hle : (S.image (fun t => (t.away ρ, t.idx ρ))).card
+      ≤ ((S.image (fun t => t.away ρ)) ×ˢ (Finset.univ : Finset (Fin 2))).card := by
+    refine Finset.card_le_card ?_
+    intro p hp
+    obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp hp
+    exact Finset.mem_product.mpr
+      ⟨Finset.mem_image.mpr ⟨t, ht, rfl⟩, Finset.mem_univ _⟩
+  have hprod : ((S.image (fun t => t.away ρ)) ×ˢ (Finset.univ : Finset (Fin 2))).card
+      = 2 * (S.image (fun t => t.away ρ)).card := by
+    rw [Finset.card_product]
+    simp [mul_comm]
+  omega
+
+/-- ★★★ **相容 split 族的基数上界**：`#S + 6 ≤ 4 · |α|`。
+
+即 `X` 上两两相容的 split 族至多 `4|X| - 6` 条 —— 正是 **binary 树**的 split 数。
+配合「binary 树的 split 数恰为 `4|X| - 6`」即得 `SplitsMaximal`（`BinarySplitsMaximal`）。 -/
+theorem card_add_six_le_four_mul_card_of_pairwise_compatible
+    (S : Finset (Split α)) (ρ : α) (h2 : 2 ≤ Fintype.card α)
+    (hcompat : ∀ s ∈ S, ∀ t ∈ S, s ≠ t → Split.Compatible s t) :
+    S.card + 6 ≤ 4 * Fintype.card α := by
+  set F := S.image (fun t => t.away ρ) with hF
+  have hl : LaminarFamily F := by
+    intro A hA B hB
+    obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp hA
+    obtain ⟨u, hu, rfl⟩ := Finset.mem_image.mp hB
+    rcases eq_or_ne t u with rfl | hne
+    · exact Or.inl (Finset.Subset.refl _)
+    · exact laminar_of_sidesCompatible_of_notMem
+        (Split.sidesCompatible_away ρ (hcompat t ht u hu hne))
+        (Split.not_mem_away ρ t) (Split.not_mem_away ρ u)
+  have hYcard : (Finset.univ \ {ρ} : Finset α).card + 1 = Fintype.card α := by
+    have h := Finset.card_sdiff_add_card_eq_card
+      (s := ({ρ} : Finset α)) (t := (Finset.univ : Finset α)) (Finset.subset_univ _)
+    simpa using h
+  have hYne : (Finset.univ \ {ρ} : Finset α).Nonempty := by
+    obtain ⟨x, y, hxy⟩ := Fintype.one_lt_card_iff_nontrivial.mp (by omega : 1 < Fintype.card α)
+    by_cases hx : x = ρ
+    · exact ⟨y, Finset.mem_sdiff.mpr ⟨Finset.mem_univ _, by simpa [← hx] using hxy.symm⟩⟩
+    · exact ⟨x, Finset.mem_sdiff.mpr ⟨Finset.mem_univ _, by simpa using hx⟩⟩
+  have hbound : F.card + 1 ≤ 2 * (Finset.univ \ {ρ} : Finset α).card := by
+    refine card_add_one_le_two_mul_card_of_laminar _ F _ rfl hYne hl ?_ ?_
+    · intro A hA
+      obtain ⟨t, _, rfl⟩ := Finset.mem_image.mp hA
+      exact Split.away_nonempty ρ t
+    · intro A hA
+      obtain ⟨t, _, rfl⟩ := Finset.mem_image.mp hA
+      exact Split.away_subset ρ t
+  have hle := card_le_two_mul_card_image_away S ρ
+  rw [hF] at hbound
+  have h1 : (S.image (fun t => t.away ρ)).card + 3 ≤ 2 * Fintype.card α := by omega
+  omega
+
+end Finset
