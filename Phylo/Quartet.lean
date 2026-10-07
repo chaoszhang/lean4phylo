@@ -288,6 +288,36 @@ theorem displaysQuartet_of_displaysQuartet_common {a b c d e : X}
       · rw [hxc]; exact h (hc1 hc1')
       · rw [hxd]; exact hd2 hd2'⟩
 
+/-- ★★ **一棵树不可能在同一个 4-元集上同时展示 `ab|cd` 与 `ac|bd`**（4 点互异）。
+
+这是 `Phylo.Stat.QuartetDecides`（`QuartetDecidesTree`）路线里**唯一真正用到
+「两条 split 必相容」**的那一步：两个见证 split 的四个交分别含 `a`、`b`、`c`、`d`，
+全非空 ⟹ 由 `pairwiseCompatible` 矛盾。
+
+⚠️ 注意：**不要求** `a,b,c,d` 互异 —— 结论对退化情形也成立（只是那时前提不可满足）。 -/
+theorem not_displaysQuartet_swap {a b c d : X}
+    (h₁ : T.DisplaysQuartet a b c d) (h₂ : T.DisplaysQuartet a c b d) : False := by
+  obtain ⟨s, hs, hab, hcd⟩ := h₁
+  obtain ⟨t, ht, hac, hbd⟩ := h₂
+  have hb_ab : b ∈ ({a, b} : Finset X) := by simp
+  have ha_ab : a ∈ ({a, b} : Finset X) := by simp
+  have ha_ac : a ∈ ({a, c} : Finset X) := by simp
+  have hc_ac : c ∈ ({a, c} : Finset X) := by simp
+  have hd_cd : d ∈ ({c, d} : Finset X) := by simp
+  have hc_cd : c ∈ ({c, d} : Finset X) := by simp
+  have hb_bd : b ∈ ({b, d} : Finset X) := by simp
+  have hd_bd : d ∈ ({b, d} : Finset X) := by simp
+  have hcomp : Split.Compatible s t := pairwiseCompatible T s hs t ht
+  rcases Split.compatible_iff_subset.mp hcomp with h | h | h | h
+  · -- `s.A ⊆ t.A`：`b ∈ s.A ⊆ t.A`，但 `b ∈ t.B`
+    exact (Finset.disjoint_left.mp t.disjoint_sides) (h (hab hb_ab)) (hbd hb_bd)
+  · -- `s.A ⊆ t.B`：`a ∈ s.A ⊆ t.B`，但 `a ∈ t.A`
+    exact (Finset.disjoint_left.mp t.disjoint_sides) (hac ha_ac) (h (hab ha_ab))
+  · -- `s.B ⊆ t.A`：`d ∈ s.B ⊆ t.A`，但 `d ∈ t.B`
+    exact (Finset.disjoint_left.mp t.disjoint_sides) (h (hcd hd_cd)) (hbd hd_bd)
+  · -- `s.B ⊆ t.B`：`c ∈ s.B ⊆ t.B`，但 `c ∈ t.A`
+    exact (Finset.disjoint_left.mp t.disjoint_sides) (hac hc_ac) (h (hcd hc_cd))
+
 /-! ### 展示 quartet 拓扑 -/
 
 /-- 树 `T` **展示** quartet 拓扑 `q`：存在 `T` 的边，在 `q.supp` 上诱导出 `q.top` 这一配对。 -/

@@ -365,4 +365,63 @@ theorem exists_displaysQuartet_of_internalEdge {a b : T.V} (hab : T.graph.Adj a 
       (by rw [hcompl]; exact hb)
   exact ⟨x, y, z, w, hxy, hzw, hdisp⟩
 
+/-! ## T0.1 第 3 步（`Q(T) = Q(T') ⟹ Σ(T) = Σ(T')`）的可证部分
+
+**容易方向（本文件已证）**：`A` 是 `T` 的某条边的一侧 ⟹ 对任意 `a,b ∈ A`、`c,d ∉ A`
+皆有 `ab|cd ∈ Q(T)`（见 `displaysQuartet_of_clade`）。
+
+**归约（本文件已证）**：两棵树的 **quartet 系统相同**（`SameQuartetSystem`，用
+`DisplaysQuartet` 层表述）⟹ `Σ(T) ∪ Σ(T')` **两两相容**（`compatible_of_sameQuartetSystem`）。
+证明只用到 `Split.exists_four_of_incompatible` 与 **`Phylo/Quartet.lean`** 里的
+★★ `Cladogram.not_displaysQuartet_swap`
+（「一棵树不能在同一个 4-元集上同时展示 `ab|cd` 与 `ac|bd`」）。
+
+⚠️ **`QuartetDecidesTree` 的现有陈述是假的**，见 `Phylo/Stat/QuartetDecides.lean` 的
+修正记录与 `HANDOVER.md` §4 T0.1：`DisplaysSplitOn` 允许 **1|3** split 被"展示"，
+于是两棵不同的 binary 树可以用同一个常量 `q` 满足全部假设。 -/
+
+/-- ★★ **clade 的必要条件**（T0.1 第 3 步的容易方向）。
+
+若 `A` 恰是树 `T` 某条边的一侧（即 `A = s.sideA`，`s ∈ Σ(T)`），则对任意
+`a,b ∈ A` 与 `c,d ∉ A`，`T` 都展示 quartet `ab|cd` —— 而且见证 split 就是 `s` 本身。 -/
+theorem displaysQuartet_of_clade {s : Split X} (hs : T.IsSplitOf s)
+    {a b c d : X} (ha : a ∈ s.sideA) (hb : b ∈ s.sideA)
+    (hc : c ∉ s.sideA) (hd : d ∉ s.sideA) :
+    T.DisplaysQuartet a b c d :=
+  ⟨s, hs,
+    fun x hx => by
+      rw [Finset.mem_insert, Finset.mem_singleton] at hx
+      exact hx.elim (fun h => h ▸ ha) (fun h => h ▸ hb),
+    fun x hx => by
+      rw [Finset.mem_insert, Finset.mem_singleton] at hx
+      exact hx.elim (fun h => h ▸ Split.mem_sideB_of_not_mem_sideA s hc)
+        (fun h => h ▸ Split.mem_sideB_of_not_mem_sideA s hd)⟩
+
+/-- **「两棵树有相同的 quartet 系统」的 `DisplaysQuartet` 层表述**（4 点互异）。
+
+⚠️ 这是**正确的**表述：`Phylo.Stat.QuartetDecides` 里的 `q, q'`（`QuartetChoice`）
+版本**不够强**（它允许 1|3 split 被"展示"），见该文件的修正记录。 -/
+def SameQuartetSystem (T T' : Cladogram X) : Prop :=
+  ∀ a b c d : X, ({a, b, c, d} : Finset X).card = 4 →
+    (T.DisplaysQuartet a b c d ↔ T'.DisplaysQuartet a b c d)
+
+/-- ★★ **同一 quartet 系统 ⟹ 两棵树的 split 系统两两相容**（T0.1 第 3 步的归约）。
+
+**这是 `Q(T) = Q(T') ⟹ Σ(T) = Σ(T')` 的关键一步**：一旦两两相容，剩下的就是
+「binary 树的 `Σ` 是**极大**相容族」（⟹ `Σ(T') ⊆ Σ(T)`，反之亦然）。
+
+证明：若 `s ∈ Σ(T)`、`t ∈ Σ(T')` 不相容，则 `Split.exists_four_of_incompatible`
+给出互异的 `a,b,c,d` 使 `{a,b} ⊆ s.sideA`、`{c,d} ⊆ s.sideB`、
+`{a,c} ⊆ t.sideA`、`{b,d} ⊆ t.sideB`；于是 `T` 展示 `ab|cd`，由同一 quartet 系统
+`T'` 也展示 `ab|cd`，而 `t` 又让 `T'` 展示 `ac|bd` —— 与 ★★ `not_displaysQuartet_swap`
+矛盾。 -/
+theorem compatible_of_sameQuartetSystem {T T' : Cladogram X}
+    (h : SameQuartetSystem T T') {s t : Split X}
+    (hs : T.IsSplitOf s) (ht : T'.IsSplitOf t) : Split.Compatible s t := by
+  by_contra hinc
+  obtain ⟨a, b, c, d, hab, hcd, hac, hbd, hcard⟩ :=
+    Split.exists_four_of_incompatible (s := s) (t := t) hinc
+  exact T'.not_displaysQuartet_swap
+    ((h a b c d hcard).mp ⟨s, hs, hab, hcd⟩) ⟨t, ht, hac, hbd⟩
+
 end Cladogram
