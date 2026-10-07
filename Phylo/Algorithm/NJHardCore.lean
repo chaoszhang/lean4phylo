@@ -35,7 +35,11 @@ import Phylo.CherryQuartet
 * ✅ ★★ `NJ.Dissimilarity.S_eq_leafStatus`
 * ✅ ★★★ `NJ.Dissimilarity.ell_eq_pathLeafStatus`
 * ✅ ★★★ `NJ.Dissimilarity.z_eq_dist_add_pathLeafStatus`（**零 `sorry` / 零 `axiom`**）
+* ✅ ★★★ `maxZCherryCore_of_pos`（T0.8 兜底）
+* ✅ ★★ `maxZCherryCore_of_card_le_three`（T0.8）
+* ✅ ★★ `maxZCherryCore_of_pos'`（T0.8）
 -/
+
 
 universe u v
 
@@ -99,6 +103,79 @@ theorem z_eq_dist_add_pathLeafStatus (δ : Dissimilarity X) {T : Phylogram.{u, v
   show δ.val u v + δ.ell u v
     = T.dist (T.leaf u) (T.leaf v) + T.pathLeafStatus (T.leaf u) (T.leaf v)
   rw [ell_eq_pathLeafStatus δ hpos hT huv, ← hT u v]
+
+-- ===== T08 BEGIN =====
+/-! ## T0.8 兜底：`MaxZCherryCore` 在「有**正权实现树**」的假设下**成立** -/
+
+/-- ★★★ **`MaxZCherryCore` 在「有正权实现树」的假设下成立**（T0.3 的兜底形式）。
+
+设 `δ` 由一棵**正边权**的 `Phylogram` `T` 实现（`hT : d(leaf x, leaf y) = δ.val x y`），
+且 `4 ≤ |X|`，则 ★ 硬核 `Dissimilarity.MaxZCherryCore` **是定理**（不再作为假设）。
+
+证明（`δ` 层 ↔ 树层三条桥接引理 + Weller Thm 2 + 樱桃的 quartet 不等式）：
+
+1. ★★★ `z_eq_dist_add_pathLeafStatus` 把 `hmax`（关于 `δ.z` 的最大性）**翻译到树层**；
+2. ★★★ `Cladogram.exists_isCherry_of_max_z`（Weller **Thm 2**，需正边权与 `3 ≤ |X|`）给出
+   `T.IsCherry a b`；
+3. ★★★ `Cladogram.dist_add_le_of_isCherry` 给出**树层**两条 quartet 不等式；
+4. 再用 `hT` 把它们**搬回 `δ` 层**。
+
+⚠️ `hfp : δ.FourPoint` 在本路线中**未被使用**（`δ` 直接由树实现，四点条件自动成立）；
+为签名兼容保留为**匿名假设**。 -/
+theorem maxZCherryCore_of_pos {X : Type u} [Fintype X] [DecidableEq X] (δ : Dissimilarity X)
+    {T : Phylogram.{u, v} X} (hcard : 4 ≤ Fintype.card X)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    δ.MaxZCherryCore := by
+  intro _ a b hab hmax i j hij hia hib hja hjb
+  -- ① `δ.z` 的最大性 ⟹ 树层 `d + ℓ` 的最大性
+  have hmaxT : ∀ p q : X, p ≠ q →
+      T.dist (T.leaf p) (T.leaf q) + T.pathLeafStatus (T.leaf p) (T.leaf q) ≤
+        T.dist (T.leaf a) (T.leaf b) + T.pathLeafStatus (T.leaf a) (T.leaf b) := by
+    intro p q hpq
+    have h := hmax p q hpq
+    rwa [z_eq_dist_add_pathLeafStatus δ hpos hT hpq,
+      z_eq_dist_add_pathLeafStatus δ hpos hT hab] at h
+  -- ② Weller Thm 2（★★★）：`z` 最大的一对叶是樱桃
+  have hc : T.IsCherry a b :=
+    Cladogram.exists_isCherry_of_max_z hpos (by omega) hab hmaxT
+  -- ③ 樱桃的 quartet 不等式（树层）
+  have hle := Cladogram.dist_add_le_of_isCherry hc hia hib hja hjb hij
+  -- ④ 搬回 `δ` 层
+  exact ⟨by rw [← hT a b, ← hT i j, ← hT a i, ← hT b j]; exact hle.1,
+    by rw [← hT a b, ← hT i j, ← hT a j, ← hT b i]; exact hle.2⟩
+
+/-- ★★ **基数 ≤ 3 时 `MaxZCherryCore` 空真**：结论要求 4 个互异点 `a, b, i, j`
+（`a ≠ b`、`i ≠ j`、`i,j ∉ {a,b}`），故 `4 ≤ |X|` 是结论的**必要条件**；
+与 `h : |X| ≤ 3` 矛盾（经 `Finset.card_le_card` + `Finset.card_eq_four`）。
+
+与 ★★★ `maxZCherryCore_of_pos` 合起来**覆盖全部基数**。 -/
+theorem maxZCherryCore_of_card_le_three {X : Type u} [Fintype X] [DecidableEq X]
+    (δ : Dissimilarity X) (h : Fintype.card X ≤ 3) : δ.MaxZCherryCore := by
+  intro _ a b hab _ i j hij hia hib hja hjb
+  have hs : ({a, b, i, j} : Finset X).card = 4 := by
+    rw [Finset.card_eq_four]
+    exact ⟨a, b, i, j, hab, hia.symm, hja.symm, hib.symm, hjb.symm, hij, rfl⟩
+  have hle : 4 ≤ Fintype.card X := by
+    have hsub := Finset.card_le_card (Finset.subset_univ ({a, b, i, j} : Finset X))
+    rwa [hs, Finset.card_univ] at hsub
+  exact absurd hle (by omega)
+
+/-- ★★ **无基数条件的合并形式**：`MaxZCherryCore` 由**正权实现树**直接给出，
+`|X| ≤ 3` 与 `4 ≤ |X|` 两种情形分别归约到
+★★ `maxZCherryCore_of_card_le_three` 与 ★★★ `maxZCherryCore_of_pos`。
+
+（这是 T0.3 收口时最省事的一条接口。） -/
+theorem maxZCherryCore_of_pos' {X : Type u} [Fintype X] [DecidableEq X] (δ : Dissimilarity X)
+    {T : Phylogram.{u, v} X}
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    δ.MaxZCherryCore := by
+  by_cases hcard : 4 ≤ Fintype.card X
+  · exact maxZCherryCore_of_pos δ hcard hpos hT
+  · exact maxZCherryCore_of_card_le_three δ (by omega)
+
+-- ===== T08 END =====
 
 end Dissimilarity
 
