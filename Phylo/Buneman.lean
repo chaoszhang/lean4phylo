@@ -60,7 +60,7 @@ J. Combinatorial Theory (B) **17** (1974) 48–50。
 * **★★ `Dissimilarity.shrinkDissimilarity`** —— 把 `δ'` 打包成 `Dissimilarity`
   （供归纳假设使用）。
 
-## ⬜ 形式化缺口（本文件的诚实边界）
+## ✅ T0.2 已完成（本文件的诚实边界已搬到别处）
 
 **目标定理**（Buneman 1974, Theorem 2；`HANDOVER.md` §4 的 T0.2 验收项）：
 
@@ -75,25 +75,34 @@ theorem Dissimilarity.exists_phylogram_of_fourPoint
 > `Cladogram.leaf_iff_degree_one` 把 `|X|` **钉死**成「度 `1` 顶点数」（每个度 `1` 顶点
 > 都必须是某个标签的像），而有限树只有两种可能：只有 `1` 个顶点（度 `0`，**没有**度 `1` 顶点）、
 > 或至少 `2` 片叶。故 **`|X| = 1` 时 `Phylogram X` 是空类型** ⇒ 无条件陈述恒假
-> （反例与完整证明：★★★ `Phylo.not_inductiveAssembly_of_subsingleton`，
-> 见 `Phylo/InductiveAssembly.lean`）。
+> （反例与完整证明：★★★ `Phylo.not_inductiveAssembly_without_card_hypothesis` +
+> ★★★ `Phylo.not_nonempty_phylogram_of_subsingleton`，见 `Phylo/InductiveAssembly.lean`）。
 > **`|X| = 0` 是合法的**（单顶点无边树），故条件写作 `≠ 1` 而**不是** `2 ≤ card`。
 
 **这不是学术开放问题**：Buneman 1974 已给出完整证明（Zaretskii 1965 亦有等价结果）。
-上面的算术核心（选极大三元组、加入 `t`、`δ'` 仍是满足四点条件的相异度、(2a)/(2b)）
-**已全部形式化**；剩下的只有**树的图手术 + 归纳装配**：
+✅ **2026-10-08 已完成（提交 `45ee01c`）** —— 三块凑齐：
 
-* **挂叶手术**：把 `Phylogram` 的一片叶（对应新点 `t`）改成内部顶点，再挂上两片新叶 `p,q`；
-  需要新增图论引理「树上挂两个悬挂点仍是树」+ 度数记账（`t` 由度 1 变度 3，
-  `no_degree_two`、`leaf_iff_degree_one` 保持）+ 唯一路径的边权和计算
-  （`dist` 沿「`p—t—…—x`」分解，用 `attach_left` / `attach_right`）；
-* **归纳**：对 `Fintype.card` 强归纳（基例 `|Y| = 2`：一条边；`|Y| = 3`：三点星形；
-  `|Y| = 0`：单顶点树。**不能**写 `|Y| ≤ 3` —— 它含 `|Y| = 1` 这一不可能情形），
-  每步用上面的手术 + 上面的算术核心。
+* **算术核心** = 本文件（选极大三元组、加入 `t`、`δ'` 仍是满足四点条件的相异度、(2a)/(2b)）；
+* **挂叶图手术** = `Phylo/BunemanGraft.lean`（1117 行，**已登记**）：`graftGraph` ·
+  ★★★ `graftGraph_isTree` · ★★★ `graftPhylogram` · 完整的 `dist` 记账
+  （★★★ `graftPhylogram_dist_leaf_p/_q/_pq/_old`）；
+* **归纳装配** = `Phylo/InductiveAssembly.lean`（461 行，**已登记**）：
+  ★★★ `Phylo.inductiveAssembly` —— 即 `Dissimilarity.InductiveAssembly X` **本身已是定理**
+  （`def` 保留为可复用的命题名，形制同 `Phylo.BinarySplitsMaximal`）。
+  另给**更强**的形式 ★★★ `Phylo.exists_realizingPhylogram_of_card_ne_one`
+  （**不需要** `PositiveDefinite`）与齐 `hpos` 的无条件收口
+  `Phylo.exists_phylogram_of_fourPoint'`。
 
-本文件把该装配登记为 `Dissimilarity.InductiveAssembly`（**显式假设**，
-与 `Phylo/Algorithm/NJ.lean` 的 `MaxZCherryCore` 同一房规）——
-**不使用 `sorry`**，库仍零 `sorry`，且依赖关系机器可查。
+⚠️ **归纳的基例是 `|Y| ∈ {0, 2}`**，**不是** `|Y| ≤ 3`：`|Y| = 1` **不合法**
+（`Phylogram Y` 是空类型），而 `|Y| = 3` **由归纳步覆盖**（收缩后 `BunemanShrink p q`
+的基数恰为 2）—— **无需单独造三点星**。
+
+⚠️ **本文件仍把装配登记为 `Dissimilarity.InductiveAssembly`**：那是 `def … : Prop` 的
+**命题名**（不是假设了）—— 定义与证明分离在 `Phylo/InductiveAssembly.lean` 里，
+因为 **`Buneman.lean` 不能 import 它**（会与 `BunemanGraft` → `Buneman` 成环）。
+调用者可写 `NJ.Dissimilarity.exists_phylogram_of_fourPoint δ hcard hFP hpos
+  (Phylo.inductiveAssembly X)` 得到无条件形式。
+**零 `sorry`**，库仍零 `sorry`，且依赖关系机器可查。
 -/
 
 noncomputable section
@@ -554,22 +563,25 @@ def shrinkDissimilarity (δ : Dissimilarity X) (p q r : X) :
 def ExistsRealizingPhylogram (δ : Dissimilarity X) : Prop :=
   ∃ T : Phylogram.{u, u} X, ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y
 
-/-- ⬜ **归纳装配（T0.2 的缺口，作为显式假设，不用 `sorry`）**。
+/-- ✅ **归纳装配**（T0.2 的缺口）—— **2026-10-08 已由 `Phylo/InductiveAssembly.lean` 的
+★★★ `Phylo.inductiveAssembly` 无条件证出**（提交 `45ee01c`）；本 `def` 保留为可复用的**命题名**
+（形制同 `Phylo/BinarySplitsMaximal`）。定义与证明分离在这里，是因为
+**本文件不能 import `Phylo/InductiveAssembly.lean`**（后者 import `BunemanGraft`，
+而 `BunemanGraft` import 本文件 —— 会成环）。
 
-Buneman 归纳证明（第 74–121 行）的**装配部分**：
+Buneman 归纳证明（第 74–121 行）的**装配内容**：
 
-1. 基例：`|Y| = 2`（一条边）、`|Y| = 3`（三点星形）、`|Y| = 0`（单顶点树）；
-2. 归纳步：取极大三元组 `(p,q,r)`，在 `Y ∖ {p,q} ∪ {t}` 上用归纳假设，
-   再把 `p,q` 作为**悬挂叶**挂到 `t` 上（边权 `ρ(p;q,r)`、`ρ(q;p,r)`）。
+1. 基例：`|Y| = 0`（单顶点树，★ `Phylo.exists_realizingPhylogram_of_isEmpty`）、
+   `|Y| = 2`（一条边，★★★ `Phylo.exists_realizingPhylogram_of_card_eq_two`）；
+2. 归纳步（`|Y| ≥ 3`）：取极大三元组 `(p,q,r)`，在 `Y ∖ {p,q} ∪ {t}` 上用归纳假设，
+   再把 `p,q` 作为**悬挂叶**挂到 `t` 上（`Phylo.graftPhylogram`，边权 `ρ(p;q,r)`、`ρ(q;p,r)`）。
+   ⚠️ **`|Y| = 3` 由此步覆盖**（收缩后 `BunemanShrink p q` 的基数恰为 2），**不需要三点星基例**。
 
 ⚠️ **量词必须排除单点类型**：`∀ {Y : Type u}` 含 `|Y| = 1`，而单点标签类型上
 `Phylogram Y` 是**空类型**（★★★ `Phylo.not_nonempty_phylogram_of_subsingleton`）
 ⇒ 不带 `Fintype.card Y ≠ 1` 的版本是**假命题**
-（★★★ `Phylo.not_inductiveAssembly_of_subsingleton`，均见 `Phylo/InductiveAssembly.lean`）。
-
-「挂两个悬挂叶」的**图手术**及其 `IsTree` / 度数 / `dist` 记账已在
-`Phylo/BunemanGraft.lean` 建立（`graftPhylogram` + `graftPhylogram_dist_leaf_*`）；
-形式与 `Phylo/Algorithm/NJ.lean` 的 `MaxZCherryCore` 一致：显式假设、零 `sorry`。
+（★★★ `Phylo.not_inductiveAssembly_without_card_hypothesis`，均见 `Phylo/InductiveAssembly.lean`）。
+**`|Y| = 0` 合法**，故条件是 `≠ 1` 而**不是** `2 ≤ card`。
 
 （第一个参数只用来**钉住宇宙** `u`：装配须对与 `X` 同宇宙的所有有限类型成立。） -/
 def InductiveAssembly (_X : Type u) : Prop :=
@@ -581,7 +593,11 @@ def InductiveAssembly (_X : Type u) : Prop :=
 在 `InductiveAssembly`（归纳装配，见其 docstring）下，
 `|X| ≠ 1` + 四点条件 + 正定 ⟹ 存在实现 `δ` 的 `Phylogram`。
 
-⚠️ `hcard` **不可省**：`|X| = 1` 时后件恒假（见 `InductiveAssembly` 的 docstring）。 -/
+⚠️ `hcard` **不可省**：`|X| = 1` 时后件恒假（见 `InductiveAssembly` 的 docstring）。
+
+✅ `hgap` 现在**总是可以无条件填入** ★★★ `Phylo.inductiveAssembly X`
+（`Phylo/InductiveAssembly.lean`，2026-10-08）⇒ 本定理的条件形式已被解除；
+该文件里的 `Phylo.exists_phylogram_of_fourPoint'` 就是齐 `hpos` 的无条件收口。 -/
 theorem exists_phylogram_of_fourPoint (δ : Dissimilarity X) (hcard : Fintype.card X ≠ 1)
     (hFP : δ.FourPoint) (hpos : δ.PositiveDefinite) (hgap : InductiveAssembly X) :
     δ.ExistsRealizingPhylogram :=
