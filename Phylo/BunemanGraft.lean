@@ -67,9 +67,42 @@ J. Combinatorial Theory (B) **17** (1974) 48–50，
   并证 `IsTree`、`leaf_iff_degree_one`、`no_degree_two`。
 * **★★ `Phylo.graftOldEdge_exists`** / **★★ `Phylo.graftOldEdge`** ——
   非挂边的旧边来源（用 ★★★ `Phylo.graftGraph_edgeSet_subset` + `Classical.choose`）。
-* **★★★ `Phylo.graftPhylogram`** —— **挂叶的 phylogram**：旧边沿用 `T'.w`，
-  两条新挂边取 `δ.rho p q r`、`δ.rho q p r`（第 94、119–121 行），非负性用
-  `Dissimilarity.rho_nonneg`。
+* **★★★ `Phylo.graftPhylogram`** —— **挂叶的 phylogram**：拓扑取
+  ★★★ `Phylo.graftCladogram`，权重取 ★★★ `Phylo.graftW`。
+* **★★★ `Phylo.graftW`** —— 定义在**具体类型** `Sym2 (T'.V ⊕ Fin 2)` 上的边权：
+  两条新挂边取 `δ.rho p q r`、`δ.rho q p r`（第 94、119–121 行），
+  旧边沿用 `T'.w`，其余取 `0`；**非负**由 ★★ `Phylo.graftW_nonneg` 给出
+  （`Dissimilarity.rho_nonneg` + `Phylogram.w_nonneg`）。
+
+**`dist` 记账（TASK 3）**
+
+* **★★★ `Phylogram.dist_eq_walkDist_of_isPath`** —— 树上 `dist` = **任一**简单路径的
+  加权长度（`dist` 由唯一路径定义，而树上简单路径唯一）。
+* **★★ `Phylogram.walkDist_cons`** / **★★ `Phylogram.walkDist_nil`** ——
+  `walkDist` 沿 `Walk.cons`／`Walk.nil` 的计算规则。
+* **★★★ `Phylo.graftW_new_left`** / **`graftW_new_right`** / **`graftW_map`** ——
+  三条边权计算：两条新挂边分别取 `ρ(p;q,r)`、`ρ(q;p,r)`；旧边的像取 `T'.wExt`。
+* **★★ `Phylo.graftW_not_left`** / **`graftW_not_right`** —— 旧边的像**不是**新挂边
+  （新挂边含 `Sum.inr`，旧边的像只含 `Sum.inl`）。
+* **★★ `Phylo.graftGraph_mem_edgeSet_map`** —— 旧边是挂叶图的边。
+* **★★★ `Phylo.graftPhylogram_wExt_eq`** —— `wExt` 与 `graftW` 的桥。
+* **★★★ `Phylo.graftPhylogram_wExt_old`** / **★★★ `Phylo.graftPhylogram_walkDist_map`** ——
+  旧路径的 `wExt`／`walkDist` 在挂叶后**不变**。
+* **★★★ `Phylo.graftPhylogram_dist_inl_inl`** —— **旧点到旧点的距离不变**：
+  `dist (inl u) (inl v) = T'.dist u v`。
+* **★★★ `Phylo.graftPhylogram_dist_new_left`** ——
+  `dist (inr 0) (inl v) = ρ(p;q,r) + T'.dist (T'.leaf t) v`（`p` 挂在 `t` 上）。
+* **★★★ `Phylo.graftPhylogram_dist_new_right`** ——
+  `dist (inr 1) (inl v) = ρ(q;p,r) + T'.dist (T'.leaf t) v`（`q` 挂在 `t` 上）。
+* **★★★ `Phylo.graftPhylogram_dist_new_new`** ——
+  `dist (inr 0) (inr 1) = ρ(p;q,r) + ρ(q;p,r)`（即 `δ(p,q)`）。
+
+**与 `Dissimilarity.attach_left` / `attach_right` 的关系**：上面前两条把 `p`、`q` 到旧叶的
+距离分解成「新挂边权 + `T'.dist (T'.leaf t) ·`」，而归纳假设给出
+`T'.dist (T'.leaf t) (T'.leaf (inl ⟨x,·,·⟩)) = δ'(t,x)`；把
+`Dissimilarity.attach_left`（`δ(x,p) = ρ(p;q,r) + δ'(t,x)`）逐点代入即得
+`dist (leaf x) (leaf p) = δ.val x p`（同 `attach_right`）。
+`Phylo.graftPhylogram_dist_new_new` 配合 `Dissimilarity.rho_add_rho` 给出 `δ(p,q)`。
 
 **`graftGraph_isTree` 的证法（已落地的路线）**：不直接做「环 → 桥」的图论论证，而是
 `SimpleGraph.isTree_iff_connected_and_card`：
@@ -89,13 +122,26 @@ J. Combinatorial Theory (B) **17** (1974) 48–50，
 `Set.ncard`，从而绕开 `Set.toFinset` 的 `Fintype` 实例不 defeq 的问题
 （同 `Phylo/InternalEdge.lean` 的 `degree_induce_eq_card_inter` 的教训）。
 
+`Cladogram.V` 是结构字段，`(graftCladogram …).V`／`(graftPhylogram …).V` 在
+`rw` 所用的低透明层下**不**归约，故本文件：(a) 把边权单独写成
+`graftW : Sym2 (T'.V ⊕ Fin 2) → ℝ`（TASK 3 的全部算术都在这个**具体类型**上做）；
+(b) 对 `graftCladogram`／`graftPhylogram` 加 `attribute [reducible]`；
+(c) 凡 `rw` 匹配失败处改用 `calc`＋`exact`（`exact` 在 `default` 透明层做 defeq）。
+
 ## ⬜ 诚实边界（本文件**不**声称的）
 
-* **⬜ `Phylo.graftPhylogram_dist`**（`dist` 记账：旧点到旧点不变；`p`、`q` 到旧点用
-  `Dissimilarity.attach_left` / `attach_right` 分解为
-  `ρ(p;q,r) + T'.dist (T'.leaf t) (T'.leaf x)`；`p`—`q` 距离为 `ρ + ρ`）——
-  **尚未**落地。★ `Phylo.graftPhylogram` 只给出**权重与拓扑**，
-  `Phylogram.dist`（沿唯一路径的边权和）的**计算**仍缺（本文件无 `sorry`、无 `axiom`）。
+* **⬜ `Phylo.graftPhylogram_dist_leaf`**（**标签层**的 `dist` 记账）——
+  **尚未**落地。本文件已把**顶点层**的全部记账做完
+  （★★★ `Phylo.graftPhylogram_dist_inl_inl`、★★★ `Phylo.graftPhylogram_dist_new_left`、
+  ★★★ `Phylo.graftPhylogram_dist_new_right`、★★★ `Phylo.graftPhylogram_dist_new_new`），
+  但要从顶点层升到标签层还差两块：
+  (i) ``Phylogram.dist`` 的**对称性** `dist u v = dist v u`（现有四条只覆盖
+  `inl—inl`、`inr 0—inl`、`inr 1—inl`、`inr 0—inr 1` 四个方向）；
+  (ii) 把 `T'.dist (T'.leaf t) (T'.leaf (Sum.inl ⟨x,·,·⟩))` 与
+  `Dissimilarity.attach_left`／`attach_right` 中的 `δ'(t,x)` 对上的
+  **归纳假设代入**（即把 `∀ a b, T'.dist (T'.leaf a) (T'.leaf b) = δ'.val a b`
+  作为假设，推出 `∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y`）。
+  本文件无 `sorry`、无 `axiom`。
 
 * **⬜ `Dissimilarity.InductiveAssembly` 与 `Phylo/Buneman.lean` 的缺口 —— 精确边界**：
 
@@ -128,6 +174,32 @@ open SimpleGraph
 
 universe u
 
+
+namespace Phylogram
+
+variable {X : Type*}
+
+/-- ★★★ 树上 `dist` 等于**任一**简单路径的加权长度（`dist` 由唯一路径定义，
+而树上简单路径唯一）。 -/
+theorem dist_eq_walkDist_of_isPath (T : Phylogram X) {u v : T.V} (w : T.graph.Walk u v)
+    (hw : w.IsPath) : T.dist u v = T.walkDist w := by
+  have h : (T.existsUnique_path u v).choose = w :=
+    ((T.existsUnique_path u v).choose_spec.2 w hw).symm
+  simp only [Phylogram.dist]
+  rw [h]
+
+/-- ★★ `Walk.cons` 的加权长度 = 首边权 + 尾 walk 的加权长度。 -/
+theorem walkDist_cons (T : Phylogram X) {u v w : T.V} (h : T.graph.Adj u v)
+    (p : T.graph.Walk v w) :
+    T.walkDist (SimpleGraph.Walk.cons h p) = T.wExt s(u, v) + T.walkDist p := by
+  simp only [Phylogram.walkDist, SimpleGraph.Walk.edges_cons, List.map_cons, List.sum_cons]
+
+/-- ★★ 平凡 walk 的加权长度为 `0`。 -/
+theorem walkDist_nil (T : Phylogram X) (u : T.V) :
+    T.walkDist (SimpleGraph.Walk.nil : T.graph.Walk u u) = 0 := by
+  simp only [Phylogram.walkDist, SimpleGraph.Walk.edges_nil, List.map_nil, List.sum_nil]
+
+end Phylogram
 namespace Phylo
 
 variable {V : Type*}
@@ -620,23 +692,334 @@ noncomputable def graftOldEdge (T' : Cladogram (BunemanShrink p q)) {e : Sym2 (T
   ⟨Classical.choose (graftOldEdge_exists T' he h0 h1),
     (Classical.choose_spec (graftOldEdge_exists T' he h0 h1)).1⟩
 
-/-- ★★★ **挂叶的 phylogram**：旧边沿用 `T'.w`，两条新挂边取
-`δ.rho p q r` 与 `δ.rho q p r`（Buneman 第 94、119–121 行）。
-非负性由 `Dissimilarity.rho_nonneg` 与 `Phylogram.w_nonneg` 给出。 -/
+/-- Old edges of `G` are edges of `graftGraph G t`. -/
+theorem graftGraph_mem_edgeSet_map (G : SimpleGraph V) (t : V) {e : Sym2 V}
+    (he : e ∈ G.edgeSet) :
+    Sym2.map (Sum.inl : V → V ⊕ Fin 2) e ∈ (graftGraph G t).edgeSet := by
+  revert he
+  refine Sym2.inductionOn e ?_
+  intro x y he
+  rw [SimpleGraph.mem_edgeSet] at he
+  rw [Sym2.map_mk, SimpleGraph.mem_edgeSet]
+  exact (graftGraph_adj_inl_inl).mpr he
+
+/-- ★★★ **挂叶边的原始权重函数**（定义在 `Sym2 (T'.V ⊕ Fin 2)` 上）。
+
+把它与 `Phylogram.w` 分开，是为了避开 `Cladogram.V` 投影
+（`(graftPhylogram …).V`）在 `rw`／`rfl` 的 `implicit` 透明层下不归约带来的摩擦：
+只要把「哪条边」说清楚，之后所有 `dist` 记账都在
+`Sym2 (T'.V ⊕ Fin 2)` 这个**具体类型**上做。
+
+两条新挂边取 `δ.rho p q r`、`δ.rho q p r`（Buneman 第 94、119–121 行），
+其余边（必是旧边的像，见 ★★ `Phylo.graftOldEdge`）取 `T'.w`。 -/
+noncomputable def graftW (δ : NJ.Dissimilarity Y) (p q r : Y)
+    (T' : Phylogram (BunemanShrink p q)) (e : Sym2 (T'.V ⊕ Fin 2)) : ℝ :=
+  if h0 : e = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) then δ.rho p q r
+  else if h1 : e = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 1) then δ.rho q p r
+  else if he : e ∈ (graftGraph T'.graph (T'.leaf (Sum.inr ()))).edgeSet then
+    T'.w (graftOldEdge T'.toCladogram he h0 h1)
+  else 0
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★ `graftW` **非负**（`Dissimilarity.rho_nonneg` + `Phylogram.w_nonneg`）。 -/
+theorem graftW_nonneg (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (T' : Phylogram (BunemanShrink p q)) (e : Sym2 (T'.V ⊕ Fin 2)) :
+    0 ≤ graftW δ p q r T' e := by
+  classical
+  rw [graftW]
+  split_ifs
+  · exact δ.rho_nonneg hfp p q r
+  · exact δ.rho_nonneg hfp q p r
+  · exact T'.w_nonneg _
+  · exact le_refl 0
+
+/-- ★★★ **挂叶的 phylogram**：拓扑来自 ★★★ `Phylo.graftCladogram`，
+权重来自 ★★★ `Phylo.graftW`（两条新挂边取 `ρ(p;q,r)`、`ρ(q;p,r)`，旧边沿用 `T'.w`；
+Buneman 第 94、119–121 行）。 -/
 noncomputable def graftPhylogram (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
     (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) : Phylogram Y where
   toCladogram := graftCladogram hpq T'.toCladogram
-  w := fun e =>
-    if h0 : e.1 = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) then δ.rho p q r
-    else if h1 : e.1 = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 1) then δ.rho q p r
-    else T'.w (graftOldEdge T'.toCladogram e.2 h0 h1)
-  w_nonneg := by
-    intro e
-    split_ifs with h0 h1
-    · exact δ.rho_nonneg hfp p q r
-    · exact δ.rho_nonneg hfp q p r
-    · exact T'.w_nonneg _
+  w := fun e => graftW δ p q r T' e.1
+  w_nonneg := fun e => graftW_nonneg δ hfp p q r T' e.1
+
+-- `V`／`graph` 投影需要能在 `reducible` 透明层归约，才能与
+-- `Sym2 (T'.V ⊕ Fin 2)` 上的陈述自由互转。
+attribute [reducible] graftCladogram graftPhylogram
+
+omit [Fintype Y] in
+/-- ★★★ **`wExt` 与 `graftW` 的桥**（`e` 是挂叶图的一条边）。 -/
+theorem graftPhylogram_wExt_eq (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) (e : Sym2 (T'.V ⊕ Fin 2))
+    (he : e ∈ (graftGraph T'.graph (T'.leaf (Sum.inr ()))).edgeSet) :
+    (graftPhylogram δ hfp p q r hpq T').wExt e = graftW δ p q r T' e := by
+  classical
+  rw [Phylogram.wExt, dite_eq_left he]
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★ 一条旧边的像**不等于**第一条新挂边。 -/
+theorem graftW_not_left (T' : Phylogram (BunemanShrink p q)) (e : Sym2 T'.V) :
+    Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e
+      ≠ s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) := by
+  intro h
+  have hmem : Sum.inr (0 : Fin 2) ∈ Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e :=
+    h ▸ Sym2.mem_mk_right _ _
+  rw [Sym2.mem_map] at hmem
+  obtain ⟨a, _, ha⟩ := hmem
+  exact absurd ha (by simp)
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★ 一条旧边的像**不等于**第二条新挂边。 -/
+theorem graftW_not_right (T' : Phylogram (BunemanShrink p q)) (e : Sym2 T'.V) :
+    Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e
+      ≠ s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 1) := by
+  intro h
+  have hmem : Sum.inr (1 : Fin 2) ∈ Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e :=
+    h ▸ Sym2.mem_mk_right _ _
+  rw [Sym2.mem_map] at hmem
+  obtain ⟨a, _, ha⟩ := hmem
+  exact absurd ha (by simp)
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★★ 新挂边 `s(inl t, inr 0)` 的权重是 `ρ(p;q,r)`。 -/
+theorem graftW_new_left (δ : NJ.Dissimilarity Y) (p q r : Y)
+    (T' : Phylogram (BunemanShrink p q)) :
+    graftW δ p q r T' s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) = δ.rho p q r := by
+  rw [graftW, dite_eq_left rfl]
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★★ 新挂边 `s(inl t, inr 1)` 的权重是 `ρ(q;p,r)`。 -/
+theorem graftW_new_right (δ : NJ.Dissimilarity Y) (p q r : Y)
+    (T' : Phylogram (BunemanShrink p q)) :
+    graftW δ p q r T' s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 1) = δ.rho q p r := by
+  rw [graftW, dite_eq_right ?_, dite_eq_left rfl]
+  intro h
+  exact Fin.zero_ne_one (Sum.inr.inj (Sym2.congr_right.mp h)).symm
+
+omit [Fintype Y] [DecidableEq Y] in
+/-- ★★★ **旧边沿用 `T'` 的权重**：`graftW (Sym2.map inl e) = T'.wExt e`。 -/
+theorem graftW_map (δ : NJ.Dissimilarity Y) (p q r : Y) (T' : Phylogram (BunemanShrink p q))
+    (e : Sym2 T'.V) :
+    graftW δ p q r T' (Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e) = T'.wExt e := by
+  classical
+  by_cases he : e ∈ T'.graph.edgeSet
+  · have hmem : Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e
+        ∈ (graftGraph T'.graph (T'.leaf (Sum.inr ()))).edgeSet :=
+      graftGraph_mem_edgeSet_map T'.graph (T'.leaf (Sum.inr ())) he
+    rw [Phylogram.wExt, dite_eq_left he, graftW, dite_eq_right (graftW_not_left T' e),
+      dite_eq_right (graftW_not_right T' e), dite_eq_left hmem]
+    congr 1
+    refine Subtype.ext ?_
+    exact Sym2.map.injective Sum.inl_injective
+      (Classical.choose_spec (graftOldEdge_exists T'.toCladogram hmem
+        (graftW_not_left T' e) (graftW_not_right T' e))).2
+  · have hnotmem : ¬ (Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) e
+        ∈ (graftGraph T'.graph (T'.leaf (Sum.inr ()))).edgeSet) := by
+      intro hmem
+      rcases graftGraph_edgeSet_subset T'.graph (T'.leaf (Sum.inr ())) hmem with h | h
+      · obtain ⟨e', he', hmap⟩ := h
+        exact he (Sym2.map.injective Sum.inl_injective hmap ▸ he')
+      · exact h.elim (graftW_not_left T' e) (graftW_not_right T' e)
+    rw [Phylogram.wExt, dite_eq_right he, graftW, dite_eq_right (graftW_not_left T' e),
+      dite_eq_right (graftW_not_right T' e), dite_eq_right hnotmem]
 
 end Phyl
+
+section Dist
+
+open NJ.Dissimilarity
+
+variable {Y : Type u} [Fintype Y] [DecidableEq Y] {p q r : Y}
+
+omit [Fintype Y] in
+/-- ★★★ 挂叶图上**旧边**的 `wExt` 就是 `T'` 的 `wExt`。 -/
+theorem graftPhylogram_wExt_old (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) {u v : T'.V} (h : T'.graph.Adj u v) :
+    (graftPhylogram δ hfp p q r hpq T').wExt s(Sum.inl u, Sum.inl v) = T'.wExt s(u, v) := by
+  classical
+  have hmem : s(Sum.inl u, Sum.inl v)
+      ∈ (graftGraph T'.graph (T'.leaf (Sum.inr ()))).edgeSet :=
+    (SimpleGraph.mem_edgeSet _).mpr ((graftGraph_adj_inl_inl).mpr h)
+  rw [graftPhylogram_wExt_eq δ hfp p q r hpq T' _ hmem,
+    show s(Sum.inl u, Sum.inl v) = Sym2.map (Sum.inl : T'.V → T'.V ⊕ Fin 2) s(u, v) from rfl,
+    graftW_map]
+
+omit [Fintype Y] in
+/-- ★★★ **旧路径的加权长度不变**：把 `T'` 的 walk 沿 `Sum.inl` 搬进挂叶图，`walkDist` 不变。 -/
+theorem graftPhylogram_walkDist_map (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) {u v : T'.V}
+    (w : T'.graph.Walk u v) :
+    (graftPhylogram δ hfp p q r hpq T').walkDist
+        (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) w)
+      = T'.walkDist w := by
+  induction w with
+  | nil => rw [SimpleGraph.Walk.map_nil, Phylogram.walkDist_nil, Phylogram.walkDist_nil]
+  | cons h p ih =>
+      rw [SimpleGraph.Walk.map_cons, Phylogram.walkDist_cons, Phylogram.walkDist_cons, ih]
+      exact congrArg (fun x => x + T'.walkDist p) (graftPhylogram_wExt_old δ hfp _ _ _ hpq T' h)
+
+omit [Fintype Y] in
+/-- ★★★ **旧点到旧点的距离不变**。 -/
+theorem graftPhylogram_dist_inl_inl (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) (u v : T'.V) :
+    (graftPhylogram δ hfp p q r hpq T').dist (Sum.inl u) (Sum.inl v) = T'.dist u v := by
+  classical
+  set c := (T'.existsUnique_path u v).choose with hc
+  have hcp : c.IsPath := hc.symm ▸ (T'.existsUnique_path u v).choose_spec.1
+  have hpath : (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c).IsPath :=
+    SimpleGraph.Walk.IsPath.map (f := graftGraphHom T'.graph (T'.leaf (Sum.inr ())))
+      Sum.inl_injective hcp
+  rw [Phylogram.dist_eq_walkDist_of_isPath _ _ hpath]
+  exact (graftPhylogram_walkDist_map δ hfp p q r hpq T' c).trans
+    (Phylogram.dist_eq_walkDist_of_isPath T' c hcp).symm
+
+omit [Fintype Y] in
+/-- ★★★ **新叶 `p` 到旧叶的距离**：`dist (inr 0) (inl v) = ρ(p;q,r) + T'.dist t v`。 -/
+theorem graftPhylogram_dist_new_left (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) (v : T'.V) :
+    (graftPhylogram δ hfp p q r hpq T').dist (Sum.inr 0) (Sum.inl v)
+      = δ.rho p q r + T'.dist (T'.leaf (Sum.inr ())) v := by
+  classical
+  set c := (T'.existsUnique_path (T'.leaf (Sum.inr ())) v).choose with hc
+  have hcp : c.IsPath := hc.symm ▸ (T'.existsUnique_path _ v).choose_spec.1
+  have hstep : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Adj (Sum.inr 0)
+      ((graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ()))) :=
+    (graftGraph_adj_inr_inl).mpr rfl
+  have hpath : (SimpleGraph.Walk.cons hstep
+      (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c)).IsPath := by
+    rw [SimpleGraph.Walk.cons_isPath_iff]
+    refine ⟨SimpleGraph.Walk.IsPath.map (f := graftGraphHom T'.graph (T'.leaf (Sum.inr ())))
+      Sum.inl_injective hcp, ?_⟩
+    rw [SimpleGraph.Walk.support_map]
+    intro hmem
+    rw [List.mem_map] at hmem
+    obtain ⟨a, _, ha⟩ := hmem
+    exact absurd (show Sum.inl a = Sum.inr (0 : Fin 2) from ha) (by simp)
+  have hw : (graftPhylogram δ hfp p q r hpq T').wExt
+      s(Sum.inr (0 : Fin 2),
+        (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ()))) = δ.rho p q r := by
+    rw [show s(Sum.inr (0 : Fin 2),
+          (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ())))
+        = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) from Sym2.eq_swap,
+      graftPhylogram_wExt_eq δ hfp p q r hpq T' _
+        ((SimpleGraph.mem_edgeSet _).mpr ((graftGraph_adj_inl_inr).mpr rfl)),
+      graftW_new_left]
+  calc (graftPhylogram δ hfp p q r hpq T').dist (Sum.inr 0) (Sum.inl v)
+      = (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.cons hstep
+            (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c)) :=
+        Phylogram.dist_eq_walkDist_of_isPath _ _ hpath
+    _ = (graftPhylogram δ hfp p q r hpq T').wExt
+          s(Sum.inr (0 : Fin 2),
+            (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ())))
+        + (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c) :=
+        Phylogram.walkDist_cons _ hstep _
+    _ = δ.rho p q r + (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c) := by
+        rw [hw]
+    _ = δ.rho p q r + T'.walkDist c :=
+        congrArg (fun x => δ.rho p q r + x)
+          (graftPhylogram_walkDist_map δ hfp p q r hpq T' c)
+    _ = δ.rho p q r + T'.dist (T'.leaf (Sum.inr ())) v :=
+        congrArg (fun x => δ.rho p q r + x)
+          (Phylogram.dist_eq_walkDist_of_isPath T' c hcp).symm
+
+omit [Fintype Y] in
+/-- ★★★ **新叶 `q` 到旧叶的距离**：`dist (inr 1) (inl v) = ρ(q;p,r) + T'.dist t v`。 -/
+theorem graftPhylogram_dist_new_right (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) (v : T'.V) :
+    (graftPhylogram δ hfp p q r hpq T').dist (Sum.inr 1) (Sum.inl v)
+      = δ.rho q p r + T'.dist (T'.leaf (Sum.inr ())) v := by
+  classical
+  set c := (T'.existsUnique_path (T'.leaf (Sum.inr ())) v).choose with hc
+  have hcp : c.IsPath := hc.symm ▸ (T'.existsUnique_path _ v).choose_spec.1
+  have hstep : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Adj (Sum.inr 1)
+      ((graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ()))) :=
+    (graftGraph_adj_inr_inl).mpr rfl
+  have hpath : (SimpleGraph.Walk.cons hstep
+      (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c)).IsPath := by
+    rw [SimpleGraph.Walk.cons_isPath_iff]
+    refine ⟨SimpleGraph.Walk.IsPath.map (f := graftGraphHom T'.graph (T'.leaf (Sum.inr ())))
+      Sum.inl_injective hcp, ?_⟩
+    rw [SimpleGraph.Walk.support_map]
+    intro hmem
+    rw [List.mem_map] at hmem
+    obtain ⟨a, _, ha⟩ := hmem
+    exact absurd (show Sum.inl a = Sum.inr (1 : Fin 2) from ha) (by simp)
+  have hw : (graftPhylogram δ hfp p q r hpq T').wExt
+      s(Sum.inr (1 : Fin 2),
+        (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ()))) = δ.rho q p r := by
+    rw [show s(Sum.inr (1 : Fin 2),
+          (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ())))
+        = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 1) from Sym2.eq_swap,
+      graftPhylogram_wExt_eq δ hfp p q r hpq T' _
+        ((SimpleGraph.mem_edgeSet _).mpr ((graftGraph_adj_inl_inr).mpr rfl)),
+      graftW_new_right]
+  calc (graftPhylogram δ hfp p q r hpq T').dist (Sum.inr 1) (Sum.inl v)
+      = (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.cons hstep
+            (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c)) :=
+        Phylogram.dist_eq_walkDist_of_isPath _ _ hpath
+    _ = (graftPhylogram δ hfp p q r hpq T').wExt
+          s(Sum.inr (1 : Fin 2),
+            (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) (T'.leaf (Sum.inr ())))
+        + (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c) :=
+        Phylogram.walkDist_cons _ hstep _
+    _ = δ.rho q p r + (graftPhylogram δ hfp p q r hpq T').walkDist
+          (SimpleGraph.Walk.map (graftGraphHom T'.graph (T'.leaf (Sum.inr ()))) c) := by
+        rw [hw]
+    _ = δ.rho q p r + T'.walkDist c :=
+        congrArg (fun x => δ.rho q p r + x)
+          (graftPhylogram_walkDist_map δ hfp p q r hpq T' c)
+    _ = δ.rho q p r + T'.dist (T'.leaf (Sum.inr ())) v :=
+        congrArg (fun x => δ.rho q p r + x)
+          (Phylogram.dist_eq_walkDist_of_isPath T' c hcp).symm
+
+omit [Fintype Y] in
+/-- ★★★ **两片新叶之间的距离**：`dist (inr 0) (inr 1) = ρ(p;q,r) + ρ(q;p,r) = δ(p,q)`。 -/
+theorem graftPhylogram_dist_new_new (δ : NJ.Dissimilarity Y) (hfp : δ.FourPoint) (p q r : Y)
+    (hpq : p ≠ q) (T' : Phylogram (BunemanShrink p q)) :
+    (graftPhylogram δ hfp p q r hpq T').dist (Sum.inr 0) (Sum.inr 1)
+      = δ.rho p q r + δ.rho q p r := by
+  classical
+  have h0 : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Adj
+      (Sum.inr 0) (Sum.inl (T'.leaf (Sum.inr ()))) := (graftGraph_adj_inr_inl).mpr rfl
+  have h1 : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Adj
+      (Sum.inl (T'.leaf (Sum.inr ()))) (Sum.inr 1) := (graftGraph_adj_inl_inr).mpr rfl
+  have hnil : (SimpleGraph.Walk.nil : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Walk
+      (Sum.inr 1) (Sum.inr 1)).IsPath := by
+    rw [SimpleGraph.Walk.isPath_def, SimpleGraph.Walk.support_nil]
+    exact List.nodup_singleton _
+  have hcons : (SimpleGraph.Walk.cons h1
+      (SimpleGraph.Walk.nil : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Walk
+        (Sum.inr 1) (Sum.inr 1))).IsPath := by
+    rw [SimpleGraph.Walk.cons_isPath_iff]
+    exact ⟨hnil, by rw [SimpleGraph.Walk.support_nil]; exact fun h => absurd h (by simp)⟩
+  have hpath : (SimpleGraph.Walk.cons h0 (SimpleGraph.Walk.cons h1
+      (SimpleGraph.Walk.nil : (graftGraph T'.graph (T'.leaf (Sum.inr ()))).Walk
+        (Sum.inr 1) (Sum.inr 1)))).IsPath := by
+    rw [SimpleGraph.Walk.cons_isPath_iff]
+    refine ⟨hcons, ?_⟩
+    rw [SimpleGraph.Walk.support_cons, SimpleGraph.Walk.support_nil]
+    intro hmem
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hmem
+    rcases hmem with h | h <;> exact absurd h (by simp)
+  have hw0 : (graftPhylogram δ hfp p q r hpq T').wExt
+      s(Sum.inr (0 : Fin 2), Sum.inl (T'.leaf (Sum.inr ()))) = δ.rho p q r := by
+    rw [show s(Sum.inr (0 : Fin 2), Sum.inl (T'.leaf (Sum.inr ())))
+        = s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr 0) from Sym2.eq_swap,
+      graftPhylogram_wExt_eq δ hfp p q r hpq T' _
+        ((SimpleGraph.mem_edgeSet _).mpr ((graftGraph_adj_inl_inr).mpr rfl)),
+      graftW_new_left]
+  have hw1 : (graftPhylogram δ hfp p q r hpq T').wExt
+      s(Sum.inl (T'.leaf (Sum.inr ())), Sum.inr (1 : Fin 2)) = δ.rho q p r := by
+    rw [graftPhylogram_wExt_eq δ hfp p q r hpq T' _
+        ((SimpleGraph.mem_edgeSet _).mpr ((graftGraph_adj_inl_inr).mpr rfl)),
+      graftW_new_right]
+  rw [Phylogram.dist_eq_walkDist_of_isPath _ _ hpath, Phylogram.walkDist_cons,
+    Phylogram.walkDist_cons, Phylogram.walkDist_nil, hw0, hw1, add_zero]
+
+end Dist
 
 end Phylo
