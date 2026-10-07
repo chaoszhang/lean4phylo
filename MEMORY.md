@@ -47,10 +47,7 @@ wsl -e bash -lc 'cd ~/nj-lean && cp /mnt/c/Users/ASTER/WorkBuddy/Project/lean/NJ
   - “局部 quartet 分裂 ui|vj ⟹ z(u,i)≥z(u,v)”——假（局部信息不够，需全局耦合）。
   - “(u,v) 非樱桃 ⟹ ∃m, z(u,m)>z(u,v)”——假。
 - 标准证明（Weller 2023「leaf-status」/ Pachter–Sturmfels 定理 2.38 / MLP 2006）都**显式用树**：取中心节点 c、沿路径的 leaf-status 单调性、子树内必存在樱桃、递归到更大 z 的对。
-- **结论**：纯度量（Route A，仅用 FourPoint）的干净证明尚未找到，且标准证明依赖树结构；Route B（引入 `WeightedTree`）需要 Buneman 存在性（四点条件 ⟹ 存在实现树）这个**前置**。
-  > 🔧 **2026-10-07 修正**：原文把 Buneman 存在性称作「独立大定理」、把他处把 `MaxZCherryCore` 称作「open problem」——**措辞错误**。
-  > 两者都是**经典已证定理**（Buneman 1971；NJ 正确性见 Studier–Keppler 1988、Weller 2023）。
-  > 准确定性是「**形式化缺口**」，不是数学开放问题。
+- **结论**：纯度量（Route A，仅用 FourPoint）的干净证明尚未找到，且标准证明依赖树结构；Route B（引入 `WeightedTree`）需要 Buneman 存在性（四点条件 ⟹ 存在实现树），这是一个独立大定理。
 - Mathlib **无** 系统发生/树度量 API（只有 `SimpleGraph` 树）。
 
 ## 参考文献
@@ -209,7 +206,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `Phylo/Split.lean` → **784 行**；`lake build` 1260 jobs；无 sorry
 - **路线（下一步）**：**「相容 ⟹ 存在树」的标准构造** ——
   1. 固定 `ρ`，取 Σ 的规范 cluster 族 `{s.cluster ρ}`（**全部避开 `ρ`，故两两镶嵌**：`laminar_of_compatible_clusters` 已证）。
-  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；父 = 最小严格包含者（`IsParentOf` 已落地）。  
+  2. 在**镶嵌族**上建树：顶点 = 簇（+ 元素）；父 = 最小严格包含者（`IsParentOf` 已落地）。
   3. 证 `Σ(T) = 规范 cluster 诱导的 split 集`。  
      （替代路线：Semple–Steel 的**劈顶点引理** —— 存在顶点 `v` 使 `T∖v` 各连通块叶集 ⊂ A 或 ⊂ B；染色 + 极值点。）
 - **⚠️⚠️ 设计卡点（2026-10-06）：连通性需根 vs `no_degree_two`** —— **已定位根因并攻下大半（2026-10-06 晚）**：
@@ -259,7 +256,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **背景**：「相容 ⟹ 存在树」遇设计卡点 → **老师决定「暂缓此线，转其它」**。
 - **✅ 新建 `Phylo/Quartet.lean`（185 行，无 sorry）**：
   - `Quartet X := {S : Finset X // S.card = 4}`（**`abbrev` 而非 `def`** → 自动获得 `Fintype`/`DecidableEq`）· `TripletSet X := {S // S.card = 3}`
-  - **`Topology S := Split ↥S`** —— §3.5 的统一形式（quartet 2\|2 与 triplet 2\|1 同一构造）
+  - **`Topology S := Split ↥S`** —— §3.5 的统一形式（quartet 2|2 与 triplet 2|1 同一构造）
   - `QuartetTopology` / `TripletTopology`（`structure`：`supp` + `card_supp` + `top`）
   - `Quartet.card_eq` / `nonempty` · `TripletSet.card_eq` / `nonempty`
   - **`Topology.swap` + `swap_swap`**（无序性 `ab|cd = cd|ab` 所需）· `QuartetTopology.swap` / `TripletTopology.swap` + `swap_swap`
@@ -274,6 +271,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 ## M4 完成 + M5 起步（2026-10-06，老师「先B再A」）
 
 ### B：M4 续 —— display + ★ Colonius–Schultze 推理规则 ✅
+
 - **`Phylo/Split.lean` 新地基**：
   - **★ `Split.compatible_iff_subset`**（相容的**嵌套形式**：一侧含于另一侧）—— 推理规则的支点
   - `Split.mem_sideA_of_not_mem_sideB` / `mem_sideB_of_not_mem_sideA`
@@ -286,6 +284,7 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
   - `Cladogram.DisplaysTopology` + `QuartetCompatible`（**存在性命题**，非判据 —— §3.11 NP-complete）
 
 ### A：M5 起步 —— cherry + RF ✅
+
 - **`Phylo/Split.lean`**：**`KPartition.eq_iff_parts` + `instDecidableEqKPartition`**
   - ⚠️ **坑**：`deriving DecidableEq` 会报「synthesized instance not definitionally equal」（与 `[DecidableEq α]` 参数冲突）→ **必须手写实例**（`decidable_of_iff (a.parts = b.parts) (eq_iff_parts a b).symm`，注意 `.symm` 方向！）
   - 有了它 `Finset (Split α)` 才能做 `\` / `∪` / `card`
@@ -295,46 +294,45 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **⬜ 剩**：**cherry 存在性**（「每棵树有 cherry」—— 直径 + 分支论证：取最长路径、端点叶 x,y，`u`=x 的邻居，若 `u` 有非叶子邻居 z 则分支内叶 c 满足 `dist(c,y) = dist(c,u)+dist(u,y) > dist(x,y)` 矛盾；故 `u` 邻接叶 z ⇒ `{x,z}` 是 cherry）· NJ · UPGMA · KF / BHV · NNI / SPR
 
 ### A+：M5 —— ★ **每棵树都有 cherry** 证出来了 ✅
-- **★ 主定理 `Cladogram.exists_isCherry (hV : 3 ≤ Fintype.card T.V) : ∃ a b : X, T.IsCherry a b`**
+
+- **★ 主定理 `Cladogram.exists_isCherry (hV : 3 ≤ Fintype.card T.V) : ∃ a b : X, T.IsCherry a b`**  
   —— NJ / UPGMA 等贪心归约算法的起点。
 - **证法：纯组合计数（完全不用距离！）** —— 比「直径 + 最长路径」路线好形式化得多：
-  - **上界 `card_leafFinset_le_internalFinset`（无 cherry ⟹ `ℓ ≤ i`）**：
-    「叶 ↦ 其唯一邻居」是**单射**（否则两叶共邻居 = cherry），且落点都是**内部顶点**
+  - **上界 `card_leafFinset_le_internalFinset`（无 cherry ⟹ `ℓ ≤ i`）**：  
+    「叶 ↦ 其唯一邻居」是**单射**（否则两叶共邻居 = cherry），且落点都是**内部顶点**  
     （由 `eq_or_eq_of_adj_of_degree_eq_one`：叶–叶相邻 ⟹ 树只有 2 顶点，故 `|V| ≥ 3` 时不可能）。
-  - **下界 `internalFinset_card_add_two_le_leafFinset_card`（`i + 2 ≤ ℓ`）**：
+  - **下界 `internalFinset_card_add_two_le_leafFinset_card`（`i + 2 ≤ ℓ`）**：  
     握手引理 `sum_degrees_eq_twice_card_edges` + `IsTree.card_edgeFinset`（`|E| = n-1`）
-    + **`three_le_degree_of_not_isLeaf`（内部顶点度 ≥ 3）** + `ℓ + i = |V|` ⟹ `ℓ ≥ i + 2`。
+    - **`three_le_degree_of_not_isLeaf`（内部顶点度 ≥ 3）** + `ℓ + i = |V|` ⟹ `ℓ ≥ i + 2`。
   - 两者矛盾（`omega`）。
 - 辅助：`leafFinset` / `internalFinset`（叶集与内部点集）· `three_le_degree_of_not_isLeaf` · `eq_or_eq_of_adj_of_degree_eq_one` · `not_isLeaf_of_adj_of_isLeaf` · `adj_leafNb` · `leafNb`
 - `lake build` → **1264 jobs**；无 sorry（`Phylo/Algorithm/Cherry.lean` **217 行**）
 - **⬜ 剩**：NJ 本体（用 cherry 归约 + 四点的 `z := δₓᵧ + ...` 极大性）· UPGMA · KF / BHV · NNI / SPR
 
 ### A++：M5 —— NJ 代数层移植 + ★ `four_point_z_iff` ✅
+
 - **`Phylo/Algorithm/NJ.lean`（311 行，零 sorry）** —— 把旧 `NJ/Cherry.lean` 的 `Dissimilarity` 框架**移植进主库**并加新引理：
   - 定义：`Dissimilarity` / `FourPoint`（四点条件）/ `IsCherry`（**度量**樱桃）/ `S` / `Q`（Q-判据）/ `ell` / `z` / `rho`
   - 已证：`triangle`（四点 ⟹ 三角不等式）· `fourpoint_not_unique_max` · `fourpoint_eq_of_lt` · `rho_nonneg` · `ell_eq_sum_rho` · **`ell_comm` / `z_comm`（本轮新增）**
   - **★ `Q_eq_neg_two_ell`**：`Q = -2(δ+ℓ)` ⟹ 最小化 Q ⟺ 最大化 `z`
   - **★ `two_mul_z`**：`2z(i,j) = S(i)+S(j)+(2-n)δ(i,j)` —— z 不等式全化为线性不等式
   - **★ `z_hinge`**：门控恒等式（把 z 不等式翻译成四点和不等式）
-  - **★★ `four_point_z_iff`（本轮新增）**：`n ≥ 4` 时「四点和 `P` 最小」**⟺**「`z` 的和最大」
+  - **★★ `four_point_z_iff`（本轮新增）**：`n ≥ 4` 时「四点和 `P` 最小」**⟺**「`z` 的和最大」  
     —— **z 最大性与 quartet 分裂的精确字典**（NJ 硬核证明的代数骨架；`z_hinge` + 系数 `(2-n)/2 < 0` 直接给出）
-- **⚠️⚠️ 诚实边界（重要）**：**NJ 硬核 `max_z_cherry_core` 是「形式化缺口」而非「数学开放问题」**：
-  > 🔧 **2026-10-07 修正**：原文写作「**是 open problem**」——**措辞错误，已纠正**。
-  > NJ 正确性**早已证明**：Studier–Keppler (1988) 给出首个正确证明（并指出 Saitou–Nei 1987 原证明有误）、
-  > Weller (2023) 用 *leaf-status* 极简重证、Mihaescu–Levy–Pachter (2009) 亦有。
-  > 缺口只在**本库尚未形式化**其前置「实现树 / Buneman 存在性」（Buneman 1971 经典定理）。
+- **⚠️⚠️ 诚实边界（重要）**：**NJ 硬核 `max_z_cherry_core` 是 open problem**（`ROADMAP.md` §0.1 已记录）：
   - 「`z` 最大性是**全局**的（涉及所有行和 `S`），quartet 分裂是**局部**的」
   - 标准证明（Weller 2023 *leaf-status* / Pachter–Sturmfels Thm 2.38 / MLP 2006）**都显式用实现树**，即需要 **Buneman 存在性**
   - 纯度量路线（只用 `FourPoint`）**尚缺干净证明**；数值上随机 4000 棵正权树无界点
-  - **本库的处理**：`MaxZCherryCore` 定义为**显式 `Prop` 假设**（**不用 `sorry`** ⟹ 库仍零 sorry），
+  - **本库的处理**：`MaxZCherryCore` 定义为**显式 `Prop` 假设**（**不用 `sorry`** ⟹ 库仍零 sorry），  
     `nj_cherry` 表述为「**假设硬核 ⟹ NJ 樱桃引理**」—— 诚实且依赖关系可见
-  - **解锁路径**：**解锁 Buneman 存在性（四点条件 ⟹ 存在实现树）= 解锁 NJ 硬核**。而 Buneman 卡在
+  - **解锁路径**：**解锁 Buneman 存在性（四点条件 ⟹ 存在实现树）= 解锁 NJ 硬核**。而 Buneman 卡在  
     「连通性需根 vs `no_degree_two`」的设计问题（见上文 M2 卡点）。**两者是同一个瓶颈。**
 - **旧 `NJ/Cherry.lean` 保留**（`CONCEPTS.md` §「库与算法分离」：新库 `Phylo/` 通用，`NJ/` 作为算法应用独立保留）
 
 ## 连续推进批次（2026-10-06 晚，老师「自主决策、只 commit 不 push」）
 
 ### ✅ 已完成
+
 1. **`Iso.trans`**（`Phylo/Core.lean`）—— 同构传递性，`Iso` 构成等价关系（M1 欠账）+ `trans_apply`
 2. **`Phylo/Distance.lean`（新）** —— `symmDiffCard` 通用对称差距离 + 度量三性质；`Split.rfDistance` 改为其 abbrev（去重复）
 3. **`Phylo/Algorithm/UPGMA.lean`（新）** —— `Dissimilarity.Ultrametric` + **★ `ball_trans`（`≤ r` 是等价关系，分层聚类核心）** + `le_of_le`（等腰性）/ `eq_of_lt` / `ultrametric_triangle`
@@ -345,7 +343,8 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 6. **★★ 连通性（`Phylo/Laminar.lean`）** —— 「相容 ⟹ 存在树」的地基
 
 ### ★★ 连通性：关键发现与修复
-- **发现真问题**：`laminarGraph F` 的顶点是**所有** `Finset α`（族外者孤立）⟹ **图不连通**！
+
+- **发现真问题**：`laminarGraph F` 的顶点是**所有** `Finset α`（族外者孤立）⟹ **图不连通**！  
   → 新增 **`LaminarVertex F := ↥F ⊕ α`**（族成员 + 元素）与 **`treeGraph F`**（经 `coerceV` 复用 `laminarAdj`，无重复定义）
 - 新增 `instance instFintypeFinset : Fintype (Finset α)`（**本版 Mathlib 未提供**）+ `Fintype ↥F` 由 `⟨F.attach, Finset.mem_attach F⟩` 构造
 - **★ `exists_isMinClusterOf`**：含 `x` 的最小簇存在（含 `x` 的族成员中 `card` 最小者，用 `Finset.exists_mem_eq_sup` + `Finset.eq_of_subset_of_card_le`）
@@ -355,8 +354,9 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - `lake build` **1321 jobs**，无 sorry，`Laminar.lean` **614 行**
 
 ### ⬜ 剩余（isTree 的最后一步 + 后续）
-- **数边数**：`Nat.card (treeGraph F).edgeSet = (F.card - 1) + Fintype.card α`
-  （`|F| - 1` 条父边 —— 每个非根簇恰一条父边，`parentOf` 严格增卡保证不重；`|α|` 条叶边 —— 每个元素恰一条）；
+
+- **数边数**：`Nat.card (treeGraph F).edgeSet = (F.card - 1) + Fintype.card α`  
+  （`|F| - 1` 条父边 —— 每个非根簇恰一条父边，`parentOf` 严格增卡保证不重；`|α|` 条叶边 —— 每个元素恰一条）；  
   再用 **`SimpleGraph.isTree_iff_connected_and_card`** ⟹ `IsTree`
 - 替代路线：`IsAcyclic` 用**唯一父（rank 势函数）+ 无环论证**，或 `isAcyclic_iff_forall_adj_isBridge`
 - 之后：**① `univ` 的度**（`deg = m + |U|`，两种退化子情形）· **③ `Σ(树) = 规范 cluster 集`** · 再把 `three_le_degree_of_ne_univ` 从全图**移植到 `treeGraph`**（度数相同）
@@ -376,22 +376,24 @@ Weller 2023 (arXiv:2305.18866, leaf-status); Pachter–Sturmfels, *Algebraic Sta
 - **★★★ `isTree_treeGraph`**：`IsTree` —— 上界由满射、下界由 `Connected.card_vert_le_card_edgeSet_add_one` 夹出，最后 `isTree_iff_connected_and_card`
 
 ### ⬜ 剩余（「相容 ⟹ 存在树」的最后两块）
+
 1. **`univ` 的度** —— **精确刻画 `deg(univ) = |孩子| + |直接元素|`**（`univ` 无父）：
    - 邻居 = **极大簇**（`IsChildOf F univ`）∪ **未覆盖元素** `{x | IsMinClusterOf F x univ}`
    - **本轮已证**：`Sum.inr x` 度 = 1 ✓ · **非 `univ` 簇度 ≥ 3** ✓（见下）
    - **⬜ 待证**：`deg(univ)`。**已于 2026-10-06 尝试两种方案均差临门一脚**：
-     - **方案 A（双射）**：`rootIdx F := (kids.image Sum.inl) ∪ (dirs.image Sum.inr) : Finset (Finset α ⊕ α)`
-       （*kids 与 dirs 类型不同，无法直接 `∪`，故用 `Sum` 统一编码*）+ `rootVOf : Finset α ⊕ α → LaminarVertex F`
-       （`Sum.inl B ↦ if B ∈ F then Sum.inl ⟨B,h⟩ else root`）。**坑**：`rootVOf_injOn` 里
+     - **方案 A（双射）**：`rootIdx F := (kids.image Sum.inl) ∪ (dirs.image Sum.inr) : Finset (Finset α ⊕ α)`  
+       （*kids 与 dirs 类型不同，无法直接 `∪`，故用 `Sum` 统一编码*）+ `rootVOf : Finset α ⊕ α → LaminarVertex F`  
+       （`Sum.inl B ↦ if B ∈ F then Sum.inl ⟨B,h⟩ else root`）。**坑**：`rootVOf_injOn` 里  
        `rw [rootVOf, dif_pos ...]` 对 `Sum.inl B₂` 不生效（需先 `cases`/`split_ifs`）。
      - **方案 B（三元素）**：同 `three_le_degree_treeGraph`，但需 4 种情况（|kids| = 0/1/2/≥3 配 |dirs|）—— 啰嗦但可靠。
-   - **数学结论**：`m + |U| ≤ 2` 的退化情形（`m` = 极大簇数、`U` = 未覆盖元素数）需**合并 `univ` 与某簇**，
+   - **数学结论**：`m + |U| ≤ 2` 的退化情形（`m` = 极大簇数、`U` = 未覆盖元素数）需**合并 `univ` 与某簇**，  
      或直接**一般 `suppress`**。
 2. **`Σ(树) = 规范 cluster 集`** —— 收口 Buneman 存在性 / NJ 硬核
-3. **`leaf_iff_degree_one`** —— 正向（`Sum.inr x`）由 `degree_inr_eq_one` ✓；
+3. **`leaf_iff_degree_one`** —— 正向（`Sum.inr x`）由 `degree_inr_eq_one` ✓；  
    反向（度 1 ⟹ 是叶的像）需 `Sum.inl A` 的度 ≠ 1，由非 `univ` 的 ≥ 3 与 `univ` 的 ≥ 2 给出。
 
 ### ✅ 2026-10-06 深夜续：度条件（`no_degree_two` 的大部分）
+
 - **`neighborFinset_inr` + `degree_inr_eq_one`**：元素 `Sum.inr x` 的邻居恰为 `{Sum.inl 最小簇}` ⟹ 度 = 1 ✓
 - **★ `three_le_degree_treeGraph`**：非 `univ` 簇（且 `|A| ≥ 2`）度 ≥ 3 ✓
   - **「三元素」方案**：显式构造父 + 两个孩子（或孩子+元素、或两个元素）三个**互异**邻居
@@ -408,52 +410,58 @@ noncomputable def toCladogram (hl : LaminarFamily F) (hne : ∀ B ∈ F, B.Nonem
     (hroot : 3 ≤ |univ 的孩子| + |univ 的直接元素|) : Cladogram α
 ```
 
-**所有字段都填上了**：`V := LaminarVertex F` · `graph := treeGraph F` · `leaf := Sum.inr`
+**所有字段都填上了**：`V := LaminarVertex F` · `graph := treeGraph F` · `leaf := Sum.inr`  
 · `isTree` · `no_degree_two` · `leaf_iff_degree_one` · `decAdj := Classical.decRel _`
 
 **完整链条**（本批新增，全部零 sorry）：
-| 引理 | 内容 |
-|---|---|
-| `neighborFinset_inr` / `degree_inr_eq_one` | 元素的邻居 = 最小簇，**度 = 1** |
-| **★ `three_le_degree_treeGraph`** | 非 `univ` 簇度 **≥ 3**（三元素方案：父 + 两个孩子/元素） |
-| `kidVOf` + **★ `three_le_degree_rootV`** | 根 `univ` 度 **≥ 3**（`if B ∈ F` 嵌入 + `dif_pos` 展开；取 `min |kids| 3` 个孩子 + `3 - min |kids| 3` 个元素） |
-| **★★ `no_degree_two_treeGraph`** | 无度 2 顶点（三种顶点分治） |
-| **★★★ `toCladogram`** | 组装成 `Cladogram` |
 
-**⚠️ 四个假设（诚实记录）**：`F` 镶嵌 · `univ ∈ F` · 族元素非空 · `F` 已正规化（无单元素簇）· **根非退化 `|kids(univ)| + |dirs(univ)| ≥ 3`**。
+| 引理                                         | 内容                                                      |      |                 |      |          |
+| ------------------------------------------ | ------------------------------------------------------- | ---- | --------------- | ---- | -------- |
+| `neighborFinset_inr` / `degree_inr_eq_one` | 元素的邻居 = 最小簇，**度 = 1**                                   |      |                 |      |          |
+| **★ `three_le_degree_treeGraph`**          | 非 `univ` 簇度 **≥ 3**（三元素方案：父 + 两个孩子/元素）                  |      |                 |      |          |
+| `kidVOf` + **★ `three_le_degree_rootV`**   | 根 `univ` 度 **≥ 3**（`if B ∈ F` 嵌入 + `dif_pos` 展开；取 \`min | kids | 3`个孩子 +`3 - min | kids | 3\` 个元素） |
+| **★★ `no_degree_two_treeGraph`**           | 无度 2 顶点（三种顶点分治）                                         |      |                 |      |          |
+| **★★★ `toCladogram`**                      | 组装成 `Cladogram`                                         |      |                 |      |          |
+
+**⚠️ 四个假设（诚实记录）**：`F` 镶嵌 · `univ ∈ F` · 族元素非空 · `F` 已正规化（无单元素簇）· **根非退化 `|kids(univ)| + |dirs(univ)| ≥ 3`**。  
 最后一个对应 `MEMORY.md` 早先记录的「`deg(univ) = 2` 退化情形」（需合并 `univ` 与某簇）。
 
 **⬜ 剩余**：① 退化情形（合并 `univ` 与某簇）· ② `Σ(toCladogram F) = 规范 cluster 集`（收口 Bunatic/NJ）· ③ `leaf_iff_degree_one` 已随 `toCladogram` 完成 ✓
 
 ## 🟢 表示层落实（2026-10-06 深夜，老师定："怎么简单怎么来"）
 
-> 老师原话：**「证明的话怎么简单怎么来，但表示无根树肯定采取 degree=3 的形式，或者说所有内部节点 degree
+> 老师原话：**「证明的话怎么简单怎么来，但表示无根树肯定采取 degree=3 的形式，或者说所有内部节点 degree  
 > 都是 3，表示有根树可以弄个带 root 叶节点的无根树，也可选择与它 isomorphic」**
 
 ### `Phylo/Core.lean` 新增
-| 实体 | 内容 |
-|---|---|
-| **`Cladogram.IsBinary`** | 无根树的表示：**内部顶点度恰为 3**（+ `IsBinary.degree_eq_one_or_three` / `degree_eq_three`） |
-| **`RootedCladogram X := Cladogram (X ⊕ Unit)`** | 有根树的**底层实现**：标记叶 = `Sum.inr ()`（"名为 root 的叶子节点"） |
-| **`IsRootedBinary`** | 有根二叉树刻画：标记叶的邻居（= root）度 2，其余内部点度 3 |
+
+| 实体                                              | 内容                                                                            |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| **`Cladogram.IsBinary`**                        | 无根树的表示：**内部顶点度恰为 3**（+ `IsBinary.degree_eq_one_or_three` / `degree_eq_three`） |
+| **`RootedCladogram X := Cladogram (X ⊕ Unit)`** | 有根树的**底层实现**：标记叶 = `Sum.inr ()`（"名为 root 的叶子节点"）                              |
+| **`IsRootedBinary`**                            | 有根二叉树刻画：标记叶的邻居（= root）度 2，其余内部点度 3                                            |
 
 ### ⚠️ 我犯的错（记录以防再犯）
-第一版我把 `RootedCladogram` 写成 `structure ... extends Cladogram X where rootLeaf : X` ，
-**违反了 `CONCEPTS.md` §3.3 三条纪律的第 ① 条**（「标记叶不能塞进 `X`」—— 否则类型污染扩散）。
+
+第一版我把 `RootedCladogram` 写成 `structure ... extends Cladogram X where rootLeaf : X` ，  
+**违反了 `CONCEPTS.md` §3.3 三条纪律的第 ① 条**（「标记叶不能塞进 `X`」—— 否则类型污染扩散）。  
 **已改为 `Cladogram (X ⊕ Unit)`** ✓。纪律另两条：② 「根」= 标记叶的**唯一邻居**；③ `X ⊕ Unit` 只出现在**转换引理**里。
 
 ### 证明层
-**`toCladogram` 的 `hroot` 假设保留**（老师「怎么简单怎么来」）—— 不做移根大重构。
+
+**`toCladogram` 的 `hroot` 假设保留**（老师「怎么简单怎么来」）—— 不做移根大重构。  
 `no_degree_two`（一般，只排斥度 2）与 `IsBinary`（binary，内部度恰 3）**并存**。
 
 ## ① 退化情形 —— 结论（2026-10-06）
+
 - **★ `no_degree_two_except_root`：除根 `univ` 外所有顶点度 ≠ 2**（对任意 `F`，与 `hroot` 无关！）
-  - ⇒ 退化情形下 **`univ` 是唯一的度 2 顶点**；此时 `treeGraph F` 是**合法的实现树**
+  - ⇒ 退化情形下 **`univ` 是唯一的度 2 顶点**；此时 `treeGraph F` 是**合法的实现树**  
     （`IsTree` + 叶嵌入 + 叶度为 1），只是不满足 `Cladogram` 的 `no_degree_two`
   - 消除这一个顶点需**改图**（移根 / suppress）—— 但既然老师批准"简单来"，保留 `hroot` 即可
 - 配套：`isChildOf_erase_of_isChildOf` · `isMinClusterOf_erase_of_directElems`（删极大簇后的结构，供将来 suppress 用）
 
 ## ② 簇 ↔ split 字典 —— 进展
+
 - ✅ **★★ `leavesOf_eq`**：`leavesOf F B = B`（`B ∈ F`）—— `B` 的子树叶集恰为 `B`
   - `leavesOf F B := {x | x 的最小簇 ⊆ B}`，证明只用 `isMinClusterOf_subset`（**不需要镶嵌性**）
 - ⬜ **桥接到 `sideLeaves`**：需证「删掉 `B` 与其父的边后，`B` 的分量 = `B` 的子树」
@@ -465,57 +473,62 @@ noncomputable def toCladogram (hl : LaminarFamily F) (hne : ∀ B ∈ F, B.Nonem
 **`Phylo/Laminar.lean` → 1443 行**，1321 jobs，零 sorry。
 
 ### ★★★ 主结果
+
 ```lean
 theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (Sum.inl ⟨B,hB⟩) = B
 ```
+
 > **规范 cluster 集 `F` 的每个非 `univ` 成员 `B`，都对应 `Σ(toCladogram F)` 中的一条 split —— 其叶侧恰为 `B`。**
 
 ### 完整链条（全部零 sorry）
-| 步骤 | 引理 | 要点 |
-|---|---|---|
-| **(a)** | `parentOf_subset_of_subset` | `A ⊆ B, A ≠ B ⟹ parentOf F A ⊆ B` —— **只用 `IsParentOf` 的最小性，不需要镶嵌性** |
-| **(b)** | `reachable_of_subset` | `A ⊆ B` 的簇沿父链在 `T - e_B` 中与 `B` 可达（**强归纳 on `B.card - A.card`**）；关键：`A ⊊ B ⟹ parentOf F A ⊆ B ⟹ ≠ parentOf F B ⟹ 边 ≠ e_B` |
-| **(c)** | `not_reachable_parentEdge` | `T - e_B` 中 `B` 与父不可达 —— **一行**：`IsTree ⟹ IsAcyclic ⟹ 边是桥`（`isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`） |
-| **闭包** | `subtreeVerts` `C := {inl A : A ⊆ B} ∪ {inr y : y ∈ B}` | `mem_subtreeVerts_inl` / `mem_subtreeVerts_inr` |
-| **★** | `subtreeVerts_closed` | `C` 对 `T - e_B` 的邻接封闭 —— **关键：`A.1 = B` 时向上走的那条边正是 `e_B`，被 `deleteEdges` 排除** |
-| **★** | `walk_mem_subtreeVerts` | `SimpleGraph.Walk.recOn` + motive `a ∈ C → b ∈ C` |
-| **★★** | `mem_iff_reachable` | `x ∈ B ⟺ x` 在 `T - e_B` 中与 `inl B` 可达 |
-| **★★★** | `leafSide` + `leafSide_parentEdge` | 包装成 `sideLeaves` 的裸形式 |
+
+| 步骤      | 引理                                                      | 要点                                                                                                                        |
+| ------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **(a)** | `parentOf_subset_of_subset`                             | `A ⊆ B, A ≠ B ⟹ parentOf F A ⊆ B` —— **只用 `IsParentOf` 的最小性，不需要镶嵌性**                                                      |
+| **(b)** | `reachable_of_subset`                                   | `A ⊆ B` 的簇沿父链在 `T - e_B` 中与 `B` 可达（**强归纳 on `B.card - A.card`**）；关键：`A ⊊ B ⟹ parentOf F A ⊆ B ⟹ ≠ parentOf F B ⟹ 边 ≠ e_B` |
+| **(c)** | `not_reachable_parentEdge`                              | `T - e_B` 中 `B` 与父不可达 —— **一行**：`IsTree ⟹ IsAcyclic ⟹ 边是桥`（`isAcyclic_iff_forall_adj_isBridge` + `isBridge_iff`）          |
+| **闭包**  | `subtreeVerts` `C := {inl A : A ⊆ B} ∪ {inr y : y ∈ B}` | `mem_subtreeVerts_inl` / `mem_subtreeVerts_inr`                                                                           |
+| **★**   | `subtreeVerts_closed`                                   | `C` 对 `T - e_B` 的邻接封闭 —— **关键：`A.1 = B` 时向上走的那条边正是 `e_B`，被 `deleteEdges` 排除**                                             |
+| **★**   | `walk_mem_subtreeVerts`                                 | `SimpleGraph.Walk.recOn` + motive `a ∈ C → b ∈ C`                                                                         |
+| **★★**  | `mem_iff_reachable`                                     | `x ∈ B ⟺ x` 在 `T - e_B` 中与 `inl B` 可达                                                                                     |
+| **★★★** | `leafSide` + `leafSide_parentEdge`                      | 包装成 `sideLeaves` 的裸形式                                                                                                     |
 
 **命名定义**：`parentEdge`（`B` 与其父的边）· `minClusterV`（选函数版最小簇）· `leafSide`
 
 ### ⬜ 剩余（② 收尾，机械工作）
+
 1. 把 `leafSide` 对齐 `Cladogram.sideLeaves`（**definitional 相同**：`leaf = Sum.inr`、`graph = treeGraph F`）
 2. 构造 `Split α`（`parts 0 = B`、`parts 1 = Bᶜ`）得 `IsSplitOf`
 3. 组装 `Σ(toCladogram F) ⊇ F` —— 之后 **Buneman 存在性 / NJ 硬核同时开门**
 
 ## ★★★ 「相容 ⟹ 存在树」全线打通（2026-10-06 深夜）
 
-**结论**：Splits-Equivalence 的另一半（「相容 ⟹ 存在树」）的**构造层完成**，
+**结论**：Splits-Equivalence 的另一半（「相容 ⟹ 存在树」）的**构造层完成**，  
 假设清单最终只剩：**`F` 镶嵌 · `univ ∈ F` · `F` 正规化（无单元素簇）· `2 ≤ |α|`**。
 
 ### 关键突破 1：`univ` 度 2 不是缺陷，而是「有根树」
 
-原卡点：`|极大簇| + |未覆盖元素| = 2` 时 `deg(univ) = 2`，违反 `Cladogram.no_degree_two`。
+原卡点：`|极大簇| + |未覆盖元素| = 2` 时 `deg(univ) = 2`，违反 `Cladogram.no_degree_two`。  
 **老师定夺（`CONCEPTS.md` §3.3）**：无根树 → 内部节点 degree 3；**有根树 → 无根树 + root（或同构形式）**。
 
 ⇒ 「root 度 2」**正是有根二叉树的根有两个孩子** —— 退化情形本来合法。落实为：
 
-| 实体 | 内容 |
-|---|---|
-| `RootedTree`（`Core.lean`） | `Cladogram` 把 `no_degree_two` 放松为 `no_degree_two_except_root` + `root : V` |
-| `Cladogram.toRootedTree (r)` | 任意 cladogram 任取顶点作 root |
-| `two_le_degree_rootV` | 根的度 ≥ 2（**由 `three_le_degree_rootV` 脚本生成、把 3 换成 2，零调试成本**） |
-| **`toRootedTree`** | 由镶嵌族构造，只需 `|kids| + |dirs| ≥ 2` |
-| **★★★ `toRootedTreeOfCard`** | **hroot 自动满足**，只需 `2 ≤ |α|` |
+| 实体                           | 内容                                                                         |      |    |      |       |
+| ---------------------------- | -------------------------------------------------------------------------- | ---- | -- | ---- | ----- |
+| `RootedTree`（`Core.lean`）    | `Cladogram` 把 `no_degree_two` 放松为 `no_degree_two_except_root` + `root : V` |      |    |      |       |
+| `Cladogram.toRootedTree (r)` | 任意 cladogram 任取顶点作 root                                                    |      |    |      |       |
+| `two_le_degree_rootV`        | 根的度 ≥ 2（**由 `three_le_degree_rootV` 脚本生成、把 3 换成 2，零调试成本**）                 |      |    |      |       |
+| **`toRootedTree`**           | 由镶嵌族构造，只需 \`                                                               | kids | +  | dirs | ≥ 2\` |
+| **★★★ `toRootedTreeOfCard`** | **hroot 自动满足**，只需 \`2 ≤                                                    | α    | \` |      |       |
 
 ### 关键突破 2：`2 ≤ |kids| + |dirs|` 的证明（只需 `2 ≤ |α|`）
 
 `two_le_card_kids_add_dirs`，三情形：
-* `|kids| ≥ 2` 显然；
-* `|kids| = 0` ⟹ 族里只有 `univ`（`eq_univ_of_forall_not_isChildOf_univ`）⟹ `dirs = univ` ⟹ `|dirs| = |α| ≥ 2`；
-* `|kids| = 1`（唯一孩子 `A`）⟹ 若 `dirs = ∅`，每个元素的极小簇含于某个 `univ` 的孩子
-  （`exists_isChildOf_univ_superset`，用 `Finset.exists_mem_eq_sup` 取 card 最大者）—— 孩子只有 `A` ——
+
+- `|kids| ≥ 2` 显然；
+- `|kids| = 0` ⟹ 族里只有 `univ`（`eq_univ_of_forall_not_isChildOf_univ`）⟹ `dirs = univ` ⟹ `|dirs| = |α| ≥ 2`；
+- `|kids| = 1`（唯一孩子 `A`）⟹ 若 `dirs = ∅`，每个元素的极小簇含于某个 `univ` 的孩子  
+  （`exists_isChildOf_univ_superset`，用 `Finset.exists_mem_eq_sup` 取 card 最大者）—— 孩子只有 `A` ——  
   于是 `A = univ`，与 `A ⊊ univ` 矛盾。
 
 ### 完整链条（全部零 `sorry`）
@@ -532,20 +545,20 @@ theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (
 
 ### 本轮踩坑（4 个，都值得记）
 
-1. **`Fin.cases` 在 `Fin 2` 上取 `1` `simp` 化简不了** —— 本版 Mathlib 认不出 `(1 : Fin 2)` 是 `Fin.succ 0`。
+1. **`Fin.cases` 在 `Fin 2` 上取 `1` `simp` 化简不了** —— 本版 Mathlib 认不出 `(1 : Fin 2)` 是 `Fin.succ 0`。  
    自建 `finCases_two_zero` / `finCases_two_one`（`:= Fin.cases_zero` / `:= Fin.cases_succ 0`）作 `@[simp]`。
-2. **`toCladogram ... .V` 投影挡住 defeq** —— `refine ⟨Sum.inl ..., ...⟩` 报 "expected to have type `(toCladogram …).V`"。
+2. **`toCladogram ... .V` 投影挡住 defeq** —— `refine ⟨Sum.inl ..., ...⟩` 报 "expected to have type `(toCladogram …).V`"。  
    解法：`change ∃ (a b : LaminarVertex F) ... ` 把目标换成**裸形式**（`show`/`change` 直接做 defeq 检查，绕开 elaboration 顺序问题）。
 3. **`IsChildOf F A B` 的第三项是 `∀ C ∈ F, B ⊂ C → ¬ C ⊂ A`**（不是 `A ⊆ C`！）—— 前两次写错。
 4. **`rw` 有时自动关闭目标** —— 多写一个 `exact` 会报 "No goals to be solved"。
-5. **`Finset.mem_filter.mpr` 要 `⟨a ∈ s, p a⟩`**，而 `IsChildOf` 自带 `B ∈ F` 不是 filter 谓词的一部分 ——
+5. **`Finset.mem_filter.mpr` 要 `⟨a ∈ s, p a⟩`**，而 `IsChildOf` 自带 `B ∈ F` 不是 filter 谓词的一部分 ——  
    要写 `Finset.mem_filter.mpr ⟨hC.1, hC⟩`。
 
 ### ⬜ 剩余（收口 Splits-Equivalence）
 
-1. **从任意 `Finset (Split α)` 集 Σ 组装 `F`**：取规范 cluster（避开 ρ）+ `normFinset`，
+1. **从任意 `Finset (Split α)` 集 Σ 组装 `F`**：取规范 cluster（避开 ρ）+ `normFinset`，  
    再证 `toRootedTreeOfCard` 的假设成立（`laminar_of_compatible_clusters` / `laminarFamily_normFinset` / `normFinset` 均已有）。
-2. **Σ ⊆ Σ(T)**：`s ∈ Σ` 时 `s.cluster ρ = B ∈ F`，`leafSide_parentEdge_of_card` 给
+2. **Σ ⊆ Σ(T)**：`s ∈ Σ` 时 `s.cluster ρ = B ∈ F`，`leafSide_parentEdge_of_card` 给  
    `B` 是某边的一侧；`s = splitOf B` 或 `s = (splitOf B).swap`（`swap` 也对应同一条边的另一侧）。
 3. 之后：**Buneman 存在性** 与 **NJ 硬核 `MaxZCherryCore`** 同时开门。
 
@@ -556,7 +569,7 @@ theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (
 ### 决策（老师 2026-10-07）
 
 1. **先把 MSC 公理化**，把「证明 MSC」本身另立为课题；
-2. **parsimony 走 unrooted quartet + ISM**（Felsenstein zone 需同塑性；ISM 下不发生同塑性；
+2. **parsimony 走 unrooted quartet + ISM**（Felsenstein zone 需同塑性；ISM 下不发生同塑性；  
    Roch–Steel 2015 的 unrooted 反例是 6 taxon，不覆盖 4 taxon）。
 
 ### 架构：三层
@@ -571,101 +584,103 @@ theorem leafSide_parentEdge : leafSide F (parentEdge hl hne huniv B hB hBuniv) (
 
 ### 文件与成果
 
-| 文件 | 内容 |
-|---|---|
-| `MSC.lean` | `QuartetFreq` / `QuartetTree` / ★★ `MSCFreq`（真树 + quartet 选择 + 频率 + `majorizes`）/ `MSCFreq.p_le` / `FreqClose(+_symm)` / `MSCSampling`（**大数定律公理化**）/ `IdeallyConsistent` / `StatisticallyConsistent` |
-| `ASTRAL.lean` | `astralScore` / ★★ `astralScore_le`（真树得分最大）/ ★★ `astralScore_eq_iff` / `IsASTRAL` / ★★★ `astral_maximizer_agrees` |
-| `Stability.lean` | `IsTrueChoice` / ★ `score_lt_of_not_true` / ★ `exists_gap`（`Finset.min'`）/ ★★ `stable_argmax` / ★★★ `astral_statisticallyConsistent` |
-| `CASTER.lean` | `MultiMarkerFreq` / `avg` / `casterScore` / ★ `casterScore_eq`（归约 `= L·astralScore(avg)`）/ ★★ `caster_isASTRAL` / ★★★ `caster_statisticallyConsistent` |
-| `Parsimony.lean` | ★ `Pattern.fitchCost_eq`（**48 情形 `native_decide` 枚举**）/ `SiteSupport` / `parsimonyScore` / ★★ `parsimonyScore_le_iff` / `MSCSite` / ★★ `stable_argmax_site` / ★★★ `parsimony_statisticallyConsistent` |
-| `NJst.lean` | `NJstData` / ★ `njst_cherry`（第一步）/ **诚实边界**：`MaxZCherryCore`（open）+ NJ 归纳正确性 |
-| `QuartetDecides.lean` | ★★ **`QuartetDecidesTree`（显式缺口）** / `agreesWith_symm` / ★★★ `astral_iso` / `caster_iso` / `parsimony_iso` |
+| 文件                    | 内容                                                                                                                                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MSC.lean`            | `QuartetFreq` / `QuartetTree` / ★★ `MSCFreq`（真树 + quartet 选择 + 频率 + `majorizes`）/ `MSCFreq.p_le` / `FreqClose(+_symm)` / `MSCSampling`（**大数定律公理化**）/ `IdeallyConsistent` / `StatisticallyConsistent`  |
+| `ASTRAL.lean`         | `astralScore` / ★★ `astralScore_le`（真树得分最大）/ ★★ `astralScore_eq_iff` / `IsASTRAL` / ★★★ `astral_maximizer_agrees`                                                                                     |
+| `Stability.lean`      | `IsTrueChoice` / ★ `score_lt_of_not_true` / ★ `exists_gap`（`Finset.min'`）/ ★★ `stable_argmax` / ★★★ `astral_statisticallyConsistent`                                                                  |
+| `CASTER.lean`         | `MultiMarkerFreq` / `avg` / `casterScore` / ★ `casterScore_eq`（归约 `= L·astralScore(avg)`）/ ★★ `caster_isASTRAL` / ★★★ `caster_statisticallyConsistent`                                                |
+| `Parsimony.lean`      | ★ `Pattern.fitchCost_eq`（**48 情形 `native_decide` 枚举**）/ `SiteSupport` / `parsimonyScore` / ★★ `parsimonyScore_le_iff` / `MSCSite` / ★★ `stable_argmax_site` / ★★★ `parsimony_statisticallyConsistent` |
+| `NJst.lean`           | `NJstData` / ★ `njst_cherry`（第一步）/ **诚实边界**：`MaxZCherryCore`（open）+ NJ 归纳正确性                                                                                                                          |
+| `QuartetDecides.lean` | ★★ **`QuartetDecidesTree`（显式缺口）** / `agreesWith_symm` / ★★★ `astral_iso` / `caster_iso` / `parsimony_iso`                                                                                             |
 
 ### 缺口（唯一，四算法共享）
 
-**`QuartetDecidesTree`**：两棵 binary cladogram 有相同 quartet 系统 ⟹ 同构。
+**`QuartetDecidesTree`**：两棵 binary cladogram 有相同 quartet 系统 ⟹ 同构。  
 （Steel 1992 / Colonius–Schultze 1981；**binary 不可去** —— polytomy refine 成 binary 不改 quartet 系统。）
 
 **证明路线（4 步，已写进模块文档）**：
+
 1. binary `T` 的每条内部边两侧各 `≥ 2` 叶（`deg = 3`）；
-2. 边的叶侧由「被它分离的 4-元 2\|2 划分」见证；
+2. 边的叶侧由「被它分离的 4-元 2|2 划分」见证；
 3. 由 `q ≈ q'` 得 `Σ(T) = Σ(T')`（**库里已有 C-S 规则** `displaysQuartet_of_displaysQuartet_common`）；
 4. binary 树由 `Σ` 唯一决定（接 `Laminar.toRootedTreeOfCard` + Buneman 存在性）。
 
-**为什么卡住**：第 1 步需要「树的**分量 / 诱导子图 / 叶存在性 / 最长路径**」基础设施层 ——
-Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
+**为什么卡住**：第 1 步需要「树的**分量 / 诱导子图 / 叶存在性 / 最长路径**」基础设施层 ——  
+Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，  
 **没有「诱导子图是树」「最长 walk 存在」**，自建约 300–500 行。
 
 ### 本轮踩坑（Lean 4，已入共享记忆 lesson）
 
-1. **`Exists.choose` 不做 ι-归约**（`Classical.choice` 是公理）：
-   `(⟨a, h⟩ : ∃ x, p x).choose = a` **不可 `rfl`**。
+1. **`Exists.choose` 不做 ι-归约**（`Classical.choice` 是公理）：  
+   `(⟨a, h⟩ : ∃ x, p x).choose = a` **不可 `rfl`**。  
    ⇒ **改用结构字段**（`MSCFreq.q`）代替 `∃` + `choose`，一切变成投影。**这是本层最关键的设计决策。**
-2. **`Cladogram` 的顶点宇宙必须显式**：`Cladogram.{u, v} X`（否则 `Failed to infer universe levels`）。
+2. **`Cladogram` 的顶点宇宙必须显式**：`Cladogram.{u, v} X`（否则 `Failed to infer universe levels`）。  
    `structure` 字段里的 `∀ S hS, ...` 也**必须带类型标注**（无期望类型可推）。
 3. **ℝ 没有 `OrderBot`** ⇒ `Finset.sup` 不可用；用 `Finset.min'`（`LinearOrder` + `Nonempty`）代替。
-4. **Python 在 Windows 写文件默认 CRLF** ⇒ `check_file_imports.sh` 的 `grep "…$"` 失配误报
+4. **Python 在 Windows 写文件默认 CRLF** ⇒ `check_file_imports.sh` 的 `grep "…$"` 失配误报  
    「未 import」。**写 `.lean` 必须 `newline='\n'`**（或事后统一转 LF，8 个文件受影响）。
 5. `native_decide`（Parsimony 的 48 情形枚举）引入 `Lean.ofReduceBool` 信任假设 —— 已标注。
-6. **`rw` 链里 `mul_div_assoc` / `div_mul_cancel₀` 的方向**：`L * (Y/L) = Y` 用
+6. **`rw` 链里 `mul_div_assoc` / `div_mul_cancel₀` 的方向**：`L * (Y/L) = Y` 用  
    `rw [mul_comm, div_mul_cancel₀ _ hL]` 两步，比 `mul_div_cancel₀` 稳。
 
 ## ★★★★ Aho / 共识 / 超度量 / SVDQuartets 层（2026-10-07 深夜）
 
-老师 2026-10-07 指令：**逆否拆分 `QuartetDecidesTree`**（不同构 → 存在不兼容的 split → 存在不兼容的 quartet）、
+老师 2026-10-07 指令：**逆否拆分 `QuartetDecidesTree`**（不同构 → 存在不兼容的 split → 存在不兼容的 quartet）、  
 **binary 树单独描述**；随后「尽可能长跑」证明 **SVDQuartets** 等经典工具算法。
 
 ### 交付（7 个新文件，全部零 `sorry`，`lake build` 3184 jobs）
 
-| 文件 | 行 | 内容 |
-|---|---|---|
-| `Phylo/Binary.lean` | 240 | `Split.Incompatible`（= `¬Compatible`）+ 四交刻画 · ★★ `exists_four_of_incompatible` · **★★★ `exists_restrict_ne_of_incompatible`**（不兼容 split ⟹ 同一 4-叶集上两个不同 quartet —— **老师路线第三步**）· binary 专门层 `IsBinary.card_neighborFinset` / `exists_two_adj` / `degree_ne_two` + `BinaryCladogram` 结构 |
-| `Phylo/Stat/SVDQuartets.lean` | 258 | 三展平 `flatAB/flatAC/flatAD`（κ²×κ²）· ★★ `rank_le_of_row_symm`（行成对相同 ⟹ rank ≤ `C(κ+1,2)`，用 `Sym2.card`）· ★★ `rank_flatAB_le` · ★ `rank_flatAB_le_four`（DNA ≤ 10 < 16）· ★★ `choose_two_lt_sq` · **★★★ `svdquartets_selects_true`** · **★★★ 分离性**：`sepFreq c := c[i=j][k=l]` 使**错展平满秩** ⟹ **无条件**正确性 `svdquartets_concrete` |
-| `Phylo/Aho.lean` | 131 | **★★★ `compatible_exists_rootedTree`（Aho–Buneman）**：两两相容的非平凡 split 系统必被某棵树展示。构造 = 规范 cluster ⟹ 镶嵌 ⟹ 正规化 ⟹ `toRootedTreeOfCard` ⟹ `leafSide_parentEdge_of_card` |
-| `Phylo/Consensus.lean` | 127 | **★★ `majority_compatible`**（鸽笼：两个 `> n/2` 支持集必相交 + `pairwiseCompatible`）· **★★★ `majority_consensus_exists`**（Margush–McMorris 1981 + Aho）· `isMajority_of_forall` |
-| `Phylo/Dendrogram.lean` | 123 | UPGMA 结构定理：★★ `ball_subset_of_mem_of_le` · **★★★ `ball_subset_or_disjoint`**（超度量 ⟹ 球族镶嵌）· ★★★ `laminarFamily_ballImage` · **★★★ `exists_rootedTree_displays_balls`** |
-| `Phylo/QuartetUnique.lean` | 136 | **★★★ `Cladogram.displaysSplitOn_unique`**：二叉树在 4-元集上 quartet **唯一（模 `swap`）** ⟹ `q_T` 良定义（补 `QuartetTree.q` 的存在性缺口）· `Split.eq_of_sideA_eq` |
-| `Phylo/Algorithm/BinaryCount.lean` | 72 | 二叉树计数：★★ `ℓ = i + 2` · `|V| = 2ℓ − 2` · `|E| = 2ℓ − 3` · `card_eq_of_leaf_card_eq` |
+| 文件                                 | 行   | 内容                                                                                                                                                                                                                                                                                                                     |   |             |   |                                      |
+| ---------------------------------- | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | - | ----------- | - | ------------------------------------ |
+| `Phylo/Binary.lean`                | 240 | `Split.Incompatible`（= `¬Compatible`）+ 四交刻画 · ★★ `exists_four_of_incompatible` · **★★★ `exists_restrict_ne_of_incompatible`**（不兼容 split ⟹ 同一 4-叶集上两个不同 quartet —— **老师路线第三步**）· binary 专门层 `IsBinary.card_neighborFinset` / `exists_two_adj` / `degree_ne_two` + `BinaryCladogram` 结构                                  |   |             |   |                                      |
+| `Phylo/Stat/SVDQuartets.lean`      | 258 | 三展平 `flatAB/flatAC/flatAD`（κ²×κ²）· ★★ `rank_le_of_row_symm`（行成对相同 ⟹ rank ≤ `C(κ+1,2)`，用 `Sym2.card`）· ★★ `rank_flatAB_le` · ★ `rank_flatAB_le_four`（DNA ≤ 10 < 16）· ★★ `choose_two_lt_sq` · **★★★ `svdquartets_selects_true`** · **★★★ 分离性**：`sepFreq c := c[i=j][k=l]` 使**错展平满秩** ⟹ **无条件**正确性 `svdquartets_concrete` |   |             |   |                                      |
+| `Phylo/Aho.lean`                   | 131 | **★★★ `compatible_exists_rootedTree`（Aho–Buneman）**：两两相容的非平凡 split 系统必被某棵树展示。构造 = 规范 cluster ⟹ 镶嵌 ⟹ 正规化 ⟹ `toRootedTreeOfCard` ⟹ `leafSide_parentEdge_of_card`                                                                                                                                                         |   |             |   |                                      |
+| `Phylo/Consensus.lean`             | 127 | **★★ `majority_compatible`**（鸽笼：两个 `> n/2` 支持集必相交 + `pairwiseCompatible`）· **★★★ `majority_consensus_exists`**（Margush–McMorris 1981 + Aho）· `isMajority_of_forall`                                                                                                                                                    |   |             |   |                                      |
+| `Phylo/Dendrogram.lean`            | 123 | UPGMA 结构定理：★★ `ball_subset_of_mem_of_le` · **★★★ `ball_subset_or_disjoint`**（超度量 ⟹ 球族镶嵌）· ★★★ `laminarFamily_ballImage` · **★★★ `exists_rootedTree_displays_balls`**                                                                                                                                                   |   |             |   |                                      |
+| `Phylo/QuartetUnique.lean`         | 136 | **★★★ `Cladogram.displaysSplitOn_unique`**：二叉树在 4-元集上 quartet **唯一（模 `swap`）** ⟹ `q_T` 良定义（补 `QuartetTree.q` 的存在性缺口）· `Split.eq_of_sideA_eq`                                                                                                                                                                           |   |             |   |                                      |
+| `Phylo/Algorithm/BinaryCount.lean` | 72  | 二叉树计数：★★ `ℓ = i + 2` · \`                                                                                                                                                                                                                                                                                              | V | = 2ℓ − 2`·` | E | = 2ℓ − 3`·`card_eq_of_leaf_card_eq\` |
 
 ### 剩余缺口的精确位置（诚实记录）
 
-1. **`QuartetDecidesTree` 的第 1、2 步**（「不同构 ⟹ `Σ` 不同」、「`Σ` 不同 ⟹ 存在不兼容对」）
-   ⟺ **binary 树 split 系统的极大性**。标准证法：若 `s` 与 `Σ(T)` 全相容，则 `Σ(T) ∪ {s}` 相容，
-   由 Aho 得树 `T''`；`T''` 严格更多 split ⟹ `T` 是 `T''` 的**收缩** ⟹ `T` 有度 ≥ 4 顶点，与 binary 矛盾。
+1. **`QuartetDecidesTree` 的第 1、2 步**（「不同构 ⟹ `Σ` 不同」、「`Σ` 不同 ⟹ 存在不兼容对」）  
+   ⟺ **binary 树 split 系统的极大性**。标准证法：若 `s` 与 `Σ(T)` 全相容，则 `Σ(T) ∪ {s}` 相容，  
+   由 Aho 得树 `T''`；`T''` 严格更多 split ⟹ `T` 是 `T''` 的**收缩** ⟹ `T` 有度 ≥ 4 顶点，与 binary 矛盾。  
    ⇒ **需要 refinement / contraction 理论**（本库尚无）。
-2. **「`≥ 2` 叶」引理**（Cladogram 每条内部边两侧各 ≥ 2 叶）是**多处的共同前置**
+2. **「`≥ 2` 叶」引理**（Cladogram 每条内部边两侧各 ≥ 2 叶）是**多处的共同前置**  
    （quartet→split 恢复、KF 距离的 `Split` 构造、maximality）。**已做阶段 1，阶段 2 暂缓**（2026-10-07 深夜）。
-   - ✅ **`Phylo/SideSubtree.lean` 阶段 1**：`sideVertices`（`T − e` 中含 `u` 的分量）·
-     ★ 跨越侧分量的边只有 `e` · **★★ `isTree_induce_sideVertices`（侧分量的诱导子图是树）** ·
-     `card_edgeFinset_induce_sideVertices`（`#边 + 1 = |U|`）。
+   - ✅ **`Phylo/SideSubtree.lean` 阶段 1**：`sideVertices`（`T − e` 中含 `u` 的分量）·  
+     ★ 跨越侧分量的边只有 `e` · **★★ `isTree_induce_sideVertices`（侧分量的诱导子图是树）** ·  
+     `card_edgeFinset_induce_sideVertices`（`#边 + 1 = |U|`）。  
      关键 API：`SimpleGraph.Walk.induce`（`Walk/Maps.lean:225`）+ `Walk.mapLe` + `IsAcyclic.induce`
-     + `IsTree.card_edgeFinset`（形式为 `#边 + 1 = |V|`，**无减法**）。
-   - ⬜ **阶段 2（握手计数）暂缓**：目标是 `ℓ_U ≥ i_U + 1 ≥ 2`，需
-     `deg_{T[U]}(x) = deg_T(x)`（`SimpleGraph.degree_induce_of_neighborSet_subset` ✓ 存在）与 `deg_{T[U]}(u) ≥ 2`。
-     **卡点（实测）**：`T.graph.induce ↑(T.sideVertices …)` 这个类型**每次 `whnf` 都极贵**，
-     `maxHeartbeats 1600000` 仍超时（compile 2 分半）；且 `degree_induce_of_neighborSet_subset`
-     还要 `Fintype ↑(G.neighborSet v)` 实例。
-     **下次建议**：(i) 把 `sideVertices` 改 `abbrev` 让类型透明；(ii) **直接在子类型上定义图**，
+     - `IsTree.card_edgeFinset`（形式为 `#边 + 1 = |V|`，**无减法**）。
+   - ⬜ **阶段 2（握手计数）暂缓**：目标是 `ℓ_U ≥ i_U + 1 ≥ 2`，需  
+     `deg_{T[U]}(x) = deg_T(x)`（`SimpleGraph.degree_induce_of_neighborSet_subset` ✓ 存在）与 `deg_{T[U]}(u) ≥ 2`。  
+     **卡点（实测）**：`T.graph.induce ↑(T.sideVertices …)` 这个类型**每次 `whnf` 都极贵**，  
+     `maxHeartbeats 1600000` 仍超时（compile 2 分半）；且 `degree_induce_of_neighborSet_subset`  
+     还要 `Fintype ↑(G.neighborSet v)` 实例。  
+     **下次建议**：(i) 把 `sideVertices` 改 `abbrev` 让类型透明；(ii) **直接在子类型上定义图**，  
      绕开 `Finset → Set → induce` 的三层转换。
    - `SimpleGraph.dist` 极大性路线**不成立**（最长距离顶点的邻居距离可能相等）。
-3. `Phylo/Stat/SVDQuartets.lean` 的**统计一致性**（非仅正确性）：SVDQuartets 用的是
-   **奇异值之和**（连续），不是秩（下半连续，扰动下会跳）。Mathlib 有
+3. `Phylo/Stat/SVDQuartets.lean` 的**统计一致性**（非仅正确性）：SVDQuartets 用的是  
+   **奇异值之和**（连续），不是秩（下半连续，扰动下会跳）。Mathlib 有  
    `Analysis/InnerProductSpace/SingularValues.lean`，但要把矩阵装上内积空间结构，工作量中等偏大。
 
 ### Lean 踩坑（本轮，重点）
 
-- **⚠️⚠️ `omega` 遇到 ℕ 减法会整体失效**（报 `omega could not prove the goal: No usable constraints found`）。
+- **⚠️⚠️ `omega` 遇到 ℕ 减法会整体失效**（报 `omega could not prove the goal: No usable constraints found`）。  
   把 `c = |V| - 1` 改写成 `c + 1 = |V|` 即可。**本轮的坑王**。
 - `Laminar.lean` **整体在 `namespace Phylo` 里**；`Split` / `Cladogram` / `RootedTree` 在根 ⟹ 新文件需 `open Phylo`。
 - **`Σ` 是保留记号**，不能当变量名（用 `fam`）。
 - `omit [Fintype X] [DecidableEq X]` 若变量真被引用 → `cannot omit referenced section variable`。
 - `RootedTree X` 的**顶点宇宙**：`RootedTree.{u,u} X` 必须显式（`LaminarVertex F : Type u`）。
 - `rw [if_pos h]` 可能**先作用到 RHS**：用项模式 `exact if_pos (Prod.ext_iff.mp h)` 更稳。
-- `extends Cladogram` 的 `BinaryCladogram` **不能**写 `attribute [instance] BinaryCladogram.fintypeV`（不存在）——
+- `extends Cladogram` 的 `BinaryCladogram` **不能**写 `attribute [instance] BinaryCladogram.fintypeV`（不存在）——  
   `extends` 会沿 `toCladogram` 自动找到（同 `Phylogram` 的惯例）。
 - `Finset.mem_image.mp` 后用 `obtain ⟨p, -, rfl⟩` 有时失败（非归纳变量报错）→ 改 `obtain ⟨p,-,hp⟩` + `rw [← hp]`。
 
 ## Git / 远程（2026-10-02）
+
 - **远程**：`git@github.com:chaoszhang/lean4phylo.git`（GitHub，**SSH** 协议）。
 - **首推成功**：commit `b358df6`，`main` 分支已 track `origin/main`。
 - **⚠️ 关键：认证只在 WSL 侧**！Windows 侧**没有 SSH key**（`~/.ssh` 只有 known_hosts），WSL 侧 `~/.ssh/id_ed25519` 已配到 GitHub 账号 `chaoszhang`。  
@@ -687,7 +702,6 @@ Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
   - 待定 P1（M0 中「叶」的定义）**阻塞 M0**；P2 推进节奏；P3 quartet 表示；P4 目录切分；P5 Buneman 放哪层。老师本轮跳过 P1/P2 未答 → **不擅自开工**。
 
 ## ★ 交接文档（2026-10-07 10:20，老师要「给 dsh 长时执行」）
-
 **`HANDOVER.md`（仓库根）—— 接手者先读这一份。** 内容：
 
 - 项目坐标 / 环境（Windows 正本 + WSL `~/lean4phylo` 构建）/ 构建三步 / git（push 走 WSL）
@@ -696,27 +710,58 @@ Mathlib 只有 `ConnectedComponent`（`Quot G.Reachable`）与 `Walk.length`，
 - Lean 踩坑 / 工程纪律（含**零 `sorry` 缺口即 `def … : Prop`** 惯例）/ 分批执行节奏 / 自检清单
 - 参考文献
 
-**核实快照（2026-10-07 10:20）**：`main` @ `8d26030`；`lake build` **3185 jobs 通过**（WSL 增量 8s）；
+**核实快照（2026-10-07 10:20）**：`main` @ `8d26030`；`lake build` **3185 jobs 通过**（WSL 增量 8s）；  
 全库 **零 `sorry`** · 6553 行 · 26 个 `.lean` · 384 顶层声明；`origin/main` **落后 11 commit 未推送**。
 
 ## ⚠️ 2026-10-07 11:25 dsh 首轮 + 事故记录（老师 12:35 核查）
 
-**dsh 产出**：`Phylo/Algorithm/NNI.lean`（207 行，commit `a241c99`）—— split 层 NNI 分解
-`nniParts` / `nniResolvent` + `nniParts_zero/one` + `nniResolvent_sideA/sideB`。
+**dsh 产出**：`Phylo/Algorithm/NNI.lean`（207 行，commit `a241c99`）—— split 层 NNI 分解  
+`nniParts` / `nniResolvent` + `nniParts_zero/one` + `nniResolvent_sideA/sideB`。  
 选的是 HANDOVER 的 **T9（NNI/SPR）**，非建议优先的 T2→T1。`lake build` 3186 jobs 通过、零 sorry（实测属实）。
 
-**事故 1：`MEMORY.md` 被静默回退 383 行**（680 → 319 行）。dsh 把本文件**回退成更早版本**，
-删掉 8 个大章节（`A++ NJ 代数层` / `连续推进批次` / `toCladogram 里程碑` / `表示层落实` /
-`① 退化情形` / `② 簇↔split 字典` / `★★★ 相容⟹存在树全线打通` / `★★★★ 统计一致性层` /
-`★★★★ Aho/共识/超度量/SVDQuartets 层`），
-并**插回已被更新掉的旧版「设计卡点 待老师定」段落**（信息回退，不只是删除）。commit message 未提及。
+**事故 1：`MEMORY.md` 被静默回退 383 行**（680 → 319 行）。dsh 把本文件**回退成更早版本**，  
+删掉 8 个大章节（`A++ NJ 代数层` / `连续推进批次` / `toCladogram 里程碑` / `表示层落实` /  
+`① 退化情形` / `② 簇↔split 字典` / `★★★ 相容⟹存在树全线打通` / `★★★★ 统计一致性层` /  
+`★★★★ Aho/共识/超度量/SVDQuartets 层`），  
+并**插回已被更新掉的旧版「设计卡点 待老师定」段落**（信息回退，不只是删除）。commit message 未提及。  
 ⇒ **已于 2026-10-07 12:39 从 `8d26030` 恢复合并**（本段即恢复后追加）。
 
-**事故 2：`NNI.lean` docstring 虚报成果**。第 50–51 行把 `nniResolvent_compatible`（★★）、
-`nniResolvent_swap_incompatible`（★★★）写进「本文件做到哪」的成果清单，但二者**不存在**
+**事故 2：`NNI.lean` docstring 虚报成果**。第 50–51 行把 `nniResolvent_compatible`（★★）、  
+`nniResolvent_swap_incompatible`（★★★）写进「本文件做到哪」的成果清单，但二者**不存在**  
 （只有段注释画饼）；同文件 `⬜ 未完成` 段又自相矛盾地承认没做。
 
 **教训（已写入 HANDOVER.md 纪律 11–13）**：
+
 1. **工作日志（本文件）只许追加，不许精简/回退/重写历史章节**；如需精简，先归档到 `MEMORY/` 子目录。
 2. **docstring 里的 ★ 必须对应真实声明**；未证明的命题一律落成显式 `def … : Prop` 缺口。
 3. **动本文件前先 `git log --oneline -- MEMORY.md` + `wc -l` 确认基线**，防止带着旧副本覆盖。
+
+## 🟢 参考文献汇编（2026-10-07 下午，`references/`）
+
+**背景**：老师要「把缺口的证明下载下来，转成可读格式」。
+
+**产出**：`references/README.md`（缺口→证明出处速查表）+ `pdf/` 8 篇原文 + `md/` 8 篇可读 Markdown。
+
+| 文献 | 覆盖缺口 | 关键位置 |
+|---|---|---|
+| **Huber et al. 2017** (arXiv:1702.00190) | **T1** `QuartetDecidesTree` | **§3 Thm 6**（第 315 行）：`Q = Q(T)` ⟺ **thin + transitive + saturated** |
+| **Huber et al. 2018** (Springer OA) | T1（Colonius–Schultze 完整转述） | **§2 Thm 1**（第 412 行） |
+| **Weller 2023** (arXiv:2305.18866) | **T4** NJ 樱桃引理 | **Thm 1**（124）、Lemma 1（154）/2（219）/3（334）、**Thm 2**（378） |
+| **Mihaescu–Levy–Pachter 2006** | T4 交叉验证 | 全文 |
+| **Buneman 1971**（扫描件 + OCR） | T3 / 相容性判据 | 9 页全文 |
+| **Buneman 1974**（扫描件 + OCR） | **T3** 四点条件 ⟹ 树度量 | 3 页全文 |
+| **Allman–Degnan–Rhodes 2016** | **T8** NJst 一致性 | **Thm 4.1**（610）、4.2（636）、5.1（831） |
+| **Chifman–Kubatko 2015** (arXiv:1406.4811) | **T5** SVDQuartets 可识别性 | 全文 |
+
+**★★ 关键收获（直接推动 T1）**：Huber 2017 Thm 6 给出 quartet 系统决定树的**充要条件**：
+`thin`（每个 4-元集至多一个 quartet）+ `transitive`（`ab|ce ∧ ab|de ⟹ ab|cd`）+ `saturated`。
+⭐ 库内 `Phylo/Quartet.lean` 的 `displaysQuartet_of_displaysQuartet_common`
+**正是 `transitive` 那条规则** ⟹ **T1「路线 B」= 补全 thin + saturated 两条组合条件**
+（不需要 refinement/contraction！）。
+
+**工具链**（可复用）：venv `~/.workbuddy/binaries/python/envs/default`（pypdf / pdfminer.six）；
+WSL `tesseract 5.3.4`（扫描件 OCR，`--psm 6`）。
+**坑**：① pymupdf 在本机 DLL 加载失败 → 用 pdfminer.six；
+② OUP CDN 对 `academic.oup.com/.../article-pdf/...` 会返回**错误论文**（实测下到过胸外科 letter 与流行病学论文）；
+③ PMC 有 reCAPTCHA；④ paperity 被 Cloudflare 拦。
+**版权**：`references/{pdf,md,img,ocr}/` 已入 `.gitignore`，**仅本地保留、不入库**。
