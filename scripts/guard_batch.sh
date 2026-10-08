@@ -114,7 +114,11 @@ fi
 #     —— 并行开发时其它 agent 的在建文件不该让本批验收变红（协调侧此前靠手工暂存，现固化）。
 #     ⚠️ `MODS`/`MODS_SP` 是**斜杠形式**（如 `Phylo/Core`），本循环的比较也一律用斜杠形式；
 #     曾因「斜杠 vs 点号」不一致把所有模块误判为未登记、把整个 Phylo/ 暂存走 —— 故加了两道保险：
-#     (a) 需暂存文件数 > 5 视为异常，立刻放回并放弃暂存；(b) 恢复以暂存目录的实际内容为准。
+#     (a) 需暂存文件数 > 8 视为异常，立刻放回并放弃暂存；(b) 恢复以暂存目录的实际内容为准。
+#     ⚠️ 2026-10-09 W10 修正：扫描范围从 `$CANON`（整个仓库）**收紧到 `$CANON/Phylo`** ——
+#     与 `check_file_imports.sh`（它只扫 `Phylo/`）对齐。此前会把并行 agent 放在
+#     `scripts/*.lean` 的 **scratch 文件**也算成「未登记模块」，个数一多就触发阈值 (a)
+#     而**整个暂存被放弃**（W10 实测踩到：6 个文件 > 旧阈值 5）。阈值同时放宽到 8。
 STASHDIR=$(mktemp -d)
 STASHED=""
 while IFS= read -r f; do
@@ -129,7 +133,7 @@ while IFS= read -r f; do
       if mv "$f" "$STASHDIR/$rel"; then STASHED="$STASHED $rel"; fi
       ;;
   esac
-done <<< "$(find "$CANON" -name '*.lean' -not -path '*/.lake/*' 2>/dev/null || true)"
+done <<< "$(find "$CANON/Phylo" -name '*.lean' -not -path '*/.lake/*' 2>/dev/null || true)"
 
 restore_stash() {
   if [ -d "$STASHDIR" ]; then
@@ -147,7 +151,7 @@ restore_stash() {
 }
 
 NSTASH=$(echo $STASHED | wc -w)
-if [ "$NSTASH" -gt 5 ]; then
+if [ "$NSTASH" -gt 8 ]; then
   echo "✗ 需暂存文件数异常（$NSTASH > 5）：疑似模块名比对出错 ⇒ 立刻放回并**放弃暂存**"
   restore_stash
   STASHED=""

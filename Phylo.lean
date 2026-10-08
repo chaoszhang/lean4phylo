@@ -62,6 +62,7 @@ import Phylo.Stat.CASTERTopo
 import Phylo.Stat.CASTERTopoSplit
 import Phylo.Stat.CASTERWeights
 import Phylo.Stat.Coalescent
+import Phylo.Stat.CoalescentStats
 import Phylo.Stat.InvariantsRank
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
