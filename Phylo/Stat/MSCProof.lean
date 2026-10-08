@@ -29,8 +29,10 @@ import Phylo.Stat.CASTERTopoSplit
 
 ## 2. 本文件交付
 
+* ★★★ `rootTopoProb` —— 根种群的拓扑概率 `1/3` 是**推导值**（跳链均匀权重在拓扑**类**上的
+  求和，`MSCKingman.root_topology_class_prob`），**不是写定的常数**（正面回应 W9 的批评点）；
 * ★★★ `mscConcordant` / `mscDiscordant` —— **由溯祖等待时间拼出**的 MSC 权重
-  （`firstMergeCDF 2 t + survival 2 t · ⅓`），并证其闭形式 `1 − ⅔e^{−t}` 与 `⅓e^{−t}`；
+  （`firstMergeCDF 2 t + survival 2 t · rootTopoProb`），并证其闭形式 `1 − ⅔e^{−t}` 与 `⅓e^{−t}`；
 * ★★★ `mscQuartetFreq` —— `Fin 4` 上的**具体** `QuartetFreq`，`p` 就是 MSC 权重
   （`p_nonneg` / `p_sum_one` / `p_swap` **三条都真证**）；
 * ★★★ `mscQuartetTree` —— `Fin 4` 上的**具体** `QuartetTree`（真树 = `NJstWitness.T1234`，
@@ -77,22 +79,39 @@ theorem mem_of_card_four (S : Finset (Fin 4)) (hS : S.card = 4) (x : Fin 4) : x 
 
 /-! ## 1. 由溯祖等待时间给出的 MSC 权重 -/
 
+/-- ★★★ **根种群的拓扑概率 `1/3` 是「推导值」而不是「写定的常数」**：
+它是**跳链均匀权重** `1/C(4,2)` 在「`0,1` 同类」这一拓扑**类**上的求和
+（`C(4,2) = 6` 个首次合并对按拓扑分成 3 类、每类恰 2 个 —— K82 (2.2) 的均匀性 ＋
+ADR2011 Lemma 4 的重标号对称性在 4 叶下的组合内容）。
+
+⚠️ 这与 W9 被指出的问题**正面相对**：W9 的 `1/3` 是 `Kingmanτd` 的**定义**；
+这里它是 `MSCKingman.root_topology_class_prob` 的**应用**（一个真求和）。 -/
+noncomputable def rootTopoProb : ℝ :=
+  ∑ _p ∈ (Coalescent.mergePairsFinset 4).filter
+      (fun p => ((0 : Fin 4) ∈ p ↔ (1 : Fin 4) ∈ p)),
+    (1 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ)
+
+/-- ★★★ 该求和恰为 `1/3`（`MSCKingman.root_topology_class_prob` 的第一个合取项）。 -/
+theorem rootTopoProb_eq_third : rootTopoProb = 1 / 3 :=
+  Phylo.Stat.MSCKingman.root_topology_class_prob.1
+
 /-- ★★★ **一致（concordant）quartet 的概率，由溯祖等待时间拼出**：
-`P(A,B 在内部枝内合并) + P(未合并) · P(根种群给出 01|23) = (1 − e^{−t}) + e^{−t} · ⅓`。
+`P(A,B 在内部枝内合并) + P(未合并) · P(根种群给出 01|23) = (1 − e^{−t}) + e^{−t} · (1/3)`，
+其中 `1/3` 是 `rootTopoProb`（**推导值**，见上）。
 与闭形式 `1 − ⅔e^{−t}` 相等见 `mscConcordant_closed`。 -/
 def mscConcordant (t : ℝ) : ℝ :=
-  Coalescent.firstMergeCDF 2 t + Coalescent.survival 2 t * (1 / 3)
+  Coalescent.firstMergeCDF 2 t + Coalescent.survival 2 t * rootTopoProb
 
 /-- ★★★ **每个不一致 quartet 的概率**：`P(未在内部枝合并) · ⅓ = ⅓e^{−t}`。 -/
-def mscDiscordant (t : ℝ) : ℝ := Coalescent.survival 2 t * (1 / 3)
+def mscDiscordant (t : ℝ) : ℝ := Coalescent.survival 2 t * rootTopoProb
 
 /-- `mscConcordant` 就是库内既有的 `Coalescent.pConcordant`。 -/
 theorem mscConcordant_eq (t : ℝ) : mscConcordant t = Coalescent.pConcordant t := by
-  rw [mscConcordant, Coalescent.pConcordant_eq_kingman, mul_comm]
+  rw [mscConcordant, rootTopoProb_eq_third, Coalescent.pConcordant_eq_kingman, mul_comm]
 
 /-- `mscDiscordant` 就是库内既有的 `Coalescent.pDiscordant`。 -/
 theorem mscDiscordant_eq (t : ℝ) : mscDiscordant t = Coalescent.pDiscordant t := by
-  rw [mscDiscordant, Coalescent.pDiscordant_eq_survival, mul_comm]
+  rw [mscDiscordant, rootTopoProb_eq_third, Coalescent.pDiscordant_eq_survival, mul_comm]
 
 /-- ★★ **一致概率的闭形式** `1 − ⅔e^{−t}`。 -/
 theorem mscConcordant_closed (t : ℝ) :
@@ -113,7 +132,7 @@ theorem mscConcordant_pos {t : ℝ} (ht : 0 < t) : 0 < mscConcordant t := by
 /-- 不一致概率恒为正。 -/
 theorem mscDiscordant_pos (t : ℝ) : 0 < mscDiscordant t := by
   rw [mscDiscordant]
-  exact mul_pos (Coalescent.survival_pos 2 t) (by norm_num)
+  exact mul_pos (Coalescent.survival_pos 2 t) (by rw [rootTopoProb_eq_third]; norm_num)
 
 /-- `t ≥ 0` 时一致概率非负。 -/
 theorem mscConcordant_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ mscConcordant t := by
