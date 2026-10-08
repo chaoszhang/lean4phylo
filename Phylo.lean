@@ -48,6 +48,7 @@ import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
+import Phylo.Stat.CASTERF84
 import Phylo.Stat.CASTERGeneTree
 import Phylo.Stat.CASTERInstances
 import Phylo.Stat.CASTERJC69
