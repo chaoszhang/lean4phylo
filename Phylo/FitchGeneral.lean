@@ -106,10 +106,31 @@ import Phylo.Stat.Parsimony
 
 ## 🟡 尚未做（**不得含糊**）
 
-* **与库内 4 元集版的桥 `fitchCostGen_quartet_eq_fitchCost` 尚未做**：在 4 叶二叉树 `12|34` 上
-  把 `fitchCostGen` 与 `Pattern.fitchCost 0 p`（`Phylo/Stat/Parsimony.lean:61`）对上。
-  需要先给出一个 4 叶 `GenTree` 实例（`Fin 7` 或等价），再做枚举验证。
-  —— 这在**逻辑上独立于主定理**（主定理已证），故只影响「与库内旧版的桥」这一项。
+* **与库内 4 元集版的桥 `fitchCostGen_quartet_eq_fitchCost` 尚未证**（显式缺口见文件末
+  `QuartetBridgeGap`）。目标：在 4 叶二叉树 `12|34` 上，`fitchCostGen σ = Pattern.fitchCost 0 σ`
+  （`Phylo/Stat/Parsimony.lean:61`，`decide` 枚举 48 情形的那个）。
+  **卡点（精确）**：
+  1. `fitchSet` / `fitchCost` 是 `WellFounded.fix` 定义的**不可计算**项 ⇒ `decide` 不能直接算；
+     必须先证并注册足够的展开引理（已有 `fitchCost_eq_leaf` / `fitchCost_eq_internal'` /
+     `minExtra_pair` / `best_pair`），这一层**已经想清楚**（本轮还另外试出了
+     `finset_min'_congr` / `minExtra_congr` / `best_congr` / `fitchSet_nonempty` /
+     `extra_childSets_pair` / `minExtra_childSets_pair` / `fitchSet_eq_pair` / `fitchCost_eq_pair`
+     这一整套「恰有两个孩子」的引理，均已证明通过——只是没有落进本文件，避免留下未用的声明）；
+  2. **真正的卡点**：具体实例 `V := Fin 7` 时，`quartetTree.V` 只在 `.default` 透明度下才与
+     `Fin 7` 相等；而 `rw` 用 `.implicit` 透明度匹配、`open Classical` 又使 `decide` 的类型类搜索
+     优先取到 `Classical.propDecidable`（阶跃到 `choice` 而卡住）、去掉它之后
+     `DecidableEq (Finset quartetTree.V)` 又推不出来。于是「用 `decide` 枚举 `Fin 7` 上的
+     `children v = {u1,u2}`」这一步反复失败（试过：`decide`、`attribute [-instance]
+     Classical.propDecidable in`、`ext + fin_cases + decide`）。**不是数学问题，是具体实例的
+     defeq/实例搜索工程问题。**
+  **建议的下一条路**（优先级从高到低）：
+  * 把桥写成**抽象形态**：假设 `T.children r = {i₁, i₂}`、`T.children i₁ = {a,b}`、
+    `T.children i₂ = {c,d}`、四个叶的 `fitchSet` 与其代价，然后用上面那套「恰有两个孩子」的引理
+    + `minExtra_pair` / `best_pair` + `Bool` 上的 `pair = Pattern.fitchSet` 收尾 —— **完全不需要
+    构造具体实例、也不需要 `decide` 枚举 `Fin 7`**（风险最低）；
+  * 或给具体实例补一个**可约的顶点类型别名**（`abbrev QuartetV := Fin 7`）+ 显式
+    `DecidableEq` 实例，再走 `decide`。
+  ⇒ 未证者不标 ★（纪律 12），且**没有留 `sorry`**（桥只以 `QuartetBridgeGap : Prop` 的形式存在）。
 * **Sankoff（任意代价矩阵）本批不做** —— **Sankoff 1975**
   （*Minimum mutation trees of sequences*, SIAM J. Appl. Math. 28:35–42）
   **不在** `references/md/`（见 `references/README.md:248`、`:282` 缺失清单）。
@@ -1123,6 +1144,16 @@ theorem fitchCostGen_eq_minChanges (T : GenTree X) (σ : X → α) :
       _ = ∑ w ∈ (Finset.univ : Finset T.V), minExtra (T.childSets σ w) :=
           T.numChanges_assign σ
       _ = T.fitchCostGen σ := (T.fitchCostGen_eq_sum_minExtra σ).symm
+
+/-! ### 显式缺口：与库内 4 元集版的桥（**未证**，纪律 12） -/
+
+/-- **未完成的缺口（4 元集桥）**：4 叶二叉树 `12|34` 上的 Fitch 代价 = 库内
+`Pattern.fitchCost 0`（`Phylo/Stat/Parsimony.lean:61`）。
+
+即：存在 `T : GenTree (Fin 4)`，对一切 `σ : Fin 4 → Bool`，`T.fitchCostGen σ = Pattern.fitchCost 0 σ`。
+本文件**没有证明**它（也**没有**定义那棵具体的树）；精确卡点与建议路线见文件头「🟡 尚未做」。 -/
+def QuartetBridgeGap : Prop :=
+  ∃ T : GenTree (Fin 4), ∀ σ : Fin 4 → Bool, T.fitchCostGen σ = Pattern.fitchCost 0 σ
 
 end
 
