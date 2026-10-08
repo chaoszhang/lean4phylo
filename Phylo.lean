@@ -66,6 +66,7 @@ import Phylo.Stat.CoalescentHistoryCount
 import Phylo.Stat.CoalescentStats
 import Phylo.Stat.DegnanSalter
 import Phylo.Stat.EmpiricalConvergence
+import Phylo.Stat.FiveTaxonLemma4
 import Phylo.Stat.Identifiability
 import Phylo.Stat.InvariantsRank
 import Phylo.Stat.KingmanCoalescent
