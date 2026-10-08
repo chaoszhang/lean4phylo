@@ -94,4 +94,56 @@ theorem iso_of_quartets_true {X : Type u} [Fintype X] [DecidableEq X]
   · exact Or.inl h
   · exact Or.inr h
 
+/-- ★★★ **定理 1 的树级形式**（通用）：Topo 层的估计量 `E` 最终判对（定理 1 的结论），
+`Qt n` 是**实现** `E n` 的二元树（每个 4-元集上它的 split 拓扑类就是 `E n` 在该集上的选择），
+`Ttrue` 是实现真选择 `qtrue` 的真树 ⇒ `Qt n` 最终与 `Ttrue` **同构**。
+
+`2|2` 条件不必再传：它是 `QuartetTree.q_card` 字段（T0.6 治本）。 -/
+theorem tree_iso_of_topo_consistency {X : Type u} [Fintype X] [DecidableEq X]
+    (e : QuartetLabel X) (qtrue : TopoChoice X) {E : ℕ → TopoChoice X}
+    (hE : ∃ N : ℕ, ∀ n ≥ N, IsTrueT qtrue (E n))
+    {Ttrue : QuartetTree.{u, u} X} {Qt : ℕ → QuartetTree.{u, u} X}
+    (hTtrue : Ttrue.tree.IsBinary) (hQt : ∀ n : ℕ, (Qt n).tree.IsBinary)
+    (htrue_class : ∀ (S : Finset X) (hS : S.card = 4),
+      topoOfSplit (e S hS) (Ttrue.q S hS) = qtrue S hS)
+    (hreal : ∀ (n : ℕ) (S : Finset X) (hS : S.card = 4),
+      topoOfSplit (e S hS) ((Qt n).q S hS) = (E n) S hS) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (Qt n).tree Ttrue.tree) := by
+  obtain ⟨N, hN⟩ := hE
+  exact ⟨N, fun n hn => iso_of_quartets_true e hTtrue (hQt n)
+    (fun S hS => Ttrue.q_card S hS) (fun S hS => (Qt n).q_card S hS)
+    (fun S hS => by rw [hreal n S hS, hN n hn S hS, htrue_class S hS])⟩
+
+
+/-- ★★★ **JC69 下 CASTER 恢复真物种树的拓扑**（**树级**，正文定理 1 的最终形式）。
+
+薄壳：`hE` 由 ★★★ `jc69_caster_statisticallyConsistent` 供给（一行），
+本定理把它经 ★★★ `tree_iso_of_topo_consistency` 升级为「估计量的树与真树**同构**」。 -/
+theorem jc69_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n))
+    {Ttrue : QuartetTree.{0, 0} (Fin 4)} {Qt : ℕ → QuartetTree.{0, 0} (Fin 4)}
+    (hTtrue : Ttrue.tree.IsBinary) (hQt : ∀ n : ℕ, (Qt n).tree.IsBinary)
+    (htrue_class : ∀ (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) (Ttrue.q S hS) = Topo.ab_cd)
+    (hreal : ∀ (n : ℕ) (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) ((Qt n).q S hS) = (E n) S hS) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (Qt n).tree Ttrue.tree) :=
+  tree_iso_of_topo_consistency (X := Fin 4) e (fun _ _ => Topo.ab_cd) hE hTtrue hQt
+    htrue_class hreal
+
+
+/-- ★★★ **LM1 下 CASTER 恢复真物种树的拓扑**（**树级**，同 `jc69_recovers_true_tree`；
+`hE` 由 ★★★ `lm1_caster_statisticallyConsistent` 供给）。 -/
+theorem lm1_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n))
+    {Ttrue : QuartetTree.{0, 0} (Fin 4)} {Qt : ℕ → QuartetTree.{0, 0} (Fin 4)}
+    (hTtrue : Ttrue.tree.IsBinary) (hQt : ∀ n : ℕ, (Qt n).tree.IsBinary)
+    (htrue_class : ∀ (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) (Ttrue.q S hS) = Topo.ab_cd)
+    (hreal : ∀ (n : ℕ) (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) ((Qt n).q S hS) = (E n) S hS) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (Qt n).tree Ttrue.tree) :=
+  tree_iso_of_topo_consistency (X := Fin 4) e (fun _ _ => Topo.ab_cd) hE hTtrue hQt
+    htrue_class hreal
+
 end Phylo.Stat.CASTERInstances
