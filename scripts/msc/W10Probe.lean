@@ -1,6 +1,6 @@
 import Phylo
 
-/-! # `W10Probe.lean` —— W10c（`MSCProof`）的**反空真探针**（协调侧自写，**不登记进 `Phylo.lean`**）
+/-! # `W10Probe.lean` —— W10 全批（W10a–W10i ＋ 收口 ＋ 空洞性发现）的**反空真探针**（协调侧自写，**不登记进 `Phylo.lean`**）
 
 目的：证明 `MSCProof` 里的构造**不是空真** —— 实例可居留、真树 quartet 概率**严格为正**、
 一般 `X` 的取值引理**真的**能落地、`1/3` **真的是求和**。
@@ -102,3 +102,32 @@ example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.CASTERSamplingLaw.{0} (Fin 4
 
 example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.SiteSamplingLaw.{0, 0} (Fin 4)) :=
   Phylo.Stat.SamplingAxiomVacuity.siteSamplingLaw_nonempty (Fin 4)
+
+/-! ## 本批最后四块的反空真护栏（一般 `n` 计数 · ADR2011 Lemma 4 · 根部 `1/3`） -/
+
+-- ⑱ ★★★ **一般 `n` 的溯祖历史计数**（纯内核，不是枚举）
+example : ((Phylo.Stat.RankedGeneTree.mergeHistories 5).card : ℝ)
+    = Phylo.Stat.RankedGeneTree.H 5 :=
+  Phylo.Stat.CoalescentHistoryCount.card_mergeHistories_eq_H 5 (by norm_num)
+
+-- ⑲ ★★★ **ADR2011 Lemma 4（主目标）**：任意两个无根拓扑的纤维相等
+example (T T' : Phylo.Stat.FiveTaxonLemma4.UnrootedTopology5) :
+    ((Phylo.Stat.RankedGeneTree.mergeHistories 5).filter
+        (fun f => Phylo.Stat.FiveTaxonLemma4.topoOf 5 f = T.1)).card
+      = ((Phylo.Stat.RankedGeneTree.mergeHistories 5).filter
+        (fun f => Phylo.Stat.FiveTaxonLemma4.topoOf 5 f = T'.1)).card :=
+  Phylo.Stat.FiveTaxonLemma4.lemma4_five T T'
+
+-- ⑳ ★★★ Lemma 4 的**概率版**：每个无根拓扑 `P(T) = 1/15`
+example (T : Phylo.Stat.FiveTaxonLemma4.UnrootedTopology5) :
+    (∑ _f ∈ (Phylo.Stat.RankedGeneTree.mergeHistories 5).filter
+        (fun f => Phylo.Stat.FiveTaxonLemma4.topoOf 5 f = T.1),
+        (1 / Phylo.Stat.RankedGeneTree.H 5)) = 1 / 15 :=
+  Phylo.Stat.FiveTaxonLemma4.lemma4_five_prob T
+
+-- ㉑ ★★★ **根部 `1/3` 就是跳链在拓扑类上的质量**（**等式**）
+example : Phylo.Stat.MSCProof.rootTopoProb
+    = ∑ P ∈ (Finset.univ.filter (fun P : Phylo.Stat.KingmanJumpChain.PartK 4 3 =>
+        ({0, 1} : Finset (Fin 4)) ∈ P.1.parts ∨ ({2, 3} : Finset (Fin 4)) ∈ P.1.parts)),
+      Phylo.Stat.KingmanJumpChain.jumpWeight 4 3 P :=
+  Phylo.Stat.RootJumpMass.rootTopoProb_eq_jumpMass
