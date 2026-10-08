@@ -21,6 +21,12 @@
 | `caster_f84_refdump.py` | dump aggregated 式的完整隐含表（32 个非零模式）⇒ `caster_f84_reference_table.json` |
 | `caster_f84_collapse.py` | ★ **关键塌缩**：8 个「侧向事件」形式与原 aggregated 式**完全一致**（1.1e-13） |
 | `caster_f84_scaffold.py` | ★ 推导脚手架：`Σ_{i∈U} K(t)_{p,i} = π_U + e^{−λt}(1[p∈U] − π_U)`（2.2e-16） |
+| `caster_f84_leancheck.py` | ★★ **决定性**：把 Lean 接口 `CASTERF84Events.lean` **逐字**翻译成数值代码 ⇒ 旧版 `Ew` 对 (t1,t2,t3,t4) **完全对称**（3.6e-12）、`Ew = 8π_Aπ_Cπ_Gπ_Tπ_Rπ_Y(1−sm lx)rm(Σl)`（2.2e-12）⇒ 旧主公式**按字面为假** |
+| `caster_f84_decide.py` | 把 `caster_f84_iface.py` 的实现与我的实现**并列**打印 ⇒ `E_ab = C`、`E_ac = E_ad = 0`（1e-15/1e-20） |
+| `caster_f84_tabtest.py` | 6 组系数的穷举对照 ⇒ 只有「附录式 **÷4**」给出 `E_ab=C, E_ac=E_ad=0`（7e-13）；照印系数给 `E_ab=4C`；Fig.1D 逐模式读法漂移 |
+| `caster_f84_formal.py` | ★★★ **把 `sm_t,rm_t` 当自由符号（含负数）后 (D)/(XA)/(XB) 仍成立**（3e-10 / 3e-18 / 1e-18）⇒ 推导层是**纯有理函数恒等式**，Lean 侧不需要任何指数运算律 |
+| `caster_f84_hyp.py` | 恒等式**不需要** `π_R+π_Y=1`；只需 `piR pi ≠ 0`、`piY pi ≠ 0`（决定 Lean 假设集） |
+| `caster_f84_algstruct.py` | 首版「代数结构」探针（其 `Cval` 漏乘/多乘 `rm_lx` 的版本，保留作对照；结论以 `caster_f84_formal.py` 为准） |
 
 ## 怎么跑（Windows 上）
 ```
