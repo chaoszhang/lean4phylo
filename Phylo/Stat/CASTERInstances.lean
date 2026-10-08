@@ -146,4 +146,36 @@ theorem lm1_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoic
   tree_iso_of_topo_consistency (X := Fin 4) e (fun _ _ => Topo.ab_cd) hE hTtrue hQt
     htrue_class hreal
 
+/-- ★★★ **定理 1（任意物种数，条件形式）**：只要**每个 4-元集都有自己的 MSC 模型**
+（`M S hS`：该 quartet 的基因树拓扑分布）与**自己的命题 A 数据**（`P S hS`）
+——这正是正文的设定（各 quartet 的支长不同）——则最大化 CASTER 得分的估计量
+最终把**每一个** quartet 的拓扑都判对。
+
+用的就是 ★★★ `TopoIdeal.ofFamily`（逐 quartet 建模）与 ★★★ `topo_statisticallyConsistent`。
+`hNE`（存在非真选择）由调用方给出（例如取 `fun _ _ => Topo.ac_bd`）；
+对单个 quartet（`X = Fin 4`）该见证在 `jc69_/lm1_…statisticallyConsistent` 内部就地证出。 -/
+theorem caster_statisticallyConsistent_of_family {X : Type u} [Fintype X] [DecidableEq X]
+    (Θ : (S : Finset X) → S.card = 4 → Type*)
+    [inst : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSpace (Θ S hS)]
+    (M : ∀ (S : Finset X) (hS : S.card = 4), MSCTopoSym (Θ S hS))
+    (ν : ∀ (S : Finset X) (hS : S.card = 4), Measure (Θ S hS))
+    [inst2 : ∀ (S : Finset X) (hS : S.card = 4), IsProbabilityMeasure (ν S hS)]
+    (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
+    (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
+    (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
+      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
+      Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS))
+    (emp : ℕ → TopoWeight X)
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N, TopoClose (emp n)
+      (TopoIdeal.ofFamily Θ M ν hdeep P hf_int hf_pos hpos hint).W ε)
+    (hNE : ∃ q : TopoChoice X, ¬ IsTrueT (fun _ _ => Topo.ab_cd) q)
+    {E : ℕ → TopoChoice X}
+    (hE : ∀ (n : ℕ) (q : TopoChoice X), topoScore (emp n) q ≤ topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n) :=
+  topo_statisticallyConsistent (TopoIdeal.ofFamily Θ M ν hdeep P hf_int hf_pos hpos hint)
+    emp hconv hNE hE
+
 end Phylo.Stat.CASTERInstances
