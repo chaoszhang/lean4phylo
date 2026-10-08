@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.Stat.CASTERF84Events
+import Phylo.Stat.CASTERF84Scaffold
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTERGeneTree
 
@@ -23,7 +24,7 @@ Phylo.Stat.CASTERGeneTree    jc69PropAData + 端到端定理 1 的写法
         └── 本文件：把 F84 的**九格权重表**打包成 `PropAData`
 ```
 
-## 🔻 条件形式（刻意为之）
+## 两种形式（条件 / 无条件）
 
 三条核恒等式
 
@@ -34,9 +35,14 @@ Phylo.Stat.CASTERGeneTree    jc69PropAData + 端到端定理 1 的写法
 C := 2·π_A·π_C·π_G·π_T·π_R·π_Y·(1 − sm lam lx)·rm(λ,κ,t1)·rm(λ,κ,t2)·rm(λ,κ,t3)·rm(λ,κ,t4)
 ```
 
-由**另一路**（`Phylo.Stat.CASTERF84Scaffold`）证明。本文件把它们作为**显式假设**
-`hD / hA / hB` 收下，因此**不依赖**那一支即可落地；待其到位后，加 5 行无条件版即可
-（见文件末「接续」注释）。
+已由 ★★★ `Phylo.Stat.CASTERF84Scaffold.Ew_diag` / `EwA_zero` / `EwB_zero` **无条件证完**
+（零 `sorry` / 零 `axiom`）。本文件据此给两种打包：
+
+* **条件形式** `f84PropAData_of` / `f84_caster_statisticallyConsistent_of`：把三条恒等式收成
+  显式假设 `hD / hA / hB`，因此**不依赖**脚手架那一支即可落地（保留，供分层复核与复用）；
+* **无条件形式** `f84PropAData` / `f84_caster_statisticallyConsistent`（见 §5）：
+  `π, κ` 退为**参数**，样本空间取「叶长 × 内部枝长」`(Fin 4 → ℝ) × ℝ`，
+  三条恒等式由脚手架直接供给 ⇒ **F84 的 CASTER 定理 1 端到端无条件成立**。
 
 **九格权重表**（`T'` = 基因树形状、`τ` = 被评拓扑；`l` 是按 `a,b,c,d` 的**自然**叶长）：
 
@@ -51,8 +57,9 @@ C := 2·π_A·π_C·π_G·π_T·π_R·π_Y·(1 − sm lam lx)·rm(λ,κ,t1)·rm(
 
 由 (D)/(XA)/(XB) 立即得到 `E[w(τ) | 基因树 T'] = C·[τ = T']` —— **两个错拓扑的期望权重恰为 0**。
 
-本文件含 ★★★ `f84Weight_eq`、★★★ `f84PropAData_of`、
-★★★ `f84_caster_statisticallyConsistent_of`；不含 `sorry` / `axiom` / `import Mathlib`。
+本文件含 ★★★ `f84Weight_eq`、★★★ `f84PropAData_of`、★★★ `f84_caster_statisticallyConsistent_of`、
+★★★ `f84Weight_eq_uncond`、★★★ `f84PropAData`、★★★ `f84_caster_statisticallyConsistent`；
+不含 `sorry` / `axiom` / `import Mathlib`。
 -/
 
 noncomputable section
@@ -265,17 +272,120 @@ theorem f84_caster_statisticallyConsistent_of
   propAData_caster_statisticallyConsistent S ν hdeep (f84PropAData_of hD hA hB)
     hf_int hf_pos hpos hint emp hconv hE
 
-/-! ## 5. 接续（另一路到位后加 5 行）
+/-! ## 5. 无条件形式（由 `Phylo.Stat.CASTERF84Scaffold` 供给）
 
-`Phylo.Stat.CASTERF84Scaffold` 证明 `Ew_diag` / `EwA_zero` / `EwB_zero` 后，
-无条件版即
+`π, κ` 从样本空间退为**参数**，样本空间只剩「叶长 × 内部枝长」`(Fin 4 → ℝ) × ℝ`；
+三条核恒等式 (D)/(XA)/(XB) 由 ★★★ `Ew_diag` / `EwA_zero` / `EwB_zero` 无条件给出，
+于是本节的 `f84PropAData` 与 `f84_caster_statisticallyConsistent` **不含任何核恒等式假设**。 -/
 
-```
-noncomputable def f84PropAData (pi : Fin 4 → ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0) :
-    PropAData (((Fin 4 → ℝ) × ℝ)) := ...
-```
+open Phylo.Stat.CASTERF84Scaffold (Ew_diag EwA_zero EwB_zero)
 
-（`π,κ` 从样本空间退回为参数；三条子句由 `f84Weight_eq` 与 `Ew_diag`/`EwA_zero`/`EwB_zero`
-直接给出。）本文件不预先写好它，以免与那一支的最终签名冲突。 -/
+/-- ★★ **无条件版 (D)**：把 ★★★ `Ew_diag` 重排成 `f84Amp · ∏rm` 的形状（即 `hD` 的形状）。 -/
+theorem f84Ew_eq (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0) (lx : ℝ) :
+    ∀ a b c d : ℝ, Ew pi kap (lamF84 pi kap) a b lx c d
+      = f84Amp pi (lamF84 pi kap) lx
+        * (rm (lamF84 pi kap) kap a * rm (lamF84 pi kap) kap b
+          * rm (lamF84 pi kap) kap c * rm (lamF84 pi kap) kap d) := by
+  intro a b c d
+  rw [Ew_diag pi hR hY kap (lamF84 pi kap) a b lx c d]
+  simp only [f84Amp]
+
+/-- ★★ **无条件版 (XA)**：跨结点分组 `ac|bd` 的期望权重恒为 `0`。 -/
+theorem f84EwA_eq (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0) (lx : ℝ) :
+    ∀ a b c d : ℝ, EwA pi kap (lamF84 pi kap) a b lx c d = 0 :=
+  fun a b c d => EwA_zero pi hR hY kap (lamF84 pi kap) a b lx c d
+
+/-- ★★ **无条件版 (XB)**：跨结点分组 `ad|bc` 的期望权重恒为 `0`。 -/
+theorem f84EwB_eq (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0) (lx : ℝ) :
+    ∀ a b c d : ℝ, EwB pi kap (lamF84 pi kap) a b lx c d = 0 :=
+  fun a b c d => EwB_zero pi hR hY kap (lamF84 pi kap) a b lx c d
+
+/-- ★★★ **F84 九格定理（无条件）**：`π, κ` 固定为参数时，`f84Weight` 恰是
+「对角 = 印的常数、非对角 = `0`」。 -/
+theorem f84Weight_eq_uncond (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0)
+    (l : Fin 4 → ℝ) (lx : ℝ) :
+    ∀ T' τ : Topo, f84Weight pi kap (lamF84 pi kap) l lx T' τ
+      = if T' = τ then f84Const pi kap (lamF84 pi kap) lx l else 0 :=
+  f84Weight_eq pi kap (lamF84 pi kap) l lx
+    (f84Ew_eq pi kap hR hY lx) (f84EwA_eq pi kap hR hY lx) (f84EwB_eq pi kap hR hY lx)
+
+/-- ★★ **对角格（无条件）**：`f84Weight` 在 `T' = τ` 时给印的常数。 -/
+theorem f84Weight_self_uncond (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0)
+    (l : Fin 4 → ℝ) (lx : ℝ) (T : Topo) :
+    f84Weight pi kap (lamF84 pi kap) l lx T T = f84Const pi kap (lamF84 pi kap) lx l := by
+  rw [f84Weight_eq_uncond pi kap hR hY l lx T T, ite_eq_left rfl]
+
+/-- ★★ **非对角格（无条件）**：`f84Weight` 在 `T' ≠ τ` 时给 `0`。 -/
+theorem f84Weight_ne_uncond (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0)
+    (l : Fin 4 → ℝ) (lx : ℝ) (T' τ : Topo) (h : T' ≠ τ) :
+    f84Weight pi kap (lamF84 pi kap) l lx T' τ = 0 := by
+  rw [f84Weight_eq_uncond pi kap hR hY l lx T' τ, ite_eq_right h]
+
+/-- 无条件形式的期望权重表（`π, κ` 是参数，`θ` 只含枝长）。 -/
+noncomputable def f84A_uncond (pi : Fin 4 → ℝ) (kap : ℝ) (θ : (Fin 4 → ℝ) × ℝ)
+    (T' τ : Topo) : ℝ :=
+  f84Weight pi kap (lamF84 pi kap) θ.1 θ.2 T' τ
+
+/-- 无条件形式的幅度。 -/
+noncomputable def f84F_uncond (pi : Fin 4 → ℝ) (kap : ℝ) (θ : (Fin 4 → ℝ) × ℝ) : ℝ :=
+  f84Const pi kap (lamF84 pi kap) θ.2 θ.1
+
+/-- ★★★ **F84 的命题 A 数据（无条件）**：样本空间 = 「叶长 × 内部枝长」`(Fin 4 → ℝ) × ℝ`，
+`π, κ` 退回为参数（故 `hR : π_R ≠ 0`、`hY : π_Y ≠ 0` 是对**参数**的非退化假设，
+而不是对样本点的逐点要求）。三条子句由 ★★★ `f84Weight_eq_uncond` 立即给出。 -/
+noncomputable def f84PropAData (pi : Fin 4 → ℝ) (kap : ℝ)
+    (hR : piR pi ≠ 0) (hY : piY pi ≠ 0) : PropAData ((Fin 4 → ℝ) × ℝ) where
+  A := f84A_uncond pi kap
+  f := f84F_uncond pi kap
+  clause_ab := by
+    intro θ T' hT
+    subst hT
+    simp only [f84A_uncond, f84F_uncond]
+    have hs := f84Weight_self_uncond pi kap hR hY θ.1 θ.2 .ab_cd
+    have h1 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ab_cd .ac_bd (by decide)
+    have h2 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ab_cd .ad_bc (by decide)
+    rw [hs, h1, h2]
+    exact ⟨sub_self _, sub_self _⟩
+  clause_ac := by
+    intro θ T' hT
+    subst hT
+    simp only [f84A_uncond, f84F_uncond]
+    have hs := f84Weight_self_uncond pi kap hR hY θ.1 θ.2 .ac_bd
+    have h1 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ac_bd .ab_cd (by decide)
+    have h2 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ac_bd .ad_bc (by decide)
+    rw [hs, h1, h2]
+    exact ⟨sub_self _, sub_self _⟩
+  clause_ad := by
+    intro θ T' hT
+    subst hT
+    simp only [f84A_uncond, f84F_uncond]
+    have hs := f84Weight_self_uncond pi kap hR hY θ.1 θ.2 .ad_bc
+    have h1 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ad_bc .ab_cd (by decide)
+    have h2 := f84Weight_ne_uncond pi kap hR hY θ.1 θ.2 .ad_bc .ac_bd (by decide)
+    rw [hs, h1, h2]
+    exact ⟨sub_self _, sub_self _⟩
+
+/-- ★★★ **F84 的 CASTER 定理 1（端到端，无条件）**：三条核恒等式**不再作为假设**，
+由 `Phylo.Stat.CASTERF84Scaffold` 的 ★★★ `Ew_diag` / `EwA_zero` / `EwB_zero` 直接供给；
+其余假设与 `f84_caster_statisticallyConsistent_of` 逐条同形
+（`hdeep`/`hpos` MSC 侧、`hf_int`/`hf_pos` 幅度、`hint` 正文条件 (2)、`hconv` 大数定律）。 -/
+theorem f84_caster_statisticallyConsistent
+    (pi : Fin 4 → ℝ) (kap : ℝ) (hR : piR pi ≠ 0) (hY : piY pi ≠ 0)
+    (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ)) (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
+    (hdeep : MeasurableSet {θ | S.deep θ}) (hpos : 0 < ν {θ | ¬ S.deep θ})
+    (hf_int : Integrable (f84PropAData pi kap hR hY).f ν)
+    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (f84PropAData pi kap hR hY).f θ)
+    (hint : ∀ T : Topo, Integrable
+      (fun θ => ∑ T' : Topo, S.τd θ T' * (f84PropAData pi kap hR hY).A θ T' T) ν)
+    (emp : ℕ → TopoWeight (Fin 4))
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N,
+      TopoClose (emp n)
+        (TopoIdeal.ofModel S ν hdeep (f84PropAData pi kap hR hY) hf_int hf_pos hpos hint).W ε)
+    {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∀ (n : ℕ) (q : TopoChoice (Fin 4)),
+      topoScore (emp n) q ≤ topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n) :=
+  propAData_caster_statisticallyConsistent S ν hdeep (f84PropAData pi kap hR hY)
+    hf_int hf_pos hpos hint emp hconv hE
 
 end Phylo.Stat.CASTERF84PropA
