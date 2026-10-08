@@ -91,6 +91,21 @@ def main():
     assert ok
 
     print("=" * 78)
+    print("④ **测度层**（`Phylo/Stat/MSCMeasure.lean`）：内部枝上的概率划分")
+    # 把 x = e^{−t} 当自由符号：P(τ₂ ≤ t) = 1 − x, P(τ₂ > t) = x
+    P_le = (F(1), F(-1))     # 常数项, x 的系数
+    P_gt = (F(0), F(1))
+    tot = (P_le[0] + P_gt[0], P_le[1] + P_gt[1])
+    print(f"   P(τ₂ ≤ t) + P(τ₂ > t) = {tot[0]} + {tot[1]}·x   （要求 1 + 0·x）")
+    assert tot == (F(1), F(0)), tot
+    # 一致概率的测度层混合：P(≤t)·1 + P(>t)·rootTopoProb，rootTopoProb = 1/3
+    third = F(1, 3)
+    mix = (P_le[0] * 1 + P_gt[0] * third, P_le[1] * 1 + P_gt[1] * third)
+    print(f"   P(≤t)·1 + P(>t)·(1/3) = {mix[0]} + {mix[1]}·x   （要求 1 + (−2/3)·x = pConc）")
+    assert mix == pConc, (mix, pConc)
+    print("   ⇒ **误差恰为 0** ✓  —— 对应 Lean `branch_partition` / `mscConcordant_eq_measure`")
+
+    print("=" * 78)
     print("VERDICT: PASS")
 
 if __name__ == "__main__":
