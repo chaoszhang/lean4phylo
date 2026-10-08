@@ -76,6 +76,17 @@ import Phylo.Stat.Parsimony
     `fitchCostGen σ = ∑_v minExtra (childSets v)`；
   * `numChanges_eq_sum_children`：`numChanges σ τ = ∑_v ∑_{u ∈ children v} [st τ u ≠ st τ v]`。
   （两条「后代求和」桥都靠 `desc` 的分解 + 两两不交 + `Finset.sum_biUnion`。）
+* ★★★ **主定理 `fitchCostGen_eq_minChanges`**（**任意有根有限树 + 任意有限状态类型 `α`**）：
+  `fitchCostGen σ = minChanges σ`。两个方向分别是：
+  * `≤`：下界（ii）`fitchCost_add_le_insideCost` 在根处、取「突变数最小」的赋值即得
+    （`exists_numChanges_eq_minChanges`）；
+  * `≥`：**上界（iii）**——自顶向下构造 `assign : V → α`（根的初值任取，然后
+    「父态 ∈ `S_u` 就沿用、否则取 `S_u` 的任一元素」），并证明
+    `assign_mem`（每个顶点 `st (assign σ) v ∈ S_v`）、
+    `assign_child_eq_iff`（每条边上「变 ⟺ 父态 ∉ `S_v`」）、
+    `numChanges_assign`（`numChanges σ (assign σ) = ∑_v minExtra (childSets v)`），
+    再合上桥 2（`fitchCostGen_eq_sum_minExtra`）。
+  ⇒ **一般分支数（polytomy）也成立**，不需要二叉假设。
 
 ## ⚠️ 树层的一处更正（多分叉）：`F v s = c_v + [s ∉ S_v]` **不成立**
 
@@ -95,17 +106,10 @@ import Phylo.Stat.Parsimony
 
 ## 🟡 尚未做（**不得含糊**）
 
-* **树层主定理尚未证**：`fitchCostGen = 最少突变数`（`fitchCostGen_eq_minChanges`），
-  以及与库内 4 元集版的桥 `fitchCostGen_quartet_eq_fitchCost`。
-  **已有**：树数据 `GenTree`、子树机制（分解 / 不交 / `desc root = univ`）、
-  `S_v` / `c_v` / `insideCost` 的定义与展开引理、`fitchCostGen` / `numChanges` / `minChanges`、
-  结点层下界引擎 `minExtra_add_le`、下界（ii）`fitchCost_add_le_insideCost`、
-  两条桥 `insideCost_root_eq_numChanges` / `fitchCostGen_eq_sum_minExtra`、
-  `numChanges_eq_sum_children`。
-  **缺**（最后一批）：上界（iii）—— 自顶向下构造 `assign : V → α`，使每个结点
-  `st (assign σ) v ∈ S_v`，于是 `∑_v extra (childSets v) (st τ v) = ∑_v minExtra (childSets v)`，
-  从而 `minChanges σ ≤ fitchCostGen σ`；再由 (ii) 得主定理 `fitchCostGen_eq_minChanges`。
-  —— **未证者不标 ★**（纪律 12）；`references/README.md` 的 `Fitch1971_*` 在手 ✓。
+* **与库内 4 元集版的桥 `fitchCostGen_quartet_eq_fitchCost` 尚未做**：在 4 叶二叉树 `12|34` 上
+  把 `fitchCostGen` 与 `Pattern.fitchCost 0 p`（`Phylo/Stat/Parsimony.lean:61`）对上。
+  需要先给出一个 4 叶 `GenTree` 实例（`Fin 7` 或等价），再做枚举验证。
+  —— 这在**逻辑上独立于主定理**（主定理已证），故只影响「与库内旧版的桥」这一项。
 * **Sankoff（任意代价矩阵）本批不做** —— **Sankoff 1975**
   （*Minimum mutation trees of sequences*, SIAM J. Appl. Math. 28:35–42）
   **不在** `references/md/`（见 `references/README.md:248`、`:282` 缺失清单）。
@@ -940,7 +944,185 @@ theorem fitchCostGen_eq_sum_minExtra (σ : X → α) :
     T.fitchCostGen σ = ∑ w ∈ (Finset.univ : Finset T.V), minExtra (T.childSets σ w) := by
   rw [fitchCostGen, T.fitchCost_eq_sum_minExtra, T.desc_root]
 
+/-! ### 上界（iii）：自顶向下构造达到最优的赋值
+
+构造：根的初值任取；对顶点 `u`，若父态落在 `S_u` 里就沿用父态，否则取 `S_u` 的任一元素。
+于是每个顶点都满足 `st τ v ∈ S_v`，且「与父亲状态不同」⟺「父态 ∉ `S_v`」，
+从而 `numChanges σ τ = ∑_v extra (childSets v) (st τ v) = ∑_v minExtra (childSets v) = fitchCostGen σ`。 -/
+
+/-- 树高的上界（自顶向下递归的度量）。 -/
+def maxDepth (T : GenTree X) : ℕ :=
+  (Finset.univ.image T.depth).max' (Finset.image_nonempty.mpr ⟨T.root, Finset.mem_univ T.root⟩)
+
+theorem depth_le_maxDepth (T : GenTree X) (v : T.V) : T.depth v ≤ T.maxDepth :=
+  Finset.le_max' _ _ (Finset.mem_image.mpr ⟨v, Finset.mem_univ v, rfl⟩)
+
+/-- 自顶向下递归的良基关系：父亲的高度更大（`depth` 是从叶往上数的高度）。 -/
+theorem wf_depth_rev (T : GenTree X) :
+    WellFounded (fun a b : T.V => T.maxDepth - T.depth a < T.maxDepth - T.depth b) :=
+  InvImage.wf (fun v => T.maxDepth - T.depth v) Nat.lt_wfRel.wf
+
+/-- `u` 的父亲（只在 `u ≠ root` 时可用）。 -/
+def parentGet (T : GenTree X) (u : T.V) (h : T.parent u ≠ none) : T.V :=
+  (T.parent u).get (Option.isSome_iff_ne_none.mpr h)
+
+theorem parent_some_parentGet (T : GenTree X) {u : T.V} (h : T.parent u ≠ none) :
+    T.parent u = some (T.parentGet u h) := by
+  rw [parentGet]
+  exact (Option.some_get _).symm
+
+/-- 已知父亲状态 `s` 时顶点 `u` 的状态：叶取标签；否则「`s ∈ S_u` 就沿用 `s`，
+不然取 `S_u` 的任一元素」。 -/
+def assignStep (σ : X → α) (u : T.V) (s : α) : α :=
+  if T.children u = ∅ then σ (T.label u)
+  else if s ∈ T.fitchSet σ u then s
+  else Classical.choose (best_nonempty (T.childSets σ u) (σ (T.label u)))
+
+/-- 自顶向下构造的赋值。 -/
+noncomputable def assign (σ : X → α) : T.V → α :=
+  WellFounded.fix T.wf_depth_rev (C := fun _ => α) (fun u rec =>
+    if h : T.parent u = none then T.assignStep σ u (σ (T.label T.root))
+    else T.assignStep σ u (rec (T.parentGet u h) (by
+      have hs := T.parent_some_parentGet h
+      have h1 := T.depth_parent hs
+      have h2 := T.depth_le_maxDepth (T.parentGet u h)
+      have h3 := T.depth_le_maxDepth u
+      omega)))
+
+theorem assign_eq_child_get {σ : X → α} {u : T.V} (h : T.parent u ≠ none) :
+    T.assign σ u = T.assignStep σ u (T.assign σ (T.parentGet u h)) := by
+  rw [assign, WellFounded.fix_eq, dite_eq_right h]
+
+theorem assign_eq_root {σ : X → α} {u : T.V} (h : T.parent u = none) :
+    T.assign σ u = T.assignStep σ u (σ (T.label T.root)) := by
+  rw [assign, WellFounded.fix_eq, dite_eq_left h]
+
+theorem assign_eq_child {σ : X → α} {u p : T.V} (hp : T.parent u = some p) :
+    T.assign σ u = T.assignStep σ u (T.assign σ p) := by
+  have hne : T.parent u ≠ none := by rw [hp]; simp
+  rw [T.assign_eq_child_get hne]
+  have hget : T.parentGet u hne = p := by
+    rw [parentGet]
+    exact Option.some.inj (by rw [Option.some_get]; exact hp)
+  rw [hget]
+
+/-- 构造出的赋值与 `st` 一致（叶被标签钉死，`assign` 在叶上恰好给出标签）。 -/
+theorem st_assign (σ : X → α) (u : T.V) : T.st σ (T.assign σ) u = T.assign σ u := by
+  by_cases hleaf : T.children u = ∅
+  · rw [st, ite_eq_left hleaf]
+    cases hp : T.parent u with
+    | none => rw [T.assign_eq_root hp, assignStep, ite_eq_left hleaf]
+    | some p => rw [T.assign_eq_child hp, assignStep, ite_eq_left hleaf]
+  · rw [st, ite_eq_right hleaf]
+
+theorem choose_mem_fitchSet (σ : X → α) {u : T.V} (h : T.children u ≠ ∅) :
+    Classical.choose (best_nonempty (T.childSets σ u) (σ (T.label u))) ∈ T.fitchSet σ u := by
+  rw [T.fitchSet_eq_internal h]
+  exact Classical.choose_spec (best_nonempty (T.childSets σ u) (σ (T.label u)))
+
+theorem assignStep_mem (σ : X → α) {u : T.V} (h : T.children u ≠ ∅) (s : α) :
+    T.assignStep σ u s ∈ T.fitchSet σ u := by
+  rw [assignStep, ite_eq_right h]
+  by_cases hs : s ∈ T.fitchSet σ u
+  · rw [ite_eq_left hs]
+    exact hs
+  · rw [ite_eq_right hs]
+    exact T.choose_mem_fitchSet σ h
+
+/-- ★★ 构造出的赋值在每个顶点都落在 Fitch 候选集 `S_v` 里。 -/
+theorem assign_mem (σ : X → α) (u : T.V) : T.st σ (T.assign σ) u ∈ T.fitchSet σ u := by
+  rw [T.st_assign]
+  by_cases hleaf : T.children u = ∅
+  · cases hp : T.parent u with
+    | none =>
+      rw [T.assign_eq_root hp, assignStep, ite_eq_left hleaf, T.fitchSet_eq_leaf hleaf]
+      exact Finset.mem_singleton_self _
+    | some p =>
+      rw [T.assign_eq_child hp, assignStep, ite_eq_left hleaf, T.fitchSet_eq_leaf hleaf]
+      exact Finset.mem_singleton_self _
+  · cases hp : T.parent u with
+    | none => rw [T.assign_eq_root hp]; exact T.assignStep_mem σ hleaf _
+    | some p => rw [T.assign_eq_child hp]; exact T.assignStep_mem σ hleaf _
+
+/-- ★★ **上界的核心**：构造出的赋值在每条边上「变 ⟺ 父态不在孩子的候选集里」。 -/
+theorem assign_child_eq_iff {σ : X → α} {u p : T.V} (hp : T.parent u = some p) :
+    (T.st σ (T.assign σ) u = T.st σ (T.assign σ) p)
+      ↔ T.st σ (T.assign σ) p ∈ T.fitchSet σ u := by
+  rw [show T.st σ (T.assign σ) u = T.assign σ u from T.st_assign σ u,
+    show T.st σ (T.assign σ) p = T.assign σ p from T.st_assign σ p,
+    T.assign_eq_child hp]
+  by_cases hleaf : T.children u = ∅
+  · rw [assignStep, ite_eq_left hleaf, T.fitchSet_eq_leaf hleaf, Finset.mem_singleton]
+    exact eq_comm
+  · rw [assignStep, ite_eq_right hleaf]
+    by_cases hs : T.assign σ p ∈ T.fitchSet σ u
+    · rw [ite_eq_left hs]
+      exact ⟨fun _ => hs, fun _ => rfl⟩
+    · rw [ite_eq_right hs]
+      exact ⟨fun h => absurd (h ▸ T.choose_mem_fitchSet σ hleaf) hs,
+        fun h => absurd h hs⟩
+
+/-- ★★★ **上界（iii）**：构造出的赋值达到 `∑_v minExtra (childSets v)`。 -/
+theorem numChanges_assign (σ : X → α) :
+    T.numChanges σ (T.assign σ)
+      = ∑ w ∈ (Finset.univ : Finset T.V), minExtra (T.childSets σ w) := by
+  rw [T.numChanges_eq_sum_children]
+  refine Finset.sum_congr rfl fun v _ => ?_
+  by_cases hleaf : T.children v = ∅
+  · have h1 : (∑ u ∈ T.children v,
+        (if T.st σ (T.assign σ) u ≠ T.st σ (T.assign σ) v then 1 else 0)) = 0 := by
+      rw [hleaf, Finset.sum_empty]
+    have h2 : minExtra (T.childSets σ v) = 0 := T.minExtra_childSets_eq_zero_of_leaf hleaf
+    rw [h1, h2]
+  · have hmem : T.st σ (T.assign σ) v ∈ best (T.childSets σ v) := by
+      rw [← T.fitchSet_eq_internal hleaf]
+      exact T.assign_mem σ v
+    rw [← mem_best.mp hmem, T.extra_childSets_finset]
+    exact Finset.sum_congr rfl fun u hu => by
+      have hiff := T.assign_child_eq_iff (σ := σ) (T.mem_children.mp hu)
+      by_cases hst : T.st σ (T.assign σ) u = T.st σ (T.assign σ) v
+      · rw [ite_eq_right (by simp [hst]), ite_eq_left (hiff.mp hst)]
+      · rw [ite_eq_left hst, ite_eq_right fun hc => hst (hiff.mpr hc)]
+
+/-- 取到最小突变数的赋值存在。 -/
+theorem exists_numChanges_eq_minChanges (σ : X → α) :
+    ∃ τ : T.V → α, T.numChanges σ τ = T.minChanges σ := by
+  obtain ⟨τ, -, hτ⟩ := Finset.mem_image.mp
+    (Finset.min'_mem ((Finset.univ : Finset (T.V → α)).image (T.numChanges σ))
+      (Finset.image_nonempty.mpr ⟨fun _ => σ (T.label T.root), Finset.mem_univ _⟩))
+  exact ⟨τ, hτ⟩
+
+theorem minChanges_le (σ : X → α) (τ : T.V → α) : T.minChanges σ ≤ T.numChanges σ τ :=
+  Finset.min'_le _ _ (Finset.mem_image.mpr ⟨τ, Finset.mem_univ τ, rfl⟩)
+
 end GenTree
+
+/-- ★★★ **主定理**：任意有根有限树 + 任意有限状态类型 `α` 上，
+
+    `fitchCostGen σ`（自底向上的 Fitch 递推：`S_v = best (childSets v)`、`c_v = Σ c_u + minExtra`）
+    **等于** `minChanges σ`（对全体赋值 `τ` 取最小的突变数，叶态由 `σ ∘ label` 钉死）。
+
+**证明**：`≤` 由下界（ii）`fitchCost_add_le_insideCost` 在根处取到最小值的赋值即得；
+`≥` 由上界（iii）`numChanges_assign`（自顶向下构造的 `assign`）即得。 -/
+theorem fitchCostGen_eq_minChanges (T : GenTree X) (σ : X → α) :
+    T.fitchCostGen σ = T.minChanges σ := by
+  refine le_antisymm ?_ ?_
+  · obtain ⟨τ, hτ⟩ := T.exists_numChanges_eq_minChanges σ
+    calc T.fitchCostGen σ
+        ≤ T.fitchCost σ T.root
+            + (if T.st σ τ T.root ∈ T.fitchSet σ T.root then 0 else 1) :=
+          Nat.le_add_right _ _
+      _ ≤ T.insideCost σ τ T.root
+            + (if T.st σ τ T.root ≠ T.st σ τ T.root then 1 else 0) :=
+          T.fitchCost_add_le_insideCost σ τ T.root (T.st σ τ T.root)
+      _ = T.numChanges σ τ := by
+          rw [ite_eq_right (by simp), Nat.add_zero, T.insideCost_root_eq_numChanges]
+      _ = T.minChanges σ := hτ
+  · calc T.minChanges σ
+        ≤ T.numChanges σ (T.assign σ) := T.minChanges_le σ (T.assign σ)
+      _ = ∑ w ∈ (Finset.univ : Finset T.V), minExtra (T.childSets σ w) :=
+          T.numChanges_assign σ
+      _ = T.fitchCostGen σ := (T.fitchCostGen_eq_sum_minExtra σ).symm
 
 end
 
