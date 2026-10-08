@@ -160,34 +160,61 @@ structure MSCTopoSym (Θ : Type*) where
   /-- 有深合并 ⇒ `ac|bd` 占 `1/3`。 -/
   deep_ac : ∀ θ, deep θ → τd θ .ac_bd = 1 / 3
 
-/-- ★★★ **深合并抵消**：`∑ T, τd θ T * sign T = [θ 无深合并]`（右端是无深合并集的指示函数）。
+/-- 深合并时 `ad|bc` 也占 `1/3`（由全概率 `1` 与另两条推得）。 -/
+theorem MSCTopoSym.tau_ad_deep {Θ : Type*} (S : MSCTopoSym Θ) {θ : Θ} (h : S.deep θ) :
+    S.τd θ .ad_bc = 1 / 3 := by
+  have hsum : S.τd θ .ab_cd + S.τd θ .ac_bd + S.τd θ .ad_bc = 1 := by
+    simpa [sum_topo] using S.τd_sum θ
+  have h1 := S.deep_ab θ h
+  have h2 := S.deep_ac θ h
+  linarith
 
-* 深合并：三个拓扑各 `1/3` ⇒ `(1/3)(+1) + (1/3)(-1) + (1/3)(0) = 0`；
-* 无深合并：点质量在 `ab|cd` ⇒ `1·(+1) + 0·(-1) + 0·0 = 1`。
+/-- 无深合并时到另两个拓扑的重量都是 `0`。 -/
+theorem MSCTopoSym.tau_others_notDeep {Θ : Type*} (S : MSCTopoSym Θ) {θ : Θ}
+    (h : ¬ S.deep θ) : S.τd θ .ac_bd = 0 ∧ S.τd θ .ad_bc = 0 := by
+  have hsum : S.τd θ .ab_cd + S.τd θ .ac_bd + S.τd θ .ad_bc = 1 := by
+    simpa [sum_topo] using S.τd_sum θ
+  have h1 := S.not_deep θ h
+  have h2 := S.τd_nonneg θ .ac_bd
+  have h3 := S.τd_nonneg θ .ad_bc
+  exact ⟨by linarith, by linarith⟩
+
+/-- ★★★ **广义深合并抵消**：把 `sign` 换成任意满足「三拓扑取值之和为 `0`」且
+「在 `ab|cd` 上取 `1`」的 `sgn : Topo → ℝ`，结论不变。
+
+* 深合并：三拓扑各 `1/3` ⇒ `(1/3)·∑ T, sgn T = 0`；
+* 无深合并：点质量在 `ab|cd` ⇒ `1·sgn ab_cd = 1`。
+
+**这一般化是必要的**：命题 B 要对**两个**错拓扑各给一条严格不等式。
+`sgn = (+1,-1,0)` 给出 `E[w(ab|cd)] > E[w(ac|bd)]`；`sgn = (+1,0,-1)` 给出
+`E[w(ab|cd)] > E[w(ad|bc)]`。两者都是本引理的实例。 -/
+theorem MSCTopoSym.cancel_of {Θ : Type*} (S : MSCTopoSym Θ) (sgn : Topo → ℝ)
+    (hsum : ∑ T : Topo, sgn T = 0) (hab : sgn .ab_cd = 1) (θ : Θ) :
+    ∑ T : Topo, S.τd θ T * sgn T = {θ' : Θ | ¬ S.deep θ'}.indicator (fun _ => (1 : ℝ)) θ := by
+  by_cases h : S.deep θ
+  · have hmem : θ ∉ {θ' : Θ | ¬ S.deep θ'} := by simpa using h
+    have h1 := S.deep_ab θ h
+    have h2 := S.deep_ac θ h
+    have h3 := S.tau_ad_deep h
+    rw [sum_topo] at hsum ⊢
+    rw [h1, h2, h3, Set.indicator_of_notMem hmem]
+    linarith
+  · obtain ⟨h2, h3⟩ := S.tau_others_notDeep h
+    have hmem : θ ∈ {θ' : Θ | ¬ S.deep θ'} := by simpa using h
+    have h1 := S.not_deep θ h
+    rw [sum_topo] at hsum ⊢
+    rw [h1, h2, h3, Set.indicator_of_mem hmem]
+    linarith
+
+/-- ★★★ **深合并抵消**（`sgn = sign` 的实例）：
+`∑ T, τd θ T * sign T = [θ 无深合并]`（右端是无深合并集的指示函数）。
 
 ⚠️ 注意 `ad|bc` 的符号是 `0`（不是 `-1`）——**这一条是抵消能成立的关键**：
 `+f` 与 `-f` 各占 `1/3`，第三类必须贡献 `0`。所以命题 A 的**第三条子句**不是装饰。 -/
 theorem MSCTopoSym.cancel {Θ : Type*} (S : MSCTopoSym Θ) (θ : Θ) :
     ∑ T : Topo, S.τd θ T * sign T
-      = {θ' : Θ | ¬ S.deep θ'}.indicator (fun _ => (1 : ℝ)) θ := by
-  have hsum : S.τd θ .ab_cd + S.τd θ .ac_bd + S.τd θ .ad_bc = 1 := by
-    simpa [sum_topo] using S.τd_sum θ
-  rw [sum_topo]
-  by_cases h : S.deep θ
-  · have hmem : θ ∉ {θ' : Θ | ¬ S.deep θ'} := by simpa using h
-    have hab := S.deep_ab θ h
-    have hac := S.deep_ac θ h
-    have had : S.τd θ .ad_bc = 1 / 3 := by linarith
-    rw [hab, hac, had, Set.indicator_of_notMem hmem]
-    norm_num
-  · have hmem : θ ∈ {θ' : Θ | ¬ S.deep θ'} := by simpa using h
-    have hab := S.not_deep θ h
-    have h1 := S.τd_nonneg θ .ac_bd
-    have h2 := S.τd_nonneg θ .ad_bc
-    have hac : S.τd θ .ac_bd = 0 := by linarith
-    have had : S.τd θ .ad_bc = 0 := by linarith
-    rw [hab, hac, had, Set.indicator_of_mem hmem]
-    norm_num
+      = {θ' : Θ | ¬ S.deep θ'}.indicator (fun _ => (1 : ℝ)) θ :=
+  S.cancel_of sign (by rw [sum_topo]; simp [sign]) rfl θ
 
 /-! ## 4. 迭代期望与解析核心（与模型、与 MSC 都无关） -/
 
@@ -197,6 +224,20 @@ theorem MSCTopoSym.cancel {Θ : Type*} (S : MSCTopoSym Θ) (θ : Θ) :
 noncomputable def geneExpect {Θ : Type*} [MeasurableSpace Θ] (ν : Measure Θ)
     (τd : Θ → Topo → ℝ) (g : Θ → Topo → ℝ) : ℝ :=
   ∫ θ, (∑ T : Topo, τd θ T * g θ T) ∂ν
+
+/-- **迭代期望的线性性**（需两个内层和都可积 —— 对应正文定理 1 的条件 (2)「权重一致有界」）。 -/
+theorem geneExpect_sub {Θ : Type*} [MeasurableSpace Θ] (ν : Measure Θ)
+    (τd : Θ → Topo → ℝ) (g h : Θ → Topo → ℝ)
+    (hg : Integrable (fun θ => ∑ T : Topo, τd θ T * g θ T) ν)
+    (hh : Integrable (fun θ => ∑ T : Topo, τd θ T * h θ T) ν) :
+    geneExpect ν τd (fun θ T => g θ T - h θ T) = geneExpect ν τd g - geneExpect ν τd h := by
+  unfold geneExpect
+  rw [← integral_sub hg hh]
+  refine integral_congr_ae (Filter.Eventually.of_forall fun θ => ?_)
+  show (∑ T : Topo, τd θ T * (g θ T - h θ T))
+      = (∑ T : Topo, τd θ T * g θ T) - ∑ T : Topo, τd θ T * h θ T
+  rw [← Finset.sum_sub_distrib]
+  exact Finset.sum_congr rfl fun T _ => by ring
 
 /-- ★★ **解析核心**：集合 `s` 上处处为正的可积函数，其指示函数的积分 `> 0`（`s` 正测度）。
 
@@ -220,6 +261,33 @@ theorem integral_pos_of_indicator {Θ : Type*} [MeasurableSpace Θ] (ν : Measur
 
 /-! ## 5. ★★★ 命题 B（物种树层） -/
 
+/-- ★★★ **广义命题 B**：`sgn` 满足「三拓扑和 `0`」「`ab|cd` 上取 `1`」时，
+`sgn`-加权的期望权重差严格为正。
+
+（`sgn = (+1,-1,0)` 与 `(+1,0,-1)` 两个实例合起来，才给出「真拓扑比**两个**错拓扑都严格大」。） -/
+theorem MSCTopoSym.propB_of {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (ν : Measure Θ)
+    [IsProbabilityMeasure ν] (hdeep : MeasurableSet {θ | S.deep θ}) (sgn : Topo → ℝ)
+    (hsum : ∑ T : Topo, sgn T = 0) (hab : sgn .ab_cd = 1)
+    (f : Θ → ℝ) (hf_int : Integrable f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < f θ)
+    (hpos : 0 < ν {θ | ¬ S.deep θ}) :
+    0 < geneExpect ν S.τd (fun θ T => sgn T * f θ) := by
+  have hs : MeasurableSet {θ : Θ | ¬ S.deep θ} := hdeep.compl
+  have hcongr : geneExpect ν S.τd (fun θ T => sgn T * f θ)
+      = ∫ θ, {θ' : Θ | ¬ S.deep θ'}.indicator f θ ∂ν := by
+    unfold geneExpect
+    refine integral_congr_ae (Filter.Eventually.of_forall fun θ => ?_)
+    show (∑ T : Topo, S.τd θ T * (sgn T * f θ)) = {θ' : Θ | ¬ S.deep θ'}.indicator f θ
+    have hstep : (∑ T : Topo, S.τd θ T * (sgn T * f θ))
+        = (∑ T : Topo, S.τd θ T * sgn T) * f θ := by
+      rw [Finset.sum_mul]
+      exact Finset.sum_congr rfl fun T _ => by ring
+    rw [hstep, S.cancel_of sgn hsum hab θ]
+    by_cases h : θ ∈ {θ' : Θ | ¬ S.deep θ'}
+    · rw [Set.indicator_of_mem h, Set.indicator_of_mem h, one_mul]
+    · rw [Set.indicator_of_notMem h, Set.indicator_of_notMem h, zero_mul]
+  rw [hcongr]
+  exact integral_pos_of_indicator ν _ hs f hf_int (fun θ hθ => hf_pos θ hθ) hpos
+
 /-- ★★★ **命题 B（物种树层）**：真物种树拓扑 `ab|cd` 与错拓扑 `ac|bd` 的
 **期望权重差严格为正**。
 
@@ -233,22 +301,7 @@ theorem MSCTopoSym.propB {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (
     [IsProbabilityMeasure ν] (hdeep : MeasurableSet {θ | S.deep θ})
     (f : Θ → ℝ) (hf_int : Integrable f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ}) :
-    0 < geneExpect ν S.τd (fun θ T => sign T * f θ) := by
-  have hs : MeasurableSet {θ : Θ | ¬ S.deep θ} := hdeep.compl
-  have hcongr : geneExpect ν S.τd (fun θ T => sign T * f θ)
-      = ∫ θ, {θ' : Θ | ¬ S.deep θ'}.indicator f θ ∂ν := by
-    unfold geneExpect
-    refine integral_congr_ae (Filter.Eventually.of_forall fun θ => ?_)
-    show (∑ T : Topo, S.τd θ T * (sign T * f θ)) = {θ' : Θ | ¬ S.deep θ'}.indicator f θ
-    have hstep : (∑ T : Topo, S.τd θ T * (sign T * f θ))
-        = (∑ T : Topo, S.τd θ T * sign T) * f θ := by
-      rw [Finset.sum_mul]
-      exact Finset.sum_congr rfl fun T _ => by ring
-    rw [hstep, S.cancel θ]
-    by_cases h : θ ∈ {θ' : Θ | ¬ S.deep θ'}
-    · rw [Set.indicator_of_mem h, Set.indicator_of_mem h, one_mul]
-    · rw [Set.indicator_of_notMem h, Set.indicator_of_notMem h, zero_mul]
-  rw [hcongr]
-  exact integral_pos_of_indicator ν _ hs f hf_int (fun θ hθ => hf_pos θ hθ) hpos
+    0 < geneExpect ν S.τd (fun θ T => sign T * f θ) :=
+  S.propB_of ν hdeep sign (by rw [sum_topo]; simp [sign]) rfl f hf_int hf_pos hpos
 
 end Phylo.Stat.CASTEREngine
