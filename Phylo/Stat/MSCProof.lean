@@ -41,6 +41,11 @@ import Phylo.Stat.CASTERTopoSplit
   ⇒ `MSCFreq` 不再是「只被假设的结构」；
 * ★★★ `mscWeights_majorizes` —— 把 `MSCFreq.majorizes` 这条**核心不等式**表述成
   **关于权重的定理**（对任意 `t > 0`）。
+* ★★★ **§6 推广**：`mscQuartetFreqOf` —— **任意有限 `X`**、任意 4-元集的真 quartet 选择 `q`
+  （含 `q_card`）⇒ 具体 `QuartetFreq X`（三条字段全真证），配上
+  `mscQuartetFreqOf_majorizes`（任意 `X` 的 `majorizes`）。
+  关键计数 `card_splits_two`（任意 4-元集上 `2|2` 有向 split 恰 6 个）、
+  `card_eq_or_swap`（`{q, q.swap}` 恰 2 个）、`card_other_two`（其余 `2|2` 恰 4 个）。
 
 ## 3. 关键记账（为什么是 `/2`）
 
@@ -57,7 +62,8 @@ quartet 拓扑对应**两个**有向 split。因此本文件里每个有向 spli
 | `p_nonneg` / `p_sum_one` / `p_swap` | **已证**（`mscP_*`；`2\|2` 有向 split 与 `Fin 4` 二元子集的计数是 `decide` 可判的纯组合事实） |
 | `q_card` / `displays` | **已证**（`qSplit_*`，真树用 `NJstWitness.T1234`） |
 | `majorizes` | **已证**（它是 `mscDiscordant_lt_mscConcordant` 的推论，**不是**被假设的字段） |
-| `X = Fin 4` **之外**的 `X` | ❌ **未构造**（一般 `X` 需要「binary 树上每个 4-元集的 quartet 选择」这一接口；闸门见 `Phylo/Stat/QuartetDecides.lean`） |
+| `X = Fin 4` **之外**的 `X`：**频率表** | ✅ **已构造**（§6 ★★★ `mscQuartetFreqOf`：任意有限 `X` ＋任意「每个 4-元集的真 quartet 选择 `q`」（含 `q_card`）⇒ `QuartetFreq X`，`p_nonneg`/`p_sum_one`/`p_swap` **全真证**；`mscQuartetFreqOf_majorizes` 给出任意 `X` 的 `majorizes`） |
+| `X = Fin 4` 之外的 **`MSCFreq`（含真树）** | ❌ **未构造**：剩下的是**纯组合**的「binary 树上每个 4-元集的 quartet 选择」接口（闸门见 `Phylo/Stat/QuartetDecides.lean`）—— **不再是溯祖/概率问题** |
 | `1 − e^{−t}` 是**测度层**的概率 | ⚠️ **本文件用的是实数层的 `Coalescent.firstMergeCDF`**；把它换成 `ProbabilityTheory.expMeasure` 的测度层陈述属 W10b（`Phylo/Stat/KingmanCoalescent.lean`），**不在本文件** |
 | 跳链的**绝对分布 (2.2)** | 属 W10a（`Phylo/Stat/KingmanJumpChain.lean`），**不在本文件** |
 | `MSCSampling.converges`（大数定律） | ❌ 仍公理化（W10d）；本文件**不**声称去掉它 |
@@ -573,5 +579,303 @@ theorem mscFreqFin4_freq_pos (t : ℝ) (ht : 0 < t) :
   rw [show (mscFreqFin4 t ht).freq.p = mscP t from rfl]
   rw [show (mscFreqFin4 t ht).q = qSplit from rfl]
   exact mscP_qSplit_pos t ht Finset.univ (by decide)
+
+/-! ## 6. ★★★ 推广：**任意** `X` 上由 Kingman 溯祖给出的 `QuartetFreq`
+
+§3–§5 只做到 `X = Fin 4`（因为那里的真树用了 `NJstWitness.T1234`）。本节把**频率表**
+这一半推广到**任意有限 `X`**：只要对每个 4-元集 `S` 给定一个「真 quartet」`q S hS`
+（形状与 `QuartetTree.q` 一致，含 `q_card`），就能构造出 `QuartetFreq X`。
+
+⇒ 于是「`X = Fin 4` 之外」这条边界的**剩余部分只剩「树」**（一个纯组合的
+`Cladogram` 展示问题，见 `Phylo/Stat/QuartetDecides.lean`），**不再是溯祖/概率的问题**。 -/
+
+section General
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+omit [Fintype X] in
+/-- `r : Split ↥S` 的 `sideA` 在 `X` 里的实际元素。 -/
+def sideAX {S : Finset X} (r : Split ↥S) : Finset X :=
+  r.sideA.image (Function.Embedding.subtype fun x => x ∈ S)
+
+omit [Fintype X] in
+theorem sideAX_subset {S : Finset X} (r : Split ↥S) : sideAX r ⊆ S := by
+  intro x hx
+  rw [sideAX, Finset.mem_image] at hx
+  obtain ⟨y, _, rfl⟩ := hx
+  exact y.2
+
+omit [Fintype X] in
+theorem card_sideAX {S : Finset X} (r : Split ↥S) : (sideAX r).card = r.sideA.card :=
+  Finset.card_image_of_injective _ (Function.Embedding.subtype _).injective
+
+omit [Fintype X] in
+/-- 把 `T : Finset X` **拉回** `↥S`（只保留落在 `T` 里的元素）。 -/
+def liftS (S T : Finset X) : Finset ↥S :=
+  Finset.univ.filter fun x => (x : X) ∈ T
+
+omit [Fintype X] in
+theorem image_liftS (S T : Finset X) :
+    (liftS S T).image (Function.Embedding.subtype fun x => x ∈ S)
+      = S.filter (fun x => x ∈ T) := by
+  ext x
+  simp only [liftS, Finset.mem_image, Finset.mem_filter, Finset.mem_univ, true_and,
+    Function.Embedding.subtype_apply]
+  constructor
+  · rintro ⟨y, hy, rfl⟩; exact ⟨y.2, hy⟩
+  · rintro ⟨hxS, hxT⟩; exact ⟨⟨x, hxS⟩, hxT, rfl⟩
+
+omit [Fintype X] in
+theorem card_liftS (S T : Finset X) : (liftS S T).card = (S.filter fun x => x ∈ T).card := by
+  rw [← Finset.card_image_of_injective _ (Function.Embedding.subtype _).injective, image_liftS]
+
+omit [Fintype X] in
+/-- ★★ `sideAX` 完全决定 `sideA`。 -/
+theorem sideA_eq_liftS (S : Finset X) (r : Split ↥S) :
+    r.sideA = liftS S (sideAX (S := S) r) := by
+  ext x
+  simp only [liftS, sideAX, Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image,
+    Function.Embedding.subtype_apply]
+  constructor
+  · intro hx; exact ⟨x, hx, rfl⟩
+  · rintro ⟨y, hy, hyx⟩
+    have h : y = x := Subtype.ext hyx
+    rwa [h] at hy
+
+omit [Fintype X] in
+theorem sideAX_inj {S : Finset X} {r r' : Split ↥S}
+    (h : sideAX (S := S) r = sideAX (S := S) r') : r = r' := by
+  apply Phylo.Stat.CASTERTopoSplit.eq_of_sideA_eq
+  rw [sideA_eq_liftS S r, sideA_eq_liftS S r', h]
+
+omit [Fintype X] in
+theorem sideAX_splitOf_liftS (S T : Finset X)
+    (h1 : (liftS S T).Nonempty) (h2 : (liftS S T)ᶜ.Nonempty) :
+    sideAX (S := S) (Phylo.splitOf (liftS S T) h1 h2) = S.filter (fun x => x ∈ T) := by
+  unfold sideAX
+  rw [Phylo.splitOf_sideA]
+  exact image_liftS S T
+
+omit [Fintype X] in
+/-- ★★★ **一般 4-元集上 `2|2` 的（有向）split 恰 `C(4,2) = 6` 个**
+（`r ↦ sideAX r` 与 `S.powersetCard 2` 一一对应）。 -/
+theorem card_splits_two (S : Finset X) (hS : S.card = 4) :
+    ((Finset.univ : Finset (Split ↥S)).filter (fun r => r.sideA.card = 2)).card = 6 := by
+  set s : Finset (Split ↥S) :=
+    (Finset.univ : Finset (Split ↥S)).filter (fun r => r.sideA.card = 2) with hs
+  have hinj : Set.InjOn (fun r : Split ↥S => sideAX (S := S) r) ↑s := by
+    intro r1 _ r2 _ h
+    exact sideAX_inj h
+  have hcard : s.card = (S.powersetCard 2).card := by
+    rw [← Finset.card_image_of_injOn hinj]
+    congr 1
+    ext T
+    constructor
+    · intro hT
+      obtain ⟨r, hr, rfl⟩ := Finset.mem_image.mp hT
+      simp only [hs, Finset.mem_filter, Finset.mem_univ, true_and] at hr
+      rw [Finset.mem_powersetCard]
+      exact ⟨sideAX_subset r, by rw [card_sideAX]; exact hr⟩
+    · intro hT
+      rw [Finset.mem_powersetCard] at hT
+      obtain ⟨hsub, hcardT⟩ := hT
+      have hfil : S.filter (fun x => x ∈ T) = T := by
+        ext x
+        simp only [Finset.mem_filter]
+        exact ⟨fun h => h.2, fun h => ⟨hsub h, h⟩⟩
+      have hcard2 : (liftS S T).card = 2 := by rw [card_liftS, hfil, hcardT]
+      have h1 : (liftS S T).Nonempty := by
+        rw [Finset.nonempty_iff_ne_empty]
+        intro h
+        rw [h, Finset.card_empty] at hcard2
+        omega
+      have h2 : (liftS S T)ᶜ.Nonempty := by
+        apply Phylo.compl_nonempty_of_ne_univ
+        intro h
+        rw [h, Finset.card_univ, Fintype.card_coe, hS] at hcard2
+        omega
+      exact Finset.mem_image.mpr
+        ⟨Phylo.splitOf (liftS S T) h1 h2, by
+          simp only [hs, Finset.mem_filter, Finset.mem_univ, true_and, Phylo.splitOf_sideA,
+            card_liftS, hfil, hcardT],
+          by rw [sideAX_splitOf_liftS S T h1 h2, hfil]⟩
+  rw [hcard, Finset.card_powersetCard, hS]
+  decide
+
+omit [Fintype X] in
+/-- 一个有向 split 与它的 `swap` 不同（两侧不交且非空）。 -/
+theorem ne_swap_of_split {S : Finset X} (q : Split ↥S) : q ≠ q.swap := by
+  intro h
+  have hs : q.sideA = q.sideB := by
+    have := congrArg Split.sideA h
+    rwa [Split.swap_sideA] at this
+  have hd : Disjoint q.sideA q.sideA := by
+    have h' := q.disjoint_sides
+    rwa [← hs] at h'
+  obtain ⟨x, hx⟩ := q.nonempty 0
+  exact (Finset.disjoint_left.mp hd) hx hx
+
+omit [Fintype X] in
+theorem card_eq_or_swap {S : Finset X} (q : Split ↥S) :
+    ((Finset.univ : Finset (Split ↥S)).filter (fun r => r = q ∨ r = q.swap)).card = 2 := by
+  have hset : (Finset.univ.filter (fun r : Split ↥S => r = q ∨ r = q.swap)) = {q, q.swap} := by
+    ext r; simp
+  rw [hset, Finset.card_pair (ne_swap_of_split q)]
+
+omit [Fintype X] in
+/-- `q` 与 `q.swap` 都是 `2|2` 时，「其余 `2|2`」恰 4 个（`6 − 2`）。 -/
+theorem card_other_two (S : Finset X) (hS : S.card = 4) (q : Split ↥S)
+    (hq : q.sideA.card = 2) :
+    ((Finset.univ : Finset (Split ↥S)).filter
+      (fun r => r.sideA.card = 2 ∧ ¬ (r = q ∨ r = q.swap))).card = 4 := by
+  have hqswap : q.swap.sideA.card = 2 := by
+    rw [Split.swap_sideA]
+    have h := Phylo.Stat.CASTERTopoSplit.card_sideA_add_card_sideB q
+    have hc4 : Fintype.card ↥S = 4 := by rw [Fintype.card_coe]; exact hS
+    have h4 : q.sideA.card + q.sideB.card = 4 := by rw [h, hc4]
+    omega
+  have hBsub : (Finset.univ.filter (fun r : Split ↥S => r = q ∨ r = q.swap))
+      ⊆ (Finset.univ.filter (fun r : Split ↥S => r.sideA.card = 2)) := by
+    intro r hr
+    rw [Finset.mem_filter] at hr ⊢
+    obtain ⟨-, h | h⟩ := hr
+    · rw [h]; exact ⟨Finset.mem_univ _, hq⟩
+    · rw [h]; exact ⟨Finset.mem_univ _, hqswap⟩
+  have hdiff : (Finset.univ.filter (fun r : Split ↥S =>
+        r.sideA.card = 2 ∧ ¬ (r = q ∨ r = q.swap)))
+      = (Finset.univ.filter (fun r : Split ↥S => r.sideA.card = 2)) \
+        (Finset.univ.filter (fun r : Split ↥S => r = q ∨ r = q.swap)) := by
+    ext r
+    simp only [Finset.mem_filter, Finset.mem_sdiff, Finset.mem_univ, true_and]
+  rw [hdiff, Finset.card_sdiff, Finset.inter_eq_left.mpr hBsub,
+    card_splits_two S hS, card_eq_or_swap q]
+
+omit [Fintype X] in
+/-- ★★★ **一般 `X` 上由 Kingman 溯祖给出的 quartet 概率表**：
+给定每个 4-元集 `S` 的「真 quartet」`q S hS`（`q_card` 为 `2|2`），
+一致的（有向）split `q`/`q.swap` 各得 `mscConcordant t / 2`，其余 `2|2` 各得
+`mscDiscordant t / 2`，`1|3` 得 `0`。 -/
+def mscPOf (t : ℝ) (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (S : Finset X) (hS : S.card = 4) (r : Split ↥S) : ℝ :=
+  if r = q S hS ∨ r = (q S hS).swap then mscConcordant t / 2
+  else if r.sideA.card = 2 then mscDiscordant t / 2 else 0
+
+omit [Fintype X] in
+theorem mscPOf_of_eq {t : ℝ} {q : (S : Finset X) → S.card = 4 → Split ↥S}
+    {S : Finset X} {hS : S.card = 4} {r : Split ↥S}
+    (h : r = q S hS ∨ r = (q S hS).swap) : mscPOf t q S hS r = mscConcordant t / 2 := by
+  unfold mscPOf
+  simp [h]
+
+omit [Fintype X] in
+theorem mscPOf_of_ne_of_card {t : ℝ} {q : (S : Finset X) → S.card = 4 → Split ↥S}
+    {S : Finset X} {hS : S.card = 4} {r : Split ↥S}
+    (h : ¬ (r = q S hS ∨ r = (q S hS).swap)) (h2 : r.sideA.card = 2) :
+    mscPOf t q S hS r = mscDiscordant t / 2 := by
+  unfold mscPOf
+  simp [h, h2]
+
+omit [Fintype X] in
+theorem mscPOf_of_ne_of_not_card {t : ℝ} {q : (S : Finset X) → S.card = 4 → Split ↥S}
+    {S : Finset X} {hS : S.card = 4} {r : Split ↥S}
+    (h : ¬ (r = q S hS ∨ r = (q S hS).swap)) (h2 : r.sideA.card ≠ 2) :
+    mscPOf t q S hS r = 0 := by
+  unfold mscPOf
+  simp [h, h2]
+
+omit [Fintype X] in
+theorem mscPOf_nonneg {t : ℝ} (ht : 0 ≤ t)
+    (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (S : Finset X) (hS : S.card = 4) (r : Split ↥S) : 0 ≤ mscPOf t q S hS r := by
+  by_cases h : r = q S hS ∨ r = (q S hS).swap
+  · rw [mscPOf_of_eq h]
+    exact div_nonneg (mscConcordant_nonneg ht) (by norm_num)
+  · by_cases h2 : r.sideA.card = 2
+    · rw [mscPOf_of_ne_of_card h h2]
+      exact div_nonneg (mscDiscordant_pos t).le (by norm_num)
+    · rw [mscPOf_of_ne_of_not_card h h2]
+
+omit [Fintype X] in
+theorem mscPOf_swap {t : ℝ} (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (S : Finset X) (hS : S.card = 4) (r : Split ↥S) :
+    mscPOf t q S hS r.swap = mscPOf t q S hS r := by
+  have hiff : (r.swap = q S hS ∨ r.swap = (q S hS).swap) ↔ (r = q S hS ∨ r = (q S hS).swap) := by
+    constructor
+    · rintro (h | h)
+      · refine Or.inr (Split.swap_injective ?_)
+        rw [Split.swap_swap]; exact h
+      · exact Or.inl (Split.swap_injective h)
+    · rintro (h | h)
+      · exact Or.inr (by rw [h])
+      · exact Or.inl (by rw [h, Split.swap_swap])
+  have hcard : (r.swap.sideA.card = 2) ↔ (r.sideA.card = 2) := by
+    rw [Split.swap_sideA]
+    have h := Phylo.Stat.CASTERTopoSplit.card_sideA_add_card_sideB r
+    have hc4 : Fintype.card ↥S = 4 := by rw [Fintype.card_coe]; exact hS
+    have h4 : r.sideA.card + r.sideB.card = 4 := by rw [h, hc4]
+    constructor <;> intro h2 <;> omega
+  by_cases hc : r = q S hS ∨ r = (q S hS).swap
+  · rw [mscPOf_of_eq (hiff.mpr hc), mscPOf_of_eq hc]
+  · have hc' : ¬ (r.swap = q S hS ∨ r.swap = (q S hS).swap) := fun h => hc (hiff.mp h)
+    by_cases h2 : r.sideA.card = 2
+    · rw [mscPOf_of_ne_of_card hc' (hcard.mpr h2), mscPOf_of_ne_of_card hc h2]
+    · rw [mscPOf_of_ne_of_not_card hc' (fun h => h2 (hcard.mp h)),
+        mscPOf_of_ne_of_not_card hc h2]
+
+omit [Fintype X] in
+/-- ★★★ **归一化（一般 `X`）**：`Σ_{r} mscPOf t q S hS r = 1`。 -/
+theorem mscPOf_sum {t : ℝ} (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (hq2 : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2)
+    (S : Finset X) (hS : S.card = 4) :
+    ∑ r : Split ↥S, mscPOf t q S hS r = 1 := by
+  have hterm : ∀ r : Split ↥S, mscPOf t q S hS r
+      = (if r = q S hS ∨ r = (q S hS).swap then mscConcordant t / 2 else 0)
+        + (if r.sideA.card = 2 ∧ ¬ (r = q S hS ∨ r = (q S hS).swap)
+            then mscDiscordant t / 2 else 0) := by
+    intro r
+    by_cases h : r = q S hS ∨ r = (q S hS).swap
+    · rw [mscPOf_of_eq h]; simp [h]
+    · by_cases h2 : r.sideA.card = 2
+      · rw [mscPOf_of_ne_of_card h h2]; simp [h, h2]
+      · rw [mscPOf_of_ne_of_not_card h h2]; simp [h, h2]
+  rw [Finset.sum_congr rfl (fun r _ => hterm r), Finset.sum_add_distrib]
+  rw [sum_ite_zero (fun r : Split ↥S => r = q S hS ∨ r = (q S hS).swap) (mscConcordant t / 2),
+      sum_ite_zero (fun r : Split ↥S =>
+        r.sideA.card = 2 ∧ ¬ (r = q S hS ∨ r = (q S hS).swap)) (mscDiscordant t / 2),
+      card_eq_or_swap (q S hS), card_other_two S hS (q S hS) (hq2 S hS)]
+  push_cast
+  linarith [mscConcordant_add_two t]
+
+/-- ★★★ **任意 `X` 上由 Kingman 溯祖给出的 `QuartetFreq`**（三条字段全部真证）。 -/
+def mscQuartetFreqOf (t : ℝ) (ht : 0 ≤ t)
+    (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (hq2 : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2) :
+    QuartetFreq X where
+  p := mscPOf t q
+  p_nonneg := mscPOf_nonneg ht q
+  p_sum_one := mscPOf_sum q hq2
+  p_swap := mscPOf_swap q
+
+/-- ★★★ **MSC 核心不等式（一般 `X`，无条件版本）**：对任意 4-元集 `S`，
+`mscQuartetFreqOf` 给出的频率表在真 quartet 上**唯一严格最大**（`t > 0`）。 -/
+theorem mscQuartetFreqOf_majorizes (t : ℝ) (ht : 0 < t)
+    (q : (S : Finset X) → S.card = 4 → Split ↥S)
+    (hq2 : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2) :
+    ∀ (S : Finset X) (hS : S.card = 4) (r : Split ↥S),
+      r ≠ q S hS → r ≠ (q S hS).swap →
+        (mscQuartetFreqOf t ht.le q hq2).p S hS r
+          < (mscQuartetFreqOf t ht.le q hq2).p S hS (q S hS) := by
+  intro S hS r hr hrs
+  show mscPOf t q S hS r < mscPOf t q S hS (q S hS)
+  have hc : q S hS = q S hS ∨ q S hS = (q S hS).swap := Or.inl rfl
+  rw [mscPOf_of_eq hc]
+  have hn : ¬ (r = q S hS ∨ r = (q S hS).swap) := fun h => h.elim hr hrs
+  by_cases h2 : r.sideA.card = 2
+  · rw [mscPOf_of_ne_of_card hn h2]
+    exact div_lt_div_of_pos_right (mscDiscordant_lt_mscConcordant ht) (by norm_num)
+  · rw [mscPOf_of_ne_of_not_card hn h2]
+    exact div_pos (mscConcordant_pos ht) (by norm_num)
+
+end General
 
 end Phylo.Stat.MSCProof
