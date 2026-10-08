@@ -67,6 +67,7 @@ import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
 import Phylo.Stat.MSCInstance
 import Phylo.Stat.MSCKingman
+import Phylo.Stat.MSCProof
 import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
