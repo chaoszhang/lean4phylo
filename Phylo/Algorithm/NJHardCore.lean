@@ -6,6 +6,11 @@ Authors: ASTER LAB
 import Phylo.Algorithm.NJ
 import Phylo.LeafStatus
 import Phylo.CherryQuartet
+-- T0.3 收口的**最后一步（无条件形式）**（HANDOVER.md:231 的 ★★★ `maxZCherryCore`）需要两件弹药：
+-- ★★★ `exists_realizingPhylogram_pos_of_addConst`（`δ.addConst ε` 的**全正**实现树，(A2) 器械层）
+-- 与 `addConst` 的代数件（★★★ `z_addConst` / ★★ `fourSum_addConst` / ★★ `fourPoint_addConst`）。
+import Phylo.DissimilarityPerturb
+import Phylo.PhylogramContract
 
 /-!
 # `Phylo.Algorithm.NJHardCore` —— T0.3 步骤 C 的**桥接层**（`δ` 层 ↔ 树层）
@@ -44,6 +49,12 @@ import Phylo.CherryQuartet
 * ✅ ★★★ `maxZCherryCore_of_hasPositiveRealization`
 * ✅ ★★ `max_z_gives_split_of_hasPositiveRealization`（**T0.3 step D**：`hcore`-自由版）
 * ✅ ★★★ `nj_cherry_of_hasPositiveRealization`（**T0.3 step D 主接口**：`hcore` 从下游接口上摘掉）
+* ✅ ★★★ `maxZCherryCore`（🏆 **T0.3 终局**：`MaxZCherryCore` 的**无条件**形式
+  `theorem maxZCherryCore (δ) : δ.MaxZCherryCore`，`HANDOVER.md:231` W2b 的验收原文 ——
+  **无** `HasPositiveRealization` / 无基数假设 / 无 `∃ 树`。路线 = ★★★ `exists_realizingPhylogram_pos_of_addConst`
+  （`δ+1` 的全正实现树）→ ★★★ `maxZCherryCore_of_pos`（`(δ+1).MaxZCherryCore`）
+  → ★★★ `z_addConst` + ★★ `fourSum_addConst` + ★★ `fourPoint_addConst`（shift-不变性，搬回 `δ`），
+  `|X| ≤ 3` 走 ★★ `maxZCherryCore_of_card_le_three`。详见该定理 docstring）
 -/
 
 
@@ -198,7 +209,16 @@ theorem maxZCherryCore_of_pos' {X : Type u} [Fintype X] [DecidableEq X] (δ : Di
 🔎 独立脚本实证（400 组随机树度量，含大量 0 权边，穷举全部并列选择 = 9244 次构造，0 次未实现 `δ_ε`）：
 `δ_ε` 下 T0.2 的构造**从不**给**实标签**（`X` 的 `Sum.inl`）0 权挂边 —— 0 权只出现在
 **合成点**（`Sum.inr ()`，即 shrink 造出的新点）之间，而合成点在最终树里都是内部点
-⇒ 打磨这条「实标签挂边恒正 + 收缩合成点间 0 权内边」即可得无条件形式（工作量 = 图收缩器械）。 -/
+⇒ 打磨这条「实标签挂边恒正 + 收缩合成点间 0 权内边」即可得无条件形式（工作量 = 图收缩器械）。
+
+✅ **2026-10-08 更新：这条「无条件形式」已经做完** —— 上面的「图收缩器械」已由
+`Phylo/PhylogramContract.lean` + `Phylo/ContractCount.lean` 的 (A2) 层兑现
+（★★★ `exists_realizingPhylogram_pos_of_addConst`：`δ.FourPoint → 4 ≤ |X| → 0 < ε →`
+`δ.addConst ε` 有**边权全正**的实现树），其「搬回 `δ`」的一步由本文件末尾的
+★★★ `maxZCherryCore` 用 `addConst` 的 shift-不变性（★★★ `z_addConst` + ★★ `fourSum_addConst`）完成
+⇒ **`MaxZCherryCore` 已是无条件定理**（`HANDOVER.md:231` 的验收达成）。
+本节的条件版本保留：它们是 ★★★ `maxZCherryCore` 的构造性中间件，也是下游 `_of_hasPositiveRealization`
+一族（T0.3 step D）的依据。 -/
 theorem maxZCherryCore_of_exists_pos (δ : Dissimilarity X)
     (h : ∃ T : Phylogram.{u, v} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
       ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
@@ -248,6 +268,78 @@ theorem nj_cherry_of_hasPositiveRealization (δ : Dissimilarity X)
   nj_cherry δ (maxZCherryCore_of_hasPositiveRealization δ h) hfp a b hab hmin
 
 -- ===== T08 END =====
+
+-- ===== W2b FINAL STEP BEGIN =====
+/-! ## T0.3 收口（**无条件形式**）：`MaxZCherryCore` 由 `def` 缺口变成**无条件定理**
+
+**验收原文**（`HANDOVER.md:231`，W2b 一行，逐字）：
+
+```lean
+theorem maxZCherryCore (δ) : δ.MaxZCherryCore
+```
+
+**无** `HasPositiveRealization`、**无** `∃ 正权实现树`、**无**基数假设。下面的 ★★★ `maxZCherryCore`
+就是它的形式（`{X} [Fintype X] [DecidableEq X]` 是 `Dissimilarity X` 自身的类型类要求，
+不是额外假设；`δ.FourPoint` 是 `MaxZCherryCore` **定义内部**的前提，不是新假设）。
+
+## 路线：`addConst` 的 **shift-不变性**（把 `δ+ε` 的结果搬回 `δ`）
+
+此前记录为「扰动法 / `ℓ` 改造已判死」的是**另外两件事**（见 `HANDOVER.md:201–204` 的两条判死记录）：
+「拿 T0.2 的构造树直接吃 `hpos`」（反例作废）与「改造树层的 `ℓ` 论证」（`hpos` 贯穿 `LeafStatus`
+20+ 条定理）。本节**两者都没用**：走的是派单指定的另一条通道 —— `HANDOVER.md:46-51` 所述的
+「把 `δ+ε` 的正性搬回 `δ`」，即 `addConst` 的 **shift-不变性**。
+而「收缩 0 权内边」这条通道也已由 ★★★ `exists_realizingPhylogram_pos_of_addConst`（(A2) 器械）兑现，
+于是只差平移：
+
+1. 取 `ε = 1`，★★★ `exists_realizingPhylogram_pos_of_addConst` 给出 `δ+1` 的**边权全正**实现树 `T`；
+2. ★★★ `maxZCherryCore_of_pos`（Weller Thm 2 的树层论证作用在 `T` 上）给出 `(δ+1).MaxZCherryCore`；
+3. ★★★ `z_addConst`：`z_{δ+1}(i,j) = z_δ(i,j) + (|X|/2)·1` —— 平移量**与 `i j` 无关**
+   ⇒ `δ` 的 `z`-最大化对在 `δ+1` 里**仍是**最大化对；★★ `fourPoint_addConst` 给 `(δ+1).FourPoint`；
+4. ★★ `fourSum_addConst`：quartet 不等式两边**同步平移 `2ε`** ⇒ 对 `δ+1` 证出的不等式搬回 `δ`。
+
+`|X| ≤ 3` 时结论要量化四个互异点 ⇒ **空真**，由 ★★ `maxZCherryCore_of_card_le_three` 收口。
+
+## 诚实边界
+
+* 本定理**不需要**任何超出 `MaxZCherryCore` 自身定义的前提（逐字对照见其上 docstring）。
+* 唯一「非文献」的步骤是第 3 步的 shift-不变性：它是 `addConst` 的**纯代数**恒等式，
+  出自本库 `Phylo/DissimilarityPerturb.lean`（★★★ `z_addConst` / ★★ `fourSum_addConst`），
+  不含任何未证缺口。 -/
+theorem maxZCherryCore (δ : Dissimilarity X) : δ.MaxZCherryCore := by
+  by_cases hcard : 4 ≤ Fintype.card X
+  · -- 主情形：经 `δ.addConst 1` 中转（(A2) 器械 + shift-不变性）
+    intro hfp a b hab hmax i j hij hia hib hja hjb
+    -- ① `(A2)`：`δ + 1` 有**边权全正**的实现树
+    obtain ⟨T, hpos, hT⟩ :=
+      Phylo.Contract.exists_realizingPhylogram_pos_of_addConst δ hfp hcard (ε := 1) (by norm_num)
+    -- ② Weller Thm 2（树层）⇒ `(δ+1).MaxZCherryCore`
+    have hcore : (δ.addConst 1).MaxZCherryCore :=
+      maxZCherryCore_of_pos (δ.addConst 1) hcard hpos hT
+    -- ③ `z` 的平移不变性：`z`-最大化对不变；四点条件保持
+    have hmax' : ∀ p q : X, p ≠ q → (δ.addConst 1).z p q ≤ (δ.addConst 1).z a b := by
+      intro p q hpq
+      rw [z_addConst (δ := δ) (ε := 1) (i := p) (j := q) hpq,
+        z_addConst (δ := δ) (ε := 1) (i := a) (j := b) hab]
+      linarith [hmax p q hpq]
+    have hfp' : (δ.addConst 1).FourPoint := fourPoint_addConst δ (by norm_num) hfp
+    obtain ⟨hq1, hq2⟩ := hcore hfp' a b hab hmax' i j hij hia hib hja hjb
+    -- ④ 四点和同步平移 `2·1` ⇒ 搬回 `δ`
+    have eab : (δ.addConst 1).val a b + (δ.addConst 1).val i j
+        = δ.val a b + δ.val i j + 2 * 1 :=
+      fourSum_addConst δ 1 hab hij hia hib hja hjb
+    have eai : (δ.addConst 1).val a i + (δ.addConst 1).val b j
+        = δ.val a i + δ.val b j + 2 * 1 :=
+      fourSum_addConst δ 1 hia.symm hjb.symm hab.symm hib.symm hja hij.symm
+    have eaj : (δ.addConst 1).val a j + (δ.addConst 1).val b i
+        = δ.val a j + δ.val b i + 2 * 1 :=
+      fourSum_addConst δ 1 hja.symm hib.symm hab.symm hjb.symm hia hij
+    refine ⟨?_, ?_⟩
+    · rw [eab, eai] at hq1; linarith
+    · rw [eab, eaj] at hq2; linarith
+  · -- 退化情形 `|X| ≤ 3`：结论空真
+    exact maxZCherryCore_of_card_le_three δ (by omega)
+
+-- ===== W2b FINAL STEP END =====
 
 end Dissimilarity
 
