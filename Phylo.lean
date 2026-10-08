@@ -66,6 +66,7 @@ import Phylo.Stat.CoalescentStats
 import Phylo.Stat.DegnanSalter
 import Phylo.Stat.Identifiability
 import Phylo.Stat.InvariantsRank
+import Phylo.Stat.KingmanCoalescent
 import Phylo.Stat.KingmanJumpChain
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
