@@ -27,6 +27,9 @@
 | `caster_f84_formal.py` | ★★★ **把 `sm_t,rm_t` 当自由符号（含负数）后 (D)/(XA)/(XB) 仍成立**（3e-10 / 3e-18 / 1e-18）⇒ 推导层是**纯有理函数恒等式**，Lean 侧不需要任何指数运算律 |
 | `caster_f84_hyp.py` | 恒等式**不需要** `π_R+π_Y=1`；只需 `piR pi ≠ 0`、`piY pi ≠ 0`（决定 Lean 假设集） |
 | `caster_f84_algstruct.py` | 首版「代数结构」探针（其 `Cval` 漏乘/多乘 `rm_lx` 的版本，保留作对照；结论以 `caster_f84_formal.py` 为准） |
+| `caster_f84_plan5.py` | ★ **§5 路线的独立复核**：`4·Ew = ΣpΣq π_pKx(gR p·gY q + gY p·gR q)`（1.17e-12）、`p∉R⇒gR p=0`（4.2e-17）、`Σ_{p∈R}π_p gR p = π_R(π_R²−q_R)rm t1 rm t2`（3.2e-14）、`4·Ew = 2(1−sm lx)π_Rπ_Y(π_R²−q_R)(π_Y²−q_Y)∏rm`（1.18e-12） |
+| `caster_f84_plan5A.py` / `caster_f84_plan5A2.py` | ★ **负结果（勿重犯）**：`EwA`/`EwB` **不存在** (0) 式「单和乘积」因子化 —— 试了"交换结点"与"交换长度对"两种形状，相对偏差 **1.39 / 1.19**（不是 0）。同时给出**可用**的三条：`p,q∉c ⇒ G_c(p,q;s,t)=0`（6.9e-18）、混合情形 `G_c = pi_c·rm(s)(1−sm t)(pi_c π_p − sq_c)`（4.8e-13）、`Σ_{p∈c}π_p(pi_c π_p − sq_c)=0`（4.2e-17）⇒ `EwA_zero`/`EwB_zero` 必须走**直接分块**。 |
+| `caster_f84_hyp.py` / `caster_f84_leancheck.py` / `caster_f84_decide.py` / `caster_f84_formal.py` / `caster_f84_tabtest.py` | 见上表 |
 
 ## 怎么跑（Windows 上）
 ```
