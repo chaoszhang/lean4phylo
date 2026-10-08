@@ -57,3 +57,37 @@ example (t : ℝ) (ht : 0 < t) :
         (mscQuartetFreqOf t ht.le qSplit qSplit_card).p S hS r
           < (mscQuartetFreqOf t ht.le qSplit qSplit_card).p S hS (qSplit S hS) :=
   mscQuartetFreqOf_majorizes t ht qSplit qSplit_card
+
+/-! ## W10 后续模块的反空真探针（W10a/b/d ＋ 收口 ＋ **空洞性发现**） -/
+
+-- ⑨ 跳链的 `PMF` 等价物**归一**（`Σ = 1`），不是空结构
+example : (∑ P : Phylo.Stat.KingmanJumpChain.PartK 4 4,
+    Phylo.Stat.KingmanJumpChain.jumpWeight 4 4 P) = 1 :=
+  Phylo.Stat.KingmanJumpChain.jumpWeight_sum_eq_one 4 4 (by norm_num) (by norm_num)
+
+-- ⑩ 逗留时间律 `sojournLaw 2` **是概率测度**，且 `P(τ₂ > 0) = 1`
+example : Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Ioi 0) = 1 := by
+  rw [Phylo.Stat.KingmanCoalescent.sojournLaw_Ioi (by norm_num) 0 le_rfl,
+    Coalescent.survival_zero, ENNReal.ofReal_one]
+
+-- ⑪ Theorem 1 的**具体实例**：跳链律 ⊗ 独立指数（`jumpMeasure` 是概率测度）
+example : MeasureTheory.IsProbabilityMeasure (Phylo.Stat.KingmanLaw.jumpMeasure 4 4) :=
+  Phylo.Stat.KingmanLaw.isProbabilityMeasure_jumpMeasure 4 4 (by norm_num) (by norm_num)
+
+-- ⑫ M1 公式的**测度层**形式：两个测度项之和 = 1（真·概率划分）
+example (t : ℝ) : (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Iic t)).toReal
+    + (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Ioi t)).toReal = 1 :=
+  Phylo.Stat.MSCMeasure.branch_partition t
+
+-- ⑬ ★★★ **空洞性发现的回归护栏**：`MSCSampling (Fin 4)` **是空的**
+example : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4)) :=
+  Phylo.Stat.MSCSamplingVacuity.not_nonempty_mscSampling_fin4
+
+-- ⑭ ★★★ **修正版非空洞**：`MSCSamplingLaw` 有居民
+example : Nonempty (Phylo.Stat.MSCSamplingVacuity.MSCSamplingLaw.{0, 0} (Fin 4)) :=
+  Phylo.Stat.MSCSamplingVacuity.mscSamplingLaw_nonempty (Fin 4)
+
+-- ⑮ 但**旧版**的「一致性」对**任何**估计量都成立（空洞的直接体现）
+example (E : QuartetFreq (Fin 4) → Cladogram (Fin 4)) (sm : MSCSampling.{0, 0} (Fin 4)) :
+    StatisticallyConsistent E sm :=
+  Phylo.Stat.MSCSamplingVacuity.statisticallyConsistent_vacuous_fin4 E sm
