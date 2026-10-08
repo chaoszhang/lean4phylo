@@ -165,6 +165,15 @@ def IdeallyConsistent (E : QuartetFreq X → Cladogram.{u, v} X) : Prop :=
 把概率层的「几乎必然收敛」抽象掉了。把 `converges` 换成真概率陈述
 （需要概率空间 + 强大数定律）即得真·依概率一致性 —— 课题 `Phylo.Stat.MSCProof`。
 
+🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）是空类型** ——
+`emp` **不依赖 `m`**，而 `converges` 却对**所有** `m : MSCFreq X` 断言
+⇒ 只要 `MSCFreq X` 里有两个**频率表不同**的元素（`X = Fin 4` 即如此），要求就自相矛盾。
+于是 `StatisticallyConsistent`（下方）对**任何**估计量都**空洞成立**。
+**证明、四处同型缺陷（`USTARSampling` / `CASTERSampling` / `SiteSampling`）、
+修正结构与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**；
+**「公理被数据 a.e. 实现」与 ASTRAL 的 a.e. 一致性**见 **`Phylo/Stat/MSCSamplingAE.lean`**。
+本结构**保持原样未改**（改了会打断既有定理），但**不要**再把它当成「非空假设」使用。
+
 这样切分的好处：一致性定理的**形状**与算法内容现在就能定死，
 将来只需替换 `converges` 这一个字段。 -/
 structure MSCSampling (X : Type u) [Fintype X] [DecidableEq X] where

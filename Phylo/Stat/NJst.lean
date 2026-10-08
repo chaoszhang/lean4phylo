@@ -159,6 +159,8 @@ def DissClose (δ δ' : Dissimilarity X) (ε : ℝ) : Prop :=
 * `emp n` —— `n` 棵基因树给出的**经验** USTAR 相异度；
 * `converges` —— **公理化的 SLLN**：经验相异度最终 `ε`-接近理论值 `M.δ`。
 
+🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖 `M`**，而 `converges` 却对**所有** `M : NJstData X` 断言；只要有两个模型的 `δ` 在某点不同，要求即自相矛盾 ⇒ `njst_statisticallyConsistent` 空洞。**判据、修正结构 `USTARSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。
+
 ⚠️ **公理层**：形制同 `MSCSampling.converges`（`Phylo/Stat/MSC.lean:168–173`），
 把「**几乎必然**收敛」抽象成「**最终** `ε`-接近」的确定性形式；**不得**读成真·依概率一致性
 （把 `converges` 换成真概率陈述即课题 `Phylo.Stat.MSCProof`）。 -/

@@ -217,6 +217,8 @@ theorem caster_stable_argmax (M : CASTERIdeal X) {δ : ℝ} (hδ : 0 < δ)
 * `emp n` —— `n` 个位点的**经验平均权重表**；
 * `converges` —— **大数定律**：经验平均最终逐点 `ε`-接近理论期望权重。
 
+🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖** `W`，而 `converges` 却对**所有** `W : WeightTable X` 断言；**任意两张不同的权重表**就足以矛盾（比 `MSC` 侧更严重，连「两个模型」都不需要）⇒ `caster_statisticallyConsistent` 空洞。**`Fin 4` 的无条件空性、修正结构 `CASTERSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。
+
 ⚠️ 与 `Phylo.Stat.MSC` 的 `MSCSampling.converges` 同一层：取「最终 `ε`-接近」的
 **确定性**形式，把「几乎必然收敛」抽象掉。**有界性**（正文条件 2）折叠在这里。 -/
 structure CASTERSampling (X : Type u) [Fintype X] [DecidableEq X] where

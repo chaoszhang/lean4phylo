@@ -275,7 +275,9 @@ theorem isParsimony_iff_supportMax (D : SiteSupport X) {qt : QuartetTree.{u, v} 
   ⟨fun h qt1 => (parsimonyScore_le_iff D qt.q qt1.q).mp (h qt1),
     fun h qt1 => (parsimonyScore_le_iff D qt.q qt1.q).mpr (h qt1)⟩
 
-/-- **（公理化）ISM 采样的位点大数定律**。 -/
+/-- **（公理化）ISM 采样的位点大数定律**。
+
+🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖** `M`，而 `converges` 却对**所有** `M : MSCSite X` 断言；只要有两个模型的 `cnt` 在某点不同，要求即自相矛盾 ⇒ `parsimony_statisticallyConsistent` 空洞。**判据、修正结构 `SiteSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。 -/
 structure SiteSampling (X : Type u) [Fintype X] [DecidableEq X] where
   /-- 第 `n` 个样本的支持表。 -/
   emp : ℕ → SiteSupport X
