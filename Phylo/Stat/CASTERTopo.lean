@@ -263,4 +263,30 @@ theorem propB_of_bridge {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (�
   · exact h1
   · exact h2
 
+namespace TopoIdeal
+
+variable {Θ : Type*} [MeasurableSpace Θ]
+
+/-- ★★★ **从「单个 MSC 模型 + 命题 A 数据」打包出 `TopoIdeal`**（各模型插进引擎的**入口**）。
+
+所有 4-元集共享同一个基因树模型（`S` / `ν` / `P`）—— 对**单个 quartet**（`X = Fin 4`，
+只有一个 4-元集）这是**精确**的；对更多物种，各 quartet 的支长不同，需把 `(ν, P)`
+也按 `(S, hS)` 索引（纯记账，模型无关）。
+
+`qtrue` 取每个 4-元集上的 `ab|cd`（= 该 quartet **标号下**的真拓扑；标号是任意约定，
+故不失一般性）；`propB` 由 ★★★ `propB_of_bridge` 供给。 -/
+noncomputable def ofModel (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMeasure ν]
+    (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hpos : 0 < ν {θ | ¬ S.deep θ})
+    (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' T) ν) :
+    TopoIdeal X where
+  W := fun _ _ T => expWeight ν S.τd P.A T
+  qtrue := fun _ _ => .ab_cd
+  propB := fun _ _ T hT =>
+    propB_of_bridge S ν hdeep P hf_int hf_pos hpos
+      (hint .ab_cd) (hint .ac_bd) (hint .ad_bc) T hT
+
+end TopoIdeal
+
 end Phylo.Stat.CASTERTopo
