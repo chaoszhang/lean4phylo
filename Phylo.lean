@@ -51,6 +51,7 @@ import Phylo.Stat.CASTEREngine
 import Phylo.Stat.CASTERF84
 import Phylo.Stat.CASTERF84Events
 import Phylo.Stat.CASTERF84PropA
+import Phylo.Stat.CASTERF84Scaffold
 import Phylo.Stat.CASTERGeneTree
 import Phylo.Stat.CASTERInstances
 import Phylo.Stat.CASTERJC69
