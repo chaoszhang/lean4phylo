@@ -1,0 +1,1034 @@
+{
+ "pi": [
+  0.1,
+  0.2,
+  0.3,
+  0.4
+ ],
+ "table": [
+  {
+   "pattern": "AAAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "AAGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "AACA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AACG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AACC",
+   "w": 0.0096
+  },
+  {
+   "pattern": "AACT",
+   "w": -0.01
+  },
+  {
+   "pattern": "AATA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AATG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AATC",
+   "w": -0.01
+  },
+  {
+   "pattern": "AATT",
+   "w": 0.0096
+  },
+  {
+   "pattern": "AGAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGCC",
+   "w": -0.012
+  },
+  {
+   "pattern": "AGCT",
+   "w": 0.0125
+  },
+  {
+   "pattern": "AGTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "AGTC",
+   "w": 0.0125
+  },
+  {
+   "pattern": "AGTT",
+   "w": -0.012
+  },
+  {
+   "pattern": "ACAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ACTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "ATTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GAGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GACA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GACG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GACC",
+   "w": -0.012
+  },
+  {
+   "pattern": "GACT",
+   "w": 0.0125
+  },
+  {
+   "pattern": "GATA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GATG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GATC",
+   "w": 0.0125
+  },
+  {
+   "pattern": "GATT",
+   "w": -0.012
+  },
+  {
+   "pattern": "GGAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGCC",
+   "w": 0.0096
+  },
+  {
+   "pattern": "GGCT",
+   "w": -0.01
+  },
+  {
+   "pattern": "GGTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GGTC",
+   "w": -0.01
+  },
+  {
+   "pattern": "GGTT",
+   "w": 0.0096
+  },
+  {
+   "pattern": "GCAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GCTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "GTTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CAGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CACA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CACG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CACC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CACT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CATA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CATG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CATC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CATT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CGTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCAA",
+   "w": 0.0096
+  },
+  {
+   "pattern": "CCAG",
+   "w": -0.012
+  },
+  {
+   "pattern": "CCAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCGA",
+   "w": -0.012
+  },
+  {
+   "pattern": "CCGG",
+   "w": 0.0096
+  },
+  {
+   "pattern": "CCGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CCTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTAA",
+   "w": -0.01
+  },
+  {
+   "pattern": "CTAG",
+   "w": 0.0125
+  },
+  {
+   "pattern": "CTAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTGA",
+   "w": 0.0125
+  },
+  {
+   "pattern": "CTGG",
+   "w": -0.01
+  },
+  {
+   "pattern": "CTGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "CTTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TAGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TACA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TACG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TACC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TACT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TATA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TATG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TATC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TATT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGAA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGAG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGGA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGGG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TGTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCAA",
+   "w": -0.01
+  },
+  {
+   "pattern": "TCAG",
+   "w": 0.0125
+  },
+  {
+   "pattern": "TCAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCGA",
+   "w": 0.0125
+  },
+  {
+   "pattern": "TCGG",
+   "w": -0.01
+  },
+  {
+   "pattern": "TCGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TCTT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTAA",
+   "w": 0.0096
+  },
+  {
+   "pattern": "TTAG",
+   "w": -0.012
+  },
+  {
+   "pattern": "TTAC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTAT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTGA",
+   "w": -0.012
+  },
+  {
+   "pattern": "TTGG",
+   "w": 0.0096
+  },
+  {
+   "pattern": "TTGC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTGT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTCA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTCG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTCC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTCT",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTTA",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTTG",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTTC",
+   "w": 0.0
+  },
+  {
+   "pattern": "TTTT",
+   "w": 0.0
+  }
+ ]
+}
