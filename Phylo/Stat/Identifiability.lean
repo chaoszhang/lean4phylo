@@ -18,7 +18,10 @@ Allman–Degnan–Rhodes (2011) 第 **300–306** 行给出三分支物种树的
 
 * ★★★ `three_halves_mul_one_sub`：等价的无 `log` 形式 `(3/2)(1 − p) = e^{−t}`；
 * ★★★ `branchLength_eq`：ADR2011 的**原式** `−log((3/2)(1 − mscConcordant t)) = t`；
-* ★★★ `mscConcordant_injective`：`t ↦ p(t)` **单射** ⇒ **内部枝长可识别**；
+* ★★★ `mscConcordant_strictMono` / `mscDiscordant_antitone`：`p` **严格递增**、`⅓e^{−t}` **递减**
+  （ADR2011 第 300–306 行公式的**单调性**，比单射更强）；`concordant_lt_of_lt` 是其定量形式；
+* ★★★ `mscConcordant_injective`：`t ↦ p(t)` **单射** ⇒ **内部枝长可识别**
+  （现由 `mscConcordant_strictMono` 直接推出，见 `mscConcordant_injective'`）；
 * ★★★ `argmax_unique`：`t > 0` 时**任何**竞争拓扑的概率都**严格小于**真拓扑的
   ⇒ **拓扑可识别**（argmax 唯一）；
 * ★★ `tripleDist` / `tripleDist_sum` / `tripleDist_injective`：把三分支的 rooted-triple
@@ -29,6 +32,7 @@ Allman–Degnan–Rhodes (2011) 第 **300–306** 行给出三分支物种树的
 | 条目 | 状态 |
 |---|---|
 | ADR2011 第 300–306 行的公式（三分支） | **已证**（`branchLength_eq`） |
+| 该公式的**单调性**（枝长越长 ⇒ `p` 越大） | **已证**（`mscConcordant_strictMono` / `mscDiscordant_antitone` / `concordant_lt_of_lt`） |
 | **Proposition 1**（第 309 行）在 `n = 3` 的情形 | **已证**（`mscConcordant_injective` + `argmax_unique`） |
 | **Corollary 2**（第 316 行）的三分支情形 | **已证**（`tripleDist_injective`） |
 | **Proposition 1 的一般 `n ≥ 3`** | ❌ **未做**：需要「**有根 triple 系统**」这一**纯组合**接口（「每条内部边都有两个叶子其 MRCA 在该边上，外加一个从该边父结点分出的叶子」），本库**尚无**该接口；缺的是组合层，不是概率层 |
@@ -61,6 +65,35 @@ theorem branchLength_eq (t : ℝ) :
   rw [three_halves_mul_one_sub, Real.log_exp, neg_neg]
 
 /-! ## 2. 可识别性 -/
+
+/-- ★★★ **一致概率随内部枝长严格递增**（`t ↦ p(t)` 是 `StrictMono`）：
+树内枝越长 ⇒ 溯祖越容易在枝内完成 ⇒ 一致拓扑越占优 ——
+这是 ADR2011 第 **300–306** 行公式 `p = 1 − ⅔e^{−t}` 的**单调性**（比单射更强）。 -/
+theorem mscConcordant_strictMono : StrictMono mscConcordant := by
+  intro a b hab
+  rw [mscConcordant_closed, mscConcordant_closed]
+  have h : Real.exp (-b) < Real.exp (-a) := Real.exp_lt_exp.mpr (by linarith)
+  linarith
+
+/-- ★★★ **不一致概率随内部枝长严格递减**（`t ↦ ⅓e^{−t}` 是 `Antitone`）。 -/
+theorem mscDiscordant_antitone : Antitone mscDiscordant := by
+  have hfun : ∀ t : ℝ, mscDiscordant t = (1 / 3) * Real.exp (-t) := by
+    intro t
+    rw [mscDiscordant_eq, Coalescent.pDiscordant_eq_survival, Coalescent.survival_two]
+  intro a b hab
+  rw [hfun a, hfun b]
+  have h : Real.exp (-b) ≤ Real.exp (-a) := Real.exp_le_exp.mpr (by linarith)
+  linarith
+
+/-- ★★★ **内部枝长可识别（定量形式）**：`a < b` ⟹ `p(a) < p(b)`
+—— 枝长之差不可能被概率抹平。 -/
+theorem concordant_lt_of_lt {a b : ℝ} (h : a < b) : mscConcordant a < mscConcordant b :=
+  mscConcordant_strictMono h
+
+/-- ★★★ **内部枝长可识别**：`t ↦ p(t)` 是**单射**（不同的枝长给出不同的概率）。
+（现在是 `mscConcordant_strictMono` 的直接推论 —— 严格单调比单射更强。） -/
+theorem mscConcordant_injective' : Function.Injective mscConcordant :=
+  mscConcordant_strictMono.injective
 
 /-- ★★★ **内部枝长可识别**：`t ↦ p(t)` 是**单射**（不同的枝长给出不同的概率）。 -/
 theorem mscConcordant_injective : Function.Injective mscConcordant := by
