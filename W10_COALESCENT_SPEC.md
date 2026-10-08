@@ -543,6 +543,45 @@ theorem empFreq_tendsto_ae … : ∀ᵐ ω ∂μ, Tendsto (fun n => empFreq n ω
 
 ---
 
+## §11 W10i ★ Stadler–Degnan 2012：**ranked（带次序）基因树概率**
+
+**交付文件**（新建）：`Phylo/Stat/RankedGeneTree.lean`
+**命名空间**：`Phylo.Stat.RankedGeneTree`
+**允许 import**：`Phylo.Stat.MSCProof`（已交付的 MSC 权重）＋必要时 `Phylo.Stat.KingmanCoalescent`。
+
+### 11.1 文献
+
+`../references/md/StadlerDegnan2012_RankedGeneTreeProbability.md`：
+**Theorem 1**（第 **504** 行）· **Theorem 2**（第 **540** 行）· **Theorem 3**（第 **693** 行）。
+
+⚠️ **第一步（必做）**：把上述定理的**准确陈述 + 行号**逐字抄进 docstring 引用块，**再**动手。
+⚠️ **并且**：本批已有两篇论文的 md 出过问题（一篇 OCR 坏、一篇印刷范围错）。
+所以**必须**先做一次「**冒烟测试**」：从你要用的定理里挑**一条能被独立验证的公式**
+（例如某个小 `n` 的数值例子），用**精确有理数**脚本核对；**对不上就以 PDF 为准**
+（镜像里可用 `pdftotext -layout -enc UTF-8 <pdf> -` 重新提取），并在文件头写明你的判定依据。
+
+### 11.2 交付（骨架优先；`n = 3` 的显式情形是**硬性要求**）
+
+* 先定义「**ranked 基因树**」这一**组合对象**（若库内没有）：例如在 `Cladogram` 之上加一个
+  「内部顶点的**时间次序**」字段（即 coalescence 事件的先后），并给出它与**非 ranked** 拓扑的
+  「遗忘映射」；
+* 再给**概率**：★★★ 至少把 `n = 3`（或你能确切推出的最小情形）的 ranked 概率写成**闭形式**，
+  并与库内 `MSCProof.mscConcordant` / `mscDiscordant`（以及 `KingmanCoalescent.sojournLaw`，若可达）
+  **接上**；
+* ★★ 若 Theorem 1 的一般递推可读通，给出**条件形式**（把「节律 / ordering 等概率」这一模型口径
+  写成**显式前提**，**不要**默默当成公理）。
+
+### 11.3 允许的降级（**必须如实报告**）
+
+* 若 md 不可读、PDF 也提取不出可信公式：**不要硬造**。交付「组合对象 + 与非 ranked 拓扑的映射 +
+  一条可证的性质（例如‘给定拓扑下 ranked 树恰有 `(n−1)!` 个’）」，把概率部分落成
+  **显式 `def … : Prop` 缺口**，并写明「文献不可读，公式未采信」。
+* 数值复核脚本留档 `scripts/msc/stadler_degnan_ranked.py`（精确有理数，**不要 Monte Carlo**）：
+  至少核对「给定拓扑的 ranked 树计数 = `(n−1)!`」与小情形的概率和 = 1。
+* 零 `sorry` / 零 `axiom`；新模块按**字母序**登记（协调侧做）；**不要**动 `Phylo.lean`。
+
+---
+
 ## §8 三个子批共同的验收清单
 
 每子批收口（协调侧统一执行，执行 agent 只需自测前 4 条）：
