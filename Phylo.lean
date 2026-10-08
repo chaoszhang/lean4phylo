@@ -48,9 +48,11 @@ import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
+import Phylo.Stat.CASTERGeneTree
 import Phylo.Stat.CASTERJC69
 import Phylo.Stat.CASTERTheorem1
 import Phylo.Stat.CASTERTheorem2
+import Phylo.Stat.CASTERTopo
 import Phylo.Stat.CASTERWeights
 import Phylo.Stat.Coalescent
 import Phylo.Stat.InvariantsRank
