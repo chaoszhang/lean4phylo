@@ -176,10 +176,12 @@ theorem merge_outcomes_injective (Q : Part n) :
 * 由 §1.5 的递归可推出归一化（§1.4 路线），故**不必**去证「割-排列」双射。
 * 递归的代数核对（`n = 4, k = 2`，`Q = {12|3|4}`，`μ = (2,1,1)`）：
   `partitionProb 4 3 Q = (1/6)`，两个 `P` 各 `(1/6)/C(3,2)` ⇒ `1/9 = partitionProb 4 2 {12|34}` ✓
-* (★) 数值核对：`|B| = 3` 时 LHS `= 1!·2! × 3 = 12 = 3!·2` ✓；
-  `|B| = 4` 时 LHS `= (1!3! ×4) + (2!2! ×3) = 24 + 12 = 36 = 4!·3` ✓
-  （注意 `A` 与 `B\A` **成对出现**，所以上面这个「有序」和是**每个无序分裂两份**；
-  §1.5 里的求和要相应乘 `1/2` 或按「`min' B ∈ A`」取代表元 —— **两种都行，选一种并写明**）。
+* (★) 数值核对：`|B| = 3` 时**有序**和 `= 1!·2! × 3 = 12 = 3!·2` ✓；
+  `|B| = 4` 时**有序**和 `= (1!3! ×4) + (2!2! ×3) = 24 + 12 = 36`，**但 `4!·3 = 72`**
+  —— ⚠️ **2026-10-09 勘误（W10a 执行 agent 发现）**：本规格此处原先写「`36 = 4!×3`」，
+  那是**笔误**：`36` 是**无序**分裂和（`= 4!·3/2`），**有序**和才是 `72`，
+  与 §1.5 的定理陈述（有序、`= |B|!(|B|−1)`）一致。**定理陈述是对的，只有这行数字注解错了。**
+  形式化一律按**有序**陈述（`sum_powerset_factorial`），全程无 `1/2` 因子。
 * 归一化恒等式（供 §1.4 校验）：`Σ_{|ξ|=k} ∏λᵢ! = n!(n−1)! / ((n−k)! k! (k−1)!)`
   （`n = 4, k = 2` 时 `= 36` ✓；这就是 WorkBuddy 用脚本精确复核过的那条）。
 
@@ -302,7 +304,246 @@ noncomputable def pUV (u v : ℕ) (t : ℝ) : ℝ := …   -- 按原文抄
 
 ---
 
-## §4 三个子批共同的验收清单
+## §5 W10f ★★★ ADR 2017：split 概率与「1/3 阈值」（异常区的形式化）
+
+**交付文件**（新建）：`Phylo/Stat/SplitProbabilities.lean`
+**命名空间**：`Phylo.Stat.SplitProbabilities`
+**允许 import**：`Phylo.Stat.MSCProof`（已交付，给出 4 叶 MSC 权重）+ `Phylo.Stat.MSC`。
+⚠️ 该模块**已登记**在 `Phylo.lean` 里，**不要**改 `Phylo.lean`。
+
+### 5.1 文献（`../references/md/AllmanDegnanRhodes2017_SplitProbabilitiesMSC.md`）
+
+* **Lemma 3.1**（第 **315** 行）：`|X| = n` 时，**非平凡 split 的概率之和 = `n − 3`**。
+* ★★★ **Proposition 3.2**（第 **363** 行）：设 `σ` 是 `X` 上的 **binary** 物种树，
+  内部枝长 `λ_i > ε ≥ 0`，`A|B` 是 `X` 的一个 split。则在 MSC 下
+  > 若 `P_σ(A|B) ≥ (1/3)·exp(−ε)`，则 `A|B` 是 `σ` 展示的 split。
+
+  并且 `1/3·exp(−ε)` **是紧的**：对任意 `α < (1/3)exp(−ε)`，存在物种树 `σ`（内部枝长 `> ε`）
+  与**不被 `σ` 展示**的 split `A|B`，使 `P_σ(A|B) > α`。
+* **Cor 3.3**（第 **415** 行）· **Thm 4.1**（第 **656** 行）：按「分离 `ac, bd` 的 split」求和的
+  不等式（异常区的定量刻画）。**有余力再做**，先读原文抄准确形状。
+
+### 5.2 交付（**`|X| = 4` 版本是硬性要求**，一般 `n` 允许落缺口）
+
+`|X| = 4` 时非平凡 split 恰 3 个（三个 `2|2` 无向拓扑），与 `MSCProof` 的权重一一对应：
+被展示的那个概率 `mscConcordant t`，另两个各 `mscDiscordant t`。
+
+```lean
+/-- 4 叶：`A|B` 在内部枝长 `t` 的物种树下的 MSC split 概率。 -/
+noncomputable def splitProb4 (t : ℝ) (displayed : Bool) : ℝ :=
+  if displayed then mscConcordant t else mscDiscordant t
+```
+★ 要证的（都应与 `Coalescent.pDiscordant` / `MSCProof.mscDiscordant` 接上）：
+```lean
+/-- ★★★ **Prop 3.2（4 叶）**：`P ≥ (1/3)exp(−ε)` ⟹ 该 split 被展示。-/
+theorem prop_3_2_four {t ε : ℝ} (h : ε < t) (A : Bool) (hdis : A = false) :
+    splitProb4 t A < (1 / 3) * Real.exp (-ε)
+/-- ★★★ **紧性**：任意 `α < (1/3)exp(−ε)` 都存在反例。-/
+theorem prop_3_2_tight_four {ε α : ℝ} (hα : α < (1 / 3) * Real.exp (-ε)) :
+    ∃ t : ℝ, ε < t ∧ α < splitProb4 t false
+/-- ★★ **Lemma 3.1（`n = 4`）**：三个非平凡 split 的概率之和 = `4 − 3 = 1`。-/
+theorem lemma_3_1_four (t : ℝ) :
+    mscConcordant t + mscDiscordant t + mscDiscordant t = 1
+```
+**一般 `n` 的 Lemma 3.1 / Prop 3.2** 需要「一般 `n` 的 MSC split 概率」这一尚未形式化的对象
+⇒ 落成**显式 `def … : Prop` 缺口**（写清缺什么），或**有充分把握时**给出条件形式。
+不许用 `sorry`。
+
+### 5.3 与库内既有设施的接合（★ 最重要）
+
+* `Phylo/Split.lean` 的 `Split` / `Split.IsSplitOf` / `Split.swap`（= `KPartition α 2`，**有向**）；
+* `Phylo/Stat/MSC.lean` 的 `QuartetFreq` / `MSCFreq`（`majorizes` 已在 `MSCProof` 里被构造）；
+* `Phylo/Stat/MSCProof.lean` 的 `mscConcordant` / `mscDiscordant` / `mscP_sum`。
+**不要重造**这些；直接引用。
+
+---
+
+## §6 W10h ★★ Zhu–Degnan–Steel 2011：clade / clan 与互单系概率
+
+**交付文件**（新建）：`Phylo/Stat/ReciprocalMonophyly.lean`
+**命名空间**：`Phylo.Stat.ReciprocalMonophyly`
+**允许 import**：`Phylo.Stat.MSCProof`（＋必要时 `Phylo.InternalEdge`）。
+
+### 6.1 文献（`../references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md`）
+
+* **Theorem 4.5**（第 **452** 行）· **Theorem 5.1**（第 **849** 行）·
+  **Theorem 6.3**（第 **1077** 行）· **Theorem 6.4**（第 **1171** 行）· **Prop 6.5**（第 **1265** 行）。
+* **第一步（必做）**：把上述定理的**准确陈述 + 行号**抄进 docstring 的引用块
+  **再**动手。**不要凭记忆写。**
+
+### 6.2 与库内的接合
+
+`Phylo/InternalEdge.lean` 已有
+`IsClan`（第 **580** 行）· `IsClade`（第 **589** 行）· `isClade_iff_isClan_of_isBinary`。
+⚠️ **先读它们的准确定义**（`IsClade A` 是「存在一条边使 `A` 恰是一侧的叶集」之类的
+**树内**概念，与「**随机基因树**里 `A` 是否成单系」是**两个层次**）：
+若需要「基因树里 `A` 是 clade」的**概率层**对象，请**显式定义**它（例如用
+`MSCProof` 的 4 叶权重 + `IsClade` 的组合条件），并在文件头写清两层的关系。
+
+### 6.3 交付与降级
+
+* 骨架优先：先给 `def`（概率层对象）与至少一条**可证的**小情形（`|X| = 4` 或 rooted triple），
+  一般定理落**显式缺口**（`def … : Prop`）并写清缺什么。
+* ⚠️ 引用纪律：**任何** docstring 断言都必须回查原文并带行号。
+* 若通读后发现该文的定理依赖本文没有的形式化基础（如一般 `n` 的基因树分布），
+  **如实报告**并给出「最小可交付」版本（例如 `|X| = 4` 情形 + 与 `IsClade` 的桥）。
+
+---
+
+## §7 W10k ★★ 溯祖统计量（Watterson / Tajima / SFS）—— 教科书级，最便宜的加厚
+
+**交付文件**（新建）：`Phylo/Stat/CoalescentStats.lean`
+**命名空间**：`Phylo.Stat.CoalescentStats`（**不要**与 `Coalescent` 撞名）
+**允许 import**：`Phylo.Stat.Coalescent`。
+
+### 7.1 内容（全部由库内既有的 `sojournMean` / `expectedTotalCoalescenceTime` 推出）
+
+* ★★★ **总枝长期望** `E[L_n] = Σ_{k=2}^{n} k·E[τ_k] = Σ_{k=2}^{n} 2/(k−1) = 2·H_{n−1}`：
+  ```lean
+  noncomputable def harmonic (m : ℕ) : ℝ := ∑ j ∈ Finset.range m, 1 / ((j : ℝ) + 1)
+  noncomputable def totalTreeLengthMean (n : ℕ) : ℝ := ∑ j ∈ Finset.range (n - 1), 2 / ((j : ℝ) + 1)
+  theorem totalTreeLengthMean_eq (n : ℕ) : totalTreeLengthMean n = 2 * harmonic (n - 1)
+  ```
+  并给出与 `Coalescent.sojournMean` 的**接合**：`k·sojournMean k = 2/(k−1)`（`k ≥ 2`）。
+* ★★★ **Watterson (1975)**：无限位点模型下 `E[S] = θ·H_{n−1}`：
+  ```lean
+  theorem watterson_expected_segregating {n : ℕ} (θ : ℝ) (hn : 2 ≤ n) :
+      (θ / 2) * totalTreeLengthMean n = θ * harmonic (n - 1)
+  ```
+  （`θ/2` = 每条谱系单位时间的突变率；`S` = 分离位点数。）**出处**：Watterson 1975,
+  *On the number of segregating sites in genetical models without recombination*,
+  Theor. Popul. Biol. **7**:256–276（**转述/教科书级**，教师允许转述）。
+* ★★ **Tajima (1983)**：`E[π] = θ`（`π` = 两两差异的平均数）—— **核心恒等式**是
+  `Σ_{k=2}^{n} E[τ_k]·C(k,2)·θ = θ`，即 `Σ_{k=2}^n sojournMean k * kingmanRate k = n − 1`
+  （因为每位点每对谱系的突变期望是 `θ`）。请**先**把这条恒等式证出来再谈 `E[π]`。
+* ★★ **SFS**：`E[ξ_i] = θ/i`（`i = 1..n−1`，`Σ_i E[ξ_i] = θ H_{n−1}`）。若一般的 `ξ_i`
+  概率层对象太难，**至少**给 `Σ_{i=1}^{n−1} θ/i = θ·H_{n−1}` 与 `E[S]` 的一致**对账**，
+  其余落**显式缺口**。
+* **诚实边界**：以上都是**实数层期望**（与 `Coalescent.lean` 同一层次），
+  **不是**测度层的随机变量。请在文件头写明这一点。
+
+### 7.2 允许的降级
+
+如上；但 `totalTreeLengthMean_eq` 与 `watterson_expected_segregating` **必须**交付
+（它们只需望远镜和与 `Finset.sum` 交换，属低风险）。
+
+---
+
+## §9 W10g ★★★ ADR 2011：可识别性（rooted triple ⇒ 物种树拓扑 + **内部枝长**）
+
+**交付文件**（新建）：`Phylo/Stat/Identifiability.lean`
+**命名空间**：`Phylo.Stat.Identifiability`
+**允许 import**：`Phylo.Stat.MSCProof`（已交付的 MSC 权重）。
+⚠️ 该模块**已登记**，**不要**改 `Phylo.lean`。
+
+### 9.1 文献（`../references/md/AllmanDegnanRhodes2011_IdentifyingRootedSpeciesTree.md`）
+
+* 第 **300–306** 行（**关键公式**）：对三分支物种树（`a,b` 比 `c` 更近），设内部枝长 `t`，
+  `p` = 「随机有根基因树里 `a,b` 比二者与 `c` 更近」的概率，则
+  > **`t = − log( (3/2)(1 − p) )`**
+
+  （引 Nei 1987 / Wakeley 2008）。
+* ★★★ **Proposition 1**（第 **309** 行）：`n ≥ 3` 时**有根 triple 基因树拓扑的概率决定
+  物种树拓扑与内部枝长**。
+* ★★ **Corollary 2**（第 **316** 行）：基因树**拓扑分布**决定物种树拓扑与内部枝长。
+* ⚠️ **Lemma 4**（第 **962–971** 行）**只对 5 taxa 成立**（第 **973–974** 行明言 6 taxa 起失效）；
+  **Prop 3**（第 **900** 行，`|X| = 4`：`σ⁻` 可识别而 `σ⁺` 不可）依赖 4 叶无根基因树分布。
+
+### 9.2 交付（**`|X| = 3`（rooted triple）版本是硬性要求**）
+
+本库的 `MSCProof.mscConcordant` **正是**三分支情形下的 `p`（同一公式：`1 − ⅔e^{−t}`）。
+
+```lean
+/-- ★★★ **ADR2011 第 300–306 行的公式**：由概率 `p` 反解内部枝长。 -/
+theorem branchLength_of_concordant (t : ℝ) :
+    - Real.log ((3 / 2) * (1 - mscConcordant t)) = t
+/-- ★★★ **内部枝长可识别**：`t ↦ p(t)` 单射。 -/
+theorem mscConcordant_injective : Function.Injective mscConcordant
+/-- ★★★ **拓扑可识别**：`t > 0` 时「概率最大」的那个拓扑**唯一**是真拓扑。 -/
+theorem topology_identifiable {t : ℝ} (ht : 0 < t) :
+    mscDiscordant t < mscConcordant t ∧
+      ∀ s : ℝ, s ≤ mscDiscordant t → mscConcordant t > s
+```
+（最后一条就是 `mscDiscordant_lt_mscConcordant` 的「argmax」包装；**不要**重造，
+直接引用 `MSCProof` 里已证的那条。）
+
+**另加**（★ 有价值、且便宜）：`Corollary 2` 的**单射版**——由 `mscConcordant_injective`
++ 「三个拓扑概率由 `p` 决定」，给出「两个物种树的 rooted-triple 分布相同 ⇒ 内部枝长相同」。
+若需要把「分布」写成对象，**显式定义**一个三元组 `(p₁,p₂,p₃)` 的记录即可。
+
+### 9.3 降级与边界
+
+* `n > 3` 的一般 Prop 1（每个内部边都可由某个 triple 反解）依赖「物种树的有根 triple 系统」，
+  属**纯组合**；若时间不够，落**显式 `def … : Prop` 缺口**并写清。
+* **Lemma 4 的 5-taxon 版本**依赖「**完整**溯祖历史的重标号对称性」（不是首次合并对的计数），
+  本子批**不做**：请在文件头诚实边界表里写明「只形式化了 4 叶下的重标号对称性
+  （`MSCKingman.root_topology_class_prob`），5 叶版本未做，原因是 …」。
+* `Prop 3`（`σ⁺` 不可识别）依赖 4 叶**无根**基因树分布，本子批**不做**，同样如实写明。
+* ⚠️ 若 `Real.log` 不在 import 闭包内，**允许**新增
+  `Mathlib.Analysis.SpecialFunctions.Log.Basic`（**在文件头注明**），或把 `branchLength_of_concordant`
+  改成等价的无 `log` 形式（`(3/2)(1 − p) = exp(−t)`）并**明确说明**你用了哪一种。
+* 数值复核脚本留档 `scripts/msc/adr2011_identifiability.py`（精确/高精度，**不要 Monte Carlo**）：
+  至少核对 `−log((3/2)(1−(1−⅔e^{−t}))) = t`（`t = 0.1 … 10`，高精度）与单射性。
+
+---
+
+## §10 W10d ★★ 大数定律 ⇒ 经验 quartet 频率的**几乎必然收敛**（**新定理，不动旧公理**）
+
+**交付文件**（新建）：`Phylo/Stat/EmpiricalConvergence.lean`
+**命名空间**：`Phylo.Stat.EmpiricalConvergence`
+**允许 import**：`Phylo.Stat.MSC` ＋（**允许并请注明**）Mathlib 概率层
+（`Mathlib.Probability.StrongLaw` / `Mathlib.Probability.Independence.*` 等）。
+
+### 10.1 背景与**界线**（**先读，别越界**）
+
+`Phylo/Stat/MSC.lean` 第 **159–175** 行把「MSC 采样 + 大数定律」公理化成
+`MSCSampling.converges`，其形状是**确定性**的
+`∀ m ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp n) m.freq ε`。
+**这个形状无法由概率论「证」出来**（它没有概率空间）——
+所以本子批**不去动 `MSCSampling`**（改它会把 `StatisticallyConsistent` 等既有定理全打断）。
+
+**本子批的目标**是**新增**一条**真概率陈述**（与 W9 的「新增派生版、保持旧版兼容」同一套路）：
+
+> 在一个真正的概率空间 `(Ω, μ)` 上，**独立同分布**的位点使**经验 quartet 频率**
+> **几乎必然**收敛到理论频率。
+
+### 10.2 交付（**骨架优先，允许降级**）
+
+```lean
+/-- 经验频率：`n` 个 iid 位点的指示函数平均。 -/
+noncomputable def empFreq (n : ℕ) (ω : Ω) (S : Finset X) (hS : S.card = 4) (q : Split ↥S) : ℝ :=
+  (n : ℝ)⁻¹ * ∑ i ∈ Finset.range n, ind (ω i) S hS q
+
+/-- ★★★ **大数定律**：`∀ᵐ ω ∂μ, Tendsto (fun n => empFreq n ω S hS q) atTop (𝓝 (m.freq.p S hS q))`。 -/
+theorem empFreq_tendsto_ae … : ∀ᵐ ω ∂μ, Tendsto (fun n => empFreq n ω …) atTop (𝓝 (m.freq.p …))
+```
+
+**必做**：
+1. **先查** Mathlib 有没有现成的**强大数定律**（在镜像里 `grep -rn 'strong_law\|StrongLaw' Mathlib/`）；
+   **有就直接用**并在文件头写明用的是哪一条（文件 + 声明名）；
+2. 若只有**弱**大数定律或**有限方差**版，**就用自己的版本**并**显式说明**：
+   「本文件证的是**依概率**收敛 / 有限方差版，不是几乎必然」——**不许含糊**；
+3. 把「经验频率」的**可测性**与**独立性**（iid 假设）写清楚：是**假设**还是**证出来**的，
+   **必须逐条说明**。
+
+### 10.3 允许的降级（**必须如实报告**）
+
+* 若 Mathlib 的概率层 API（`IndepFun` / `iIndepFun` / 测度乘积）比预期重：
+  **可以只做「有限 `n` 的期望」**（`E[empFreq n] = m.freq.p …`，即**无偏性**）
+  ＋「方差 `= p(1−p)/n`」，并把「收敛」落成**显式缺口**（`def … : Prop`）写清缺什么。
+  **这也是有价值的**（它是收敛定理的两个核心估计），但**不许**把「无偏 + 方差」说成「大数定律」。
+* **不许**为了让某条编过而改弱 `MSC.lean` / `MSCSampling` 的任何既有声明。
+* **不许**用 `sorry`；**不许**新造 `axiom`。
+
+### 10.4 数值复核
+
+留档 `scripts/msc/empirical_convergence.py`：**精确有理数**核对
+「无偏性」（`Σ_i P(第 i 个位点给出 q) = n·p`）与「方差 `= p(1−p)/n`」在 `n ≤ 6`、
+若干有理 `p` 上的恒等式（误差恒为 0）。**不要 Monte Carlo**。
+
+---
+
+## §8 三个子批共同的验收清单
 
 每子批收口（协调侧统一执行，执行 agent 只需自测前 4 条）：
 
