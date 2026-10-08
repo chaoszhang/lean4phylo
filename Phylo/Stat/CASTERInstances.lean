@@ -178,4 +178,43 @@ theorem caster_statisticallyConsistent_of_family {X : Type u} [Fintype X] [Decid
   topo_statisticallyConsistent (TopoIdeal.ofFamily Θ M ν hdeep P hf_int hf_pos hpos hint)
     emp hconv hNE hE
 
+/-- ★★★ **定理 2（贪心放置一致，任意物种数，条件形式）**。
+
+附录对定理 2 的归纳证明（`sm.tex` 1706–1720）说：**基例**是定理 1（四叶），
+**归纳步**是「把物种 `a` 放到骨架树 `S'` 上时，真树一定在候选集里」，
+于是若贪心的输出不等于真树就与定理 1 的严格分离矛盾。
+
+本定理正是这条归纳步的抽象形式：候选集 `C n`（放置的空间）**含真选择**，
+估计量在 `C n` 上最大化经验得分 ⇒ 最终把每个 quartet 都判对。
+**候选集的具体形状（三划分 / 放置位置 / DP 约束）不影响结论** —— 这也是为什么附录能一句话带过。
+
+（照 ★★★ `topo_greedy_consistent`；各 quartet 的模型与命题 A 数据同
+`caster_statisticallyConsistent_of_family`。） -/
+theorem caster_greedy_consistent_of_family {X : Type u} [Fintype X] [DecidableEq X]
+    (Θ : (S : Finset X) → S.card = 4 → Type*)
+    [inst : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSpace (Θ S hS)]
+    (M : ∀ (S : Finset X) (hS : S.card = 4), MSCTopoSym (Θ S hS))
+    (ν : ∀ (S : Finset X) (hS : S.card = 4), Measure (Θ S hS))
+    [inst2 : ∀ (S : Finset X) (hS : S.card = 4), IsProbabilityMeasure (ν S hS)]
+    (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
+    (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
+    (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
+      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
+      Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS))
+    (emp : ℕ → TopoWeight X)
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N, TopoClose (emp n)
+      (TopoIdeal.ofFamily Θ M ν hdeep P hf_int hf_pos hpos hint).W ε)
+    (hNE : ∃ q : TopoChoice X, ¬ IsTrueT (fun _ _ => Topo.ab_cd) q)
+    (C : ℕ → Set (TopoChoice X))
+    (hfeas : ∀ n : ℕ, (fun _ _ => Topo.ab_cd) ∈ C n)
+    {E : ℕ → TopoChoice X}
+    (hmax : ∀ (n : ℕ) (q : TopoChoice X), q ∈ C n →
+      topoScore (emp n) q ≤ topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n) :=
+  topo_greedy_consistent (TopoIdeal.ofFamily Θ M ν hdeep P hf_int hf_pos hpos hint)
+    emp hconv hNE C hfeas hmax
+
 end Phylo.Stat.CASTERInstances
