@@ -108,7 +108,7 @@ vertices being ordered」= 本文件 `IsMergeHistory` 的口径。）
 |---|---|
 | 论文式 (2) `H_ℓ = ℓ!(ℓ−1)!/2^{ℓ−1}` | ✅ **已证**（`H_eq_factorial`；`H_eq_prod` 给出乘积形式） |
 | 「`1/H_ℓ` = 每一步均匀合并的概率之积」 | ✅ **已证**（`one_div_H_eq_prod_jumpProb`，用库内 `Coalescent.jumpProb`） |
-| ranked 树计数 `= H_n`（**一般 `n`**） | ❌ **未证**（缺口 `rankedTree_card_gap`）；`n = 2, 3, 4` 已用 `decide` **枚举**验证 |
+| ranked 树计数 `= H_n`（**一般 `n`**） | ✅ **已由 `Phylo.Stat.CoalescentHistoryCount` 补证**（纯内核；本文件只做了 `n ≤ 4` 的枚举） |
 | Remark 6 的 `(n−1)!/∏(c_i−1)`（**一般 `n`**） | ❌ **未证**（缺口 `rankedFiberCount_gap`）；脚本穷举 `n ≤ 7` 核对，Lean 内验证 `n = 3, 4` 的实例 |
 | **Theorem 1 的 `n = 3` 实例** | ✅ **已证**，但**模型前提显式**（`sd2012_theorem1_n3` 的 `b` 是假设，不是从 Theorem 2/3 推出的） |
 | **Theorem 1 的一般 `n`** | ❌ **未做**（本文件只做 `n = 3`；一般 `n` 需要 Theorem 2/3 的输出） |
@@ -500,11 +500,14 @@ theorem concordant3_iff_clades : ∀ f : Fin (3 - 1) → Fin 3 × Fin 3,
 
 /-! ## §5 诚实边界：显式缺口（`def … : Prop`，**不是** `axiom`，也**不是** `sorry`） -/
 
-/-- ❌ **缺口 G1（计数，一般 `n`）**：`n` 个叶上的 ranked 树数 `= H_n`。
+/-- ❌→✅ **缺口 G1（计数，一般 `n`）已由 `Phylo/Stat/CoalescentHistoryCount.lean` 补证**：
+`n` 个叶上的 ranked 树数 `= H_n`。
 
-本文件只用 `decide` **枚举**验证了 `n = 2, 3, 4`（`1, 3, 18`），
-并给出 `card_mergeHistories_four_eq_H`；一般 `n` 的归纳（「每一步合并两块」的递归计数）
-**未证**。 -/
+本文件只用 `decide` **枚举**验证了 `n = 2, 3, 4`（`1, 3, 18`）；
+**一般 `n`** 已由 `Phylo.Stat.CoalescentHistoryCount.card_mergeHistories_eq_H`
+（**纯内核**，走「任意有限集上的合并史」的逐层计数）与
+`…rankedTree_card_gap_proved`（**本 `Prop` 本身**）证出。
+本 `def` 保留为**接口/文档**，不再表示缺口。 -/
 def rankedTree_card_gap : Prop := ∀ n : ℕ, 2 ≤ n → ((mergeHistories n).card : ℝ) = H n
 
 /-- ❌ **缺口 G2（论文 Remark 6，PDF 第 416–424 行）**：给定无次序拓扑的 ranking 数
