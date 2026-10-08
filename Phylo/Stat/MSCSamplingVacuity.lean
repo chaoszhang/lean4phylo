@@ -54,7 +54,10 @@ import Phylo.Stat.Stability
 * ★★★ `astral_statisticallyConsistent_law`：**正面修复** —— 把
   `Phylo/Stat/Stability.lean` 的 `astral_statisticallyConsistent` 里的
   `sm : MSCSampling X` 换成 `sm : MSCSamplingLaw X`（该证明只用到 `sm.converges m` 与
-  `sm.emp n` 两处，故**逐字相同**）⇒ 一致性断言在修正版上**有内容**。
+  `sm.emp n` 两处，故**逐字相同**）⇒ 一致性断言在修正版上**有内容**；
+* ★★★ **`NJst` 侧的对称修复**：`USTARSamplingLaw`（`emp : NJstData X → ℕ → Dissimilarity X`）
+  ＋ `ustarSamplingLaw_nonempty`（显式居民）＋ `njst_statisticallyConsistent_law`
+  （同样**逐字相同**地修好 `NJst.njst_statisticallyConsistent`）。
 
 ## 3. 与 W10d / `MSCSamplingAE` 的关系
 
@@ -71,6 +74,7 @@ import Phylo.Stat.Stability
 | 旧 `StatisticallyConsistent` 对 `Fin 4` 空洞 | ✅ **本文件** |
 | 修正结构非空洞（显式居民） | ✅ **本文件** |
 | **修正版**上的 ASTRAL 一致性（非空洞） | ✅ **本文件**（`astral_statisticallyConsistent_law`，证明与旧版逐字相同） |
+| **修正版**上的 NJst 一致性（非空洞） | ✅ **本文件**（`njst_statisticallyConsistent_law` ＋ `USTARSamplingLaw`，同样逐字相同） |
 | 「由 a.e. 大数定律造出 `MSCSamplingLaw` 的居民」 | ❌ **未做**（需要「按律 `m` 采样的概率空间」这一族，即 W10d 的缺口 K） |
 | 旧结构在**一般** `X` 上的空性 | ⚠️ 本文件只证 `X = Fin 4`；一般 `X` 需要「`MSCFreq X` 有两个频率表不同的元素」这一**组合前提** |
 | 「`MSCSampling` 的**字段形状**」 | ⚠️ **未修改** `MSC.lean`（沿用本项目「新增派生版、保持旧版兼容」的纪律）；本文件只**指出并修正其形状** |
@@ -81,6 +85,9 @@ universe u v
 namespace Phylo.Stat.MSCSamplingVacuity
 
 open Phylo.Stat.MSCProof
+
+-- `Dissimilarity` 定义在 `Phylo/Algorithm/NJ.lean` 的 `NJ` 命名空间里（本批 `NJst` 侧要用）。
+open NJ
 
 /-! ## 1. `MSCFreq (Fin 4)` 里有两个**频率表不同**的元素 -/
 
@@ -243,6 +250,42 @@ theorem mscSamplingLaw_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
 section Fix
 
 variable {X : Type u} [Fintype X] [DecidableEq X]
+
+/-! ### 4.1 `NJst` 侧的对称修复 -/
+
+/-- ★★★ **修正版 USTAR 采样**：`emp : NJstData X → ℕ → Dissimilarity X`
+（**在模型 `M` 下采样**），与 `MSCSamplingLaw` 对称。 -/
+structure USTARSamplingLaw (X : Type u) [Fintype X] [DecidableEq X] where
+  /-- 在**真实模型** `M` 下，`n` 棵基因树给出的经验 USTAR 相异度。 -/
+  emp : NJstData.{u, v} X → ℕ → Dissimilarity X
+  /-- ★ **大数定律**：在模型 `M` 下，经验相异度最终 `ε`-接近 `M.δ`。 -/
+  converges : ∀ M : NJstData.{u, v} X, ∀ ε : ℝ, 0 < ε →
+    ∃ N : ℕ, ∀ n ≥ N, DissClose (emp M n) M.δ ε
+
+/-- ★★★ **修正版 `USTARSampling` 非空洞**（理想样本 `emp M n := M.δ`）。 -/
+theorem ustarSamplingLaw_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
+    Nonempty (USTARSamplingLaw.{u, v} X) :=
+  ⟨{ emp := fun M _ => M.δ
+     converges := fun M ε hε =>
+       ⟨0, fun _ _ x y => by
+         show |M.δ.val x y - M.δ.val x y| < ε
+         rw [sub_self, abs_zero]
+         exact hε⟩ }⟩
+
+/-- ★★★ **修正版的 NJst 统计一致性**（**非空洞**）：把 `NJst.njst_statisticallyConsistent`
+的 `sm : USTARSampling X` 换成 `sm : USTARSamplingLaw X`，其余**逐字相同**。 -/
+theorem njst_statisticallyConsistent_law (sm : USTARSamplingLaw.{u, v} X)
+    (M : NJstData.{u, v} X) (E : Dissimilarity X → Cladogram.{u, v} X)
+    (h1 : ReturnsFittingTree E) (h2 : ContinuousAtBinaryTreeMetrics E) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp M n)) M.tree) := by
+  obtain ⟨ε, hε, hcont⟩ := h2 M.T M.δ M.hT_binary M.hT_pos M.hT_dist
+  obtain ⟨N, hN⟩ := sm.converges M ε hε
+  have hδ : Nonempty (Iso (E M.δ) M.tree) := h1 M.δ M.T M.hT_dist
+  refine ⟨N, fun n hn => ?_⟩
+  have hn' : Nonempty (Iso (E (sm.emp M n)) (E M.δ)) := hcont (sm.emp M n) (hN n hn)
+  exact ⟨hn'.some.trans hδ.some⟩
+
+/-! ### 4.2 `MSC` 侧的 ASTRAL 修复 -/
 
 /-- ★★★ **修正版的 ASTRAL 统计一致性**（**非空洞**）。
 
