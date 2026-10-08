@@ -20,8 +20,10 @@ import Phylo.Algorithm.NJ
 
 **先把 MSC 公理化**（本文件）；**把「证明 MSC」本身另立为课题**（`Phylo.Stat.MSCProof`）。
 理由：Mathlib 无 Kingman coalescent / MSC 的任何现成库，从零建是数万行工程；
-而四个算法（ASTRAL / parsimony / CASTER / NJst）一致性证明的**组合骨架**
-与概率层正交，可先行完成。
+而三个算法（ASTRAL / parsimony / NJst）一致性证明的**组合骨架**
+与概率层正交，可先行完成。（多标记 ASTRAL 亦经 `multiLocus_isASTRAL` 归约到 ASTRAL。
+真 CASTER 是位点 / 比对方法，其数学内容见批 W8 的 `Phylo/Stat/CASTER*.lean`，
+**不在**本文件所覆盖的 quartet 型算法之列。）
 
 ## 公理化进来的那一条
 
@@ -50,7 +52,7 @@ MSC 对 quartet 侧只有一个输出是「统计」必需的：
 ```
 
 `② ③` 与算法无关，写在 `Phylo.Stat.Stability`；① 分头写在
-`ASTRAL` / `CASTER` / `NJst` / `Parsimony`。
+`ASTRAL` / `MultiLocusASTRAL` / `NJst` / `Parsimony`。
 -/
 
 universe u v
@@ -139,7 +141,7 @@ theorem FreqClose_symm {D D' : QuartetFreq X} {ε : ℝ} (h : FreqClose D D' ε)
 
 /-- **物种树估计量**：从 quartet 频率给出一个树。
 
-（ASTRAL / CASTER 是这一形状；NJst / parsimony 经各自的「再参数化」也归结到这里。） -/
+（ASTRAL / 多标记 ASTRAL 是这一形状；NJst / parsimony 经各自的「再参数化」也归结到这里。） -/
 abbrev Estimator (X : Type u) [Fintype X] [DecidableEq X] :=
   QuartetFreq X → Cladogram.{u, v} X
 
@@ -147,7 +149,7 @@ abbrev Estimator (X : Type u) [Fintype X] [DecidableEq X] :=
 
 对任何 MSC 数据，估计量恢复真树（**同构意义**下 —— 拓扑是唯一能确定的）。
 
-各算法分头证这一条：ASTRAL/CASTER 靠「真树唯一最大化 quartet 得分」，
+各算法分头证这一条：ASTRAL（及其多标记版）靠「真树唯一最大化 quartet 得分」，
 NJst 靠「平均距离满足四点点条件」，parsimony 靠「最简树 = 真树」。 -/
 def IdeallyConsistent (E : QuartetFreq X → Cladogram.{u, v} X) : Prop :=
   ∀ m : MSCFreq.{u, v} X, Nonempty (Iso (E m.freq) m.tree)

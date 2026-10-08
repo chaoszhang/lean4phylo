@@ -3,7 +3,7 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
-import Phylo.Stat.CASTER
+import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.Parsimony
 import Phylo.Stat.NJst
 import Phylo.InternalEdge
@@ -15,8 +15,17 @@ import Phylo.SplitsDetermineTreeBase
 /-!
 # `Phylo.Stat.QuartetDecides` —— **quartet 系统决定 binary 树**（T0.1 收口，已证）
 
-四个算法（ASTRAL / CASTER / parsimony / NJst）的统计一致性都已证到
-**「输出与真树在每个 4-元集上一致」**。本文件把它升级为 **「输出与真树同构」**：
+三个算法（ASTRAL / parsimony / NJst）的统计一致性都已证到
+**「输出与真树在每个 4-元集上一致」**；**多标记 ASTRAL**（跨标记求和）经
+`multiLocus_isASTRAL` 也归约到 ASTRAL，故一并适用。本文件把它升级为
+**「输出与真树同构」**：
+
+> ⚠️ **真 CASTER 不在此列**（2026-10-08 批 W8a 更正）：库内旧文件 `Phylo/Stat/CASTER.lean`
+> 其实是**多标记 ASTRAL** 归约（已更名 `Phylo/Stat/MultiLocusASTRAL.lean`），
+> 与其同名的 `caster_iso` 亦已更名 `multiLocus_iso`。
+> 真 CASTER（Zhang–Nielsen–Mirarab 2025, *Science* 387(6737) eadk9688）是**位点 / 比对**方法，
+> 其数学内容此前**库内完全没有**，正由批 W8（`Phylo/Stat/LMLumping.lean` ·
+> `CASTERWeights.lean` · `CASTERJC69.lean` …）另行重建。
 
 > ★★★ **`QuartetDecidesTree`**：两棵 **binary** cladogram 若有相同的 quartet 系统，则同构。
 
@@ -54,7 +63,9 @@ import Phylo.SplitsDetermineTreeBase
 ## 下游收口（**无条件**，2026-10-08 起）
 
 * ★★★ `astral_iso` —— ASTRAL 输出与真树**同构**；
-* ★★★ `parsimony_iso` / `caster_iso` —— 同理。
+* ★★★ `parsimony_iso` / `multiLocus_iso` —— 同理。
+  （`multiLocus_iso` 原名 `caster_iso`；它说的是**多标记 ASTRAL** 归约，**不是 CASTER**。
+  更名见 `Phylo/Stat/MultiLocusASTRAL.lean` 的文件头「更名记录」。）
 
 ## ⚠️ 修正记录（2026-10-08）：旧陈述**是假命题**；已由 **T0.6 治本**
 
@@ -76,7 +87,7 @@ import Phylo.SplitsDetermineTreeBase
 
 ### ✅ 收口（**T0.6**，2026-10-08）：`2|2` 升为 `QuartetTree` 的**字段**
 
-当时的治标补丁是「给本命题多加一条 `2|2` 合取项」，并让 `astral_iso` / `caster_iso` /
+当时的治标补丁是「给本命题多加一条 `2|2` 合取项」，并让 `astral_iso` / `multiLocus_iso` /
 `parsimony_iso` 各自多传一条 `2|2` 假设（在旧陈述下那条假设**不可满足**，
 故三条定理当时是**空真**的）。**现已治本**：
 
@@ -335,13 +346,16 @@ theorem astral_iso (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary)
     (h : IsASTRAL m.freq qt) : Nonempty (Iso qt.tree m.tree) :=
   QuartetDecidesTree X qt m.toQuartetTree hqt hT fun S hS => astral_maximizer_agrees m h S hS
 
-/-- ★★★ **CASTER 恢复真树的拓扑**（同 `astral_iso`，经 `caster_isASTRAL`）。 -/
-theorem caster_iso (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary) (M : MultiMarkerFreq X)
+/-- ★★★ **多标记 ASTRAL 恢复真树的拓扑**（同 `astral_iso`，经 `multiLocus_isASTRAL`）。
+
+⚠️ 本定理是**多标记 ASTRAL**（跨标记求和）的收口，**不是 CASTER**（真 CASTER 见
+`Phylo/Stat/CASTERJC69.lean` 等）。原名 `caster_iso`，2026-10-08 批 W8a 更名。 -/
+theorem multiLocus_iso (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary) (M : MultiMarkerFreq X)
     (hM : M.avg = m.freq)
     {qt : QuartetTree.{u, v} X} (hqt : qt.tree.IsBinary)
-    (h : ∀ qt1 : QuartetTree.{u, v} X, casterScore M qt1.q ≤ casterScore M qt.q) :
+    (h : ∀ qt1 : QuartetTree.{u, v} X, multiLocusScore M qt1.q ≤ multiLocusScore M qt.q) :
     Nonempty (Iso qt.tree m.tree) :=
-  astral_iso m hT hqt (hM ▸ (caster_isASTRAL M).mp h)
+  astral_iso m hT hqt (hM ▸ (multiLocus_isASTRAL M).mp h)
 
 /-- ★★★ **parsimony 恢复真树的拓扑**（**无条件**）。
 

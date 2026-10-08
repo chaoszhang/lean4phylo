@@ -46,10 +46,12 @@ import Phylo.SplitsDetermineTree
 import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
-import Phylo.Stat.CASTER
+import Phylo.Stat.CASTERWeights
 import Phylo.Stat.Coalescent
 import Phylo.Stat.InvariantsRank
+import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
+import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
 import Phylo.Stat.Parsimony
