@@ -64,3 +64,21 @@ python kingman_check.py
 * `kingman_jumpchain.py` 顺带查出**协调侧规格**里的一处算术笔误：
   §1.7 (★) 的 `|B| = 4` 写了 `36`，但那是**无序**和；**有序**和是 `72 = 4!·3`。
 
+## `W10Probe.lean` —— W10c 的**反空真探针**（协调侧自写）
+
+**不是**数值脚本，是**能被 Lean 编译**的探针（8 个 `example`）：证明 `MSCProof` 的构造
+**不是空真**。运行方式（**必须先 build 根模块**，否则 `import Phylo` 读到的是旧 olean）：
+
+```
+# 在镜像里（正本不能跑 lake）
+cp -r <正本>/Phylo/. <镜像>/Phylo/ && cp <正本>/Phylo.lean <镜像>/
+~/w10/withlock.sh <镜像> ~/.elan/bin/lake build Phylo
+~/w10/withlock.sh <镜像> ~/.elan/bin/lake env lean scripts/msc/W10Probe.lean
+```
+
+实测 **exit 0 / 输出 0 字节**。8 个 `example` 覆盖：① `Nonempty (MSCFreq (Fin 4))`；
+② 真树 quartet 概率**严格为正**；③ `rootTopoProb = 1/3`（**是求和**）；④/⑤ 一般 `X` 下
+一致 split 与其 `swap` 都拿到 `mscConcordant t / 2`；⑥ 不一致 `2|2` 拿到 `mscDiscordant t / 2`；
+⑦ `1|3` 拿到 `0`；⑧ 一般 `X` 的 `majorizes` 可直接调用。
+
+
