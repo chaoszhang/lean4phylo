@@ -81,13 +81,24 @@ example (t : ℝ) : (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Iic t)).toRe
 
 -- ⑬ ★★★ **空洞性发现的回归护栏**：`MSCSampling (Fin 4)` **是空的**
 example : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4)) :=
-  Phylo.Stat.MSCSamplingVacuity.not_nonempty_mscSampling_fin4
+  Phylo.Stat.SamplingAxiomVacuity.not_nonempty_mscSampling_fin4
 
 -- ⑭ ★★★ **修正版非空洞**：`MSCSamplingLaw` 有居民
-example : Nonempty (Phylo.Stat.MSCSamplingVacuity.MSCSamplingLaw.{0, 0} (Fin 4)) :=
-  Phylo.Stat.MSCSamplingVacuity.mscSamplingLaw_nonempty (Fin 4)
+example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.MSCSamplingLaw.{0, 0} (Fin 4)) :=
+  Phylo.Stat.SamplingAxiomVacuity.mscSamplingLaw_nonempty (Fin 4)
 
 -- ⑮ 但**旧版**的「一致性」对**任何**估计量都成立（空洞的直接体现）
 example (E : QuartetFreq (Fin 4) → Cladogram (Fin 4)) (sm : MSCSampling.{0, 0} (Fin 4)) :
     StatisticallyConsistent E sm :=
-  Phylo.Stat.MSCSamplingVacuity.statisticallyConsistent_vacuous_fin4 E sm
+  Phylo.Stat.SamplingAxiomVacuity.statisticallyConsistent_vacuous_fin4 E sm
+
+-- ⑯ ★★★ 同一缺陷的另两处：`CASTERSampling (Fin 4)` 与 `SiteSampling`（后者为判据形式）
+example : ¬ Nonempty (CASTERSampling.{0} (Fin 4)) :=
+  Phylo.Stat.SamplingAxiomVacuity.not_nonempty_casterSampling_fin4
+
+-- ⑰ ★★★ 修正版非空洞（CASTER / parsimony 两侧）
+example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.CASTERSamplingLaw.{0} (Fin 4)) :=
+  Phylo.Stat.SamplingAxiomVacuity.casterSamplingLaw_nonempty (Fin 4)
+
+example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.SiteSamplingLaw.{0, 0} (Fin 4)) :=
+  Phylo.Stat.SamplingAxiomVacuity.siteSamplingLaw_nonempty (Fin 4)
