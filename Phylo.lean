@@ -76,6 +76,7 @@ import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
 import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
+import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
