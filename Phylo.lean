@@ -77,6 +77,7 @@ import Phylo.Stat.MSCKingman
 import Phylo.Stat.MSCMeasure
 import Phylo.Stat.MSCProof
 import Phylo.Stat.MSCSamplingAE
+import Phylo.Stat.MSCSamplingVacuity
 import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
