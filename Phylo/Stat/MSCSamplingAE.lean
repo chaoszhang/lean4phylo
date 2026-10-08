@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.MSC
+import Phylo.Stat.QuartetDecides
 import Phylo.Stat.Stability
 
 /-!
@@ -291,5 +292,36 @@ theorem astral_statisticallyConsistent_ae {X : Type u} [Fintype X] [DecidableEq 
   filter_upwards [empTable_eventually_close_ae ind h m μ hint hindep hident hmean] with ω hω
   exact astral_statisticallyConsistent_fixed
     ⟨m, fun n => empTable ind h m n ω, hω⟩ hE hNE
+
+/-- ★★★ **ASTRAL 的几乎必然**树层**统计一致性**（把 quartet 层升到**树同构**）：
+
+在 iid 位点模型下，**几乎必然**地，ASTRAL 型估计量 `E` 在足够多位点后**恢复真树的拓扑**
+（`Iso`）—— 证明 = 上一条（quartet 层）＋ 库内既有的 ★★★ `QuartetDecidesTree`
+（与 `QuartetDecides.parsimony_iso` 的收口方式相同）。
+
+⇒ **这就是「统计一致性」这条叙事，在概率空间里、在树层、把公理去掉之后的形态。** -/
+theorem astral_iso_ae {X : Type u} [Fintype X] [DecidableEq X]
+    {Ω₀ : Type*} [MeasurableSpace Ω₀] (ind : SiteFun X Ω₀) (h : SiteTable ind)
+    (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary) (μ : Measure (ℕ → Ω₀))
+    [IsProbabilityMeasure μ]
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      Integrable (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ)
+    (hindep : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      iIndepFun (fun i (ω : ℕ → Ω₀) => ind (ω i) S hS q) μ)
+    (hident : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S), ∀ i,
+      IdentDistrib (fun ω : ℕ → Ω₀ => ind (ω i) S hS q)
+        (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ μ)
+    (hmean : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      ∫ ω, ind (ω 0) S hS q ∂μ = m.freq.p S hS q)
+    {E : QuartetFreq X → QuartetTree.{u, v} X} (hE : ∀ D, IsASTRAL D (E D))
+    (hEbin : ∀ D, (E D).tree.IsBinary)
+    (hNE : ∃ q : QuartetChoice X, ¬ IsTrueChoice m q) :
+    ∀ᵐ ω ∂μ, ∃ N : ℕ, ∀ n ≥ N,
+      Nonempty (Iso (E (empTable ind h m n ω)).tree m.tree) := by
+  filter_upwards [astral_statisticallyConsistent_ae ind h m μ hint hindep hident hmean hE hNE]
+    with ω hω
+  obtain ⟨N, hN⟩ := hω
+  exact ⟨N, fun n hn =>
+    QuartetDecidesTree X (E (empTable ind h m n ω)) m.toQuartetTree (hEbin _) hT (hN n hn)⟩
 
 end Phylo.Stat.MSCSamplingAE
