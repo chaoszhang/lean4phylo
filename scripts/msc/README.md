@@ -56,6 +56,7 @@ python kingman_check.py
 | `coalescent_stats.py` | `Phylo/Stat/CoalescentStats.lean`（W10k） | ① `k·E[τ_k] = 2/(k−1)`；② `E[L_n] = Σ 2/(k−1) = 2·H_{n−1}`；③ `Σ E[τ_{j+2}]·d_{j+2} = m`；④ `Σ θ/i = θ·H_{n−1}`；⑤ `θ_W` 无偏（`n ≤ 12`，`Fraction`） | **PASS**（误差恒为 0） |
 | `kingman_jumpchain.py` | `Phylo/Stat/KingmanJumpChain.lean`（W10a，执行 agent A 写） | (2.2) 归一化、层间一致性递归（`n ≤ 7` 共 1148 个三元组）、单块分裂恒等式（有序和 `= \|B\|!(\|B\|−1)`）、Lah 归一路线 | **PASS**（`n ≤ 7`） |
 | `degnansalter_puv.py` / `pin_formula.py` | `Phylo/Stat/DegnanSalter.lean`（W10e，执行 agent C 写） | `p_{uv}` 的 (C0)–(C8) 交叉核对（谱分解 / `lvec` 递推 / 闭乘积形式） | ⚠️ **FAIL**（协调侧实测；agent 正在回炉修公式） |
+| `trivial_split_count.py` | `Phylo/Stat/TrivialSplitCount.lean`（W10，缺口 **G1** 补证） | 在「**有向** split ↔ 非空真子集 `A`（`A = sideA`）」这个**可计算代理**上穷举 `n = 2…12`：① 总数 `2^n − 2`；② `\|A\| = 1` 与 `\|Aᶜ\| = 1` 各恰 `n`（`n ≥ 2`）；③ `n ≥ 3` 时两支**不交** ⇒ 平凡恰 `2n`（`n = 2` 时两支**重合** ⇒ `2 ≠ 2n = 4`）；④ 无向平凡 `= n`；⑤ `n = 4` 时 `1\|3` 恰 **8**、`2\|2` 恰 **6**（交叉核对 `MSCProof.card_splits_two`）。⚠️ `Split (Fin n)` 的 `Fintype` 非可计算（`Fintype.ofInjective`），`decide` 枚举不了它，故走这个代理 | **PASS**（`n = 2…12`） |
 
 ### 本目录脚本自身踩过的坑（W10 新增）
 * **`msc_quartet_prob.py`：f-string 里不能直接写 `{14 ...}`** —— `{` 会被当表达式，需写成 `{{…}}`。
@@ -63,6 +64,9 @@ python kingman_check.py
   「`p_{uv}` 的公式抄错」暴露出来 —— 这正是「**脚本先跑通再相信定理**」的价值。
 * `kingman_jumpchain.py` 顺带查出**协调侧规格**里的一处算术笔误：
   §1.7 (★) 的 `|B| = 4` 写了 `36`，但那是**无序**和；**有序**和是 `72 = 4!·3`。
+* `trivial_split_count.py` 第一版把 `n = 4` 的 `1|3` 数成「`|A| = 1`」（4 个）而漏了
+  `|Aᶜ| = 1`（即 `|A| = 3`，另 4 个）—— 被脚本自己的 (E) 交叉核对当场抓住（`4 ≠ 8`）。
+  教训同上：**「有向口径下平凡 = 某一侧单点」必须两侧都数**，只数 `sideA` 会正好差一半。
 
 ## `W10Probe.lean` —— W10c 的**反空真探针**（协调侧自写）
 

@@ -59,6 +59,13 @@ import Phylo.Stat.Stability
 这不是「定理证错了」，而是「**公理的形状**与其叙事不符」——
 正是本项目最看重的那类「叙事 ≠ 形式化」问题。
 
+⚠️ **同一处还有第二个形状问题（本文件的修正一并解决）**：
+`StatisticallyConsistent`（`MSC.lean:183–186`）写的是
+`∀ m, ∃ N, ∀ n ≥ N, E (sm.emp n) ≅ m.tree` —— **结论也对所有 `m` 断言**
+（同一个 `E (emp n)` 要对**一切**理论树同构）。正确的语义是
+「**在律 `m` 下**采样 ⇒ 恢复**那个** `m` 的树」。修正版
+`StatisticallyConsistentLaw` 正是 `∀ m, ∃ N, ∀ n ≥ N, E (sm.emp m n) ≅ m.tree` ✓。
+
 ## 2. 修正（本文件第二个交付）
 
 语义上「一致性」应当是：**在真实模型下采样**，经验数据收敛到**该模型**的理论值。
@@ -290,6 +297,24 @@ theorem statisticallyConsistent_vacuous_fin4 (E : QuartetFreq (Fin 4) → Cladog
     (sm : MSCSampling.{0, 0} (Fin 4)) : StatisticallyConsistent E sm :=
   absurd ⟨sm⟩ not_nonempty_mscSampling_fin4
 
+/-- ★★★ **旧谓词 `StatisticallyConsistent` **本身**不成立**（与「`MSCSampling` 为空」**无关**）：
+只要有两条**不同构**的理论树，同一个 `E (emp n)` 不可能同时与它们同构。
+
+⚠️ 这条**加强**了上面的发现：那里说「结构空 ⇒ 空洞**成立**」，
+这里说「**即使**结构不空，谓词的结论也自相矛盾」——
+即 `StatisticallyConsistent` 在那样的情况下**永假**（不只是空洞）。 -/
+theorem not_statisticallyConsistent_of_tree_ne {X : Type u} [Fintype X] [DecidableEq X]
+    (h : ∃ m₁ m₂ : MSCFreq.{u, v} X, ¬ Nonempty (Iso m₁.tree m₂.tree)) :
+    ∀ (E : QuartetFreq X → Cladogram.{u, v} X) (sm : MSCSampling.{u, v} X),
+      ¬ StatisticallyConsistent E sm := by
+  obtain ⟨m₁, m₂, hne⟩ := h
+  intro E sm hsc
+  obtain ⟨N₁, hN₁⟩ := hsc m₁
+  obtain ⟨N₂, hN₂⟩ := hsc m₂
+  have h1 := hN₁ (max N₁ N₂) (le_max_left N₁ N₂)
+  have h2 := hN₂ (max N₁ N₂) (le_max_right N₁ N₂)
+  exact hne ⟨(Iso.symm h1.some).trans h2.some⟩
+
 /-! ## 3. ★★★ 修正版：`emp` **依赖真实律** -/
 
 /-- ★★★ **修正版 `MSCSampling`**：经验频率 `emp m n` **依赖真实律 `m`**
@@ -469,6 +494,17 @@ theorem parsimony_statisticallyConsistent_law (M : MSCSite.{u, v} X)
   refine stable_argmax_site (D := sm.emp M n) M hδ hgap ?_ ?_
   · simpa [hMdef] using hN n hn
   · exact (isParsimony_iff_supportMax (sm.emp M n)).mp (hE (sm.emp M n)) M.asQuartetTree
+
+/-- ★★ **修正版谓词不是自动成立的**（否则只是把空洞换了个地方）：
+常值估计量 `E ≡ T` 在「存在一条不与 `T` 同构的理论树」时**失败**。 -/
+theorem not_statisticallyConsistentLaw_const (T : Cladogram.{u, v} X)
+    (sm : MSCSamplingLaw.{u, v} X)
+    (h : ∃ m : MSCFreq.{u, v} X, ¬ Nonempty (Iso T m.tree)) :
+    ¬ StatisticallyConsistentLaw (fun _ => T) sm := by
+  obtain ⟨m, hm⟩ := h
+  intro hsc
+  obtain ⟨N, hN⟩ := hsc m
+  exact hm (hN N le_rfl)
 
 end Fix
 
