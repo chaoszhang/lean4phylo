@@ -195,7 +195,7 @@ theorem card_minorIndexPairs (κ : Type*) [Fintype κ] [DecidableEq κ] :
     simp [Finset.mem_powersetCard]
   rw [hcard, Finset.card_powersetCard, Finset.card_univ, invariantMinorCount,
     Fintype.card_prod]
-  ring
+  ring_nf
 
 /-! ## 4. 诚实边界（显式缺口） -/
 
