@@ -41,3 +41,26 @@ python kingman_check.py
 ```
 
 无第三方依赖（只用标准库 `itertools` / `math`）。
+
+---
+
+# W10（溯祖理论本体）的复核脚本
+
+> 全部**精确**运算（`fractions.Fraction` / 符号多项式 / 穷举），**没有 Monte Carlo**，
+> 也**不是**重跑 Lean。每个脚本对应一个 Lean 模块，用来在「相信 Lean 里的定理」之前
+> 先把它的**数学内容**独立算一遍。
+
+| 脚本 | 对应模块 | 复核什么 | 结果 |
+|---|---|---|---|
+| `msc_quartet_prob.py` | `Phylo/Stat/MSCProof.lean`（W10c） | ① `Fin 4` 的 **14** 个有向 split 按基数分类：`2\|2` 恰 **6**、`1\|3` 恰 **8**；一致恰 **2**、不一致 `2\|2` 恰 **4**；② 概率表之和（把 `x = e^{−t}` 当**自由符号**）`pConc + 2·pDisc ≡ 1`，**误差恰为 0**；③ `majorizes` 的严格不等式（符号可证 + 7 组 `t` 数值展示） | **PASS** |
+| `coalescent_stats.py` | `Phylo/Stat/CoalescentStats.lean`（W10k） | ① `k·E[τ_k] = 2/(k−1)`；② `E[L_n] = Σ 2/(k−1) = 2·H_{n−1}`；③ `Σ E[τ_{j+2}]·d_{j+2} = m`；④ `Σ θ/i = θ·H_{n−1}`；⑤ `θ_W` 无偏（`n ≤ 12`，`Fraction`） | **PASS**（误差恒为 0） |
+| `kingman_jumpchain.py` | `Phylo/Stat/KingmanJumpChain.lean`（W10a，执行 agent A 写） | (2.2) 归一化、层间一致性递归（`n ≤ 7` 共 1148 个三元组）、单块分裂恒等式（有序和 `= \|B\|!(\|B\|−1)`）、Lah 归一路线 | **PASS**（`n ≤ 7`） |
+| `degnansalter_puv.py` / `pin_formula.py` | `Phylo/Stat/DegnanSalter.lean`（W10e，执行 agent C 写） | `p_{uv}` 的 (C0)–(C8) 交叉核对（谱分解 / `lvec` 递推 / 闭乘积形式） | ⚠️ **FAIL**（协调侧实测；agent 正在回炉修公式） |
+
+### 本目录脚本自身踩过的坑（W10 新增）
+* **`msc_quartet_prob.py`：f-string 里不能直接写 `{14 ...}`** —— `{` 会被当表达式，需写成 `{{…}}`。
+* **数值「复核」必须先自证**：`degnansalter_puv.py` 的 (C7)/(C8) 交叉核对立刻把
+  「`p_{uv}` 的公式抄错」暴露出来 —— 这正是「**脚本先跑通再相信定理**」的价值。
+* `kingman_jumpchain.py` 顺带查出**协调侧规格**里的一处算术笔误：
+  §1.7 (★) 的 `|B| = 4` 写了 `36`，但那是**无序**和；**有序**和是 `72 = 4!·3`。
+
