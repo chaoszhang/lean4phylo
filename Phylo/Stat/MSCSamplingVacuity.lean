@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.MSC
 import Phylo.Stat.MSCProof
+import Phylo.Stat.NJst
 import Phylo.Stat.Stability
 
 /-!
@@ -24,11 +25,16 @@ import Phylo.Stat.Stability
 用 W10c 的 `mscFreqFin4` 取 `t = 1, 2`），这两条要求**互相矛盾** ⇒
 
 * ★★★ `not_nonempty_mscSampling_fin4`：**`MSCSampling (Fin 4)` 是空类型**；
+* ★★★ `not_nonempty_mscSampling_of_freq_ne`：**一般判据** —— 只要 `MSCFreq X` 里存在两个
+  **频率表不同**的元素，`MSCSampling X` 就空（`Fin 4` 的实例由它推出）；
+* ★★★ `not_nonempty_ustarSampling_of_ne`：**同一缺陷在 `NJst` 的采样公理上重复出现**
+  （`Phylo/Stat/NJst.lean` 第 **165–170** 行的 `USTARSampling`：`emp` 也不依赖 `M`）；
 * ★★★ `statisticallyConsistent_vacuous_fin4`：于是
   `StatisticallyConsistent E sm`（`MSC.lean` 第 **184–186** 行）
   对**任何**估计量 `E` 都**空洞成立** —— 包括 `Phylo/Stat/Stability.lean` 的
   `astral_statisticallyConsistent`、`Phylo/Stat/NJst.lean` 的 `njst_statisticallyConsistent`：
-  它们都以 `sm : MSCSampling X` 为**假设**，故对 `X = Fin 4` **没有非空洞内容**。
+  它们都以 `sm : MSCSampling X` / `sm : USTARSampling X` 为**假设**，
+  故对 `X = Fin 4`（`NJst` 侧为「有两个模型 `δ` 不同」）**没有非空洞内容**。
 
 这不是「定理证错了」，而是「**公理的形状**与其叙事不符」——
 正是本项目最看重的那类「叙事 ≠ 形式化」问题。
@@ -111,23 +117,30 @@ theorem mscFreqFin4_freq_ne :
 
 /-! ## 2. ★★★ 旧 `MSCSampling` 的**空洞性** -/
 
-/-- ★★★ **`MSCSampling (Fin 4)` 是空类型**。
+section General
 
-论证：设 `sm : MSCSampling (Fin 4)`。取上面两个频率表在某点相差 `d := |p₁ − p₂| > 0`
-（`mscFreqFin4_freq_ne`），令 `ε := d/4`。由 `converges` 对 `m₁` 与 `m₂` 分别取 `N₁, N₂`，
-在 `n := max N₁ N₂` 处同时有 `|e − p₁| < ε` 与 `|e − p₂| < ε`，
-故 `d = |p₁ − p₂| ≤ |p₁ − e| + |e − p₂| < 2ε = d/2` —— 矛盾。 -/
-theorem not_nonempty_mscSampling_fin4 : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4)) := by
+variable {X : Type u} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **一般判据（空洞性）**：只要 `MSCFreq X` 里存在两个**频率表不同**的元素，
+`MSCSampling X` 就是**空类型**（故 `StatisticallyConsistent` 空洞）。
+
+论证：设 `sm : MSCSampling X`，取两个律在某点相差 `d := |p₁ − p₂| > 0`，令 `ε := d/4`。
+由 `converges` 对 `m₁`、`m₂` 分别取 `N₁, N₂`，在 `n := max N₁ N₂` 处同时
+`|e − p₁| < ε` 与 `|e − p₂| < ε`，故 `d = |p₁ − p₂| ≤ |p₁ − e| + |e − p₂| < 2ε = d/2` —— 矛盾。 -/
+theorem not_nonempty_mscSampling_of_freq_ne
+    (h : ∃ m₁ m₂ : MSCFreq.{u, v} X, ∃ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      m₁.freq.p S hS q ≠ m₂.freq.p S hS q) :
+    ¬ Nonempty (MSCSampling.{u, v} X) := by
+  obtain ⟨m₁, m₂, S, hS, q, hpq⟩ := h
   rintro ⟨sm⟩
-  obtain ⟨S, hS, q, hpq⟩ := mscFreqFin4_freq_ne
-  set p1 := (mscFreqFin4 1 (by norm_num)).freq.p S hS q with hp1
-  set p2 := (mscFreqFin4 2 (by norm_num)).freq.p S hS q with hp2
+  set p1 := m₁.freq.p S hS q with hp1
+  set p2 := m₂.freq.p S hS q with hp2
   set d := |p1 - p2| with hd
   have hdpos : 0 < d := by
     rw [hd]
     exact abs_pos.mpr (sub_ne_zero.mpr hpq)
-  obtain ⟨N1, hN1⟩ := sm.converges (mscFreqFin4 1 (by norm_num)) (d / 4) (by linarith)
-  obtain ⟨N2, hN2⟩ := sm.converges (mscFreqFin4 2 (by norm_num)) (d / 4) (by linarith)
+  obtain ⟨N1, hN1⟩ := sm.converges m₁ (d / 4) (by linarith)
+  obtain ⟨N2, hN2⟩ := sm.converges m₂ (d / 4) (by linarith)
   have h1 := hN1 (max N1 N2) (le_max_left N1 N2) S hS q
   have h2 := hN2 (max N1 N2) (le_max_right N1 N2) S hS q
   have hlt : d < d / 2 := by
@@ -141,6 +154,50 @@ theorem not_nonempty_mscSampling_fin4 : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4))
       _ < d / 4 + d / 4 := add_lt_add h1 h2
       _ = d / 2 := by ring
   linarith
+
+/-- ★★★ **同一缺陷在 `NJst` 的采样公理上重复出现**（`Phylo/Stat/NJst.lean` 第 **165–170** 行）：
+`USTARSampling.emp : ℕ → Dissimilarity X` 也**不依赖模型** `M`，而 `converges` 却对
+**所有** `M : NJstData X` 断言。故只要有两个模型的 `δ` 在某点不同，它同样是**空类型**，
+`njst_statisticallyConsistent` 随之**空洞**。 -/
+theorem not_nonempty_ustarSampling_of_ne
+    (h : ∃ M₁ M₂ : NJstData.{u, v} X, ∃ x y : X, M₁.δ.val x y ≠ M₂.δ.val x y) :
+    ¬ Nonempty (USTARSampling.{u, v} X) := by
+  obtain ⟨M₁, M₂, x, y, hxy⟩ := h
+  rintro ⟨sm⟩
+  set p1 := M₁.δ.val x y with hp1
+  set p2 := M₂.δ.val x y with hp2
+  set d := |p1 - p2| with hd
+  have hdpos : 0 < d := by
+    rw [hd]
+    exact abs_pos.mpr (sub_ne_zero.mpr hxy)
+  obtain ⟨N1, hN1⟩ := sm.converges M₁ (d / 4) (by linarith)
+  obtain ⟨N2, hN2⟩ := sm.converges M₂ (d / 4) (by linarith)
+  have h1 := hN1 (max N1 N2) (le_max_left N1 N2) x y
+  have h2 := hN2 (max N1 N2) (le_max_right N1 N2) x y
+  have hlt : d < d / 2 := by
+    calc d = |p1 - p2| := hd
+      _ = |(p1 - (sm.emp (max N1 N2)).val x y)
+            + ((sm.emp (max N1 N2)).val x y - p2)| := by ring_nf
+      _ ≤ |p1 - (sm.emp (max N1 N2)).val x y|
+            + |(sm.emp (max N1 N2)).val x y - p2| := abs_add_le _ _
+      _ = |(sm.emp (max N1 N2)).val x y - p1|
+            + |(sm.emp (max N1 N2)).val x y - p2| := by rw [abs_sub_comm p1]
+      _ < d / 4 + d / 4 := add_lt_add h1 h2
+      _ = d / 2 := by ring
+  linarith
+
+end General
+
+/-- ★★★ **`MSCSampling (Fin 4)` 是空类型**（`not_nonempty_mscSampling_of_freq_ne` 的实例，
+用 W10c 的两个律 `t = 1, 2`）。
+
+论证：设 `sm : MSCSampling (Fin 4)`。取上面两个频率表在某点相差 `d := |p₁ − p₂| > 0`
+（`mscFreqFin4_freq_ne`），令 `ε := d/4`。由 `converges` 对 `m₁` 与 `m₂` 分别取 `N₁, N₂`，
+在 `n := max N₁ N₂` 处同时有 `|e − p₁| < ε` 与 `|e − p₂| < ε`，
+故 `d = |p₁ − p₂| ≤ |p₁ − e| + |e − p₂| < 2ε = d/2` —— 矛盾。 -/
+theorem not_nonempty_mscSampling_fin4 : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4)) :=
+  not_nonempty_mscSampling_of_freq_ne
+    ⟨mscFreqFin4 1 (by norm_num), mscFreqFin4 2 (by norm_num), mscFreqFin4_freq_ne⟩
 
 /-- ★★★ **旧版「统计一致性」对 `Fin 4` 是空洞的**：任何估计量 `E` 都满足
 `StatisticallyConsistent E sm`（因为 `sm : MSCSampling (Fin 4)` 不存在）。
