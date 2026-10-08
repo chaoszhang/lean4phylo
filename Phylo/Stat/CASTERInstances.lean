@@ -19,11 +19,15 @@ import Phylo.Stat.CASTERTopoSplit
 ⇒ 本文件的作用是把「模型 ⇒ 定理 1」这一步写**一次**，
 避免每个模型各写一遍样板；新模型只要给一条 `PropAData` 就能照抄。
 
-## 已就位
+## 已就位（三个模型全部就位）
 
 * ★★★ `lm1_caster_statisticallyConsistent` —— **LM1**（`sm.tex` 1611–1700）。
 * JC69 的对应定理在 `Phylo.Stat.CASTERGeneTree.jc69_caster_statisticallyConsistent`（模型专属文件里）。
-* F84 待其 `PropAData` 实例就位（见 `CASTER_F84_FINDING.md`：记账需按「系数各除以 4」的口径）。
+* ★★★ `Phylo.Stat.CASTERF84PropA.f84_caster_statisticallyConsistent` —— **F84**（模型专属文件里）：
+  `π, κ` 退为参数，命题 A 的三条核恒等式由 `Phylo.Stat.CASTERF84Scaffold` 的
+  ★★★ `Ew_diag` / `EwA_zero` / `EwB_zero` **无条件**供给（不再作为假设）。
+* 树级收口三件套：★★★ `jc69_recovers_true_tree` / ★★★ `lm1_recovers_true_tree` /
+  ★★★ `f84_recovers_true_tree`。
 
 ## 🔻 诚实边界
 
@@ -135,6 +139,21 @@ theorem jc69_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoi
 /-- ★★★ **LM1 下 CASTER 恢复真物种树的拓扑**（**树级**，同 `jc69_recovers_true_tree`；
 `hE` 由 ★★★ `lm1_caster_statisticallyConsistent` 供给）。 -/
 theorem lm1_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n))
+    {Ttrue : QuartetTree.{0, 0} (Fin 4)} {Qt : ℕ → QuartetTree.{0, 0} (Fin 4)}
+    (hTtrue : Ttrue.tree.IsBinary) (hQt : ∀ n : ℕ, (Qt n).tree.IsBinary)
+    (htrue_class : ∀ (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) (Ttrue.q S hS) = Topo.ab_cd)
+    (hreal : ∀ (n : ℕ) (S : Finset (Fin 4)) (hS : S.card = 4),
+      topoOfSplit (e S hS) ((Qt n).q S hS) = (E n) S hS) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (Qt n).tree Ttrue.tree) :=
+  tree_iso_of_topo_consistency (X := Fin 4) e (fun _ _ => Topo.ab_cd) hE hTtrue hQt
+    htrue_class hreal
+
+/-- ★★★ **F84 下 CASTER 恢复真物种树的拓扑**（**树级**，同 `jc69_recovers_true_tree`；
+`hE` 由 ★★★ `Phylo.Stat.CASTERF84PropA.f84_caster_statisticallyConsistent` 供给——
+那条定理本身已**无条件**：命题 A 的三条核恒等式由 `Phylo.Stat.CASTERF84Scaffold` 给出）。 -/
+theorem f84_recovers_true_tree (e : QuartetLabel (Fin 4)) {E : ℕ → TopoChoice (Fin 4)}
     (hE : ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n))
     {Ttrue : QuartetTree.{0, 0} (Fin 4)} {Qt : ℕ → QuartetTree.{0, 0} (Fin 4)}
     (hTtrue : Ttrue.tree.IsBinary) (hQt : ∀ n : ℕ, (Qt n).tree.IsBinary)
