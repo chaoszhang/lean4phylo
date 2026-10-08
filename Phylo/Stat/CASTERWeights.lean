@@ -156,6 +156,12 @@ inductive Topo where
   | ad_bc
   deriving DecidableEq, Repr
 
+/-- `Topo` 的 `Fintype` 实例（**手写**：`deriving Fintype` 在本版 Lean 上生成的
+`complete` 证明会 `rw` 失败，故显式给出）。 -/
+instance : Fintype Topo where
+  elems := {Topo.ab_cd, Topo.ac_bd, Topo.ad_bc}
+  complete := by intro x; cases x <;> simp
+
 open Topo
 
 /-- 把一个位点模式写成 `Fin 4 → Fin 4` 的四元组。 -/
