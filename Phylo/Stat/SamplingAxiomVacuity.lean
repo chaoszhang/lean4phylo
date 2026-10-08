@@ -536,6 +536,21 @@ theorem astral_statisticallyConsistentLaw (sm : MSCSamplingLaw.{u, v} X)
   exact ⟨N, fun n hn =>
     QuartetDecidesTree X (Q (sm.emp m n)) m.toQuartetTree (hQbin _) (hT m) (hN n hn)⟩
 
+/-! ### 5.2 `parsimony` 的**树层**修复 -/
+
+/-- ★★★ **parsimony 的树层统计一致性（修正版，非空洞）**：
+把 `QuartetDecides.parsimony_iso` 里的 `sm : SiteSampling X` 换成修正版
+`sm : SiteSamplingLaw X`，其余**逐字相同**（先 §4.4 的 quartet 层，再 `QuartetDecidesTree`）。 -/
+theorem parsimony_iso_law (M : MSCSite.{u, v} X) (hT : M.tree.IsBinary)
+    (sm : SiteSamplingLaw.{u, v} X)
+    {E : SiteSupport X → QuartetTree.{u, v} X} (hE : ∀ D, IsParsimony D (E D))
+    (hEbin : ∀ D, (E D).tree.IsBinary)
+    (hNE : ∃ q : QuartetChoice X, ¬ AgreesWith M.q q) :
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp M n)).tree M.tree) := by
+  obtain ⟨N, hN⟩ := parsimony_statisticallyConsistent_law M sm hE hNE
+  exact ⟨N, fun n hn =>
+    QuartetDecidesTree X (E (sm.emp M n)) M.asQuartetTree (hEbin (sm.emp M n)) hT (hN n hn)⟩
+
 end Fix
 
 end Phylo.Stat.SamplingAxiomVacuity
