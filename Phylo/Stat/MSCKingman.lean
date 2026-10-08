@@ -273,6 +273,45 @@ theorem root_topology_uniform :
     (2 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ) = 1 / 3 :=
   Coalescent.root_topologyProb
 
+/-! ### 4.1 把 `1/3` **推出来**（不只是「写定」）
+
+`Kingmanτd` 在深合并那一支**取** `1/3`；本节说明这个 `1/3` 不是任意的规定，
+而是「根种群 `C(4,2) = 6` 个首次合并对等概率 ＋ 每个拓扑类恰含 2 个对」的**推论**：
+
+* 均匀性来自 Kingman 溯祖（`Coalescent.sum_uniform_jumpProb` 的 `k = 4` 情形）；
+* 类的划分（每类恰 2 个）就是 `AllSameShape`（ADR2011 Lemma 4 的重标号对称性在 4 叶下的组合核心）。
+
+于是把「每个对的权重 `1/6`」在**类**上求和，即得该类（= 该无根拓扑）的概率 `2/6 = 1/3`。 -/
+
+/-- ★★ **均匀权重在类上的和**：若某个拓扑类恰含 `2` 个首次合并对，
+则把「每对等概率 `1/C(4,2)`」在该类上求和得 `1/3`。
+（这是**概率推导**，不是算术恒等式：被求和的集合是「类」，权重来自溯祖的均匀性。） -/
+theorem uniform_class_prob {P : Finset (Fin 4) → Prop} [DecidablePred P]
+    (h : ((Coalescent.mergePairsFinset 4).filter P).card = 2) :
+    (∑ _p ∈ (Coalescent.mergePairsFinset 4).filter P,
+        (1 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ)) = 1 / 3 := by
+  rw [Finset.sum_const, h, Coalescent.card_mergePairsFinset_four, nsmul_eq_mul]
+  norm_num
+
+/-- ★★★ **深合并时三个无根拓扑各 `1/3` —— 推导版**：
+三个拓扑类（由 ★★★ `AllSameShape` 划分）各自把均匀的首次合并对权重求和，都得 `1/3`。
+
+⇒ `Kingmanτd` 在 `KingmanDeep` 那一支取 `1/3` 是**重标号对称性的推论**，
+不是一个被写定的规定。 -/
+theorem root_topology_class_prob :
+    (∑ _p ∈ (Coalescent.mergePairsFinset 4).filter
+        (fun p => ((0 : Fin 4) ∈ p ↔ (1 : Fin 4) ∈ p)),
+        (1 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ)) = 1 / 3 ∧
+    (∑ _p ∈ (Coalescent.mergePairsFinset 4).filter
+        (fun p => ((0 : Fin 4) ∈ p ↔ (2 : Fin 4) ∈ p)),
+        (1 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ)) = 1 / 3 ∧
+    (∑ _p ∈ (Coalescent.mergePairsFinset 4).filter
+        (fun p => ((0 : Fin 4) ∈ p ↔ (3 : Fin 4) ∈ p)),
+        (1 : ℝ) / ((Coalescent.mergePairsFinset 4).card : ℝ)) = 1 / 3 :=
+  ⟨uniform_class_prob allSameShape_four.1,
+   uniform_class_prob allSameShape_four.2.1,
+   uniform_class_prob allSameShape_four.2.2⟩
+
 end Phylo.Stat.MSCKingman
 
 end
