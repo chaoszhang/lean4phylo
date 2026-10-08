@@ -83,6 +83,7 @@ import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
 import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
+import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.SamplingAxiomVacuity
 import Phylo.Stat.SplitProbabilities

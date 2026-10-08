@@ -1,0 +1,666 @@
+                               A polynomial time algorithm for calculating the probability of a ranked gene
+                                                        tree given a species tree
+                                                                         Tanja Stadler1 & James H. Degnan2,3
+                                                 1
+                                                   Institute of Integrative Biology Universitätsstrasse 16, 8092, Zürich, Switzerland
+                                                2
+                                                  Dept. of Mathematics and Statistics, Private Bag 4800, University of Canterbury
+                                                                            Christchurch 8140 New Zealand
+                                            3
+                                              National Institute of Mathematical and Biological Synthesis, Knoxville, Tennessee, USA
+
+                                                                                November 5, 2018
+
+
+                     Abstract                                                               ogy is called an anomalous gene tree. In fact, for ev-
+arXiv:1203.0204v1 [q-bio.PE] 1 Mar 2012
+
+
+
+
+                                                                                            ery species tree topology with at least 5 leaves, we can
+                     In this paper, we provide a polynomial time algorithm to               choose edge lengths in the species tree topology such
+                     calculate the probability of a ranked gene tree topology               that anomalous gene trees exist [3]. This implies that
+                     for a given species tree, where a ranked tree topology is              the gene tree topology appearing most often when con-
+                     a tree topology with the internal vertices being ordered.              sidering different genes might not agree with the species
+                     The probability of a gene tree topology can thus be cal-               tree topology, thus we cannot use a simple majority-
+                     culated in polynomial time if the number of orderings of               heuristic to infer the species tree from a collection of gene
+                     the internal vertices is a polynomial number. However,                 trees. Instead we need statistical tools rather than ma-
+                     the complexity of calculating the probability of a gene                jority rule heuristics for inferring the species tree based
+                     tree topology with an exponential number of rankings                   on gene trees.
+                     for a given species tree remains unknown.
+                                                                                               Current methods for inferring species trees from gene
+                                                                                            trees in this setting can be divided into topology-based
+                     1                    Introduction                                      and genealogy-based methods, in which the input for a
+                                                                                            reconstruction algorithm accepts either gene tree topolo-
+                     Phylogenetic reconstruction methods aim to infer the                   gies or genealogies, i.e., gene trees with branch lengths
+                     species phylogeny which gave rise to a group of extant                 (coalescence times). Topology-based methods include
+                     species. Typically, this species phylogeny is obtained                 Minimize Deep Coalescence (MDC) [19, 28], STAR [18],
+                     based on genetic data from representative individuals of               STELLS [33], rooted triple consensus [9] and other con-
+                     each extant species. The ancestries of genes at differ-                sensus and supertree methods [2, 32]. Genealogy-based
+                     ent loci form gene trees which do not necessarily have                 methods include Bayesian and likelihood methods such
+                     the same topology as the species tree. Gene tree topolo-               as BEST, *BEAST, and STEM [11, 13, 14] and cluster-
+                     gies and species tree topologies might be different due to             ing and distance-based methods [15, 17, 18, 20]. Possible
+                     such phenomena as incomplete lineage sorting, gene du-                 pros and cons of the two approaches are that topology-
+                     plication, recombination within gene loci, and horizontal              based methods can be computationally faster and less
+                     gene transfer [4]. In this paper, we focus on incomplete               sensitive to errors in estimating gene trees (and gene tree
+                     lineage sorting as the mechanism for incongruence of                   branch lengths) from sequence data [12], while methods
+                     gene tree and species tree topologies, in which two gene               that use coalescence times, particularly using Bayesian
+                     lineages do not coalesce in the most recent population                 modelling, can be the most accurate when model as-
+                     ancestral to the individuals from which the genes were                 sumptions are correct [16].
+                     sampled. As an example, the lineages sampled from                        Another possibility that has been so far unexplored in
+                     species A and B in Figure 1b do not coalesce until the                 methods for inferring species trees from gene trees is to
+                     population ancestral to species A, B, and C, thus allow-               use ranked gene trees, in which the temporal order of the
+                     ing the B and C lineages in the gene tree to have a more               nodes of the gene tree (the coalescence times) is used,
+                     recent common ancestor than lineages A and B.                          but not the continuous-valued branch lengths. This ap-
+                        Given a fixed species tree, and assuming the gene tree              proach might therefore be intermediate between purely
+                     evolved under the multi-species coalescent [4], the most               topology-based methods and genealogy-based methods.
+                     probable gene tree topology can have a different topol-                By preserving more of the temporal information in the
+                     ogy from that of the species tree. Such a gene tree topol-             gene tree nodes, the hope is to develop methods that
+
+                                                                                        1
+(a)                                                                (b)
+                                u1                                                        u1
+                                                  τ1                                                        τ1
+        s1                                                          s1
+                           u2                                                        u2
+                                                  τ2                                     u3                 τ2
+        s2                                                          s2
+                                             u3   τ3                                                   u4   τ3
+        s3                                                          s3
+                  u4                              τ4                                                        τ4
+        s4                                                          s4
+
+             A         B             C   D    E                          A      B              C   D    E
+
+
+(c)                                                                (d)
+                                u1                                                u2 u1
+                                                  τ1                                                        τ1
+        s1                                                          s1
+                           u2
+                                                  τ2                                u3                      τ2
+        s2                                                          s2
+                    u3
+                                             u4   τ3                                                   u4   τ3
+        s3                                                          s3
+                                                  τ4                                                        τ4
+        s4                                                          s4
+
+             A         B             C   D    E                          A      B              C   D    E
+
+
+Figure 1: In (a)–(d) the ranked species tree topology is (((A, B)4 , C)2 , (D, E)3 )1 . (a) The ranked gene tree matches
+the ranked species tree. (b) The (ranked or unranked) gene tree does not match the species tree, and there is an
+incomplete lineage sorting event (a deep coalescence) because the lineages from species A and B fail to coalesce
+more recently than s2 . (c) The gene tree and species tree have the same unranked topology but have different
+ranked topologies, as D and E coalesce in the gene tree more recently than A and B, while A and B is the most
+recent divergence in the species tree. The gene tree in (c) has ranked topology (((A, B)3 , C)2 , (D, E)4 )1 . In (c),
+there are no incomplete lineage sorting events (no deep coalescences); however, there is an extra lineage at time
+s3 which leads to the gene tree and species tree having different rankings. In (c), all coalescences occur in the
+most recent possible interval consistent with the ranked gene tree, and we have ℓ1 = 2, ℓ2 = 3, ℓ3 = 5, ℓ4 = 5, and
+g1 = 2, g2 = 3, g3 = 5, g4 = 5. (d) A gene tree with the same ranked topology as the gene tree in (c) but with
+coalescences occurring in different intervals.
+
+
+are more powerful than purely topology-based methods             did not provide an algorithm for computing some of the
+and that are still computationally efficient and robust          key terms in the probability of individual ranked histo-
+to errors in estimating gene trees and gene tree branch          ries. In this paper, we improve this previous (compu-
+lengths from sequence data.                                      tationally inefficient) approach, by providing a method
+   In [5], a first step toward developing methods that use       for computing probabilities of ranked gene trees given
+ranked gene trees for inferring species trees was taken          species trees which is polynomial in the number of leaves
+by providing formulae to calculate the probability of            using a dynamic programming approach.
+a ranked gene tree given a species tree. The previous               Methods for computing probabilities of ranked gene
+work, however, was based on an exponential enumera-              trees efficiently may also be of interest in the context of
+tion of what were called ranked coalescent histories and         computing probabilities of unranked gene trees, partic-
+
+                                                             2
+                                        Table 1: Notation used in the paper
+
+ Symbol       meaning
+ T            species tree with real-valued divergence times
+ G            ranked gene tree (real-valued coalescence times not specified)
+ n            the number of leaves of T and G
+ si           speciation times, with s1 > · · · > sn−1 , let s0 = ∞
+ τi           intervals between speciation times, τi = [si , si−1 )
+ ℓi           the number of gene tree lineages at time si
+ mi           the number of coalescence events in interval τi
+ Gi,ℓi        the ranked gene tree observed from time 0 to time si
+ gi           the minimum number of gene tree lineages at time si
+ yi,z         population z in interval τi in beaded tree
+ ui           internal node (coalescence) with rank i in the gene tree, u1 is most ancient,
+              un−1 is the most recent
+ ki,j,z       the number of lineages available for coalescence in population yi,z just after the jth coalescence
+              (considered forward in time) in interval τi ; ki,0,z is the number of lineages “exiting” at time si−1
+ δ(y), δ(u)   the set of leaves descended from a node of the species tree or gene tree, respectively
+ lca(u)       for a node u of the gene tree, the node y of the species tree with largest rank such that δ(u) ⊂ δ(y)
+ τ (y)        for a node y with rank i on the species tree, we denote τ (y) = τi (the interval immediately above y)
+ λi,j         the overall coalescence rate in interval τi immediately preceding (backwards in time)
+              the jth coalescence
+ h1k          number of sequences of coalescences above the root of the species tree starting with k lineages
+ fi           the joint density of coalescence times in interval τi
+
+
+
+ularly because no polynomial time algorithm has been              2    Calculating the probability of a
+found for calculating the probability of a gene tree topol-            ranked gene tree topology
+ogy given a species tree under the multispecies coales-
+cent [6, 23, 29, 33]. The probability of an unranked
+                                                                  In the following, we will derive the probability of a
+gene tree topology can be obtained by summing over
+                                                                  ranked gene tree topology given a species tree, P[G | T ].
+all ranked gene tree topologies with the same topology.
+                                                                  Equations (1,2,3,4,8,10) allow the calculation of P[G | T ]
+Thus, for unranked gene trees with particular shapes
+                                                                  in time O(n5 ). The model giving rise to the gene tree
+where the number of rankings increases in polynomial
+                                                                  is the multi-species coalescent with constant population
+time, using ranked gene trees can potentially increase
+                                                                  sizes [4]. Each species consists of a population of con-
+the speed of computing probabilities of unranked gene
+                                                                  stant size where lineages merge according to the coa-
+trees as well. We note that a completely unbalanced
+                                                                  lescent. Thus, lineages from two different species may
+gene tree has only one ranking, while the number of
+                                                                  coalesce any time previous to the split of the two species.
+rankings can be exponential in the number of leaves
+when gene trees become more balanced. Thus, our ap-                  We begin with some notation, which is also summa-
+proach for calculating unranked gene tree probabilities           rized in Table 1. Let time be 0 today and increasing
+will be most useful for less balanced ranked gene trees.          going into the past. Let T be a species tree with n
+                                                                  species, and thus n − 1 speciation events (denoted by
+                                                                  1, . . . , n − 1) occurring at times s1 > · · · > sn−1 . Denote
+                                                                  the interval between speciation event i−1 and speciation
+                                                                  event i by τi , see Figure 1.
+                                                                     Let G be a ranked gene tree topology. It is convenient
+   The bulk of the paper consists of the derivation of the        to use the same labels for the leaves of G and of T . This
+polynomial time method for computing ranked gene tree             is a slight abuse of notation, as leaf A of T refers to
+probabilities. The algorithm is summarized in section             a population (or species), and A of G refers to a gene
+2.2. This is followed by a discussion of applications to          sampled from population A. We denote the nodes of
+computing probabilities of unranked gene tree topologies          G (which are coalescence events) by u1 , . . . , un−1 , where
+and to inferring ranked species trees under maximum               node uj has rank j, and where higher rank indicates a
+likelihood and a modification to the MDC criterion.               more recent coalescence. A ranked tree topology can be
+
+                                                              3
+notated similarly to Newick notation, putting the rank                    initial value of the recursion. Calculating P[Gi,ℓi |T ] for
+as a subscript for each node, see also Figure 1.                          i < n − 1 can be done in the following way,
+   Let Gi,ℓi be part of a ranked gene tree evolving on a
+                                                                            P[Gi,ℓi |T ]
+species tree between time si and time 0 (i.e. the present).                              n
+Gi,ℓi consists of ℓi gene tree lineages at speciation time                             X
+                                                                            =                           P[Gi,ℓi , Gi+1,ℓi+1 |T ]
+si and the coalescent history of Gi,ℓi in time interval
+                                                                                 ℓi+1 =max(ℓi ,gi+1 )
+(0, si ) is consistent with the ranked gene tree G . Let                                 n
+gi be the minimum number of lineages required in the
+                                                                                        X
+                                                                             =                          P[Gi,ℓi |Gi+1,ℓi+1 , T ]P[Gi+1,ℓi+1 |T ].
+ranked gene tree at time si such that G can be embedded                          ℓi+1 =max(ℓi ,gi+1 )
+into the species tree T . Note that n ≥ ℓi ≥ gi > i.
+Next we provide a dynamic programming approach for                        Suppose P[Gi,ℓi |Gi+1,ℓi+1 , T ] is known. Given we calcu-
+calculating the probability of a ranked gene tree given a                 lated the probability P[Gi+1,ℓi+1 |T ] for ℓi+1 = i+2, . . . , n,
+species tree. An efficient way to determine the required                  then calculating P[Gi,ℓi |T ] for ℓi = i + 1, . . . , n re-
+                                                                                     Pn−i
+                                                                                           j) = O( n−i+1
+                                                                                                               
+quantities g1 , . . . , gn−1 is provided in Section 2.1.                  quires O( j=1                     2   ) calculations. Sum-
+   Essentially, in our approach, we traverse the in-                      ming
+                                                                             P up over
+                                                                                      i = 1, .. . , n − 13 yields a complexity of
+tervals between speciation events going back in time,                     O( ni=2 2i ) = O( n+1 3 ) = O(n ).
+τn−1 , . . . , τ2 (formalized in Theorem 2), and calculateIt remains to determine P[Gi−1,ℓi−1 |Gi,ℓi , T ]. Note that
+the probability of the appropriate coalescent events oc-
+                                                       during the interval τi , we have i branches in the species
+curing in interval τi based on how many coalescent     tree. Let mi be the number of coalescent events in τi ,
+events happened in the later intervals τi+1 , . . . , τn−1
+                                                       so mi = ℓi − ℓi−1 . Let the number of lineages on branch
+(Theorem 3). Finally with Theorem 1, we account for    z just after the jth coalescent event (going forward in
+the most ancetral time interval τ1 .                   time) in τi be ki,j,z . Calculation of ki,j,z can be done
+Theorem 1. The probability of a ranked gene tree given efficiently as shown in Section 2.1.
+a species tree is,                                     Theorem 3. We have,
+                                                                                                                mi
+                                n                                                                               X        e−λi,j (si−1 −si )
+                                                                             P[Gi−1,ℓi−1 |Gi,ℓi , T ] =                                         (4)
+                                X
+               P[G | T ] =               P[G1,ℓ1 | T ]/Hℓ1     (1)                                                     Qmi
+                                                                                                                 j=0    k=0,k6=j (λi,k − λi,j )
+                                ℓ1 =g1
+                                                                                          Pi        ki,j,z            1
+                                                                                                                           
+where                                                                     where λi,j =        z=1        2     and     2       := 0.
+                                                 ℓ1 −1
+                    Hℓ1 = ℓ1 !(ℓ1 − 1)!/2                       (2) Proof. The density for the coalescence events in interval
+                                                                    τ can be obtained by considering the waiting time to
+is the probability for the coalescences above the root ap- i
+                                                                    the “next” coalescent event (going backwards in time)
+pearing in the right order [8].
+                                                                    as being due to competing exponentials in the different
+   For precalculated P[G1,ℓ1 |T ] (ℓ1 = 2, . . . , n) the com- branches,           where the coalescence rate within branch z is
+                                                                      ki,j,z 
+plexity of calculating P[G | T ] is thus O(n). Next, we                 2      . Thus, the waiting time until the next coalescent
+will provide a recursive way to calculate P[G1,ℓ1 |T ] for event has rate λi,j = iz=1 ki,j,z
+                                                                                                      P        
+                                                                                                             2   .
+ℓ1 = 2, . . . , n in polynomial time, thus P[G | T ] can be             We denote the time between the jth and (j + 1)st
+calculated in polynomial time.                                      coalescent event as vj , where v0 is the time between
+                                                                    si−1 and the first (least recent) coalescent event in τi
+Theorem 2. The probability P[Gi,ℓi |T ] can be calculated and with v being the time between s and coalescent
+                                                                                     mi                               i
+for all i recursively (with li ≥ gi ),                              event mi .
+                                                                        The density for the coalescent events in the interval
+     P[Gi,ℓi |T ]                                               (3)
+                  n
+                                                                    τ i is [5],
+                                                                                                               Pmi Pi
+                 X
+                                                                                                                        ki,j,z
+      =                P[Gi,ℓi |Gi+1,ℓi+1 , T ]P[Gi+1,ℓi+1 |T ]               fi (v0 , v1 , . . . , vmi ) = e− j=0 z=1 ( 2 )vj
+         ℓi+1 =max(ℓi ,gi+1 )                                                                                          Pmi
+                                                                                                               = e−            j=0 λi,j vj   .
+with
+                                                                             It remains to integrate over v, for which we distinguish
+                        P[Gn−1,n | T ] = 1.
+                                                                          between case (i) λi,0 = 0, and case (ii) λi,0 > 0.
+The complexity of calculating P[G1,ℓ1 | T ] for ℓ1 =                         Case (i): If λi,0 = 0 (which occurs if ℓi−1 = i, i.e.,
+2, . . . , n is O(n3 ), given we know P[Gi,ℓi | Gi+1,ℓi+1 , T ] for       all lineages within each population coalesce), then we
+all i, ℓi , ℓi+1 .                                                        rewrite fi as,
+                                                                                                                  Qmi        −λi,j vj
+Proof. At the time of the most recent speciation event,                                                            j=1 λi,j e
+                                                                                    fi (v0 , v1 , . . . , vmi ) =   Qmi               . (5)
+sn−1 , we have n lineages with probability 1, which is the                                                             j=1 λi,j
+
+
+                                                                      4
+Using the fact that the integral of the numerator of                             determine P[Gi−1,ℓi−1 |Gi,ℓi , T ] for all possible i, mi and
+Equation (5) is a hypoexponential distribution based on                          ℓi . First, we observe that i ≤ ℓi−1 ≤ n, and thus for a
+the sum of mi exponential random variables [24] (with                            fixed ℓi , we have, 0 ≤ mi ≤ ℓi − i. Second, i < ℓi ≤ n.
+density functions λi,j e−λi,j vj , j = 1, . . . , mi ), the proba-               And third, 2 ≤ i ≤ n − 1. Thus, the number of cal-
+bility of the coalescent events in the interval is the cumu-                     culations needed to calculate P[Gi−1,ℓi−1 |Gi,ℓi , T ] for all
+lative distribution function of the hypoexponential            dis-              possible i, mi and ℓi is,
+tribution evaluated at si−1 − si = m
+                                        P i
+                                             j=0 iv .  Thus,  with                                                                       
+                                                                                         n−1   n     i −i
+                                                                                                    ℓX                  n−1   n
+λi,j < λi,j+1 ,                                                                          X X                            X X
+                                                                                     O                   m2i  = O              (ℓi − i)3 
+                                                                                        i=2 ℓi =i+1 mi =0             i=2 ℓi =i+1
+                                                                                                                  n−1
+                                                                                                                                    !
+P[Gi−1,ℓi−1 |Gi,ℓi , T ]                                                                                          X
+                                        mi                                                                     =O    (n − i)4
+                  1                     X          e−λi,j (si−1 −si )                                                 i=2
+              = Qmi                 −             Qmi
+                    j=1 λi,j                  λi,j k=1,k6=j (λi,k − λi,j )                                             5
+                                                                                                                         
+                                        j=1                                                                    =O n      .
+                                         mi
+                  1                     X       e−λi,j (si−1 −si )
+              = Qmi                 +         Qmi
+                    j=1 λi,j            j=1    k=0,k6=j (λi,k − λi,j )
+                  mi
+                                                                             Corollary 5. The quantities λi,j can be calculated for
+                               e−λi,j (si−1 −si )                                                                5
+                                                                         (6) all possible i, mi , ℓi and j in O(n ), given all ki,j,z .
+                  X
+              =         Qmi                            .
+                  j=0      k=0,k6=j (λi,k − λi,j )
+                                                                   Proof. For a fixed i, mi , ℓi and j, we require O(i) calcu-
+where the second line follows because −λi,j = λi,0 − λi,j . lations to evaluate λi,j . As j = 0, . . . , mi , with the same
+                                                                   arguments as in Corollary 4, we obtain,
+   Case (ii): If λi,0 > 0, then we rewrite fi as,                     
+                                                                        n−1      n    i −i X
+                                                                                     ℓX     mi
+                                                                                                     
+                                                                                                        n−1        n    i −i
+                                                                                                                       ℓX
+                                                                                                                                 
+                                                                        X X                             X        X
+                                           Qmi        −λi,j vj
+                                                                    O                         i = O      i                 mi 
+                                            j=0 λi,j e                  i=2 ℓ   =i+1 m  =0 j=0          i=2   ℓ   =i+1 m   =0
+             fi (v0 , v1 , . . . , vmi ) =   Qmi               (7)            i       i                         i        i
+
+                                                j=0 λi,j
+                                                                                                                                
+                                                                                                        n−1
+                                                                                                        X        X n
+                                                                                                  = O      i         (li − 1)2 
+   For integrating fi , we use the fact that the integral
+                                                                                                        i=2 ℓi =i+1
+of the numerator in Equation (7) is the convolution of
+                                                                                                        n−1
+                                                                                                                        !
+mi + 1 exponential random variables with parameters                                                     X
+                                                                                                  =O        i(n − i)3
+λi,0 , . . . , λi,mi , which is the hypoexponential distribu-
+                                                                                                        i=2
+tion. Now, since λi,j < λi,j+1 , we observe, using the
+                                                                                                  = O n5 .
+                                                                                                          
+probability density function of the hypoexponential dis-
+tribution,
+
+          P[Gi−1,ℓi−1 |Gi,ℓi , T ]                                                   We note that the terms P[Gi−1,ℓi−1 |Gi,ℓi , T ] are anal-
+                          Z
+                                                                                 ogous to the functions gi,j defined in [27, 31], which
+                       = fi (v0 , v1 , . . . , vmi ) dv
+                                v                                                give the probability that i lineages coalesce into j within
+                               mi
+                               X       e−λi,j (si−1 −si )                        time t in a single population and are used extensively in
+                           =         Qmi                      ,                  computing probabilities related to unranked gene trees
+                               j=0    k=0,k6=j (λi,k − λi,j )                    [6, 21, 22, 33]. In particular, if only one population, say
+                                                                                 z ∗ , has coalescence events, then we have
+which is the same expression as for the λi,0 = 0 case (6).
+Note that for case (i) we made use of the cumulative dis-         P[Gi−1,ℓi−1 |Gi,ℓi , T ]
+tribution function of the hypoexponential distribution,                                     Q
+                                                                      gℓi+1 ,ℓi (si − si+1 ) z6=z ∗ gki,0,z ,ki,0,z (si − si+1 )
+while for case (ii) we made use of the density function           =                    Qℓi+1 −ℓi ℓi+1 −k+1                      ,
+of the hypoexponential distribution. Both cases yield                                     k=1         2
+the same final expression for P[Gi−1,ℓi−1 |Gi,ℓi , T ], which
+                                                              a product of gi,j functions with the denominator count-
+establishes the proof.
+                                                              ing the number of sequences in which mi coalescences
+Corollary 4. The probabilities P[Gi−1,ℓi−1 |Gi,ℓi , T ] for   could  have occurred. The terms P[Gi−1,ℓi−1 |Gi,ℓi , T ] al-
+all possible i, mi and ℓi (recall that mi = ℓi − ℓi−1 ) are   low  for  the coalescences to occur in separate popula-
+calculated in O(n5 ), given all λi,j .                        tions, however, and are constrained by the ranking of
+                                                              the gene tree. For example, in interval τ3 of Figure
+                                                       2
+Proof. For a fixed i, mi and ℓi , we require O(mi ) cal- 1c, there are two coalescences which occur in differ-
+culations to evaluate P[Gi−1,ℓi−1 |Gi,ℓi , T ]. We need to ent populations. If the ranking of the gene tree were
+
+                                                                             5
+not important, the branches could be considered in-
+dependent, and the probability of this event would be                                                  y1,1
+g2,1 (s2 − s3 )g2,1 (s2 − s3 ). However, the gene tree ranking
+constrains the coalescence of A and B to be less recent
+                                                                                             y2,1             y2,2
+than that of D and E, so the probability for events in
+this interval is,
+                                                                                      y3,1          y3,2             y3,3
+           P[G3,2 |G4,3 , T ] = [g2,1 (s2 − s3 )]2 /2.
+
+We illustrate that we get the same result from Theorem                    y4,1       y4,2     y4,3          y4,4
+3: there are two coalescence events in interval τ3 , so we
+use j = 0, 1, 2, and calculate
+                          
+                      1          1     1
+              λ3,0 =        +       +    = 0,              Figure 2: The beaded version of the species tree topol-
+                      2          2     2
+                          
+                      2          1     1                   ogy in Figure 1a–d.
+              λ3,1 =        +       +    = 1,
+                      2          2     2
+                          
+                      2          1     2
+              λ3,2 =        +       +    = 2.              least common ancestor node on the species tree for a
+                      2          2     2
+                                                           node uj on the ranked gene tree – i.e., the node with
+                                                           the largest rank on the species tree which is ancestral to
+Thus, Equation (4) from Theorem 3 evaluates to             all species represented in uj . For a node y on the species
+                                                           tree, let τ (y) be the interval immediately above y. For
+      e−0(s2 −s3 )        e−1(s2 −s3 )    e−2(s2 −s3 )     example, in Figure 1c, τ (lca(u4 )) = τ3 where u4 is the
+                    +                  +
+    (2 − 0)(1 − 0) (0 − 1)(2 − 1) (0 − 2)(1 − 2)           gene tree node with rank 4 — the node ancestral to D
+          1                   1                            and E only. We then express gi as
+    =       − e−(s2 −s3 ) + e−2(s2 −s3 )
+          2                   2
+          1                  2                                                  X n−1
+                                                                                  n−1
+    =         1 − e−(s2 −s3 )
+                                                                                       Y
+          2                                                           g i =  n −           I(τ (lca(uk )) > τi )   (8)
+                          2                                                      j=i+1 k=j
+    = [g2,1 (s2 − s3 )] /2.
+                                                                     where τj < τi iff j < i, and where I(·) is an indicator
+                                                                     function taking the value 1 if the condition holds and
+Remark 6. The probability of a gene tree topology is                 otherwise 0. Assuming each lca() operation is O(1) [10,
+the sum of the probabilities of each ranked gene tree                25]), preprocessing allows all lca terms to be computed in
+with the Q given topology. A given tree topology has                 O(n) time. Similarly all needed products and the sum in
+             n−1
+(n − 1)!/ i=1    (ci − 1) rankings, where ci is the num-             Equation (8) can each then be computed in O(n) time.
+ber of descendant leaves of interior vertex i. A proof               Thus, calculating g1 , . . . , gn−1 can be done in O(n) time.
+can be found in [26]. For a completely balanced tree on
+n = 2k leaves, the number of rankings grows faster than
+polynomial: the numerator can be approximated by,         Calculation of ki,j,z
+                           √                              We let yi,j be the jth population (read left to right)
+                     n! ≈ 2πn(n/e)n ,
+                                                          in interval τi (equivalently, the jth branch or jth node
+and the denominator can be approximated by,               subtending the branch). In order to label every popula-
+                                                          tion before and after a speciation time si uniquely, extra
+      n−1              k
+      Y               Y
+                            i       i    k    log2 n      nodes can be added to the species tree to form a beaded
+          (ci − 1) =      (2 − 1)n/2 ≈ n = n         ,
+                                                          species tree (Figure 2), so that there are i nodes at time
+      i=1             i=1
+                                                          si , i = 1, . . . , n − 1. For each i ∈ {1, . . . , n − 1}, there
+showing that the ratio grows faster than polynomial in is one node of outdegree 2, and i − 1 nodes of outdegree
+n.                                                        1. Thus, population yi,j corresponds to a branch (equiv-
+                                                          alently, a node) in the beaded species tree. We denote
+2.1 Calculation of gi and ki,j,z                          the outdegree of a node y by outdeg(y).
+                                                              In the remainder of this section, we compute the val-
+Calculation of gi
+                                                          ues ki,j,z , i.e. the number of lineages on branch yi,z of
+If T and G have the same ranked topology, then gi = the beaded species tree during the interval immediately
+i + 1. In general, to compute gi , we let lca(uj ) be the after the jth coalescence event (going forward in time),
+
+                                                                 6
+                                                                                           Pi       ki,j,z 
+with ki,0,z being the number of lineages “exiting” the               3. Calculate λi,j =      z=1     2      (for i, j = 1, . . . , n).
+branch at time si−1 . For example, in Figure 1b, we have
+                                                                     4. Calculate P[Gi−1,ℓi−1 |Gi,ℓi , T ] (for i = 2, . . . , n;
+           k2,0,1 = 1,      k2,1,1 = 2,        k2,2,1 = 3,              ℓi−1 = gi−1 , . . . , n; ℓi = gi , . . . , n), using Theorem
+           k2,0,2 = 1,      k2,1,2 = 1,        k2,2,2 = 1               3.
+
+   The value of ki,j,z depends on the number of lineages             5. Calculate P[G1,ℓ1 |T ] using Theorem 2.
+entering branch i, ℓi , as well as the number of lineages            6. Calculate P[G | T ] using Theorem 1.
+exiting the branch, and not just on the number of coales-
+cence events in the interval. For example, in Figure 1c,
+k2,0,1 = 1 and k2,1,1 = 2, while in Figure 1d, k2,0,1 = 2           3     Discussion
+and k2,1,1 = 3, although the two gene trees have the
+same ranked topology and m2 = 1 for both cases.                     In this paper, we provide a polynomial-time algorithm
+   To determine the terms ki,j,z we note that the number            (O(n5 ) where n is the number of species) to calculate
+of coalescences that have occurred more recently than               the probability of a ranked gene tree topology given a
+interval τi is n − ℓi . In a given interval τi , we let z (1)       species tree, summarized in Section 2.2. We now dis-
+and z (2) be the left and right children, respectively, of          cuss applying these results to computing probabilities
+population z of outdegree 2, and let z (1) = z (2) be the           of unranked gene tree topologies and to inferring ranked
+only child of a node z of outdegree 1.                              species trees.
+   The number of lineages available to coalesce in popu-
+lation z of interval τi is                                          3.1   Computing probabilities of unranked
+                                                                          gene tree topologies
+                            outdeg(yi,z )
+                                                                  (9) Previous work on computing probabilities of unranked
+                                X
+               ki,mi ,z =                   ki+1,0,z (j)
+                                 j=1                                  gene tree topologies used the concept of coalescent his-
+                                                                      tories, which specify the branches in the species tree in
+             (j)
+where the z are the daughter populations (one or two) which each node of the gene tree occurs. An unranked
+of z. Further, kn,0,z = 0 for all z. Since the beaded gene tree probability can then be computed by enumer-
+species tree has n2 /2 nodes, precalculating outdeg(yi,z ) ating all coalescent histories and computing the proba-
+requires O(n2 ). For 0 ≤ j < mi , we have                             bility of each. The number of coalescent histories grows
+            (                                                         at least exponentially when the (unranked) gene tree
+              ki,j+1,z − 1 jth coalescence on branch z                matches the species tree, making this approach compu-
+   ki,j,z =                                                           tationally intensive. Coalescent histories can be enumer-
+              ki,j+1,z         otherwise
+                                                                 (10) ated either recursively (e.g., in PHYLONET [30] or [23])
+                                                                      or nonrecursively (COAL [6]).
+Consequently, determining a particular ki,j,z is O(1).                   A much faster approach using dynamic programming
+Thus determining ki,j,z for all possible i, mi and ℓi is similar to that used in this paper is implemented in
+(see also Corollary 4),                                               STELLS [33], which conditions on the ancestral con-
+                                                                    figuration in each branch rather than the number of
+                       n−1
+                       X X     n    ℓXi −i m
+                                           Xi                         lineages. Here an ancestral configuration keeps track
+              = O                            O(1)                   not only of the number of lineages in a branch in the
+                       i=2 ℓi =i+1 mi =0 j=0                          species tree, but also the particular nodes of the gene
+                       4                                              tree. Different ancestral configurations can potentially
+                         
+              =O n .
+                                                                      have the same number of lineages within a population.
+Note that taking the sum over all z is not necessary, as Enumerating ancestral configurations turns out to have
+in all but one branch the ki,j,z equals the ki,j+1,z .                exponential running time for arbitrarily shaped trees,
+                                                                      but the number of ancestral configurations is still much
+2.2 An algorithm                                                      smaller than the number of coalescent histories. When
+                                                                      computing probabilities of ranked gene tree topologies,
+In summary, we derived an algorithm with runtime however, the ranking specifies the sequence of coales-
+O(n5 ) for calculating the probability of a ranked gene cence events, leading to a unique ancestral configura-
+tree given a species tree on n tips:                                  tion given the number of lineages in a time interval.
+  1. Calculate g1 , . . . gn−1 using Equation (8).                    This fortuitously enables probabilities of ranked gene
+                                                                      tree topologies to be computed in polynomial time.
+  2. Calculate ki,j,z (for i, j = 1, . . . , n; z = 1 . . . i), using    We note that although the number of rankings for a
+      Equations (9) and (10).                                         gene tree is not polynomial in the number of leaves in
+
+                                                                7
+general, the number of rankings can be small for cer-                             the deep coalescence cost. In working with ranked gene
+tain tree shapes. For example, if the gene tree has a                             trees, however, we can keep track of the minimum num-
+caterpillar shape, in which each internal node has a leaf                         ber of extra lineages within each time interval τi . The
+as a descendant, then there is only one ranking, and                              total number of extra lineages in this sense is
+thus computing the ranked and unranked gene tree are                                                   n−1
+equivalent. For a pseudo-caterpillar, a tree made by re-
+                                                                                                       X
+                                                                                                             gi − (i + 1)              (12)
+placing the subtree with four leaves of a caterpillar with                                             i=1
+a balanced tree on four leaves [23], there are only two
+rankings possible, and for a bicaterpillar [23], for which                        Minimizing (12) as a criterion for the ranked species
+the left subtree is a caterpillar with nL leaves and the                          tree will tend to penalize long edges of the species tree
+right subtree is a caterpillar with n−nL leaves, there are                        which have multiple lineages persisting through multiple
+  n−2 
+        rankings.   Thus computing unranked gene tree                             species divergence events. As an example, in Figure 1b,
+ nL −1
+probabilities by summing ranked gene tree probabilities                           the gene tree has a MDC cost of 1 since there are two
+can be done in polynomial time for some tree shapes.                              lineages exiting the population immediately ancestral to
+We note that for the approach used by STELLS, some                                A and B; however the cost according (12) is 2 because
+tree shapes can also be computed in polynomial time, in-                          there are two edges on the beaded version of the species
+cluding the cases we mentioned that have a polynomial                             tree (Figure 2) that each have an extra lineage. In Fig-
+number of rankings. An open question is whether there                             ure 1c, the gene tree has a MDC cost of 0 for the species
+are any classes of unranked gene trees which have a poly-                         tree since it has the matching unranked topology; how-
+nomial number of rankings but an exponential number                               ever, the number of extra lineages from equation (12)
+of ancestral configurations, or vice versa.                                       is 1. We note that in Figure 1c, interval τ3 , incom-
+                                                                                  plete lineage sorting (and deep coalescence) have not
+                                                                                  occurred as these concepts are normally used. To cap-
+3.2     Inferring species trees from ranked gene                                  ture the idea that coalescence has nevertheless occurred
+        trees                                                                     in a more ancient time interval than allowed, we might
+Our fast calculation of the probability of ranked gene                            refer to the coalescence of A and B in Figure 1c as an
+tree topologies can be used to determine the maximum                              “ancient lineage sorting” event (rather than incomplete
+likelihood species tree from a collection of known gene                           lineage sorting event) or an ancient coalescence rather
+trees. Assume we have observed N ranked gene trees                                than a deep coalescence. We could therefore refer to
+(i.e., N loci). Now the maximum likelihood species tree                           minimizing equation (12) as the Minimize Ancient Co-
+TM L (with branch lengths on internal branches) is                                alescence (MAC) criterion, which would provide an in-
+                                                                                  teresting comparison to the usual topology-based MDC
+              TM L = argmax P[G1 , . . . , GN |T ]                                criterion.
+                              T
+                                                                                     In practice, a method of inferring a species tree from
+where                                                                             ranked gene trees would require estimating the ranked
+                                                                                  gene trees. This would require clock-like gene trees, or
+                            N                   Hn
+                            Y                   Y                                 trees with times estimated for nodes, which can also
+ P[G1 , . . . , GN |T ] =         P[Gk |T ] =         P[G (i) |T ]ni   (11)       be inferred under relaxed clock models in BEAST [7].
+                            k=1                 i=1
+                                                                                  To account for the uncertainty in the gene trees, the
+is a multinomial likelihood. Here P[Gk |T ] can be deter-                         counts for different ranked gene trees could be weighted
+mined with our polynomial-time algorithm, we let G (i)                            by their posterior probabilities obtained from Bayesian
+denote the ith ranked topology, and ni is the                                     estimation of the gene trees [1]. Thus, in equation (11),
+                                             P number    of
+                                                                                  we would let nik be the posterior probability
+times ranked topology i is observed, with H                                                                                PHn of ranked
+                                                 n
+                                                   n
+                                               i=1 i  = N .
+Note in particular that the ranked topology of TM L                               topology i at locus k, and use ni =        k=1 nik as the
+might differ from the most frequent ranked gene tree                              estimated number of times that ranked topology i was
+topology[5].                                                                      observed. Similarly, for equation (12), the coalescence
+   Our derivation of the ranked gene tree probability also                        cost at a locus could be distributed over multiple topolo-
+suggests a way to infer a ranked species tree topology                            gies weighted by their posterior probabilities.
+from ranked gene tree topologies with a similar flavor as
+the MDC criterion. In MDC, for an input gene tree and                             Acknowledgements
+candidate species tree, the number of extra lineages (lin-
+eages which necessarily fail to coalesce due to topological                       We thank David Bryant for suggesting the dynamic pro-
+differences between gene and species trees) on each edge                          gramming approach to this problem and two anonymous
+of the species tree is counted. For MDC, whether the                              referees for valuable comments, particularly on calculat-
+edge of the species tree is long or short does not affect                         ing gi and ki,j,z . JHD was funded by the New Zealand
+
+                                                                              8
+Marsden fund and by a Sabbatical Fellowship at the                         [18] L. Liu, L. Yu, D. K. Pearl, and S. V. Edwards. Estimating
+National Institute for Mathematical and Biological Syn-                         species phylogenies using coalescence times among sequences.
+                                                                                Syst. Biol., 58:468–477, 2009.
+thesis, an Institute sponsored by the National Science
+Foundation, the U.S. Department of Homeland Secu-                          [19] W. P. Maddison and L. L. Knowles. Inferring phylogeny de-
+                                                                                spite incomplete lineage sorting. Syst. Biol., 55:21–30, 2006.
+rity, and the U.S. Department of Agriculture through
+                                                                           [20] E. Mossel and S. Roch. Incomplete lineage sorting: consistent
+NSF Award #EF-0832858, with additional support from
+                                                                                phylogeny estimation from multiple loci. IEEE/ACM Trans.
+The University of Tennessee, Knoxville. TS was funded                           Comp. Biol. Bioinf., 7:166–171, 2010.
+by the Swiss National Science Foundation.                                  [21] P. Pamilo and M. Nei. Relationships between gene trees and
+                                                                                species trees. Mol. Biol. Evol., 5:568–583, 1988.
+References                                                                 [22] N. A. Rosenberg. The probability of topological concordance
+                                                                                of gene trees and species trees. Theor. Pop. Biol., 61:225–247,
+ [1] E. S. Allman, J. H. Degnan, and J. A. Rhodes. Identifying                  2002.
+     the rooted species tree from the distribution of unrooted gene
+                                                                           [23] N. A. Rosenberg. Counting coalescent histories. J. Comput.
+     trees under the coalescent. J. Math. Biol., 62:833–862, 2011.
+                                                                                Biol., 14:360–377, 2007.
+ [2] J. H. Degnan, M. DeGiorgio, D. Bryant, and N. A. Rosenberg.
+                                                                           [24] S. Ross. Introduction to Probability Models. Academic Press,
+     Properties of consensus methods for inferring species trees
+                                                                                San Diego, CA, 9th edition, 2007.
+     from gene trees. Syst. Biol., 58:35–54, 2009.
+                                                                           [25] B. Schiever and U. Vishkin. On finding lowest common an-
+ [3] J. H. Degnan and N. A. Rosenberg. Discordance of species
+                                                                                cestors: simplification and parallelization. SIAM J. Comput.,
+     trees with their most likely gene trees. PLoS Genet., 2:762–
+                                                                                17:1253–1262, 1988.
+     768, 2006.
+                                                                           [26] C. Semple and M. Steel. Phylogenetics, volume 24 of Oxford
+ [4] J. H. Degnan and N. A. Rosenberg. Gene tree discor-
+                                                                                Lecture Series in Mathematics and its Applications. Oxford
+     dance, phylogenetic inference, and the multispecies coales-
+                                                                                University Press, Oxford, 2003.
+     cent. Trends Ecol. Evol., 24:332–340, 2009.
+ [5] J. H. Degnan, N.A. Rosenberg, and T. Stadler. The probabil-           [27] S. Tavaré. Line-of-descent and genealogical processes, and
+     ity distribution of ranked gene trees on a species tree. Math.             their applications in population genetics models. Theor.
+     Biosci., 235:45–55, 2012.                                                  Popul. Biol., 26:119–164, 1984.
+
+ [6] J. H. Degnan and L. A. Salter. Gene tree distributions under          [28] C. Than and L. Nakhleh. Species tree inference by minimizing
+     the coalescent process. Evolution, 59:24–37, 2005.                         deep coalescences. PLoS Comput. Biol., 5:e1000501, 2009.
+
+ [7] A. J. Drummond and A. Rambaut. Beast: Bayesian evolu-                 [29] C. Than, D. Ruths, H. Innan, and L. Nakhleh. Confounding
+     tionary analysis by sampling trees. BMC Evolut. Biol., 7:214,              factors in HGT detection: statistical error, coalescent effects,
+     2007.                                                                      and multiple solutions. J. Comput. Biol., 14:517–535, 2007.
+
+ [8] A. W. F. Edwards. Estimation of the branch points of a                [30] C. Than, D. Ruths, and L. Nakhleh. Phylonet: A software
+     branching diffusion process. J. R. Stat. Soc. Ser. B, 32:155–              package for analyzing and reconstructing reticulate evolution-
+     174, 1970.                                                                 ary relationships. BMC Bioinformatics, 9:322, 2008.
+
+ [9] G. B. Ewing, I. Ebersberger, H. A. Schmidt, and A. von                [31] J. Wakeley. Coalescent Theory. Roberts & Company, Green-
+     Haeseler. Rooted triple consensus and anomalous gene trees.                wood Village, CO, 2008.
+     BMC Evol. Biol., 8:118, 2008.                                         [32] Y. Wang and J. H. Degnan. Performance of matrix represen-
+[10] D. Harel and R. E. Tarjan. Fast algorithms for finding nearest             tation with parsimony for inferring species from gene trees.
+     common ancestors. SIAM J. Comput., 13:338–355, 1984.                       Stat. Appl. Genet. Mol. Biol., 10:21, 2011.
+[11] J. Heled and A. J. Drummond. Bayesian inference of species            [33] Y. Wu. Coalescent-based species tree inference from gene
+     trees from multilocus data. Mol. Biol. Evol., 27:570–580,                  tree topologies under incomplete lineage sorting by maximum
+     2010.                                                                      likelihood. Evolution, doi:10.1111/j.1558-5646.2011.01476.x,
+                                                                                2011.
+[12] H. Huang, Q. He, L. S. Kubatko, and L. L. Knowles. Sources
+     of error for species-tree estimation: Impact of mutational and
+     coalescent effects on accuracy and implications for choosing
+     among different methods. Syst. Biol., 59:573–583, 2009.
+[13] L. S. Kubatko, B. C. Carstens, and L. L. Knowles. STEM:
+     Species tree estimation using maximum likelihood for gene
+     trees under coalescence. Bioinformatics, 25:971–973, 2009.
+[14] L. Liu and D. K. Pearl. Species trees from gene trees: Recon-
+     structing bayesian posterior distributions of a species phy-
+     logeny using estimated gene tree distributions. Syst. Biol.,
+     56:504–514, 2007.
+[15] L. Liu and L. Yu. Estimating species trees from unrooted
+     gene trees. Syst. Biol., 60:661–667, 2011.
+[16] L. Liu, L. Yu, L. S. Kubatko, D. K. Pearl, and S. V. Edwards.
+     Coalescent methods for estimating phylogenetic trees. Mol.
+     Phylogenet. Evol., 53:320–328, 2009.
+[17] L. Liu, L. Yu, and D. K. Pearl. Maximum tree: a consistent
+     estimator of the species tree. J. Math. Biol., 60:95–106, 2010.
+
+
+                                                                       9
+
