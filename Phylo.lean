@@ -25,6 +25,7 @@ import Phylo.Dendrogram
 import Phylo.DissimilarityPerturb
 import Phylo.Distance
 import Phylo.DistanceCorrection
+import Phylo.FitchGeneral
 import Phylo.InductiveAssembly
 import Phylo.InternalEdge
 import Phylo.JukesCantor
