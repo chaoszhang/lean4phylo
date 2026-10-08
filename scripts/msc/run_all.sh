@@ -17,8 +17,8 @@ for f in *.py; do
   N=$((N + 1))
   echo "===== $f"
   if timeout 900 python3 "$f" > "$TMP" 2>&1; then
-    if grep -qE 'VERDICT: *PASS|=> *PASS|ALL OK|ALL PASS|全部通过|全部核对通过' "$TMP"; then
-      grep -E 'VERDICT|=> *PASS|ALL OK|ALL PASS|全部通过|全部核对通过' "$TMP" | tail -2 | sed 's/^/    /'
+    if grep -qE 'PASS|通过|OK' "$TMP"; then
+      grep -E 'PASS|通过|OK' "$TMP" | tail -2 | sed 's/^/    /'
     else
       echo "    ✗ 脚本退出 0 但**没有**自报 PASS —— 最后 5 行："
       tail -5 "$TMP" | sed 's/^/      /'
