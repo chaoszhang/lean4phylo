@@ -46,6 +46,7 @@ import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTER
+import Phylo.Stat.Coalescent
 import Phylo.Stat.MSC
 import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
