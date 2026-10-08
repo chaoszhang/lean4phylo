@@ -65,6 +65,7 @@ import Phylo.Stat.Coalescent
 import Phylo.Stat.InvariantsRank
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
+import Phylo.Stat.MSCInstance
 import Phylo.Stat.MSCKingman
 import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.NJst
