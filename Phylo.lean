@@ -50,6 +50,7 @@ import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
 import Phylo.Stat.CASTERGeneTree
 import Phylo.Stat.CASTERJC69
+import Phylo.Stat.CASTERLM1
 import Phylo.Stat.CASTERTheorem1
 import Phylo.Stat.CASTERTheorem2
 import Phylo.Stat.CASTERTopo
