@@ -384,14 +384,15 @@ theorem sum_two_two_mscP (t : ℝ) (hS : (Finset.univ : Finset (Fin 4)).card = 4
 下面三条把本文件**没有**证明的东西写成显式命题（规格 §0.4 / §5.2 的要求：宁可留缺口，
 不许把未证内容伪装成定理）。它们在本文件中**从未被当作假设使用**。 -/
 
-/-- ❌ **缺口 G1**：`Split (Fin n)`（**有向**口径）上的**平凡 split 计数**。
+/-- ❌→✅ **缺口 G1（已由 `Phylo/Stat/TrivialSplitCount.lean` 补证）**：
+`Split (Fin n)`（**有向**口径）上的**平凡 split 计数**。
 `Split α = KPartition α 2` 用 `Fin 2` 索引把两侧有序化（`Phylo/Split.lean` 第 210–220 行），
 每个无向平凡 split `{x} | X∖{x}` 对应 `r` 与 `r.swap` 两个值，故 `n ≥ 3` 时恰 `2n` 个。
 
-**未证**：缺「`r ↦` `sideA` 的唯一单点」这个双射的一般 `n` 形式（`n = 2` 时公式不同：
-`Split (Fin 2)` 只有 `2` 个元素，两侧都是单点，故 `2 ≠ 2n = 4`）。
-本文件也没有对 `n = 4` 判定它 —— `Split (Fin 4)` 的 `Fintype` 实例无法被 `decide` 归约
-（见 §4 的说明）。**未证。** -/
+**已证**（`Phylo.Stat.TrivialSplitCount.card_trivial_splits_gap_holds` 就是本 `Prop` 本身，
+另有主定理 `card_trivial_splits (n) (3 ≤ n)`）——本 `def` 保留为**接口/文档**，不再表示缺口。
+`n = 2` 时公式**不成立**（`Split (Fin 2)` 只有 `2` 个元素，两侧都是单点，`2 ≠ 2n = 4`），
+故 `3 ≤ n` 是**充分**条件（`n = 0` 时两端都是 `0`，平凡成立）。 -/
 def card_trivial_splits_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n →
     (Finset.univ.filter (fun r : Split (Fin n) => IsTrivialSplit r)).card = 2 * n

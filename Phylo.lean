@@ -85,6 +85,7 @@ import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
 import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.ReciprocalMonophyly
+import Phylo.Stat.RootJumpMass
 import Phylo.Stat.SamplingAxiomVacuity
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
