@@ -8,6 +8,7 @@ import Phylo.Stat.MSC
 import Phylo.Stat.MSCProof
 import Phylo.Stat.NJst
 import Phylo.Stat.Parsimony
+import Phylo.Stat.QuartetDecides
 import Phylo.Stat.Stability
 
 /-!
@@ -505,6 +506,35 @@ theorem not_statisticallyConsistentLaw_const (T : Cladogram.{u, v} X)
   intro hsc
   obtain ⟨N, hN⟩ := hsc m
   exact hm (hN N le_rfl)
+
+/-! ## 5. ★★★ **修正版谓词 `StatisticallyConsistentLaw` 真正成立**（修复故事的最后一块）
+
+§4 修复的是**四条**「quartet 层」定理。但本库**叙事上的**一致性谓词是**树层**的
+`StatisticallyConsistent`（`MSC.lean:183–186`）；本节的 ★★★ `astral_statisticallyConsistentLaw`
+证明它的**修正版** `StatisticallyConsistentLaw` 对 **ASTRAL 型估计量真的成立**：
+
+* 先引 §4.2 的 `astral_statisticallyConsistent_law`（**quartet 层**，`MSCSamplingLaw` 上）；
+* 再用库内既有的 ★★★ `QuartetDecides.QuartetDecidesTree`（quartet 一致 ⇒ **树同构**）升到树层
+  —— 与 `QuartetDecides.parsimony_iso` 的收口方式相同。
+
+⇒ 于是「**统计一致性**」这条叙事在**修正后的形状**下有了**非空洞**的内容：
+不再需要「先假设一个不存在的采样结构」。 -/
+
+/-- ★★★ **修正版 `StatisticallyConsistentLaw` 对 ASTRAL 型估计量成立**（**非空洞**）。
+
+`Q` 是 quartet 层的 ASTRAL 型估计量（`∀ D, IsASTRAL D (Q D)`），
+树层估计量取 `fun D => (Q D).tree`；`hNE` 要求每条律都有「非真选择」以给出正的 gap
+（退化情形由 `QuartetDecides` 直接处理）。 -/
+theorem astral_statisticallyConsistentLaw (sm : MSCSamplingLaw.{u, v} X)
+    {Q : QuartetFreq X → QuartetTree.{u, v} X} (hQ : ∀ D, IsASTRAL D (Q D))
+    (hQbin : ∀ D, (Q D).tree.IsBinary)
+    (hT : ∀ m : MSCFreq.{u, v} X, m.tree.IsBinary)
+    (hNE : ∀ m : MSCFreq.{u, v} X, ∃ q : QuartetChoice X, ¬ IsTrueChoice m q) :
+    StatisticallyConsistentLaw (fun D => (Q D).tree) sm := by
+  intro m
+  obtain ⟨N, hN⟩ := astral_statisticallyConsistent_law m sm hQ (hNE m)
+  exact ⟨N, fun n hn =>
+    QuartetDecidesTree X (Q (sm.emp m n)) m.toQuartetTree (hQbin _) (hT m) (hN n hn)⟩
 
 end Fix
 
