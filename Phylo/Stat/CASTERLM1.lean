@@ -7,6 +7,8 @@ import Mathlib.Tactic
 import Mathlib.Data.Fin.VecNotation
 import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 import Phylo.Stat.CASTERWeights
+import Phylo.Stat.CASTERBridge
+import Phylo.Stat.CASTERTopo
 
 /-!
 # `Phylo.Stat.CASTERLM1` —— CASTER 的 LM1 模型：位点对权重与基因树层得分差闭式
@@ -877,6 +879,513 @@ theorem E_wLM1_sub_pos (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1)
   have h5 : 0 < 1 - ee lam (2 * lx) := by linarith
   have h8 : (0 : ℝ) < 8 := by norm_num
   exact mul_pos (mul_pos (mul_pos (mul_pos h8 h1) h2) h3) h5
+
+/-! ## 6. 基因树层：三段形状表、命题 A 数据与 `propB_of_bridge` 对接
+
+本节把 §1–§5 的**基准形状**结论接到抽象引擎
+（`Phylo.Stat.CASTERBridge.PropAData` ⇒ `Phylo.Stat.CASTERTopo.propB_of_bridge`）：
+
+* **三段形状表**：形状 `S` 的基因树按 `perm S` 搬到基准坐标后，拓扑 `T` 的期望权重
+  `geneE S l lx T` 等于某个基准坐标期望 `Ecanon`（表项 `tab S T`，与 JC69 版完全相同）；
+* **`lm1PropAData`**：把 `geneE` 打包成引擎的 `PropAData` 实例，
+  三条子句由 ★★★ `E_wLM1_ab_sub_ac`（形状无关形式 `Ecanon_ab_sub_ac`）
+  与「两个错拓扑期望相等」（`E_wLM1_ac_bd_eq_ad_bc`）收口；
+* **`lm1Amp` / `lm1Amp_perm` / `lm1Amp_pos` / `lm1_propB_of_bridge`**：
+  幅度的**形状无关性**（`∏`/`∑` 的重指标）、幅度正性，以及喂给 `propB_of_bridge` 的接口。
+
+（结构逐字对应 `Phylo.Stat.CASTERGeneTree` 的 JC69 版；`tab` 与 `canonLen` 的约定相同。） -/
+
+open Phylo.Stat.CASTERWeights
+open Phylo.Stat.CASTEREngine
+open Phylo.Stat.CASTERBridge
+open Phylo.Stat.CASTERTopo
+
+/-! ### 6.1 `perm` 的显式取值与四条复合恒等式 -/
+
+@[simp] theorem perm_ab_cd_apply (i : Fin 4) : perm .ab_cd i = i := by
+  fin_cases i <;> decide
+
+@[simp] theorem perm_ac_bd_apply (i : Fin 4) : perm .ac_bd i = Equiv.swap 1 2 i := by
+  fin_cases i <;> decide
+
+@[simp] theorem perm_ad_bc_apply (i : Fin 4) :
+    perm .ad_bc i = Equiv.swap 1 2 (Equiv.swap 1 3 i) := by
+  fin_cases i <;> decide
+
+@[simp] theorem swap23_apply_zero : (Equiv.swap (2 : Fin 4) 3) 0 = 0 := by decide
+
+@[simp] theorem swap23_apply_one : (Equiv.swap (2 : Fin 4) 3) 1 = 1 := by decide
+
+@[simp] theorem swap23_apply_two : (Equiv.swap (2 : Fin 4) 3) 2 = 3 := by decide
+
+@[simp] theorem swap23_apply_three : (Equiv.swap (2 : Fin 4) 3) 3 = 2 := by decide
+
+/-- ★ **`perm .ab_cd = perm .ac_bd ∘ perm .ac_bd`**（两边都是恒等）。 -/
+theorem perm_ab_cd_eq_ac_bd_comp_self (i : Fin 4) :
+    perm .ab_cd i = perm .ac_bd (perm .ac_bd i) := by fin_cases i <;> decide
+
+/-- ★ **`perm .ad_bc = perm .ac_bd ∘ perm .ad_bc ∘ swap 2 3`**。 -/
+theorem perm_ad_bc_eq_ac_bd_comp_ad_bc_swap (i : Fin 4) :
+    perm .ad_bc i = perm .ac_bd (perm .ad_bc (Equiv.swap 2 3 i)) := by
+  fin_cases i <;> decide
+
+/-- ★ **`perm .ab_cd = perm .ad_bc ∘ perm .ac_bd ∘ swap 2 3`**。 -/
+theorem perm_ab_cd_eq_ad_bc_comp_ac_bd_swap (i : Fin 4) :
+    perm .ab_cd i = perm .ad_bc (perm .ac_bd (Equiv.swap 2 3 i)) := by
+  fin_cases i <;> decide
+
+/-- ★ **`perm .ac_bd = perm .ad_bc ∘ perm .ad_bc ∘ swap 2 3`**。 -/
+theorem perm_ac_bd_eq_ad_bc_comp_self_swap (i : Fin 4) :
+    perm .ac_bd i = perm .ad_bc (perm .ad_bc (Equiv.swap 2 3 i)) := by
+  fin_cases i <;> decide
+
+/-- ★ **`swap 2 3 ∘ perm .ad_bc = perm .ac_bd`**（逐点形式；§6.7 的 `ac|bd ↔ ad|bc` 用）。 -/
+theorem swap23_comp_perm_ad_bc (i : Fin 4) :
+    Equiv.swap 2 3 (perm .ad_bc i) = perm .ac_bd i := by fin_cases i <;> decide
+
+/-! ### 6.2 位点对模式的重标号与权重的 `2 ↔ 3` 不变性 -/
+
+/-- **把位点对模式按叶置换 `p` 重标号**（与 `perm` 配合把基准坐标搬到物种坐标）。 -/
+def relabel (p : Equiv.Perm (Fin 4)) (σ : SitePair) : SitePair :=
+  (fun i => σ.1 (p i), fun i => σ.2 (p i))
+
+@[simp] theorem relabel_one (σ : SitePair) : relabel 1 σ = σ := rfl
+
+theorem relabel_comp (p q : Equiv.Perm (Fin 4)) (σ : SitePair) :
+    relabel p (relabel q σ) = relabel (q * p) σ := rfl
+
+/-- `wLM1` 的定义就是「把 `T` 的两侧搬到基准坐标」。 -/
+theorem wLM1_eq_relabel (π : Fin 4 → ℝ) (T : Topo) (σ : SitePair) :
+    wLM1 π T σ = wLM1Base π (relabel (perm T) σ) := rfl
+
+theorem ind_ne_comm (a b : Fin 2) : ind (a ≠ b) = ind (b ≠ a) := by
+  by_cases h : a = b
+  · simp [ind, h]
+  · have h' : b ≠ a := fun hh => h hh.symm
+    simp [ind, h, h']
+
+/-- ★ **权重表在基准坐标的 `2 ↔ 3` 交换下不变**（`c ↔ d` 同侧互换的 `wLM1Base` 形式）。 -/
+theorem wLM1Base_comp_swap23 (π : Fin 4 → ℝ) (p₁ p₂ : SitePat) :
+    wLM1Base π (p₁ ∘ Equiv.swap 2 3, p₂ ∘ Equiv.swap 2 3) = wLM1Base π (p₁, p₂) := by
+  rw [wLM1Base_eq, wLM1Base_eq]
+  simp only [wBg, wNN, ind_nn, fDiff, Function.comp_apply, swap23_apply_zero,
+    swap23_apply_one, swap23_apply_two, swap23_apply_three, ind_ne_comm]
+
+/-! ### 6.3 规范枝长向量、位点对概率与基因树的期望权重 -/
+
+/-- 形状 `S` 的基因树在基准 `ab|cd` 坐标下的**规范枝长向量**：位置 `0,1` 放 `S` 一侧的
+两条叶边、位置 `3,4` 放另一侧的两条叶边、位置 `2` 放内部枝长。
+
+（与 `Phylo.JC.patternProb` 的约定一致：`t 0, t 1` 挂在内部顶点 `a` 上，
+`t 3, t 4` 挂在内部顶点 `b` 上，`t 2` 是 `a—b`。） -/
+def canonLen (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) : Fin 5 → ℝ :=
+  ![l (perm S 0), l (perm S 1), lx, l (perm S 2), l (perm S 3)]
+
+@[simp] theorem canonLen_zero (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    canonLen S l lx 0 = l (perm S 0) := rfl
+
+@[simp] theorem canonLen_one (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    canonLen S l lx 1 = l (perm S 1) := rfl
+
+@[simp] theorem canonLen_two (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    canonLen S l lx 2 = lx := rfl
+
+@[simp] theorem canonLen_three (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    canonLen S l lx 3 = l (perm S 2) := rfl
+
+@[simp] theorem canonLen_four (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    canonLen S l lx 4 = l (perm S 3) := rfl
+
+/-- **基准坐标的位点对概率**：把规范枝长向量 `t = ![l_a, l_b, l_x, l_c, l_d]` 丢进 ★ `q`
+（两位点独立 ⇒ 两个单位点概率之积）。 -/
+noncomputable def qFrom (π : Fin 4 → ℝ) (lam : ℝ) (t : Fin 5 → ℝ) (σ : SitePair) : ℝ :=
+  q π lam (t 0) (t 1) (t 3) (t 4) (t 2) σ.1 * q π lam (t 0) (t 1) (t 3) (t 4) (t 2) σ.2
+
+/-- **期望得分 `E` 在规范枝长向量上的写法**：
+`Ecanon π T lam t = E π T lam (t 0) (t 1) (t 3) (t 4) (t 2)`。 -/
+noncomputable def Ecanon (π : Fin 4 → ℝ) (T : Topo) (lam : ℝ) (t : Fin 5 → ℝ) : ℝ :=
+  E π T lam (t 0) (t 1) (t 3) (t 4) (t 2)
+
+@[simp] theorem Ecanon_apply (π : Fin 4 → ℝ) (T : Topo) (lam : ℝ) (t : Fin 5 → ℝ) :
+    Ecanon π T lam t = E π T lam (t 0) (t 1) (t 3) (t 4) (t 2) := rfl
+
+/-- **形状 `S` 的基因树上，拓扑 `T` 的期望权重**（LM1）：
+
+`geneE S l lx T = ∑_σ wLM1 T σ · qFrom (canonLen S l lx) (σ ∘ perm S)`。
+
+（`q`/`wLM1` 都在**基准坐标**里说，而基因树的叶位置按 `perm S` 排列，
+故模式的第 `i` 位取 `σ (perm S i)`。） -/
+noncomputable def geneE (π : Fin 4 → ℝ) (lam : ℝ) (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ)
+    (T : Topo) : ℝ :=
+  ∑ σ : SitePair, wLM1 π T σ * qFrom π lam (canonLen S l lx) (relabel (perm S) σ)
+
+/-- **表项映射 `tab S T`**（与 `Phylo.Stat.CASTERGeneTree.tab` 完全相同）。 -/
+def tab : Topo → Topo → Topo
+  | .ab_cd, T => T
+  | .ac_bd, .ab_cd => .ac_bd
+  | .ac_bd, .ac_bd => .ab_cd
+  | .ac_bd, .ad_bc => .ad_bc
+  | .ad_bc, .ab_cd => .ac_bd
+  | .ad_bc, .ac_bd => .ad_bc
+  | .ad_bc, .ad_bc => .ab_cd
+
+/-! ### 6.4 重指标与表项的一般引理 -/
+
+/-- ★ **重指标**：按置换 `p` 重标号是 `SitePair` 上的双射，故
+`∑_σ F (relabel p σ) = ∑_τ F τ`。 -/
+theorem sum_comp_relabel (p : Equiv.Perm (Fin 4)) (F : SitePair → ℝ) :
+    (∑ σ : SitePair, F (relabel p σ)) = ∑ τ : SitePair, F τ :=
+  Equiv.sum_comp (Equiv.prodCongr (Equiv.arrowCongr p.symm (Equiv.refl (Fin 2)))
+    (Equiv.arrowCongr p.symm (Equiv.refl (Fin 2)))) F
+
+/-- ★★ **表项的一般引理**：若逐模式下 `wLM1 T σ = wLM1 T' (relabel (perm S) σ)`，
+则形状 `S` 的基因树上拓扑 `T` 的期望权重，就是把规范枝长丢进基准坐标得分 `T'`。
+
+证明：重指标 `σ ↦ relabel (perm S) σ`（`sum_comp_relabel`）后逐项改写。 -/
+theorem geneE_eq_E_of (π : Fin 4 → ℝ) (lam : ℝ) (S T T' : Topo) (l : Fin 4 → ℝ) (lx : ℝ)
+    (h : ∀ σ : SitePair, wLM1 π T σ = wLM1 π T' (relabel (perm S) σ)) :
+    geneE π lam S l lx T
+      = E π T' lam (canonLen S l lx 0) (canonLen S l lx 1) (canonLen S l lx 3)
+          (canonLen S l lx 4) (canonLen S l lx 2) := by
+  have h1 : geneE π lam S l lx T
+      = ∑ σ : SitePair, wLM1 π T' (relabel (perm S) σ)
+          * qFrom π lam (canonLen S l lx) (relabel (perm S) σ) := by
+    simp only [geneE]
+    exact Finset.sum_congr rfl fun σ _ => by rw [h σ]
+  rw [h1]
+  rw [sum_comp_relabel (perm S)
+    (fun τ : SitePair => wLM1 π T' τ * qFrom π lam (canonLen S l lx) τ)]
+  simp only [E, qFrom]
+
+/-! ### 6.5 逐模式的 `wLM1` 不变性（只有 3 条是实质性的） -/
+
+/-- 表项 `(ac_bd, ab_cd) ↦ ac_bd`：`perm .ac_bd` 是对合。 -/
+theorem wLM1_ab_cd_eq_ac_bd_comp_ac_bd (π : Fin 4 → ℝ) (σ : SitePair) :
+    wLM1 π .ab_cd σ = wLM1 π .ac_bd (relabel (perm .ac_bd) σ) := by
+  have h1 : (fun i : Fin 4 => σ.1 (perm .ab_cd i))
+      = (fun j : Fin 4 => σ.1 (perm .ac_bd (perm .ac_bd j))) := by
+    funext i; simp only [perm_ab_cd_eq_ac_bd_comp_self i]
+  have h2 : (fun i : Fin 4 => σ.2 (perm .ab_cd i))
+      = (fun j : Fin 4 => σ.2 (perm .ac_bd (perm .ac_bd j))) := by
+    funext i; simp only [perm_ab_cd_eq_ac_bd_comp_self i]
+  simp only [wLM1, relabel, h1, h2]
+
+/-- 表项 `(ac_bd, ad_bc) ↦ ad_bc`：需要 `perm .ad_bc = perm .ac_bd ∘ perm .ad_bc ∘ swap 2 3`。 -/
+theorem wLM1_ad_bc_eq_ad_bc_comp_ac_bd (π : Fin 4 → ℝ) (σ : SitePair) :
+    wLM1 π .ad_bc σ = wLM1 π .ad_bc (relabel (perm .ac_bd) σ) := by
+  have h1 : (fun i : Fin 4 => σ.1 (perm .ad_bc i))
+      = (fun j : Fin 4 => σ.1 (perm .ac_bd (perm .ad_bc j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ad_bc_eq_ac_bd_comp_ad_bc_swap i]
+  have h2 : (fun i : Fin 4 => σ.2 (perm .ad_bc i))
+      = (fun j : Fin 4 => σ.2 (perm .ac_bd (perm .ad_bc j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ad_bc_eq_ac_bd_comp_ad_bc_swap i]
+  simp only [wLM1, relabel, h1, h2, wLM1Base_comp_swap23]
+
+/-- 表项 `(ad_bc, ab_cd) ↦ ac_bd`：需要 `perm .ab_cd = perm .ad_bc ∘ perm .ac_bd ∘ swap 2 3`。 -/
+theorem wLM1_ab_cd_eq_ac_bd_comp_ad_bc (π : Fin 4 → ℝ) (σ : SitePair) :
+    wLM1 π .ab_cd σ = wLM1 π .ac_bd (relabel (perm .ad_bc) σ) := by
+  have h1 : (fun i : Fin 4 => σ.1 (perm .ab_cd i))
+      = (fun j : Fin 4 => σ.1 (perm .ad_bc (perm .ac_bd j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ab_cd_eq_ad_bc_comp_ac_bd_swap i]
+  have h2 : (fun i : Fin 4 => σ.2 (perm .ab_cd i))
+      = (fun j : Fin 4 => σ.2 (perm .ad_bc (perm .ac_bd j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ab_cd_eq_ad_bc_comp_ac_bd_swap i]
+  simp only [wLM1, relabel, h1, h2, wLM1Base_comp_swap23]
+
+/-- 表项 `(ad_bc, ac_bd) ↦ ad_bc`：需要 `perm .ac_bd = perm .ad_bc ∘ perm .ad_bc ∘ swap 2 3`。 -/
+theorem wLM1_ac_bd_eq_ad_bc_comp_ad_bc (π : Fin 4 → ℝ) (σ : SitePair) :
+    wLM1 π .ac_bd σ = wLM1 π .ad_bc (relabel (perm .ad_bc) σ) := by
+  have h1 : (fun i : Fin 4 => σ.1 (perm .ac_bd i))
+      = (fun j : Fin 4 => σ.1 (perm .ad_bc (perm .ad_bc j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ac_bd_eq_ad_bc_comp_self_swap i]
+  have h2 : (fun i : Fin 4 => σ.2 (perm .ac_bd i))
+      = (fun j : Fin 4 => σ.2 (perm .ad_bc (perm .ad_bc j))) ∘ Equiv.swap 2 3 := by
+    funext i; simp only [Function.comp_apply, perm_ac_bd_eq_ad_bc_comp_self_swap i]
+  simp only [wLM1, relabel, h1, h2, wLM1Base_comp_swap23]
+
+/-! ### 6.6 九条表项 -/
+
+/-- ★★ 表项 `(ab_cd, ab_cd) ↦ ab_cd`。 -/
+theorem geneE_tab_ab_cd_ab_cd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ab_cd l lx .ab_cd
+      = E π .ab_cd lam (canonLen .ab_cd l lx 0) (canonLen .ab_cd l lx 1)
+          (canonLen .ab_cd l lx 3) (canonLen .ab_cd l lx 4) (canonLen .ab_cd l lx 2) :=
+  geneE_eq_E_of π lam .ab_cd .ab_cd .ab_cd l lx fun _ => rfl
+
+/-- ★★ 表项 `(ab_cd, ac_bd) ↦ ac_bd`。 -/
+theorem geneE_tab_ab_cd_ac_bd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ab_cd l lx .ac_bd
+      = E π .ac_bd lam (canonLen .ab_cd l lx 0) (canonLen .ab_cd l lx 1)
+          (canonLen .ab_cd l lx 3) (canonLen .ab_cd l lx 4) (canonLen .ab_cd l lx 2) :=
+  geneE_eq_E_of π lam .ab_cd .ac_bd .ac_bd l lx fun _ => rfl
+
+/-- ★★ 表项 `(ab_cd, ad_bc) ↦ ad_bc`。 -/
+theorem geneE_tab_ab_cd_ad_bc (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ab_cd l lx .ad_bc
+      = E π .ad_bc lam (canonLen .ab_cd l lx 0) (canonLen .ab_cd l lx 1)
+          (canonLen .ab_cd l lx 3) (canonLen .ab_cd l lx 4) (canonLen .ab_cd l lx 2) :=
+  geneE_eq_E_of π lam .ab_cd .ad_bc .ad_bc l lx fun _ => rfl
+
+/-- ★★ 表项 `(ac_bd, ab_cd) ↦ ac_bd`。 -/
+theorem geneE_tab_ac_bd_ab_cd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ac_bd l lx .ab_cd
+      = E π .ac_bd lam (canonLen .ac_bd l lx 0) (canonLen .ac_bd l lx 1)
+          (canonLen .ac_bd l lx 3) (canonLen .ac_bd l lx 4) (canonLen .ac_bd l lx 2) :=
+  geneE_eq_E_of π lam .ac_bd .ab_cd .ac_bd l lx
+    (wLM1_ab_cd_eq_ac_bd_comp_ac_bd π)
+
+/-- ★★ 表项 `(ac_bd, ac_bd) ↦ ab_cd`。 -/
+theorem geneE_tab_ac_bd_ac_bd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ac_bd l lx .ac_bd
+      = E π .ab_cd lam (canonLen .ac_bd l lx 0) (canonLen .ac_bd l lx 1)
+          (canonLen .ac_bd l lx 3) (canonLen .ac_bd l lx 4) (canonLen .ac_bd l lx 2) :=
+  geneE_eq_E_of π lam .ac_bd .ac_bd .ab_cd l lx fun _ => rfl
+
+/-- ★★ 表项 `(ac_bd, ad_bc) ↦ ad_bc`。 -/
+theorem geneE_tab_ac_bd_ad_bc (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ac_bd l lx .ad_bc
+      = E π .ad_bc lam (canonLen .ac_bd l lx 0) (canonLen .ac_bd l lx 1)
+          (canonLen .ac_bd l lx 3) (canonLen .ac_bd l lx 4) (canonLen .ac_bd l lx 2) :=
+  geneE_eq_E_of π lam .ac_bd .ad_bc .ad_bc l lx
+    (wLM1_ad_bc_eq_ad_bc_comp_ac_bd π)
+
+/-- ★★ 表项 `(ad_bc, ab_cd) ↦ ac_bd`。 -/
+theorem geneE_tab_ad_bc_ab_cd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ad_bc l lx .ab_cd
+      = E π .ac_bd lam (canonLen .ad_bc l lx 0) (canonLen .ad_bc l lx 1)
+          (canonLen .ad_bc l lx 3) (canonLen .ad_bc l lx 4) (canonLen .ad_bc l lx 2) :=
+  geneE_eq_E_of π lam .ad_bc .ab_cd .ac_bd l lx
+    (wLM1_ab_cd_eq_ac_bd_comp_ad_bc π)
+
+/-- ★★ 表项 `(ad_bc, ac_bd) ↦ ad_bc`。 -/
+theorem geneE_tab_ad_bc_ac_bd (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ad_bc l lx .ac_bd
+      = E π .ad_bc lam (canonLen .ad_bc l lx 0) (canonLen .ad_bc l lx 1)
+          (canonLen .ad_bc l lx 3) (canonLen .ad_bc l lx 4) (canonLen .ad_bc l lx 2) :=
+  geneE_eq_E_of π lam .ad_bc .ac_bd .ad_bc l lx
+    (wLM1_ac_bd_eq_ad_bc_comp_ad_bc π)
+
+/-- ★★ 表项 `(ad_bc, ad_bc) ↦ ab_cd`。 -/
+theorem geneE_tab_ad_bc_ad_bc (π : Fin 4 → ℝ) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ad_bc l lx .ad_bc
+      = E π .ab_cd lam (canonLen .ad_bc l lx 0) (canonLen .ad_bc l lx 1)
+          (canonLen .ad_bc l lx 3) (canonLen .ad_bc l lx 4) (canonLen .ad_bc l lx 2) :=
+  geneE_eq_E_of π lam .ad_bc .ad_bc .ab_cd l lx fun _ => rfl
+
+/-- ★★ **九条表项合成一条**：`geneE S l lx T = Ecanon (tab S T) (canonLen S l lx)`。 -/
+theorem geneE_tab (π : Fin 4 → ℝ) (lam : ℝ) (S T : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam S l lx T = Ecanon π (tab S T) lam (canonLen S l lx) := by
+  cases S <;> cases T
+  · exact geneE_tab_ab_cd_ab_cd π lam l lx
+  · exact geneE_tab_ab_cd_ac_bd π lam l lx
+  · exact geneE_tab_ab_cd_ad_bc π lam l lx
+  · exact geneE_tab_ac_bd_ab_cd π lam l lx
+  · exact geneE_tab_ac_bd_ac_bd π lam l lx
+  · exact geneE_tab_ac_bd_ad_bc π lam l lx
+  · exact geneE_tab_ad_bc_ab_cd π lam l lx
+  · exact geneE_tab_ad_bc_ac_bd π lam l lx
+  · exact geneE_tab_ad_bc_ad_bc π lam l lx
+
+/-! ### 6.7 形状无关的主定理与 `ad|bc` 的闭式 -/
+
+/-- ★ **叶长求和对 `perm S` 不变**：`∑ᵢ l (perm S i) = ∑ᵢ l i`。 -/
+theorem sum_perm_len (S : Topo) (l : Fin 4 → ℝ) :
+    l (perm S 0) + l (perm S 1) + l (perm S 2) + l (perm S 3) = l 0 + l 1 + l 2 + l 3 := by
+  rw [← Fin.sum_univ_four (fun i => l (perm S i)), ← Fin.sum_univ_four l]
+  exact Equiv.sum_comp (perm S) l
+
+/-- ★★ **形状无关的主定理**（命题 A 的幅度形式）：把形状 `S` 的叶长按 `perm S` 搬到基准坐标后，
+真拓扑与错拓扑的期望差仍是 `8π_R²π_Y²·e^{−λ∑l}·(1 − e^{−2λl_x})`。 -/
+theorem Ecanon_ab_sub_ac (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
+    (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    Ecanon π .ab_cd lam (canonLen S l lx) - Ecanon π .ac_bd lam (canonLen S l lx)
+      = 8 * piR π ^ 2 * piY π ^ 2 * ee lam (l 0 + l 1 + l 2 + l 3)
+          * (1 - ee lam (2 * lx)) := by
+  simp only [Ecanon, canonLen_zero, canonLen_one, canonLen_three, canonLen_four, canonLen_two]
+  rw [E_wLM1_ab_sub_ac π hsum lam, sum_perm_len]
+
+/-- ★ `q` 在基准坐标的 `2 ↔ 3` 交换下只交换 `l_c` 与 `l_d`。 -/
+theorem q_comp_swap23 (π : Fin 4 → ℝ) (lam la lb lc ld lx : ℝ) (p : SitePat) :
+    q π lam la lb lc ld lx (fun i => p (Equiv.swap 2 3 i)) = q π lam la lb ld lc lx p := by
+  simp only [q, swap23_apply_zero, swap23_apply_one, swap23_apply_two, swap23_apply_three]
+  refine Finset.sum_congr rfl fun m _ => Finset.sum_congr rfl fun n _ => ?_
+  ring
+
+/-- ★ **`ac|bd` 与 `ad|bc` 的表在 `2 ↔ 3` 交换下互换**。 -/
+theorem wLM1_ac_bd_eq_ad_bc_comp_swap23 (π : Fin 4 → ℝ) (σ : SitePair) :
+    wLM1 π .ac_bd σ = wLM1 π .ad_bc (relabel (Equiv.swap 2 3) σ) := by
+  have h1 : (fun i : Fin 4 => σ.1 (Equiv.swap 2 3 (perm .ad_bc i)))
+      = (fun i : Fin 4 => σ.1 (perm .ac_bd i)) := by
+    funext i; rw [swap23_comp_perm_ad_bc i]
+  have h2 : (fun i : Fin 4 => σ.2 (Equiv.swap 2 3 (perm .ad_bc i)))
+      = (fun i : Fin 4 => σ.2 (perm .ac_bd i)) := by
+    funext i; rw [swap23_comp_perm_ad_bc i]
+  simp only [wLM1, relabel, h1, h2]
+
+/-- ★★ **`ad|bc` 的期望权重 = `ac|bd` 的期望权重（叶长 `c,d` 互换）**：重指标 + 两条对称性。 -/
+theorem E_wLM1_ad_bc_eq_ac_bd_swap (π : Fin 4 → ℝ) (lam la lb lc ld lx : ℝ) :
+    E π .ad_bc lam la lb lc ld lx = E π .ac_bd lam la lb ld lc lx := by
+  simp only [E]
+  rw [← sum_comp_relabel (Equiv.swap 2 3)
+    (fun σ : SitePair => wLM1 π .ad_bc σ
+      * (q π lam la lb lc ld lx σ.1 * q π lam la lb lc ld lx σ.2))]
+  refine Finset.sum_congr rfl fun τ _ => ?_
+  rw [← wLM1_ac_bd_eq_ad_bc_comp_swap23]
+  simp only [relabel]
+  rw [q_comp_swap23, q_comp_swap23]
+
+/-- ★★ **`ad|bc` 的期望权重闭式**（与 `ac|bd` 同值）。 -/
+theorem E_wLM1_ad_bc (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam la lb lc ld lx : ℝ) :
+    E π .ad_bc lam la lb lc ld lx
+      = 8 * piR π ^ 2 * piY π ^ 2 * (ee lam (la + lb + lc + ld + 2 * lx) - 1) := by
+  rw [E_wLM1_ad_bc_eq_ac_bd_swap, E_wLM1_ac_bd π hsum lam]
+  rw [show la + lb + ld + lc + 2 * lx = la + lb + lc + ld + 2 * lx by ring]
+
+/-- ★★ **基准坐标下两个错拓扑的期望权重相等**（命题 A 第二条子句的来源）。 -/
+theorem E_wLM1_ac_bd_eq_ad_bc (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1)
+    (lam la lb lc ld lx : ℝ) :
+    E π .ac_bd lam la lb lc ld lx = E π .ad_bc lam la lb lc ld lx := by
+  rw [E_wLM1_ad_bc π hsum lam, E_wLM1_ac_bd π hsum lam]
+
+/-! ### 6.8 三条「两个错拓扑的期望权重相等」 -/
+
+/-- ★★ 形状 `ab|cd` 的基因树上，两个错拓扑的期望权重相等。 -/
+theorem geneE_ac_bd_eq_ad_bc_of_shape_ab_cd (π : Fin 4 → ℝ)
+    (hsum : piR π + piY π = 1) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ab_cd l lx .ac_bd = geneE π lam .ab_cd l lx .ad_bc := by
+  simp only [geneE_tab, tab, Ecanon, canonLen_zero, canonLen_one, canonLen_three,
+    canonLen_four, canonLen_two, E_wLM1_ac_bd π hsum lam, E_wLM1_ad_bc π hsum lam]
+
+/-- ★★ 形状 `ac|bd` 的基因树上，两个错拓扑的期望权重相等。 -/
+theorem geneE_ab_cd_eq_ad_bc_of_shape_ac_bd (π : Fin 4 → ℝ)
+    (hsum : piR π + piY π = 1) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ac_bd l lx .ab_cd = geneE π lam .ac_bd l lx .ad_bc := by
+  simp only [geneE_tab, tab, Ecanon, canonLen_zero, canonLen_one, canonLen_three,
+    canonLen_four, canonLen_two, E_wLM1_ac_bd π hsum lam, E_wLM1_ad_bc π hsum lam]
+
+/-- ★★ 形状 `ad|bc` 的基因树上，两个错拓扑的期望权重相等。 -/
+theorem geneE_ab_cd_eq_ac_bd_of_shape_ad_bc (π : Fin 4 → ℝ)
+    (hsum : piR π + piY π = 1) (lam : ℝ) (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneE π lam .ad_bc l lx .ab_cd = geneE π lam .ad_bc l lx .ac_bd := by
+  simp only [geneE_tab, tab, Ecanon, canonLen_zero, canonLen_one, canonLen_three,
+    canonLen_four, canonLen_two, E_wLM1_ac_bd π hsum lam, E_wLM1_ad_bc π hsum lam]
+
+/-! ### 6.9 ★★★ 命题 A 对 LM1 成立（`PropAData` 实例） -/
+
+/-- **LM1 的幅度**：只依赖时间 `θ = (叶长向量, 内部枝长)`，**与基因树形状无关**。 -/
+noncomputable def lm1Amp (π : Fin 4 → ℝ) (lam : ℝ) (θ : (Fin 4 → ℝ) × ℝ) : ℝ :=
+  8 * piR π ^ 2 * piY π ^ 2 * ee lam (θ.1 0 + θ.1 1 + θ.1 2 + θ.1 3) * (1 - ee lam (2 * θ.2))
+
+/-- ★★ **幅度的形状无关性**：把形状 `S` 的叶长按 `perm S` 重排后幅度不变
+（这正是 `f` 必须与形状无关的那一步；`∑` 的重指标 `sum_perm_len`）。 -/
+theorem lm1Amp_perm (π : Fin 4 → ℝ) (lam : ℝ) (S : Topo) (l : Fin 4 → ℝ) (lx : ℝ) :
+    8 * piR π ^ 2 * piY π ^ 2
+        * ee lam (l (perm S 0) + l (perm S 1) + l (perm S 2) + l (perm S 3))
+        * (1 - ee lam (2 * lx)) = lm1Amp π lam (l, lx) := by
+  rw [lm1Amp, sum_perm_len]
+
+/-- ★★ **幅度为正**（`π_R, π_Y > 0`、`λ > 0`、内部枝长 `> 0`）。 -/
+theorem lm1Amp_pos (π : Fin 4 → ℝ) (hR : 0 < piR π) (hY : 0 < piY π) {lam : ℝ}
+    (hlam : 0 < lam) {θ : (Fin 4 → ℝ) × ℝ} (hθ : 0 < θ.2) : 0 < lm1Amp π lam θ := by
+  have h1 : 0 < piR π ^ 2 := pow_pos hR 2
+  have h2 : 0 < piY π ^ 2 := pow_pos hY 2
+  have h3 : 0 < ee lam (θ.1 0 + θ.1 1 + θ.1 2 + θ.1 3) := ee_pos _ _
+  have h4 : ee lam (2 * θ.2) < 1 := ee_lt_one (by nlinarith)
+  have h5 : 0 < 1 - ee lam (2 * θ.2) := by linarith
+  have h8 : (0 : ℝ) < 8 := by norm_num
+  exact mul_pos (mul_pos (mul_pos (mul_pos h8 h1) h2) h3) h5
+
+/-- ★★★ **LM1 的命题 A 数据**（时间 `θ = (叶长, 内部枝长)`）：
+
+* `A θ T' r = geneE T' θ.1 θ.2 r` —— 形状 `T'` 的基因树上拓扑 `r` 的期望权重；
+* `f θ = lm1Amp θ` —— 幅度；
+* 三条子句由 ★★ `geneE_tab`（搬回基准坐标）、★★ `Ecanon_ab_sub_ac`（形状无关主定理）
+  与 ★★ `E_wLM1_ac_bd_eq_ad_bc`（两个错拓扑相等）收口。 -/
+noncomputable def lm1PropAData (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ) :
+    PropAData ((Fin 4 → ℝ) × ℝ) where
+  A := fun θ T' r => geneE π lam T' θ.1 θ.2 r
+  f := fun θ => 8 * piR π ^ 2 * piY π ^ 2 * ee lam (θ.1 0 + θ.1 1 + θ.1 2 + θ.1 3)
+        * (1 - ee lam (2 * θ.2))
+  clause_ab := by
+    intro θ T' hT
+    subst hT
+    have hd := Ecanon_ab_sub_ac π hsum lam .ab_cd θ.1 θ.2
+    have h2 : Ecanon π .ac_bd lam (canonLen .ab_cd θ.1 θ.2)
+        = Ecanon π .ad_bc lam (canonLen .ab_cd θ.1 θ.2) := by
+      simp only [Ecanon]
+      exact E_wLM1_ac_bd_eq_ad_bc π hsum lam _ _ _ _ _
+    rw [geneE_tab π lam .ab_cd .ab_cd θ.1 θ.2, geneE_tab π lam .ab_cd .ac_bd θ.1 θ.2,
+      geneE_tab π lam .ab_cd .ad_bc θ.1 θ.2]
+    simp only [tab]
+    refine ⟨?_, ?_⟩ <;> linarith
+  clause_ac := by
+    intro θ T' hT
+    subst hT
+    have hd := Ecanon_ab_sub_ac π hsum lam .ac_bd θ.1 θ.2
+    have h2 : Ecanon π .ac_bd lam (canonLen .ac_bd θ.1 θ.2)
+        = Ecanon π .ad_bc lam (canonLen .ac_bd θ.1 θ.2) := by
+      simp only [Ecanon]
+      exact E_wLM1_ac_bd_eq_ad_bc π hsum lam _ _ _ _ _
+    rw [geneE_tab π lam .ac_bd .ab_cd θ.1 θ.2, geneE_tab π lam .ac_bd .ac_bd θ.1 θ.2,
+      geneE_tab π lam .ac_bd .ad_bc θ.1 θ.2]
+    simp only [tab]
+    refine ⟨?_, ?_⟩ <;> linarith
+  clause_ad := by
+    intro θ T' hT
+    subst hT
+    have hd := Ecanon_ab_sub_ac π hsum lam .ad_bc θ.1 θ.2
+    have h2 : Ecanon π .ac_bd lam (canonLen .ad_bc θ.1 θ.2)
+        = Ecanon π .ad_bc lam (canonLen .ad_bc θ.1 θ.2) := by
+      simp only [Ecanon]
+      exact E_wLM1_ac_bd_eq_ad_bc π hsum lam _ _ _ _ _
+    rw [geneE_tab π lam .ad_bc .ab_cd θ.1 θ.2, geneE_tab π lam .ad_bc .ac_bd θ.1 θ.2,
+      geneE_tab π lam .ad_bc .ad_bc θ.1 θ.2]
+    simp only [tab]
+    refine ⟨?_, ?_⟩ <;> linarith
+
+/-- ★★ **`lm1PropAData` 的幅度就是 `lm1Amp`**。 -/
+theorem lm1PropAData_f (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
+    (θ : (Fin 4 → ℝ) × ℝ) : (lm1PropAData π hsum lam).f θ = lm1Amp π lam θ := rfl
+
+/-- ★★★ **命题 A ⇒ 符号形式**（`PropA.delta` 在 LM1 上的实例）：
+`A θ .ab_cd − A θ .ac_bd = sign (τ θ) · f θ`。 -/
+theorem lm1PropAData_delta (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
+    (p : ((Fin 4 → ℝ) × ℝ) × Topo) :
+    (lm1PropAData π hsum lam).toPropA.A p .ab_cd
+        - (lm1PropAData π hsum lam).toPropA.A p .ac_bd
+      = sign ((lm1PropAData π hsum lam).toPropA.τ p)
+          * (lm1PropAData π hsum lam).toPropA.f p :=
+  PropA.delta (lm1PropAData π hsum lam).toPropA p
+
+section Bridge
+
+open MeasureTheory
+
+/-- ★★★ **`lm1PropAData` 喂给 `CASTERTopo.propB_of_bridge`**：
+对 LM1 的**时间层** `(叶长向量, 内部枝长)` 上的任意 `MSCTopoSym` 与概率测度，
+若可积性与「无深合并正概率」成立，则真拓扑 `ab|cd` 的期望权重严格大于两个错拓扑。
+
+（这就是 LM1 插进 CASTER 引擎的接口；MSC 侧的 `S`/`ν`/可积性由
+`Phylo.Stat.MSC` 与正文定理 1 的条件 (2)「权重一致有界」供给。） -/
+theorem lm1_propB_of_bridge (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ))
+    (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
+    (hdeep : MeasurableSet {θ | S.deep θ})
+    (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
+    (hf_int : Integrable (lm1PropAData π hsum lam).f ν)
+    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (lm1PropAData π hsum lam).f θ)
+    (hpos : 0 < ν {θ | ¬ S.deep θ})
+    (hint_ab : Integrable
+      (fun θ => ∑ T' : Topo, S.τd θ T' * (lm1PropAData π hsum lam).A θ T' .ab_cd) ν)
+    (hint_ac : Integrable
+      (fun θ => ∑ T' : Topo, S.τd θ T' * (lm1PropAData π hsum lam).A θ T' .ac_bd) ν)
+    (hint_ad : Integrable
+      (fun θ => ∑ T' : Topo, S.τd θ T' * (lm1PropAData π hsum lam).A θ T' .ad_bc) ν) :
+    ∀ T : Topo, T ≠ Topo.ab_cd →
+      expWeight ν S.τd (lm1PropAData π hsum lam).A T
+        < expWeight ν S.τd (lm1PropAData π hsum lam).A Topo.ab_cd :=
+  propB_of_bridge S ν hdeep (lm1PropAData π hsum lam) hf_int hf_pos hpos hint_ab hint_ac hint_ad
+
+end Bridge
 
 end
 
