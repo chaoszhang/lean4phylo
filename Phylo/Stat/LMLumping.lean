@@ -276,6 +276,90 @@ theorem stronglyLumpable (hden : (M.pi 0 + M.pi 1) * (M.pi 2 + M.pi 3) ≠ 0) :
   · simpa only [qAY, qGY, q] using M.qAY_eq_qGY hden
   · simpa only [qCR, qTR, q] using M.qCR_eq_qTR hden
 
+/-! ### LM2 / LM3：把集总结论沿状态置换**搬运**过去
+
+附录（`sm.tex` **324–330** 行）说：LM2 的转移矩阵是「把 LM1 的转移矩阵里的 `G` 与 `T` 对换」、
+LM3 是「把 `G` 与 `C` 对换」，并说「类似的引理对 LM2 / LM3 也成立」。
+
+本段**把这句证出来** —— 不需要重做任何 Ω/Φ 代数，只需要一条
+「强集总沿状态置换搬运」的引理。这也就是为什么附录能只用一句话带过 LM2 / LM3。 -/
+
+/-- **按状态置换 `τ` 搬运率矩阵**：`(permMat τ Q) i j = Q (τ i) (τ j)`。
+
+即新模型的状态 `i` 扮演旧模型状态 `τ i` 的角色 —— 这正是附录说的
+「swapping `G` with `T` in the transition matrix」。（`swap` 是对合，故 `τ` 与 `τ⁻¹`
+两种约定给出同一个矩阵。） -/
+def permMat (τ : Equiv.Perm (Fin 4)) (Q : Fin 4 → Fin 4 → ℝ) : Fin 4 → Fin 4 → ℝ :=
+  fun i j => Q (τ i) (τ j)
+
+/-- **`permMat` 保持行和为 `0`**（生成元经状态置换仍是生成元）。 -/
+theorem permMat_row_sum (τ : Equiv.Perm (Fin 4)) (Q : Fin 4 → Fin 4 → ℝ)
+    (hrow : ∀ i, ∑ j : Fin 4, Q i j = 0) (i : Fin 4) :
+    ∑ j : Fin 4, permMat τ Q i j = 0 := by
+  have h := Equiv.sum_comp τ (fun k => Q (τ i) k)
+  simp only [permMat] at h ⊢
+  rw [h]; exact hrow (τ i)
+
+/-- ★★★ **强集总沿状态置换搬运**：`Q` 对 `cls` 强可集总 ⟹ `permMat τ Q` 对 `cls ∘ τ` 强可集总。
+
+证明只是一次**重指标**：把 `∑ j ∈ {j | cls (τ j) = b}` 用 `j ↦ τ j` 换成 `∑ j' ∈ {j' | cls j' = b}`。 -/
+theorem stronglyLumpable_permMat (τ : Equiv.Perm (Fin 4)) (Q : Fin 4 → Fin 4 → ℝ)
+    {cls : Fin 4 → Fin 2} (h : StronglyLumpable cls Q) :
+    StronglyLumpable (fun i => cls (τ i)) (permMat τ Q) := by
+  have hfilter : ∀ b : Fin 2,
+      (Finset.univ.filter (fun j : Fin 4 => cls (τ j) = b))
+        = (Finset.univ.filter (fun j : Fin 4 => cls j = b)).map τ.symm.toEmbedding := by
+    intro b
+    ext j
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_map,
+      Equiv.toEmbedding_apply]
+    constructor
+    · intro hj; exact ⟨τ j, by simpa using hj, by simp⟩
+    · rintro ⟨k, hk, rfl⟩; simpa using hk
+  constructor
+  · intro i i' hii
+    simp only [hfilter 0, Finset.sum_map, permMat, Equiv.toEmbedding_apply,
+      Equiv.apply_symm_apply]
+    exact h.1 (τ i) (τ i') hii
+  · intro i i' hii
+    simp only [hfilter 1, Finset.sum_map, permMat, Equiv.toEmbedding_apply,
+      Equiv.apply_symm_apply]
+    exact h.2 (τ i) (τ i') hii
+
+/-- **LM2 的集总类**：`W = {A,T} ↦ 0`、`S = {C,G} ↦ 1`
+（= LM1 的 `R/Y` 沿 `G↔T` 的像）。 -/
+def clsWS : Fin 4 → Fin 2 := fun i => cls (Equiv.swap 1 3 i)
+
+/-- **LM3 的集总类**：`M = {A,C} ↦ 0`、`K = {G,T} ↦ 1`
+（= LM1 的 `R/Y` 沿 `G↔C` 的像）。 -/
+def clsMK : Fin 4 → Fin 2 := fun i => cls (Equiv.swap 1 2 i)
+
+/-- LM2 的两类确实是 `{A,T}` 与 `{C,G}`。 -/
+theorem clsWS_zero : (Finset.univ.filter (fun j : Fin 4 => clsWS j = 0)) = {0, 3} := by
+  decide
+
+theorem clsWS_one : (Finset.univ.filter (fun j : Fin 4 => clsWS j = 1)) = {1, 2} := by
+  decide
+
+/-- LM3 的两类确实是 `{A,C}` 与 `{G,T}`。 -/
+theorem clsMK_zero : (Finset.univ.filter (fun j : Fin 4 => clsMK j = 0)) = {0, 2} := by
+  decide
+
+theorem clsMK_one : (Finset.univ.filter (fun j : Fin 4 => clsMK j = 1)) = {1, 3} := by
+  decide
+
+/-- ★★★ **LM2（`G↔T`）也可集总**（附录 `sm.tex` 324–326 行）：LM2 的率矩阵
+`permMat (swap 1 3) M.q` 对 `W = {A,T}` / `S = {C,G}` 强可集总。 -/
+theorem stronglyLumpable_LM2 (hden : (M.pi 0 + M.pi 1) * (M.pi 2 + M.pi 3) ≠ 0) :
+    StronglyLumpable clsWS (permMat (Equiv.swap 1 3) M.q) :=
+  stronglyLumpable_permMat (Equiv.swap 1 3) M.q (M.stronglyLumpable hden)
+
+/-- ★★★ **LM3（`G↔C`）也可集总**（附录 `sm.tex` 327–330 行）：LM3 的率矩阵
+`permMat (swap 1 2) M.q` 对 `M = {A,C}` / `K = {G,T}` 强可集总。 -/
+theorem stronglyLumpable_LM3 (hden : (M.pi 0 + M.pi 1) * (M.pi 2 + M.pi 3) ≠ 0) :
+    StronglyLumpable clsMK (permMat (Equiv.swap 1 2) M.q) :=
+  stronglyLumpable_permMat (Equiv.swap 1 2) M.q (M.stronglyLumpable hden)
+
 /-! ### 集总后的 2 状态链（附录 `eq:reduced`） -/
 
 /-- **集总后的 `R → Y` 率**：`D_Y α + (π_A−π_G)(π_C−π_T)β / D_R`。 -/
