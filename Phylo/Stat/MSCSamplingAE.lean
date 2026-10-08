@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.MSC
+import Phylo.Stat.Stability
 
 /-!
 # `Phylo.Stat.MSCSamplingAE` —— **整张**经验 quartet 频率表的**几乎必然**收敛
@@ -39,7 +40,9 @@ import Phylo.Stat.MSC
 | 「每个位点本身是一张 quartet 频率表」 | ⚠️ **假设**（`hind` 非负 / `hsum` 求和为 1 / `hswap` 换向不变） |
 | **整张表同时** a.e. 收敛 | ✅ **本文件**（有限交） |
 | **统一的 `N`**（`FreqClose` 形式） | ✅ **本文件**（有限指标集上取 `sup'`） |
-| `MSCSampling.converges`（确定性公理） | ⚠️ **未改动**，也**不是**本文件的推论（它没有概率空间、没有 `ω`） |
+| **公理化的采样结构被 a.e. 实现** | ✅ **本文件**（§4：`exists_mscSamplingFixed_ae`，真律固定版） |
+| **ASTRAL 的 a.e. 统计一致性** | ✅ **本文件**（§4：由 SLLN ＋ 库内 `stable_argmax` 推出） |
+| `MSCSampling.converges`（**旧**确定性公理） | ⚠️ **未改动**；本文件给出的是**真律固定版** `MSCSamplingFixed` 的 a.e. 实现，**不是**旧谓词的推论 |
 | 一般 `n` 的方差、iid 空间的存在性 | ❌ 未做（W10d 的缺口 V / K） |
 -/
 
@@ -198,5 +201,95 @@ theorem empTable_eventually_close_ae (h : SiteTable ind) (m : MSCFreq X)
     omega
   have := hN n (le_trans hle hn)
   simpa only [empTable, hn0, ↓reduceIte, FreqClose] using this
+
+/-! ## 4. ★★★ 把公理化的采样**在几乎必然意义下实现**
+
+`Phylo/Stat/SamplingAxiomVacuity.lean` 指出：`MSCSampling.converges` 的形状
+（`emp` 不依赖真实律、却对**所有**律断言）使该结构**空**。修正的办法是把**真律固定下来**：
+
+    structure MSCSamplingFixed (X) where
+      law : MSCFreq X
+      emp : ℕ → QuartetFreq X
+      converges : ∀ ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp n) law.freq ε
+
+本节的 ★★★ `exists_mscSamplingFixed_ae` 证明：**在 §3 的 a.e. 事件上，经验频率表**正是这样一个
+结构的居民 —— 即**那条公理被数据本身（几乎必然地）满足**。再叠加库内既有的算法稳定性
+（`Stability.stable_argmax`），得到 ★★★ **ASTRAL 的几乎必然统计一致性**。 -/
+
+universe u v
+
+/-- ★★★ **真律固定版的一致性结构**：`emp` 与 `converges` 都**只对该律**断言
+（与 `SamplingAxiomVacuity.MSCSamplingLaw` 的区别：那里 `emp` 对**每个**律分别给出数据，
+这里只固定**一条**真律）。 -/
+structure MSCSamplingFixed (X : Type u) [Fintype X] [DecidableEq X] where
+  /-- **真实律**。 -/
+  law : MSCFreq.{u, v} X
+  /-- 经验频率表序列。 -/
+  emp : ℕ → QuartetFreq X
+  /-- ★ **大数定律**（只对 `law`）。 -/
+  converges : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N, FreqClose (emp n) law.freq ε
+
+/-- ★★★ **公理化的采样结构被数据 a.e. 实现**：在 `empTable_eventually_close_ae` 的
+a.e. 事件上，经验频率表构成一个 `MSCSamplingFixed`（真律 `= m`）。 -/
+theorem exists_mscSamplingFixed_ae {X : Type u} [Fintype X] [DecidableEq X]
+    {Ω₀ : Type*} [MeasurableSpace Ω₀] (ind : SiteFun X Ω₀) (h : SiteTable ind)
+    (m : MSCFreq.{u, v} X) (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      Integrable (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ)
+    (hindep : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      iIndepFun (fun i (ω : ℕ → Ω₀) => ind (ω i) S hS q) μ)
+    (hident : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S), ∀ i,
+      IdentDistrib (fun ω : ℕ → Ω₀ => ind (ω i) S hS q)
+        (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ μ)
+    (hmean : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      ∫ ω, ind (ω 0) S hS q ∂μ = m.freq.p S hS q) :
+    ∀ᵐ ω ∂μ, ∃ sm : MSCSamplingFixed.{u, v} X,
+      sm.law = m ∧ ∀ n : ℕ, sm.emp n = empTable ind h m n ω := by
+  filter_upwards [empTable_eventually_close_ae ind h m μ hint hindep hident hmean] with ω hω
+  exact ⟨{ law := m, emp := fun n => empTable ind h m n ω, converges := hω }, rfl, fun _ => rfl⟩
+
+/-- ★★★ **ASTRAL 统计一致性（真律固定版）**：把 `Stability.astral_statisticallyConsistent`
+里的 `sm : MSCSampling X` 换成 `MSCSamplingFixed X`，其余**逐字相同**。 -/
+theorem astral_statisticallyConsistent_fixed {X : Type u} [Fintype X] [DecidableEq X]
+    (sm : MSCSamplingFixed.{u, v} X)
+    {E : QuartetFreq X → QuartetTree.{u, v} X} (hE : ∀ D, IsASTRAL D (E D))
+    (hNE : ∃ q : QuartetChoice X, ¬ IsTrueChoice sm.law q) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueChoice sm.law (E (sm.emp n)).q := by
+  classical
+  obtain ⟨δ, hδ, hgap⟩ := exists_gap sm.law hNE
+  set M : ℝ := 2 * (Fintype.card {S : Finset X // S.card = 4} : ℝ) + 1 with hMdef
+  have hMpos : 0 < M := by
+    rw [hMdef]
+    have : (0 : ℝ) ≤ (Fintype.card {S : Finset X // S.card = 4} : ℝ) := Nat.cast_nonneg _
+    linarith
+  obtain ⟨N, hN⟩ := sm.converges (δ / M) (div_pos hδ hMpos)
+  refine ⟨N, fun n hn => ?_⟩
+  refine stable_argmax (D := sm.emp n) sm.law hδ hgap ?_ ?_
+  · simpa [hMdef] using hN n hn
+  · exact hE (sm.emp n) sm.law.toQuartetTree
+
+/-- ★★★ **ASTRAL 的几乎必然统计一致性**（本子批的概率层收口）：
+
+在 iid 位点模型下（W10d 的那组假设），**几乎必然**地，ASTRAL 型估计量 `E` 在**足够多的位点**后
+逐 quartet 恢复真树的选择 —— 即 **`MSCSampling.converges` 那条公理所承载的结论，在概率空间里
+由强大数定律 ＋ 算法稳定性真正推出**。 -/
+theorem astral_statisticallyConsistent_ae {X : Type u} [Fintype X] [DecidableEq X]
+    {Ω₀ : Type*} [MeasurableSpace Ω₀] (ind : SiteFun X Ω₀) (h : SiteTable ind)
+    (m : MSCFreq.{u, v} X) (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      Integrable (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ)
+    (hindep : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      iIndepFun (fun i (ω : ℕ → Ω₀) => ind (ω i) S hS q) μ)
+    (hident : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S), ∀ i,
+      IdentDistrib (fun ω : ℕ → Ω₀ => ind (ω i) S hS q)
+        (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ μ)
+    (hmean : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
+      ∫ ω, ind (ω 0) S hS q ∂μ = m.freq.p S hS q)
+    {E : QuartetFreq X → QuartetTree.{u, v} X} (hE : ∀ D, IsASTRAL D (E D))
+    (hNE : ∃ q : QuartetChoice X, ¬ IsTrueChoice m q) :
+    ∀ᵐ ω ∂μ, ∃ N : ℕ, ∀ n ≥ N, IsTrueChoice m (E (empTable ind h m n ω)).q := by
+  filter_upwards [empTable_eventually_close_ae ind h m μ hint hindep hident hmean] with ω hω
+  exact astral_statisticallyConsistent_fixed
+    ⟨m, fun n => empTable ind h m n ω, hω⟩ hE hNE
 
 end Phylo.Stat.MSCSamplingAE
