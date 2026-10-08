@@ -287,6 +287,36 @@ noncomputable def ofModel (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMe
     propB_of_bridge S ν hdeep P hf_int hf_pos hpos
       (hint .ab_cd) (hint .ac_bd) (hint .ad_bc) T hT
 
+/-- ★★★ **从「每个 4-元集各自的 MSC 模型」打包出 `TopoIdeal`**（**一般多物种情形**）。
+
+这是 `ofModel` 的一般化：每个 4-元集 `S` 有自己的时间空间 `Θ S hS`、自己的基因树拓扑分布
+`M S hS`、自己的命题 A 数据 `P S hS`。真实物种树上各 quartet 的支长不同，
+所以**这才是与正文一致的记账**；`ofModel` 是「所有 quartet 共享同一模型」的特例
+（对单个 quartet 精确）。
+
+`qtrue` 一律取 `.ab_cd`：每个 4-元集的标号（谁当 `a,b,c,d`）是该 quartet 模型自带的约定，
+换标号只是把三个拓扑的名字置换，故不失一般性。 -/
+noncomputable def ofFamily
+    (Θ : (S : Finset X) → S.card = 4 → Type*)
+    [inst : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSpace (Θ S hS)]
+    (M : ∀ (S : Finset X) (hS : S.card = 4), MSCTopoSym (Θ S hS))
+    (ν : ∀ (S : Finset X) (hS : S.card = 4), Measure (Θ S hS))
+    [inst2 : ∀ (S : Finset X) (hS : S.card = 4), IsProbabilityMeasure (ν S hS)]
+    (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
+    (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
+    (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
+      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
+    (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
+      Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS)) :
+    TopoIdeal X where
+  W := fun S hS T => expWeight (ν S hS) (M S hS).τd (P S hS).A T
+  qtrue := fun _ _ => .ab_cd
+  propB := fun S hS T hT =>
+    propB_of_bridge (M S hS) (ν S hS) (hdeep S hS) (P S hS) (hf_int S hS) (hf_pos S hS)
+      (hpos S hS) (hint S hS .ab_cd) (hint S hS .ac_bd) (hint S hS .ad_bc) T hT
+
 end TopoIdeal
 
 end Phylo.Stat.CASTERTopo

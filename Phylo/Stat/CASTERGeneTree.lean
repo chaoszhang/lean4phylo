@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.CASTERJC69
 import Phylo.Stat.CASTEREngine
+import Phylo.Stat.CASTERTopo
 import Mathlib.Tactic
 
 /-!
@@ -68,15 +69,30 @@ Phylo.Stat.CASTEREngine    抽象引擎：命题 A ⇒ 命题 B（完全不认�
    九条表项里只有 4 条需要这条对称性，其余 5 条在基准坐标下逐字相同；
 3. 三条主定理由 `CASTERJC69.score_ab_cd_sub_ac_bd` / `score_ac_bd_eq_ad_bc` 加 `sign` 收口。
 
+## 第二段（§10–§11）：接到抽象引擎，端到端可用
+
+* §10：形状无关的幅度 `jc69Amp`、重指标 `prod_e_len_perm`，以及 `PropAData` 三条子句需要的
+  「自己的拓扑减 `f` 等于另一个」在三个形状上的版本（`geneScore_ab_cd_self_sub` /
+  `geneScore_ac_bd_self_sub` / **`geneScore_ad_bc_self_sub`** —— 最后一条是本批新补的）；
+* §11：★★★ `jc69PropAData : PropAData ((Fin 4 → ℝ) × ℝ)`（时间 = （叶长, 内部枝长））
+  与 ★★★ 端到端定理 1：`propAData_caster_statisticallyConsistent`（任意模型）与
+  `jc69_caster_statisticallyConsistent`（JC69：`∃ N, ∀ n ≥ N, IsTrueT ab_cd (E n)`）。
+
+「大数定律」`hconv`（`TopoClose (emp n) W ε` 最终成立）**作为显式假设**出现，
+与 `Phylo.Stat.CASTERTopo.topo_statisticallyConsistent` 一致 —— 不新增公理。
+
 ## 诚实边界
 
-* 本文件只做 **JC69**（附录 Fig. 1C）。F84 / LM1 的 `PropA` 实例不在本批范围
-  （见 `Phylo.Stat.CASTERWeights` 的「诚实边界」）。
+* 本文件只做 **JC69**（附录 Fig. 1C）。F84 / LM1 的 `PropAData` 实例不在本批范围
+  （见 `Phylo.Stat.CASTERWeights` 的「诚实边界」）；不过 §11 的
+  `propAData_caster_statisticallyConsistent` 对**任意** `PropAData` 成立，换模型不用改一行。
 * `jc69PropA` 只断言**命题 A**（基因树层）；「命题 A ⇒ 命题 B」在
-  `Phylo.Stat.CASTEREngine` 里，模型无关。「`ν{无深合并} > 0`」这一条 MSC 假设
-  在 `MSCTopoSym` 那一层，与本文件无关。
-* 本文件不含 `sorry` / `axiom` / `import Mathlib`，`#print axioms` 只出现
-  `propext`、`Classical.choice`、`Quot.sound`。
+  `Phylo.Stat.CASTEREngine` / `Phylo.Stat.CASTERBridge` 里，模型无关。
+  「`ν{无深合并} > 0`」这一条 MSC 假设在 `MSCTopoSym` 那一层，与本文件无关。
+* 端到端定理的**结论止于 quartet 拓扑层**（`X = Fin 4`，只有一个 4-元集）：
+  「升级为树同构」由 `Phylo.Stat.QuartetDecides` 承担，多物种的逐 quartet 求和
+  由 `Phylo.Stat.CASTERTheorem1` 承担（CASTER 附录原文的做法）。
+* 本文件不含 `sorry` / `axiom` / `import Mathlib`。
 -/
 
 noncomputable section
@@ -87,6 +103,9 @@ open Phylo.Stat.CASTERWeights
 open Phylo.CASTERJC69
 open Phylo.JC
 open Phylo.Stat.CASTEREngine
+open Phylo.Stat.CASTERTopo
+open Phylo.Stat.CASTERBridge
+open MeasureTheory
 
 /-! ## 1. `wJCBase` 在基准坐标上的对称性
 
@@ -470,5 +489,178 @@ noncomputable def jc69PropA : PropA GTree where
 theorem jc69PropA_delta (G : GTree) :
     jc69PropA.A G .ab_cd - jc69PropA.A G .ac_bd = sign (jc69PropA.τ G) * jc69PropA.f G :=
   PropA.delta jc69PropA G
+
+/-! ## 10. 形状无关的幅度 `jc69Amp` 与三条「自己的拓扑减 `f`」恒等式
+
+命题 A 的幅度（`CASTERBridge.PropAData.f`）必须与基因树的**形状无关** —— 它只依赖
+叶长（按物种）与内部枝长。§8 的 `geneScore_delta` 右端是**置换后**的显式四项乘积
+`e (l (perm S 0)) * … * e (l (perm S 3))`，本节用重指标 `prod_e_len_perm` 把它换成
+`jc69Amp l lx = (3/4)·∏_i e (l i)·(1 - e lx)`。
+
+同时补上 `PropAData` 三条子句需要的「自己的拓扑减 `f` 等于另一个」在三个形状上的版本：
+
+| 形状 `S` | 恒等式 |
+|---|---|
+| `ab_cd` | `[ab] − [ac] = amp`（即 §8 `geneScore_delta .ab_cd`） |
+| `ac_bd` | `[ac] − [ab] = amp`（§8 `geneScore_delta .ac_bd` 两边乘 `−1`） |
+| `ad_bc` | `[ad] − [ab] = amp`（**本批新补**） |
+
+第三条由九条表项 + `score_ab_cd_sub_ac_bd` 在 `canonLen .ad_bc l lx` 上直接给出：
+`perm .ad_bc` 把四条叶长按 `0,3,1,2` 排列，`ring` 吸收这个重排。 -/
+
+/-- JC69 的**形状无关**幅度：`(3/4)·∏_i e (l i)·(1 - e lx)`。
+
+（`l` 按物种编号、`lx` 是内部枝长；与基因树形状 `S` 无关 —— 这正是命题 A 里
+「幅度 `f` 只依赖时间数据」那一条的具体内容。） -/
+def jc69Amp (l : Fin 4 → ℝ) (lx : ℝ) : ℝ := (3 / 4) * (∏ i : Fin 4, e (l i)) * (1 - e lx)
+
+/-- ★ **重指标**：`∏ i, e (l (perm S i)) = ∏ i, e (l i)`（`f` 与形状无关的关键）。 -/
+theorem prod_e_len_perm (l : Fin 4 → ℝ) (S : Topo) :
+    ∏ i : Fin 4, e (l (perm S i)) = ∏ i : Fin 4, e (l i) :=
+  Equiv.prod_comp (perm S) (fun i => e (l i))
+
+/-- ★★ **置换乘积的显式四项形式**（`prod_e_len_perm` 的 `Fin.prod_univ_four` 展开）：
+
+`e (l (perm S 0)) · … · e (l (perm S 3)) = e (l 0) · e (l 1) · e (l 2) · e (l 3)`。
+
+这是 §8 `geneScore_delta` 右端（**置换后**的显式四项乘积）与 `jc69Amp`（物种顺序的
+四项乘积）之间的桥。 -/
+theorem e_prod_perm_eq (l : Fin 4 → ℝ) (S : Topo) :
+    e (l (perm S 0)) * e (l (perm S 1)) * e (l (perm S 2)) * e (l (perm S 3))
+      = e (l 0) * e (l 1) * e (l 2) * e (l 3) := by
+  rw [← Fin.prod_univ_four (fun i => e (l (perm S i))), prod_e_len_perm l S,
+    Fin.prod_univ_four (fun i => e (l i))]
+
+/-- `jc69Amp` 的显式四项展开（与 §8 `geneScore_delta` 右端的形状逐字一致）。 -/
+theorem jc69Amp_eq_four (l : Fin 4 → ℝ) (lx : ℝ) :
+    jc69Amp l lx
+      = (3 / 4) * (e (l 0) * e (l 1) * e (l 2) * e (l 3)) * (1 - e lx) := by
+  rw [jc69Amp, Fin.prod_univ_four]
+
+/-- ★★ **形状 `ab|cd` 的树**：自己的拓扑的期望权重减幅度 = `ac|bd` 支的期望权重。 -/
+theorem geneScore_ab_cd_self_sub (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneScore .ab_cd l lx .ab_cd - geneScore .ab_cd l lx .ac_bd = jc69Amp l lx := by
+  rw [geneScore_ab_cd_ab_cd, geneScore_ab_cd_ac_bd, score_ab_cd_sub_ac_bd]
+  simp only [canonLen_zero, canonLen_one, canonLen_two, canonLen_three, canonLen_four,
+    jc69Amp, Fin.prod_univ_four]
+  rw [e_prod_perm_eq l .ab_cd]
+
+/-- ★★ **形状 `ac|bd` 的树**：自己的拓扑的期望权重减幅度 = `ab|cd` 支的期望权重。 -/
+theorem geneScore_ac_bd_self_sub (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneScore .ac_bd l lx .ac_bd - geneScore .ac_bd l lx .ab_cd = jc69Amp l lx := by
+  rw [geneScore_ac_bd_ac_bd, geneScore_ac_bd_ab_cd, score_ab_cd_sub_ac_bd]
+  simp only [canonLen_zero, canonLen_one, canonLen_two, canonLen_three, canonLen_four,
+    jc69Amp, Fin.prod_univ_four]
+  rw [e_prod_perm_eq l .ac_bd]
+
+/-- ★★ **形状 `ad|bc` 的树（本批新补的一条）**：自己的拓扑的期望权重减幅度 = `ab|cd` 支的期望权重。
+
+（`perm .ad_bc` 把四条叶长按 `0,3,1,2` 排列，`e_prod_perm_eq` 吸收这个重排。） -/
+theorem geneScore_ad_bc_self_sub (l : Fin 4 → ℝ) (lx : ℝ) :
+    geneScore .ad_bc l lx .ad_bc - geneScore .ad_bc l lx .ab_cd = jc69Amp l lx := by
+  rw [geneScore_ad_bc_ad_bc, geneScore_ad_bc_ab_cd, score_ab_cd_sub_ac_bd]
+  simp only [canonLen_zero, canonLen_one, canonLen_two, canonLen_three, canonLen_four,
+    jc69Amp, Fin.prod_univ_four]
+  rw [e_prod_perm_eq l .ad_bc]
+
+/-! ## 11. ★★★ 命题 A 数据与端到端定理 1（JC69） -/
+
+/-- ★★★ **JC69 的命题 A 数据**（时间 `θ = (叶长, 内部枝长)`）。
+
+* `A θ T' r = geneScore T' θ.1 θ.2 r`：在形状 `T'`、叶长 `θ.1`、内部长 `θ.2` 的基因树上，
+  拓扑 `r` 的期望权重；
+* `f θ = jc69Amp θ.1 θ.2`：形状**无关**的幅度；
+* 三条子句由 §10 的三条 `geneScore_*_self_sub`（第一个合取）与 §7 的三条
+  「两个错拓扑期望权重相等」（第二个合取）给出。
+
+这是把 `Phylo.Stat.CASTERJC69` + 本文件 §1–§10 插进 `Phylo.Stat.CASTERBridge` 的那一步。 -/
+noncomputable def jc69PropAData : PropAData ((Fin 4 → ℝ) × ℝ) where
+  A := fun θ T' r => geneScore T' θ.1 θ.2 r
+  f := fun θ => jc69Amp θ.1 θ.2
+  clause_ab := by
+    intro θ T' h
+    rw [h]
+    refine ⟨?_, ?_⟩
+    · have h1 := geneScore_ab_cd_self_sub θ.1 θ.2
+      linarith
+    · have h1 := geneScore_ab_cd_self_sub θ.1 θ.2
+      have h2 := geneScore_ac_bd_eq_ad_bc_of_shape_ab_cd θ.1 θ.2
+      linarith
+  clause_ac := by
+    intro θ T' h
+    rw [h]
+    refine ⟨?_, ?_⟩
+    · have h1 := geneScore_ac_bd_self_sub θ.1 θ.2
+      linarith
+    · have h1 := geneScore_ac_bd_self_sub θ.1 θ.2
+      have h2 := geneScore_ab_cd_eq_ad_bc_of_shape_ac_bd θ.1 θ.2
+      linarith
+  clause_ad := by
+    intro θ T' h
+    rw [h]
+    refine ⟨?_, ?_⟩
+    · have h1 := geneScore_ad_bc_self_sub θ.1 θ.2
+      linarith
+    · have h1 := geneScore_ad_bc_self_sub θ.1 θ.2
+      have h2 := geneScore_ab_cd_eq_ac_bd_of_shape_ad_bc θ.1 θ.2
+      linarith
+
+/-- ★★★ **任意模型 + MSC 的端到端定理 1**（`X = Fin 4`，单个 quartet）。
+
+把 `PropAData`（各模型的命题 A 数据）经 `CASTERTopo.propB_of_bridge` 与
+`CASTERTopo.TopoIdeal.ofModel` 插进无根 quartet 拓扑层的引擎，再交给
+`CASTERTopo.topo_statisticallyConsistent`：
+
+* `emp n`：第 `n` 个样本的经验平均权重表；
+* `hconv`：**大数定律**（作为显式假设，不新增公理）——`emp n` 最终逐点 `ε`-接近理论表 `W`；
+* `E n`：在 `emp n` 上最大化 CASTER 得分的选择；
+* 结论：最终 `E n` 把唯一的 quartet 判成真拓扑 `ab|cd`。
+
+（`hNE`（存在非真选择）对 `X = Fin 4` 由 `fun _ _ => .ac_bd` 显式给出，故不必作为假设。） -/
+theorem propAData_caster_statisticallyConsistent {Θ : Type*} [MeasurableSpace Θ]
+    (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMeasure ν]
+    (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hpos : 0 < ν {θ | ¬ S.deep θ})
+    (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' T) ν)
+    (emp : ℕ → TopoWeight (Fin 4))
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N,
+      TopoClose (emp n) (TopoIdeal.ofModel S ν hdeep P hf_int hf_pos hpos hint).W ε)
+    {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∀ (n : ℕ) (q : TopoChoice (Fin 4)),
+      topoScore (emp n) q ≤ topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n) := by
+  have hNE : ∃ q : TopoChoice (Fin 4), ¬ IsTrueT (fun _ _ => Topo.ab_cd) q := by
+    refine ⟨fun _ _ => Topo.ac_bd, fun hcontra => ?_⟩
+    have hcard : (Finset.univ : Finset (Fin 4)).card = 4 := by decide
+    have hbad : (Topo.ac_bd : Topo) = Topo.ab_cd := hcontra Finset.univ hcard
+    exact absurd hbad (by decide)
+  exact topo_statisticallyConsistent
+    (TopoIdeal.ofModel S ν hdeep P hf_int hf_pos hpos hint) emp hconv hNE hE
+
+/-- ★★★ **JC69 的 CASTER 定理 1（端到端）**：把 `jc69PropAData` 插进上面的接口。
+
+时间参数取 `(Fin 4 → ℝ) × ℝ`（叶长 × 内部枝长），其余假设逐条显式列出：
+
+* `hdeep` / `hpos`：MSC 侧（「无深合并有正概率」是 Kingman 溯祖的直接推论，此处**显式假设**）；
+* `hf_int` / `hf_pos`：幅度可积且（无深合并时）为正；
+* `hint`：三个拓扑的期望权重可积（对应正文定理 1 的条件 (2)「权重一致有界」）；
+* `hconv`：大数定律（**显式假设**）。 -/
+theorem jc69_caster_statisticallyConsistent
+    (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ)) (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
+    (hdeep : MeasurableSet {θ | S.deep θ}) (hpos : 0 < ν {θ | ¬ S.deep θ})
+    (hf_int : Integrable jc69PropAData.f ν)
+    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < jc69PropAData.f θ)
+    (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * jc69PropAData.A θ T' T) ν)
+    (emp : ℕ → TopoWeight (Fin 4))
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N,
+      TopoClose (emp n)
+        (TopoIdeal.ofModel S ν hdeep jc69PropAData hf_int hf_pos hpos hint).W ε)
+    {E : ℕ → TopoChoice (Fin 4)}
+    (hE : ∀ (n : ℕ) (q : TopoChoice (Fin 4)),
+      topoScore (emp n) q ≤ topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueT (fun _ _ => Topo.ab_cd) (E n) :=
+  propAData_caster_statisticallyConsistent S ν hdeep jc69PropAData hf_int hf_pos hpos hint
+    emp hconv hE
 
 end Phylo.Stat.CASTERGeneTree
