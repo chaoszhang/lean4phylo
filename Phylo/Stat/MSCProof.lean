@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Phylo.Stat.MSCKingman
 import Phylo.Stat.NJstWitness
 import Phylo.Stat.CASTERTopoSplit
+import Phylo.QuartetInhabitation
 
 /-!
 # `Phylo.Stat.MSCProof` —— 把 MSC 的 quartet 分布**由 Kingman 溯祖构造出来**
@@ -72,6 +73,8 @@ quartet 拓扑对应**两个**有向 split。因此本文件里每个有向 spli
 noncomputable section
 
 open Classical
+
+universe u v
 
 namespace Phylo.Stat.MSCProof
 
@@ -877,5 +880,35 @@ theorem mscQuartetFreqOf_majorizes (t : ℝ) (ht : 0 < t)
     exact div_pos (mscConcordant_pos ht) (by norm_num)
 
 end General
+
+/-! ## 7. ★★★ 任意 `X`：存在 binary 树 ⇒ `MSCFreq X` **非空**（频率表由 Kingman 权重构造）
+
+§3–§5 的 `mscFreqFin4` 只对 `X = Fin 4`（真树固定为 `NJstWitness.T1234`）。本节的
+`mscFreq_nonempty_of_binary` 把它**一般化**到**任意** `X`：只要**存在**一棵 binary
+`Cladogram`，就能构造出 `MSCFreq X` ——
+
+* 每个 4-元集上的 quartet 由 `Cladogram.exists_displaysSplitOn_card_two`
+  （`Phylo/QuartetInhabitation.lean` 第 **652** 行）取出（**纯组合**，与溯祖无关）；
+* 频率表由 §6 的 `mscQuartetFreqOf` 给出（**Kingman/MSC 权重**）；
+* `majorizes` 是 `mscQuartetFreqOf_majorizes` 给出的**定理**（不是被假设的字段）。
+
+⇒ 「`MSCFreq` 有具体实例」**不再限于 `Fin 4`**；剩下的唯一前提是「存在一棵 binary 树」，
+那是**组合**假设而不是**溯祖**假设。 -/
+
+/-- ★★★ **任意 `X`：binary 树 ⇒ `MSCFreq X` 非空**（频率表由 Kingman/MSC 权重构造）。 -/
+theorem mscFreq_nonempty_of_binary {X : Type u} [Fintype X] [DecidableEq X]
+    {T : Cladogram.{u, v} X} (hT : T.IsBinary) : Nonempty (MSCFreq.{u, v} X) := by
+  classical
+  have hchoice : ∀ (S : Finset X) (hS : S.card = 4),
+      ∃ q : Split ↥S, T.DisplaysSplitOn S q ∧ q.sideA.card = 2 :=
+    fun S hS => Cladogram.exists_displaysSplitOn_card_two hT hS
+  let q : (S : Finset X) → S.card = 4 → Split ↥S := fun S hS => (hchoice S hS).choose
+  have hq2 : ∀ (S : Finset X) (hS : S.card = 4), (q S hS).sideA.card = 2 :=
+    fun S hS => ((hchoice S hS).choose_spec).2
+  have hdisp : ∀ (S : Finset X) (hS : S.card = 4), T.DisplaysSplitOn S (q S hS) :=
+    fun S hS => ((hchoice S hS).choose_spec).1
+  exact ⟨{ toQuartetTree := ⟨T, q, hq2, hdisp⟩
+           freq := mscQuartetFreqOf 1 zero_le_one q hq2
+           majorizes := mscQuartetFreqOf_majorizes 1 one_pos q hq2 }⟩
 
 end Phylo.Stat.MSCProof
