@@ -131,3 +131,16 @@ example : Phylo.Stat.MSCProof.rootTopoProb
         ({0, 1} : Finset (Fin 4)) ∈ P.1.parts ∨ ({2, 3} : Finset (Fin 4)) ∈ P.1.parts)),
       Phylo.Stat.KingmanJumpChain.jumpWeight 4 3 P :=
   Phylo.Stat.RootJumpMass.rootTopoProb_eq_jumpMass
+
+-- ㉒ ★★★ **M1 的完全测度层形式**：内枝用 `expMeasure`、根部用跳链质量（无实数层残留）
+example (t : ℝ) (ht : 0 ≤ t) : Phylo.Stat.MSCProof.mscConcordant t
+    = (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Iic t)).toReal * 1
+      + (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Ioi t)).toReal
+        * (∑ P ∈ Phylo.Stat.MSCMeasure.TopoClass3,
+            Phylo.Stat.KingmanJumpChain.jumpWeight 4 3 P) :=
+  Phylo.Stat.MSCMeasure.mscConcordant_eq_measure_jump ht
+
+-- ㉓ ★★★ **ADR2011 公式的单调性**：枝越长 ⇒ 一致概率越高（比单射更强）
+example (a b : ℝ) (h : a < b) :
+    Phylo.Stat.MSCProof.mscConcordant a < Phylo.Stat.MSCProof.mscConcordant b :=
+  Phylo.Stat.Identifiability.mscConcordant_strictMono h
