@@ -331,10 +331,32 @@ def check_f():
     return not bad
 
 
+def check_g():
+    """(2.1) 的**正向计数**（本轮新证）：从 `k` 块划分 `Q` 出发，一步去向恰 `C(k,2)` 个、
+    且**互不相同**（对应 `KingmanStep.card_mergeTargets_cast` / `KingmanLaw.mergeTargets_gap`）。
+    """
+    print("=" * 78)
+    print("(G) (2.1) 正向计数：一步去向 = C(k,2)  ← KingmanStep.card_mergeTargets_cast")
+    bad = 0
+    for n in range(2, NMAX + 1):
+        for k in range(2, n + 1):
+            want = math.comb(k, 2)
+            parts = list(partitions_of(n, k))
+            for Q in parts:
+                outs = merge_outcomes(Q)
+                if len(outs) != want or len(set(outs)) != want:
+                    bad += 1
+            print(f"   n={n} k={k}: 每个 {k} 块划分的去向数 = {want} = C({k},2)"
+                  f"（{len(parts)} 个划分，全部互异）")
+    print(f"   ✗ 失败数 = {bad}   " + ("✓ 全部通过" if bad == 0 else ""))
+    assert bad == 0
+    return True
+
+
 def main():
     print("scripts/msc/kingman_jumpchain.py -- 精确有理数穷举复核（无 Monte Carlo）")
     print("=" * 78)
-    oks = [check_a(), check_b(), check_c(), check_d(), check_e(), check_f()]
+    oks = [check_a(), check_b(), check_c(), check_d(), check_e(), check_f(), check_g()]
     print("=" * 78)
     verdict = all(oks)
     print("VERDICT:", "PASS" if verdict else "FAIL", "   (n <= %d)" % NMAX)
