@@ -13,8 +13,26 @@ import Phylo.Algorithm.NJ
 /-!
 # `Phylo.Stat.MSC` —— 多物种溯祖（MSC）的 quartet 侧**公理化接口**
 
-`CONCEPTS.md` §3.11：MSC 下基因树可与物种树因**不完全谱系分选**（ILS）而不同；
-物种树推断的「统计一致性」正是「数据量 → ∞ 时输出 → 真物种树」。
+## 📌 W10 更新（2026-10-09）—— 本文件顶上那条「另立为课题」的**后续**
+
+下面 §决策 里写着「**先把 MSC 公理化**（本文件）；**把「证明 MSC」本身另立为课题**
+（`Phylo.Stat.MSCProof`）」。那个课题**已经做完了**，另外还有一条**必须知道**的修正：
+
+1. **`MSCFreq` 有具体实例了**（`Phylo/Stat/MSCProof.lean`）：
+   `mscFreqFin4 (t) (ht : 0 < t) : MSCFreq (Fin 4)` —— 其 `freq` 就是 Kingman/MSC 的 quartet 权重
+   （`1 − ⅔e^{−t}` / `⅓e^{−t}`），且 **`majorizes` 是定理**（不再是字段假设）；
+   进而 `mscFreq_nonempty_of_binary`：**任意** `X`，只要有一棵 binary `Cladogram`，`MSCFreq X` 就**非空**
+   ⇒ 本文件顶部那条「先公理化」的口子在**模型/对称性/接线**三侧都封上了。
+2. 🔴 **`MSCSampling.converges`（本文件下方的概率层公理）是空类型** ——
+   见 `Phylo/Stat/SamplingAxiomVacuity.lean`：`emp` 不依赖真实律、`converges` 却对**所有**律断言
+   ⇒ 只要 `MSCFreq X` 里有两个频率表不同的元素（`Fin 4` 即如此）就自相矛盾；
+   于是本文件的 `StatisticallyConsistent` 对**任何**估计量都**空洞成立**。
+   **必须有这个awareness 再引用它**；修正结构与修复定理见该文件，
+   **「公理被数据 a.e. 实现」与 ASTRAL 的 a.e.（含**树层**）一致性**见
+   `Phylo/Stat/MSCSamplingAE.lean`。**本文件的字段一律保持原样**（改动会打断既有定理）。
+3. **M1 公式已升到完全测度层**：`mscConcordant t = P(τ₂ ≤ t)·1 + P(τ₂ > t)·(跳链质量)`
+   —— 见 `Phylo/Stat/MSCMeasure.lean` ＋ `Phylo/Stat/RootJumpMass.lean`（**内枝**用 `expMeasure`、
+   **根部**用 W10a 的跳链律，**无实数层残留**）。
 
 ## 决策（2026-10-07 老师定）
 
