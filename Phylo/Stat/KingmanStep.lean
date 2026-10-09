@@ -134,4 +134,35 @@ theorem sum_targets_jumpWeight_finset {k : ℕ} (hk0 : 1 ≤ k)
       = ∑ Q ∈ S, jumpWeight n (k + 1) Q :=
   Finset.sum_congr rfl fun Q _ => sum_targets_jumpWeight hk0 Q
 
+/-- ★★★ **固定 `P`：一步「从哪来」的均匀权重总和 = `P` 的质量**。
+
+即 `Σ_{Q : MergeInto Q P} C⁻¹ · partitionProb n (k+1) Q = partitionProb n k P`，`C = C(k+1,2)` ——
+这是「一步联合律的**右边缘** `= jumpMeasure n k`」的核心算术
+（把 `KingmanJumpChain.partitionProb_merge_recursion` 的**实数层递推**两边同乘 `C⁻¹`）。
+
+`PartK`（= `{Q : Part n // Q.parts.card = k+1}`）与 `Part` 两种索引之间的求和搬运，
+用库内现成范例 `jumpWeight_sum_eq_one` 的同一招：`Finset.sum_filter` ＋ `Finset.sum_subtype`。 -/
+theorem sum_parents_partitionProb {k : ℕ} (hk0 : 1 ≤ k) (hk : k < n) (P : PartK n k) :
+    (∑ Q ∈ (Finset.univ.filter (fun Q : PartK n (k + 1) => MergeInto Q.1 P.1)),
+        (((k + 1).choose 2 : ℕ) : ℝ)⁻¹ * partitionProb n (k + 1) Q.1)
+      = partitionProb n k P.1 := by
+  classical
+  rw [← Finset.mul_sum]
+  have hbridge :
+      (∑ Q ∈ (Finset.univ.filter (fun Q : PartK n (k + 1) => MergeInto Q.1 P.1)),
+          partitionProb n (k + 1) Q.1)
+        = ∑ Q ∈ (Finset.univ.filter
+            (fun Q : Part n => Q.parts.card = k + 1 ∧ MergeInto Q P.1)),
+            partitionProb n (k + 1) Q := by
+    rw [Finset.sum_filter]
+    rw [← Finset.sum_subtype (p := fun Q : Part n => Q.parts.card = k + 1)
+      (Finset.univ.filter (fun Q : Part n => Q.parts.card = k + 1)) (fun Q => by simp)
+      (fun Q => if MergeInto Q P.1 then partitionProb n (k + 1) Q else 0)]
+    rw [← Finset.sum_filter, Finset.filter_filter]
+  rw [hbridge, ← partitionProb_merge_recursion n k hk0 hk P.1 P.2]
+  have hne : (((k + 1).choose 2 : ℕ) : ℝ) ≠ 0 := by
+    have hpos : 0 < (k + 1).choose 2 := Nat.choose_pos (by omega)
+    exact_mod_cast Nat.pos_iff_ne_zero.mp hpos
+  field_simp
+
 end Phylo.Stat.KingmanStep
