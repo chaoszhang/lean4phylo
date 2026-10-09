@@ -115,8 +115,8 @@ bash scripts/msc/run_all.sh
 
 | 缺口 | 位置 | 只差什么 |
 |---|---|---|
-| 轨迹律：`jumpMeasure_step_gap` | `KingmanLaw.lean` | **一步联合律的两个边缘** —— 左边缘用 `KingmanStep.card_mergeTargets_cast`（**已证**）、右边缘用 `partitionProb_merge_recursion_div` 求和；**两个阻塞点都已被拆掉**，只剩记账 |
-| ~~轨迹律：`mergeTargets_gap`~~ | ~~`KingmanLaw.lean`~~ | ✅ **已证**（`KingmanStep.lean`，见下面「本轮新增」） |
+| 一步联合律的**测度层**边缘等式 `jumpMeasure_step_gap` | `KingmanLaw.lean` | **只剩簿记**：两个边缘的**实数层算术都已具备**（左 `KingmanLaw.sum_targets_jumpWeight`、右 `KingmanStep.sum_parents_partitionProb`，另有 `KingmanStep.card_mergeTargets_cast` 的去向计数）；差的只是 `Measure.sum_apply` / `ENNReal.ofReal` 的搬运。`jumpStepLaw` 与 `pairMeasure` **已定义** |
+| ~~轨迹律：`mergeTargets_gap`~~ | ~~`KingmanLaw.lean`~~ | ✅ **已证** —— 且**两条独立内核证明**（`KingmanLaw` 走 `Nat` 除法算术、`KingmanStep` 走 `ℝ` cast） |
 | `pUV_normalization`（一般 `n`） | `DegnanSalter.lean` | 系数恒等式 `Σ_v c(u,v,k) = δ_{ku}`（= `Σ_k P_k = I` 的一行） |
 | `rankedFiberCount_gap` / `sd2012_eq4_uniform_rates_gap` / `ranked4_probability_gap` | `RankedGeneTree.lean` | 论文 Remark 6 的一般 `n`；式 (4) 的一般 `m`；`n = 4` 的概率表 |
 | 一般 `n` 的 MSC gene tree 分布 | — | **W10e/f/h 三个缺口共同的根** |
