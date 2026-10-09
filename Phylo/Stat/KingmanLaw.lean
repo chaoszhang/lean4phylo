@@ -103,6 +103,37 @@ theorem isProbabilityMeasure_nCoalescentLaw_jumpMeasure (n k : ℕ) (hk0 : 1 ≤
   haveI := isProbabilityMeasure_jumpMeasure n k hk0 hkn
   exact isProbabilityMeasure_nCoalescentLaw (jumpMeasure n k) hn
 
+/-! ## 轨迹律的**阻塞点**（精确记为可检查的缺口，**不是** `axiom`、**不是** `sorry`）
+
+「层间一致性的测度层形式」与「整条跳链的轨迹空间对象」都归结到**同一个计数**：
+**从 `k+1` 块划分 `Q` 出发，一次合并的「去向」恰有 `C(k+1,2)` 个**
+（跳链每步在这 `C(k+1,2)` 个去向里**均匀**挑一个 —— 这就是 (2.1)）。
+W10a 已给出**所需的两块拼图**：
+* `merge_outcomes_card`：`Q.parts` 的**无序块对**恰 `C(|Q|,2)` 个；
+* `card_pairSet`：使 `Q` 合并到 `P` 的**有序**块对恰 `2` 个（`⟺ MergeInto Q P`）；
+* `mergeOf_eq` / `mem_offDiag` / `card_offDiag`：把「有序块对 ↔ 去向」接起来。
+
+⇒ 两个缺口都只差**一个纤维求和**（`Finset.card_eq_sum_card_fiberwise` + `card_pairSet`），
+本文件**未做**（时间所限，如实记录）。 -/
+
+/-- ❌ **缺口：一次合并的「去向」计数** —— (2.1) 的**正向**语句，
+也是「跳链每步均匀挑一个块对」的**计数依据**。
+`Q : PartK n (k+1)` 的一步去向 `P : PartK n k`（`MergeInto Q.1 P.1`）恰有 `C(k+1,2)` 个。 -/
+def mergeTargets_gap : Prop :=
+  ∀ (n k : ℕ), 1 ≤ k → ∀ Q : Phylo.Stat.KingmanJumpChain.PartK n (k + 1),
+    ((Finset.univ.filter (fun P : Phylo.Stat.KingmanJumpChain.PartK n k =>
+        Phylo.Stat.KingmanJumpChain.MergeInto Q.1 P.1)).card) = (k + 1).choose 2
+
+/-- ❌ **缺口：层间一致性的测度层形式** ——
+把 `Phylo.Stat.KingmanJumpChain.partitionProb_merge_recursion`（**实数层**）升到**测度层**：
+`k` 层的律是 `k+1` 层的律经「均匀随机合并」推前。
+（证明需要上面的 `mergeTargets_gap` ＋ 一步联合律的两个边缘求和。） -/
+def jumpMeasure_step_gap : Prop :=
+  ∀ (n k : ℕ), 1 ≤ k → k < n →
+    ∃ step : Measure (Phylo.Stat.KingmanJumpChain.PartK n (k + 1) ×
+        Phylo.Stat.KingmanJumpChain.PartK n k),
+      IsProbabilityMeasure step ∧ step.fst = jumpMeasure n (k + 1) ∧ step.snd = jumpMeasure n k
+
 /-! ## 诚实边界（逐条）
 
 | 条目 | 状态 |
@@ -110,9 +141,9 @@ theorem isProbabilityMeasure_nCoalescentLaw_jumpMeasure (n k : ℕ) (hk0 : 1 ≤
 | K82 (2.2) 的跳链**绝对概率** | ✅ 在 W10a（`jumpWeight` = `partitionProb`，`+ partitionProb_sum_eq_one` / `jumpWeight_sum_eq_one`） |
 | K82 (1.7) 的逗留时间**律** `Exp(d_k)` | ✅ 在 W10b（`sojournLaw` / `isProbabilityMeasure_sojournLaw` / `sojournLaw_Ioi`） |
 | K82 **Theorem 1 的独立性** | ✅ **本文件**：每个层 `k` 上 `IndepFun`（**真 `IndepFun`**，两个边缘也证出） |
-| 「**整条**跳链 `(S_n,…,S_1)` 作为轨迹空间对象」 | ❌ **未做**：需要 `PartK n n × … × PartK n 1` 上的**链式**联合律与转移核，本文件只做**单层**边缘 |
+| 「**整条**跳链 `(S_n,…,S_1)` 作为轨迹空间对象」 | ❌ **未做**：需要 `PartK n n × … × PartK n 1` 上的**链式**联合律与转移核，本文件只做**单层**边缘（阻塞点 = 下面的两个缺口） |
 | `R_t = S_{D_t}`（过程恒等式） | ❌ **未做**：需要连续时间的死亡过程 `(D_t)`（本库无 CTMC，见 W10 的路线决策） |
-| 层间一致性的**测度层**形式（`k` 层的律 = `k+1` 层的律经均匀合并推前） | ❌ **未做**（W10a 只有**实数层**的 `partitionProb_merge_recursion`） |
+| 层间一致性的**测度层**形式 | ❌ **未做**（W10a 只有**实数层**的 `partitionProb_merge_recursion`）—— 已**精确记为** `jumpMeasure_step_gap`，其唯一阻塞点是 `mergeTargets_gap` |
 -/
 
 end Phylo.Stat.KingmanLaw
