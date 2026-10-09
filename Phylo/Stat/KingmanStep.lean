@@ -109,4 +109,29 @@ theorem card_mergeTargets_cast {k : ℕ} (Q : PartK n (k + 1)) :
     ring
   linarith
 
+/-- ★★★ **固定 `Q`：一步「去向」上的均匀权重总和 = `Q` 的质量**。
+
+即 `Σ_{P ∈ 去向} C⁻¹ · w(Q) = w(Q)`，其中 `C = C(k+1,2)` ——
+这是「一步联合律的**左边缘** `= jumpMeasure n (k+1)`」的核心算术
+（把「去向恰 `C(k+1,2)` 个」与「每个去向的权重 `w(Q)/C(k+1,2)`」相乘即得）。 -/
+theorem sum_targets_jumpWeight {k : ℕ} (hk0 : 1 ≤ k) (Q : PartK n (k + 1)) :
+    (∑ _P ∈ targets n k Q,
+        (((k + 1).choose 2 : ℕ) : ℝ)⁻¹ * jumpWeight n (k + 1) Q)
+      = jumpWeight n (k + 1) Q := by
+  rw [Finset.sum_const, nsmul_eq_mul, card_mergeTargets_cast (n := n) Q]
+  have hne : (((k + 1).choose 2 : ℕ) : ℝ) ≠ 0 := by
+    have hpos : 0 < (k + 1).choose 2 := Nat.choose_pos (by omega)
+    exact_mod_cast Nat.pos_iff_ne_zero.mp hpos
+  field_simp
+
+/-- ★★ **整个去向集合上的质量守恒**（对任意 `Finset` 的去向集合求和）：
+`Σ_{Q ∈ S} Σ_{P ∈ 去向(Q)} C⁻¹ · w(Q) = Σ_{Q ∈ S} w(Q)` ——
+「从 `S` 里的任一 `Q` 出发，一步之后的总质量不变」（左边缘的逐点形式）。 -/
+theorem sum_targets_jumpWeight_finset {k : ℕ} (hk0 : 1 ≤ k)
+    (S : Finset (PartK n (k + 1))) :
+    (∑ Q ∈ S, ∑ _P ∈ targets n k Q,
+        (((k + 1).choose 2 : ℕ) : ℝ)⁻¹ * jumpWeight n (k + 1) Q)
+      = ∑ Q ∈ S, jumpWeight n (k + 1) Q :=
+  Finset.sum_congr rfl fun Q _ => sum_targets_jumpWeight hk0 Q
+
 end Phylo.Stat.KingmanStep
