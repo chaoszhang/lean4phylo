@@ -64,6 +64,32 @@ def main():
         print(f"   p({t}) = {p(t):.30f} > 1/3 ✓")
 
     print("=" * 78)
+    print("⑤ **单调性**（`Identifiability.mscConcordant_strictMono` / `mscDiscordant_antitone`）：")
+    print("   ADR 公式的定量形式 —— 枝长越长 ⇒ 一致概率越高、不一致概率越低")
+    prev_p, prev_d = None, None
+    strictly_up = True
+    strictly_dn = True
+    for t in grid:
+        v, dv = +p(t), +(D(1) / D(3) * (-t).exp())
+        if prev_p is not None and not (prev_p < v):
+            strictly_up = False
+        if prev_d is not None and not (dv < prev_d):
+            strictly_dn = False
+        prev_p, prev_d = v, dv
+    print(f"   网格 {len(grid)} 个点上 p 严格递增：{'✓' if strictly_up else '✗'}"
+          f"；⅓e^{{−t}} 严格递减：{'✓' if strictly_dn else '✗'}")
+    assert strictly_up and strictly_dn
+    # 定量形式：a < b ⇒ p(a) < p(b)（此处即上面的严格递增），并抽查三对
+    for (a, b) in [(D(0), D(1)), (D(1) / D(2), D(3) / D(2)), (D(1), D(10))]:
+        assert p(a) < p(b), (a, b)
+        print(f"   p({a}) = {p(a):.30f} < p({b}) = {p(b):.30f} ✓")
+    # 复数域外的一致性：p(t) + 2·⅓e^{−t} = 1（三拓扑归一化）
+    for t in [D(1) / D(10), D(1), D(5)]:
+        tot = p(t) + 2 * (D(1) / D(3) * (-t).exp())
+        assert abs(tot - D(1)) < D(10) ** (-45)
+    print("   p(t) + 2·(⅓e^{−t}) ≡ 1（三拓扑归一化）✓")
+
+    print("=" * 78)
     print("VERDICT: PASS")
 
 if __name__ == "__main__":
