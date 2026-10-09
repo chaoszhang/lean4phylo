@@ -214,19 +214,34 @@ theorem caster_stable_argmax (M : CASTERIdeal X) {δ : ℝ} (hδ : 0 < δ)
 
 /-- **（公理化）CASTER 采样 + 大数定律**。
 
-* `emp n` —— `n` 个位点的**经验平均权重表**；
-* `converges` —— **大数定律**：经验平均最终逐点 `ε`-接近理论期望权重。
+* `emp W n` —— 在**理论权重表 `W`** 下、`n` 个位点的**经验平均权重表**；
+* `converges` —— **大数定律**：经验平均最终逐点 `ε`-接近**该表** `W`。
 
-🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖** `W`，而 `converges` 却对**所有** `W : WeightTable X` 断言；**任意两张不同的权重表**就足以矛盾（比 `MSC` 侧更严重，连「两个模型」都不需要）⇒ `caster_statisticallyConsistent` 空洞。**`Fin 4` 的无条件空性、修正结构 `CASTERSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。
+📌 **形状说明（2026-10-09 修正）**：`emp` **必须依赖理论权重表 `W`**。
+早期版本写成 `ℕ → WeightTable X`（不依赖 `W`），而 `converges` 却对**所有**
+`W : WeightTable X` 断言 —— **任意两张不同的权重表**就足以矛盾（比 `MSC` 侧更严重，
+连「两个模型」都不需要），该结构因此是**空类型**
+（历史上由 `Phylo.Stat.SamplingAxiomVacuity` 证明，并有 `Fin 4` 上的**无条件**实例）。
+现按「在理论表下采样」的语义修正，并由 `casterSampling_nonempty` 给出显式居民。
 
 ⚠️ 与 `Phylo.Stat.MSC` 的 `MSCSampling.converges` 同一层：取「最终 `ε`-接近」的
 **确定性**形式，把「几乎必然收敛」抽象掉。**有界性**（正文条件 2）折叠在这里。 -/
 structure CASTERSampling (X : Type u) [Fintype X] [DecidableEq X] where
-  /-- 第 `n` 个样本（`n` 个位点）的经验平均权重表。 -/
-  emp : ℕ → WeightTable X
-  /-- ★ **大数定律**（公理化）。 -/
+  /-- 在**理论权重表 `W`** 下，`n` 个位点的经验平均权重表。 -/
+  emp : WeightTable X → ℕ → WeightTable X
+  /-- ★ **大数定律**（公理化）：在 `W` 下，经验平均最终 `ε`-接近 `W`。 -/
   converges : ∀ W : WeightTable X, ∀ ε : ℝ, 0 < ε →
-    ∃ N : ℕ, ∀ n ≥ N, WeightClose (emp n) W ε
+    ∃ N : ℕ, ∀ n ≥ N, WeightClose (emp W n) W ε
+
+/-- ★★★ **`CASTERSampling` 非空洞**（理想样本 `emp W n := W`）。 -/
+theorem casterSampling_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
+    Nonempty (CASTERSampling.{u} X) :=
+  ⟨{ emp := fun W _ => W
+     converges := fun W ε hε =>
+       ⟨0, fun _ _ S hS r => by
+         show |W S hS r - W S hS r| < ε
+         rw [sub_self, abs_zero]
+         exact hε⟩ }⟩
 
 /-- ★★★ **CASTER 定理 1（统计一致性，quartet 层面）**。
 
@@ -239,7 +254,7 @@ theorem caster_statisticallyConsistent (M : CASTERIdeal X) (sm : CASTERSampling 
     (hNE : ∃ q : QuartetChoice X, ¬ IsTrueQ M.qtrue q)
     {E : ℕ → QuartetChoice X}
     (hE : ∀ n : ℕ, ∀ q : QuartetChoice X,
-      casterScore (sm.emp n) q ≤ casterScore (sm.emp n) (E n)) :
+      casterScore (sm.emp M.W n) q ≤ casterScore (sm.emp M.W n) (E n)) :
     ∃ N : ℕ, ∀ n ≥ N, IsTrueQ M.qtrue (E n) := by
   classical
   obtain ⟨δ, hδ, hgap⟩ := M.exists_gap hNE
@@ -250,6 +265,6 @@ theorem caster_statisticallyConsistent (M : CASTERIdeal X) (sm : CASTERSampling 
     linarith
   obtain ⟨N, hN⟩ := sm.converges M.W (δ / K) (div_pos hδ hKpos)
   refine ⟨N, fun n hn => ?_⟩
-  refine caster_stable_argmax M hδ hgap (W := sm.emp n) ?_ ?_
+  refine caster_stable_argmax M hδ hgap (W := sm.emp M.W n) ?_ ?_
   · simpa [hKdef] using hN n hn
   · exact hE n M.qtrue

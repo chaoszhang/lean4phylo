@@ -9,18 +9,18 @@ import Mathlib.Probability.StrongLaw
 /-!
 # `Phylo.Stat.EmpiricalConvergence` —— 大数定律 ⇒ 经验 quartet 频率的**几乎必然**收敛
 
-## 1. 背景与界线（**不动** `MSCSampling.converges`）
+## 1. 背景与界线（公理化的大数定律 vs 概率论）
 
-`Phylo/Stat/MSC.lean` 第 **159–175** 行把「MSC 采样 + 大数定律」公理化为
-`MSCSampling.converges`，形状是**确定性**的
+`Phylo/Stat/MSC.lean` 把「MSC 采样 + 大数定律」公理化为 `MSCSampling.converges`，
+形状是**确定性**的
 
 ```text
-∀ m ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp n) m.freq ε
+∀ m ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp m n) m.freq ε
 ```
 
-这个形状**没有概率空间**，所以不能由概率论「证」出来。本文件**不修改** `MSC.lean`
-（改它会打断 `StatisticallyConsistent` 等既有定理），而是**新增**一条**真概率陈述**：
-在概率空间 `(ℕ → Ω₀, μ)` 上，**iid 位点**使经验 quartet 频率**几乎必然**收敛到理论频率。
+这个形状**没有概率空间**，所以不能由概率论「证」出来。本文件**不修改** `MSC.lean`，
+而是**新增**一条**真概率陈述**：在概率空间 `(ℕ → Ω₀, μ)` 上，**iid 位点**使经验 quartet
+频率**几乎必然**收敛到理论频率。
 
 ## 2. 用的是哪条大数定律（**文件 + 声明名**）
 
@@ -83,7 +83,7 @@ import Mathlib.Probability.StrongLaw
 | **iid 概率空间的存在性**（Kolmogorov 扩张 / 无限乘积测度） | ❌ **未构造**（缺口 K；本版 Mathlib 无 `Measure.infinitePi`） |
 | 「位点观测的边缘分布 = MSC 理论频率」 | ⚠️ **是假设**（`hmean`），**不是**证出来的（MSC 的测度层定义不在本库） |
 | 「独立性、同分布」 | ⚠️ **是假设**（`hindep` / `hident`），**不是**证出来的 |
-| `MSCSampling.converges`（第 159–175 行的既有公理） | ⚠️ **未改动**；本文件的 a.e. 形式是它的**概率版**，但**不是**它的推论（后者是确定性的 `∃ N`，没有概率空间） |
+| `MSCSampling.converges`（既有公理） | ⚠️ **仍是公理化的**；本文件的 a.e. 形式是它的**概率版**，但**不是**它的推论（后者是确定性的 `∃ N`，没有概率空间） |
 | 依概率（`TendstoInMeasure`）形式 | ❌ **未单独陈述**（a.s. 更强；由 `strong_law_Lp` + `tendstoInMeasure_of_tendsto_ae` 可得，本文件未做） |
 | `n = 0` | ⚠️ `empFreq 0 = 0`（约定 `0⁻¹ = 0`）；大数定律是 `atTop` 陈述，不受影响 |
 
@@ -161,9 +161,8 @@ theorem empFreq_tendsto_ae (m : MSCFreq X) (μ : Measure (ℕ → Ω₀)) [IsPro
 
 几乎必然地，对一切 `ε > 0` 都存在 `N`，使 `n ≥ N` 时经验频率与理论频率 `ε`-接近。
 
-⚠️ 与 `MSC.lean` 第 173–175 行的 `MSCSampling.converges` 的区别：那里是
-**确定性**的 `∃ N, ∀ n ≥ N, …`（对**所有**样本），这里是 **`μ`-几乎必然**的
-（对 a.e. `ω`）。两者不可互换：前者没有概率空间，**不是**本定理的推论。 -/
+⚠️ 与 `MSCSampling.converges` 的区别：那里是**确定性**的 `∃ N, ∀ n ≥ N, …`（对**所有**样本），
+这里是 **`μ`-几乎必然**的（对 a.e. `ω`）。两者不可互换：前者没有概率空间，**不是**本定理的推论。 -/
 theorem empFreq_eventually_close_ae (m : MSCFreq X) (μ : Measure (ℕ → Ω₀))
     [IsProbabilityMeasure μ] (S : Finset X) (hS : S.card = 4) (q : Split ↥S)
     (hint : Integrable (fun ω : ℕ → Ω₀ => ind (ω 0) S hS q) μ)

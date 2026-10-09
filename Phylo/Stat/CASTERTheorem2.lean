@@ -87,7 +87,7 @@ theorem caster_greedy_consistent (M : CASTERIdeal X) (sm : CASTERSampling X)
     (C : ℕ → Set (QuartetChoice X)) (hfeas : ∀ n : ℕ, M.qtrue ∈ C n)
     {E : ℕ → QuartetChoice X}
     (hmax : ∀ (n : ℕ) (q : QuartetChoice X), q ∈ C n →
-      casterScore (sm.emp n) q ≤ casterScore (sm.emp n) (E n)) :
+      casterScore (sm.emp M.W n) q ≤ casterScore (sm.emp M.W n) (E n)) :
     ∃ N : ℕ, ∀ n ≥ N, IsTrueQ M.qtrue (E n) := by
   classical
   obtain ⟨δ, hδ, hgap⟩ := M.exists_gap hNE
@@ -98,7 +98,7 @@ theorem caster_greedy_consistent (M : CASTERIdeal X) (sm : CASTERSampling X)
     linarith
   obtain ⟨N, hN⟩ := sm.converges M.W (δ / K) (div_pos hδ hKpos)
   refine ⟨N, fun n hn => ?_⟩
-  refine caster_stable_argmax M hδ hgap (W := sm.emp n) ?_ ?_
+  refine caster_stable_argmax M hδ hgap (W := sm.emp M.W n) ?_ ?_
   · simpa [hKdef] using hN n hn
   · exact hmax n M.qtrue (hfeas n)
 
@@ -129,7 +129,7 @@ theorem caster_statisticallyConsistent_iso (M : CASTERIdeal X) (sm : CASTERSampl
     (hNE : ∃ q : QuartetChoice X, ¬ IsTrueQ M.qtrue q)
     {E : ℕ → QuartetTree.{u, v} X} (hEbin : ∀ n : ℕ, (E n).tree.IsBinary)
     (hE : ∀ (n : ℕ) (q : QuartetChoice X),
-      casterScore (sm.emp n) q ≤ casterScore (sm.emp n) (E n).q) :
+      casterScore (sm.emp M.W n) q ≤ casterScore (sm.emp M.W n) (E n).q) :
     ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E n).tree Ttrue.tree) := by
   obtain ⟨N, hN⟩ := caster_statisticallyConsistent M sm hNE hE
   exact ⟨N, fun n hn =>

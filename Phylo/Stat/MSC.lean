@@ -23,13 +23,15 @@ import Phylo.Algorithm.NJ
    （`1 − ⅔e^{−t}` / `⅓e^{−t}`），且 **`majorizes` 是定理**（不再是字段假设）；
    进而 `mscFreq_nonempty_of_binary`：**任意** `X`，只要有一棵 binary `Cladogram`，`MSCFreq X` 就**非空**
    ⇒ 本文件顶部那条「先公理化」的口子在**模型/对称性/接线**三侧都封上了。
-2. 🔴 **`MSCSampling.converges`（本文件下方的概率层公理）是空类型** ——
-   见 `Phylo/Stat/SamplingAxiomVacuity.lean`：`emp` 不依赖真实律、`converges` 却对**所有**律断言
-   ⇒ 只要 `MSCFreq X` 里有两个频率表不同的元素（`Fin 4` 即如此）就自相矛盾；
-   于是本文件的 `StatisticallyConsistent` 对**任何**估计量都**空洞成立**。
-   **必须有这个awareness 再引用它**；修正结构与修复定理见该文件，
+2. ✅ **`MSCSampling` 的形状已修正（2026-10-09）** —— 早期版本把 `emp` 写成
+   `ℕ → QuartetFreq X`（**不依赖真实律**），而 `converges` 却对**所有** `m : MSCFreq X` 断言
+   ⇒ 只要 `MSCFreq X` 里有两个频率表不同的元素（`Fin 4` 即如此）就自相矛盾，
+   该结构因此是**空类型**，`StatisticallyConsistent` 随之**空洞**
+   （这段历史原在 `Phylo.Stat.SamplingAxiomVacuity`，该文件已于 2026-10-09 随空结构一并删除）。
+   **现已把 `emp` 改为依赖真实律 `m`**（「在律 `m` 下采样」），并给出显式居民
+   `mscSampling_nonempty`（**非空洞**）。
    **「公理被数据 a.e. 实现」与 ASTRAL 的 a.e.（含**树层**）一致性**见
-   `Phylo/Stat/MSCSamplingAE.lean`。**本文件的字段一律保持原样**（改动会打断既有定理）。
+   `Phylo/Stat/MSCSamplingAE.lean`。
 3. **M1 公式已升到完全测度层**：`mscConcordant t = P(τ₂ ≤ t)·1 + P(τ₂ > t)·(跳链质量)`
    —— 见 `Phylo/Stat/MSCMeasure.lean` ＋ `Phylo/Stat/RootJumpMass.lean`（**内枝**用 `expMeasure`、
    **根部**用 W10a 的跳链律，**无实数层残留**）。
@@ -176,30 +178,41 @@ def IdeallyConsistent (E : QuartetFreq X → Cladogram.{u, v} X) : Prop :=
 
 /-- **（公理化）MSC 采样 + 大数定律**。
 
-* `emp n` —— `n` 个独立位点的**经验** quartet 频率；
-* `converges` —— **MSC 大数定律**：经验频率最终 `ε`-接近理论频率。
+* `emp m n` —— 在**真实律 `m`** 下、`n` 个独立位点的**经验** quartet 频率；
+* `converges` —— **MSC 大数定律**：在律 `m` 下，经验频率最终 `ε`-接近**该律**的理论频率。
+
+📌 **形状说明（2026-10-09 修正）**：`emp` **必须依赖真实律 `m`**。
+早期版本写成 `emp : ℕ → QuartetFreq X`（不依赖 `m`），而 `converges` 却对
+**所有** `m : MSCFreq X` 断言 —— 只要有两个频率表不同的律（`Fin 4` 即如此），
+要求就自相矛盾，该结构因此是**空类型**（历史上由 `Phylo.Stat.SamplingAxiomVacuity` 证明）。
+现按「在真实律下采样」的语义修正，并由 `mscSampling_nonempty` 给出显式居民。
 
 ⚠️ **诚实边界**：`converges` 取的是「**最终 `ε`-接近**」这一**确定性**形式，
 把概率层的「几乎必然收敛」抽象掉了。把 `converges` 换成真概率陈述
-（需要概率空间 + 强大数定律）即得真·依概率一致性 —— 课题 `Phylo.Stat.MSCProof`。
-
-🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）是空类型** ——
-`emp` **不依赖 `m`**，而 `converges` 却对**所有** `m : MSCFreq X` 断言
-⇒ 只要 `MSCFreq X` 里有两个**频率表不同**的元素（`X = Fin 4` 即如此），要求就自相矛盾。
-于是 `StatisticallyConsistent`（下方）对**任何**估计量都**空洞成立**。
-**证明、四处同型缺陷（`USTARSampling` / `CASTERSampling` / `SiteSampling`）、
-修正结构与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**；
-**「公理被数据 a.e. 实现」与 ASTRAL 的 a.e. 一致性**见 **`Phylo/Stat/MSCSamplingAE.lean`**。
-本结构**保持原样未改**（改了会打断既有定理），但**不要**再把它当成「非空假设」使用。
+（需要概率空间 + 强大数定律）即得真·依概率一致性 —— 课题 `Phylo.Stat.MSCProof`；
+「该公理被数据 a.e. 实现」见 **`Phylo/Stat/MSCSamplingAE.lean`**。
 
 这样切分的好处：一致性定理的**形状**与算法内容现在就能定死，
-将来只需替换 `converges` 这一个字段。 -/
+概率层的进展只需替换 `converges` 这一个字段。 -/
 structure MSCSampling (X : Type u) [Fintype X] [DecidableEq X] where
-  /-- 第 `n` 个样本（`n` 个位点）的经验 quartet 频率。 -/
-  emp : ℕ → QuartetFreq X
-  /-- ★ **MSC 大数定律**（公理化）：经验频率最终 `ε`-接近理论频率。 -/
+  /-- 在**真实律 `m`** 下，`n` 个位点的经验 quartet 频率。 -/
+  emp : MSCFreq.{u, v} X → ℕ → QuartetFreq X
+  /-- ★ **MSC 大数定律**（公理化）：在律 `m` 下，经验频率最终 `ε`-接近 `m.freq`。 -/
   converges : ∀ m : MSCFreq.{u, v} X, ∀ ε : ℝ, 0 < ε →
-    ∃ N : ℕ, ∀ n ≥ N, FreqClose (emp n) m.freq ε
+    ∃ N : ℕ, ∀ n ≥ N, FreqClose (emp m n) m.freq ε
+
+/-- ★★★ **`MSCSampling` 非空洞**：显式给出居民（**理想样本** `emp m n := m.freq`）。
+
+⚠️ 这个居民是**退化**的（样本恒等于理论频率），但它足以证明该结构**有居民** ——
+这正是「形状修正」的目的：结构可居留，一致性断言才有内容。 -/
+theorem mscSampling_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
+    Nonempty (MSCSampling.{u, v} X) :=
+  ⟨{ emp := fun m _ => m.freq
+     converges := fun m ε hε =>
+       ⟨0, fun _ _ S hS q => by
+         show |m.freq.p S hS q - m.freq.p S hS q| < ε
+         rw [sub_self, abs_zero]
+         exact hε⟩ }⟩
 
 /-- **统计一致性**（依概率，经大数定律）：
 
@@ -209,4 +222,15 @@ structure MSCSampling (X : Type u) [Fintype X] [DecidableEq X] where
 不是从概率空间证出来的。见 `Phylo.Stat.Stability`。 -/
 def StatisticallyConsistent (E : QuartetFreq X → Cladogram.{u, v} X)
     (sm : MSCSampling X) : Prop :=
-  ∀ m : MSCFreq.{u, v} X, ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp n)) m.tree)
+  ∀ m : MSCFreq.{u, v} X, ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp m n)) m.tree)
+
+/-- ★★ **修正后的谓词不是自动成立的**（否则「一致性」就又空洞了）：
+常值估计量 `E ≡ T`，只要存在一条**不与 `T` 同构**的理论树 `m`，就**失败**。 -/
+theorem not_statisticallyConsistent_const (T : Cladogram.{u, v} X)
+    (sm : MSCSampling.{u, v} X)
+    (h : ∃ m : MSCFreq.{u, v} X, ¬ Nonempty (Iso T m.tree)) :
+    ¬ StatisticallyConsistent (fun _ => T) sm := by
+  obtain ⟨m, hm⟩ := h
+  intro hsc
+  obtain ⟨N, hN⟩ := hsc m
+  exact hm (hN N le_rfl)

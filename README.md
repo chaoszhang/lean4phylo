@@ -50,7 +50,7 @@
 | **parsimony**（ISM） | `Pattern.fitchCost_eq`（48 情形枚举）⟹ **统计一致性** | `Phylo/Stat/Parsimony.lean` |
 | **SVDQuartets** | 秩判据 `svdquartets_selects_true` + 分离性 ⟹ **无条件正确性** `svdquartets_concrete` | `Phylo/Stat/SVDQuartets.lean` |
 | **NJst** | 第一步正确（`njst_cherry`） | `Phylo/Stat/NJst.lean` |
-| **MSC 公理化** | `MSCFreq`（真树 + 选择 + 频率 + `majorizes`）、`MSCSampling.converges` | `Phylo/Stat/MSC.lean` |
+| **MSC 公理化** | `MSCFreq`（真树 + 选择 + 频率 + `majorizes`）、`MSCSampling`（`emp` 依赖真实律，含 `mscSampling_nonempty`） | `Phylo/Stat/MSC.lean` |
 | **一致性引擎** | 理想一致性 → gap 引理 → 稳定性（扰动 < δ/(2N+1)） | `Phylo/Stat/Stability.lean` |
 
 > **诚实的边界**：ASTRAL / CASTER / parsimony 的「逐 quartet 一致」已证完，

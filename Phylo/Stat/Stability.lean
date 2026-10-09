@@ -159,7 +159,7 @@ open Classical in
 theorem astral_statisticallyConsistent (m : MSCFreq.{u, v} X) (sm : MSCSampling.{u, v} X)
     {E : QuartetFreq X → QuartetTree.{u, v} X} (hE : ∀ D, IsASTRAL D (E D))
     (hNE : ∃ q : QuartetChoice X, ¬ IsTrueChoice m q) :
-    ∃ N : ℕ, ∀ n ≥ N, IsTrueChoice m (E (sm.emp n)).q := by
+    ∃ N : ℕ, ∀ n ≥ N, IsTrueChoice m (E (sm.emp m n)).q := by
   classical
   obtain ⟨δ, hδ, hgap⟩ := exists_gap m hNE
   set M : ℝ := 2 * (Fintype.card {S : Finset X // S.card = 4} : ℝ) + 1 with hMdef
@@ -169,6 +169,6 @@ theorem astral_statisticallyConsistent (m : MSCFreq.{u, v} X) (sm : MSCSampling.
     linarith
   obtain ⟨N, hN⟩ := sm.converges m (δ / M) (div_pos hδ hMpos)
   refine ⟨N, fun n hn => ?_⟩
-  refine stable_argmax (D := sm.emp n) m hδ hgap ?_ ?_
+  refine stable_argmax (D := sm.emp m n) m hδ hgap ?_ ?_
   · simpa [hMdef] using hN n hn
-  · exact hE (sm.emp n) m.toQuartetTree
+  · exact hE (sm.emp m n) m.toQuartetTree

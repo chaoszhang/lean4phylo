@@ -277,13 +277,30 @@ theorem isParsimony_iff_supportMax (D : SiteSupport X) {qt : QuartetTree.{u, v} 
 
 /-- **（公理化）ISM 采样的位点大数定律**。
 
-🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖** `M`，而 `converges` 却对**所有** `M : MSCSite X` 断言；只要有两个模型的 `cnt` 在某点不同，要求即自相矛盾 ⇒ `parsimony_statisticallyConsistent` 空洞。**判据、修正结构 `SiteSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。 -/
+* `emp M n` —— 在**真实模型 `M`** 下、`n` 个位点的**经验支持表**；
+* `converges` —— **大数定律**：在模型 `M` 下，经验支持表最终 `ε`-接近 `M.toSiteSupport`。
+
+📌 **形状说明（2026-10-09 修正）**：`emp` **必须依赖真实模型 `M`**。
+早期版本写成 `ℕ → SiteSupport X`（不依赖 `M`），而 `converges` 却对**所有**
+`M : MSCSite X` 断言 —— 只要有两个模型的 `cnt` 在某点不同，要求即自相矛盾，
+该结构因此是**空类型**（历史上由 `Phylo.Stat.SamplingAxiomVacuity` 证明）。
+现按「在真实模型下采样」的语义修正，并由 `siteSampling_nonempty` 给出显式居民。 -/
 structure SiteSampling (X : Type u) [Fintype X] [DecidableEq X] where
-  /-- 第 `n` 个样本的支持表。 -/
-  emp : ℕ → SiteSupport X
-  /-- ★ 大数定律：经验支持表最终 `ε`-接近理论值。 -/
+  /-- 在**真实模型 `M`** 下，`n` 个位点的支持表。 -/
+  emp : MSCSite.{u, v} X → ℕ → SiteSupport X
+  /-- ★ 大数定律：在 `M` 下，经验支持表最终 `ε`-接近 `M.toSiteSupport`。 -/
   converges : ∀ M : MSCSite.{u, v} X, ∀ ε : ℝ, 0 < ε →
-    ∃ N : ℕ, ∀ n ≥ N, SiteClose (emp n) M.toSiteSupport ε
+    ∃ N : ℕ, ∀ n ≥ N, SiteClose (emp M n) M.toSiteSupport ε
+
+/-- ★★★ **`SiteSampling` 非空洞**（理想样本 `emp M n := M.toSiteSupport`）。 -/
+theorem siteSampling_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
+    Nonempty (SiteSampling.{u, v} X) :=
+  ⟨{ emp := fun M _ => M.toSiteSupport
+     converges := fun M ε hε =>
+       ⟨0, fun _ _ S hS q => by
+         show |M.toSiteSupport.cnt S hS q - M.toSiteSupport.cnt S hS q| < ε
+         rw [sub_self, abs_zero]
+         exact hε⟩ }⟩
 
 open Classical in
 /-- ★★★ **parsimony 的统计一致性**（unrooted quartet + ISM，quartet 层面）。
@@ -293,7 +310,7 @@ open Classical in
 theorem parsimony_statisticallyConsistent (M : MSCSite.{u, v} X) (sm : SiteSampling.{u, v} X)
     {E : SiteSupport X → QuartetTree.{u, v} X} (hE : ∀ D, IsParsimony D (E D))
     (hNE : ∃ q : QuartetChoice X, ¬ AgreesWith M.q q) :
-    ∃ N : ℕ, ∀ n ≥ N, AgreesWith M.q (E (sm.emp n)).q := by
+    ∃ N : ℕ, ∀ n ≥ N, AgreesWith M.q (E (sm.emp M n)).q := by
   classical
   obtain ⟨δ, hδ, hgap⟩ := M.exists_gap hNE
   set M' : ℝ := 2 * (Fintype.card {S : Finset X // S.card = 4} : ℝ) + 1 with hMdef
@@ -303,6 +320,6 @@ theorem parsimony_statisticallyConsistent (M : MSCSite.{u, v} X) (sm : SiteSampl
     linarith
   obtain ⟨N, hN⟩ := sm.converges M (δ / M') (div_pos hδ hMpos)
   refine ⟨N, fun n hn => ?_⟩
-  refine stable_argmax_site (D := sm.emp n) M hδ hgap ?_ ?_
+  refine stable_argmax_site (D := sm.emp M n) M hδ hgap ?_ ?_
   · simpa [hMdef] using hN n hn
-  · exact (isParsimony_iff_supportMax (sm.emp n)).mp (hE (sm.emp n)) M.asQuartetTree
+  · exact (isParsimony_iff_supportMax (sm.emp M n)).mp (hE (sm.emp M n)) M.asQuartetTree

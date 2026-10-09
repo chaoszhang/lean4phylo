@@ -156,20 +156,34 @@ def DissClose (δ δ' : Dissimilarity X) (ε : ℝ) : Prop :=
 
 /-- ★★ **（公理化）USTAR 相异度的采样 + 大数定律**。
 
-* `emp n` —— `n` 棵基因树给出的**经验** USTAR 相异度；
-* `converges` —— **公理化的 SLLN**：经验相异度最终 `ε`-接近理论值 `M.δ`。
+* `emp M n` —— 在**真实模型 `M`** 下、`n` 棵基因树给出的**经验** USTAR 相异度；
+* `converges` —— **公理化的 SLLN**：在模型 `M` 下，经验相异度最终 `ε`-接近理论值 `M.δ`。
 
-🔴 **重大警告（2026-10-09，W10 发现）**：**本结构（如上面所写）也是空类型** —— `emp` **不依赖 `M`**，而 `converges` 却对**所有** `M : NJstData X` 断言；只要有两个模型的 `δ` 在某点不同，要求即自相矛盾 ⇒ `njst_statisticallyConsistent` 空洞。**判据、修正结构 `USTARSamplingLaw`、非空洞居民与修复定理**见 **`Phylo/Stat/SamplingAxiomVacuity.lean`**。本结构**保持原样未改**。
+📌 **形状说明（2026-10-09 修正）**：`emp` **必须依赖真实模型 `M`**。
+早期版本写成 `ℕ → Dissimilarity X`（不依赖 `M`），而 `converges` 却对**所有**
+`M : NJstData X` 断言 —— 只要有两个模型的 `δ` 在某点不同，要求即自相矛盾，
+该结构因此是**空类型**（历史上由 `Phylo.Stat.SamplingAxiomVacuity` 证明）。
+现按「在真实模型下采样」的语义修正，并由 `ustarSampling_nonempty` 给出显式居民。
 
-⚠️ **公理层**：形制同 `MSCSampling.converges`（`Phylo/Stat/MSC.lean:168–173`），
+⚠️ **公理层**：形制同 `MSCSampling.converges`（`Phylo/Stat/MSC.lean`），
 把「**几乎必然**收敛」抽象成「**最终** `ε`-接近」的确定性形式；**不得**读成真·依概率一致性
 （把 `converges` 换成真概率陈述即课题 `Phylo.Stat.MSCProof`）。 -/
 structure USTARSampling (X : Type u) [Fintype X] [DecidableEq X] where
-  /-- 第 `n` 个样本（`n` 棵基因树）的经验 USTAR 相异度。 -/
-  emp : ℕ → Dissimilarity X
-  /-- ★ **公理化的 MSC 大数定律**：对模型 `M`，经验相异度收敛到理论值 `M.δ`。 -/
+  /-- 在**真实模型 `M`** 下，`n` 棵基因树的经验 USTAR 相异度。 -/
+  emp : NJstData.{u, v} X → ℕ → Dissimilarity X
+  /-- ★ **公理化的 MSC 大数定律**：在模型 `M` 下，经验相异度收敛到理论值 `M.δ`。 -/
   converges : ∀ M : NJstData.{u, v} X, ∀ ε : ℝ, 0 < ε →
-    ∃ N : ℕ, ∀ n ≥ N, DissClose (emp n) M.δ ε
+    ∃ N : ℕ, ∀ n ≥ N, DissClose (emp M n) M.δ ε
+
+/-- ★★★ **`USTARSampling` 非空洞**（理想样本 `emp M n := M.δ`）。 -/
+theorem ustarSampling_nonempty (X : Type u) [Fintype X] [DecidableEq X] :
+    Nonempty (USTARSampling.{u, v} X) :=
+  ⟨{ emp := fun M _ => M.δ
+     converges := fun M ε hε =>
+       ⟨0, fun _ _ x y => by
+         show |M.δ.val x y - M.δ.val x y| < ε
+         rw [sub_self, abs_zero]
+         exact hε⟩ }⟩
 
 /-- **ADR Thm 4.1 条件 (1)**：`M` 对树度量返回**唯一**拟合树
 （`M δ` 与**任何**实现 `δ` 的树同构）。 -/
@@ -204,12 +218,12 @@ def ContinuousAtBinaryTreeMetrics (E : Dissimilarity X → Cladogram.{u, v} X) :
 theorem njst_statisticallyConsistent (sm : USTARSampling.{u, v} X) (M : NJstData.{u, v} X)
     (E : Dissimilarity X → Cladogram.{u, v} X)
     (h1 : ReturnsFittingTree E) (h2 : ContinuousAtBinaryTreeMetrics E) :
-    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp n)) M.tree) := by
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp M n)) M.tree) := by
   obtain ⟨ε, hε, hcont⟩ := h2 M.T M.δ M.hT_binary M.hT_pos M.hT_dist
   obtain ⟨N, hN⟩ := sm.converges M ε hε
   have hδ : Nonempty (Iso (E M.δ) M.tree) := h1 M.δ M.T M.hT_dist
   refine ⟨N, fun n hn => ?_⟩
-  have hn' : Nonempty (Iso (E (sm.emp n)) (E M.δ)) := hcont (sm.emp n) (hN n hn)
+  have hn' : Nonempty (Iso (E (sm.emp M n)) (E M.δ)) := hcont (sm.emp M n) (hN n hn)
   exact ⟨hn'.some.trans hδ.some⟩
 
 /-! ## 非空见证（**退化**：`|X| = 2`）

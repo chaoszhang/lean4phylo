@@ -11,10 +11,9 @@ import Phylo.Stat.Stability
 /-!
 # `Phylo.Stat.MSCSamplingAE` —— **整张**经验 quartet 频率表的**几乎必然**收敛
 
-`Phylo/Stat/MSC.lean` 第 **159–175** 行把「MSC 采样 + 大数定律」公理化成
-`MSCSampling.converges`，其形状是**确定性**的
-`∀ m ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp n) m.freq ε`
-—— **没有概率空间，所以它证不出来**（W10d 也一字未改它）。
+`Phylo/Stat/MSC.lean` 把「MSC 采样 + 大数定律」公理化成 `MSCSampling.converges`，其形状是**确定性**的
+`∀ m ε > 0, ∃ N, ∀ n ≥ N, FreqClose (emp m n) m.freq ε`
+—— **没有概率空间，所以它证不出来**；本文件的 a.e. 结论是它**独立的概率版**，**不是**它的推论。
 
 `Phylo/Stat/EmpiricalConvergence.lean`（W10d）已在**真概率空间**上给出**单个** `(S, q)` 的
 几乎必然收敛。**本文件把它升到「整张表」**：对**所有** 4-元集 `S` 与**所有** split `q`
@@ -43,7 +42,7 @@ import Phylo.Stat.Stability
 | **统一的 `N`**（`FreqClose` 形式） | ✅ **本文件**（有限指标集上取 `sup'`） |
 | **公理化的采样结构被 a.e. 实现** | ✅ **本文件**（§4：`exists_mscSamplingFixed_ae`，真律固定版） |
 | **ASTRAL 的 a.e. 统计一致性** | ✅ **本文件**（§4：由 SLLN ＋ 库内 `stable_argmax` 推出） |
-| `MSCSampling.converges`（**旧**确定性公理） | ⚠️ **未改动**；本文件给出的是**真律固定版** `MSCSamplingFixed` 的 a.e. 实现，**不是**旧谓词的推论 |
+| `MSCSampling.converges`（确定性公理） | ⚠️ **仍是公理化的**；本文件给出的是**真律固定版** `MSCSamplingFixed` 的 a.e. 实现，**不是**它的推论 |
 | 一般 `n` 的方差、iid 空间的存在性 | ❌ 未做（W10d 的缺口 V / K） |
 -/
 
@@ -171,7 +170,7 @@ noncomputable def empTable (h : SiteTable ind) (m : MSCFreq X) (n : ℕ) (ω : �
 这正是 `MSC.lean` 里那条**确定性**公理 `MSCSampling.converges` 的**几乎必然版**：
 区别只在于多了一个 `ω`（概率空间）与「共同 `N` 由有限指标集上的 `sup'` 取得」这一步。
 
-⚠️ 本定理**不是** `MSCSampling.converges` 的推论，后者也**未改动**。 -/
+⚠️ 本定理**不是** `MSCSampling.converges` 的推论（后者是确定性的 `∃ N`，没有概率空间）。 -/
 theorem empTable_eventually_close_ae (h : SiteTable ind) (m : MSCFreq X)
     (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
     (hint : ∀ (S : Finset X) (hS : S.card = 4) (q : Split ↥S),
@@ -205,8 +204,9 @@ theorem empTable_eventually_close_ae (h : SiteTable ind) (m : MSCFreq X)
 
 /-! ## 4. ★★★ 把公理化的采样**在几乎必然意义下实现**
 
-`Phylo/Stat/SamplingAxiomVacuity.lean` 指出：`MSCSampling.converges` 的形状
-（`emp` 不依赖真实律、却对**所有**律断言）使该结构**空**。修正的办法是把**真律固定下来**：
+`Phylo/Stat/MSC.lean` 的 `MSCSampling` 曾因 `emp` 不依赖真实律、却对**所有**律断言而是**空类型**
+（2026-10-09 已把 `emp` 修正为**依赖真实律**，并给出居民 `mscSampling_nonempty`）。
+本节给的是**更窄**的一条路子：把**真律固定下来**：
 
     structure MSCSamplingFixed (X) where
       law : MSCFreq X
@@ -220,7 +220,7 @@ theorem empTable_eventually_close_ae (h : SiteTable ind) (m : MSCFreq X)
 universe u v
 
 /-- ★★★ **真律固定版的一致性结构**：`emp` 与 `converges` 都**只对该律**断言
-（与 `SamplingAxiomVacuity.MSCSamplingLaw` 的区别：那里 `emp` 对**每个**律分别给出数据，
+（与 `MSCSampling` 的区别：那里 `emp` 对**每个**律分别给出数据，
 这里只固定**一条**真律）。 -/
 structure MSCSamplingFixed (X : Type u) [Fintype X] [DecidableEq X] where
   /-- **真实律**。 -/

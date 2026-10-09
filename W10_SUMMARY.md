@@ -5,6 +5,20 @@
 > ｜过程记录：`HANDOVER.md`（第 87 批）＋ `MEMORY.md`（第 91–106 批，42 条教训）
 > ｜**只 commit，不 push**。
 
+> ## 🆕 后续（2026-10-09，老师裁决后）：**空结构已删除，修正版升为规范版**
+>
+> 本报告 §2 记录的「四条采样公理全是空类型」的处置，老师已定为 **彻底清理**：
+> * 四个空结构（`MSCSampling` / `USTARSampling` / `CASTERSampling` / `SiteSampling`）
+>   与旧谓词 `StatisticallyConsistent` **就地改回正确形状**（`emp` **依赖真实律/模型**），
+>   并各配 `*_nonempty` 显式居民；
+> * 七条「空洞」定理（`astral_statisticallyConsistent` / `njst_statisticallyConsistent` /
+>   `caster_statisticallyConsistent` / `caster_greedy_consistent` /
+>   `caster_statisticallyConsistent_iso` / `parsimony_statisticallyConsistent` / `parsimony_iso`）
+>   由修正版**接管同名**（证明逐字相同），**全部非空洞**；
+> * `Phylo/Stat/SamplingAxiomVacuity.lean`（含空性证明与 `*SamplingLaw` 修正版）**整文件删除**；
+>   树层定理并入 `Phylo/Stat/QuartetDecides.lean`（`astral_statisticallyConsistent_iso`）。
+> ⇒ 库内**不再残留任何「空洞」物件**。下文 §2 保留为当时的发现记录（其中的 `*Law` 名字已不存在）。
+
 ---
 
 ## 0. 一句话结论

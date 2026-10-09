@@ -79,29 +79,31 @@ example (t : ℝ) : (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Iic t)).toRe
     + (Phylo.Stat.KingmanCoalescent.sojournLaw 2 (Set.Ioi t)).toReal = 1 :=
   Phylo.Stat.MSCMeasure.branch_partition t
 
--- ⑬ ★★★ **空洞性发现的回归护栏**：`MSCSampling (Fin 4)` **是空的**
-example : ¬ Nonempty (MSCSampling.{0, 0} (Fin 4)) :=
-  Phylo.Stat.SamplingAxiomVacuity.not_nonempty_mscSampling_fin4
+-- ⑬ ★★★ **四处采样结构（修正后）都非空洞** —— 回归护栏。
+--     它们**曾是空类型**（`emp` 不依赖真实律/模型，而 `converges` 却对所有模型断言 ⇒ 矛盾）；
+--     2026-10-09 已把 `emp` 改为**依赖真实律/模型**，并给出显式居民（原「空性证明」随空结构一并删除）。
+example : Nonempty (MSCSampling.{0, 0} (Fin 4)) := mscSampling_nonempty (Fin 4)
+example : Nonempty (USTARSampling.{0, 0} (Fin 4)) := ustarSampling_nonempty (Fin 4)
+example : Nonempty (CASTERSampling.{0} (Fin 4)) := casterSampling_nonempty (Fin 4)
+example : Nonempty (SiteSampling.{0, 0} (Fin 4)) := siteSampling_nonempty (Fin 4)
 
--- ⑭ ★★★ **修正版非空洞**：`MSCSamplingLaw` 有居民
-example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.MSCSamplingLaw.{0, 0} (Fin 4)) :=
-  Phylo.Stat.SamplingAxiomVacuity.mscSamplingLaw_nonempty (Fin 4)
+-- ⑭ ★★★ **形状护栏**：`emp` **依赖真实律/模型**（若被改回「不依赖模型」，此处编译失败）
+example (sm : MSCSampling.{0, 0} (Fin 4)) (m : MSCFreq (Fin 4)) :
+    ℕ → QuartetFreq (Fin 4) := sm.emp m
+example (sm : USTARSampling.{0, 0} (Fin 4)) (M : NJstData.{0, 0} (Fin 4)) :
+    ℕ → NJ.Dissimilarity (Fin 4) := sm.emp M
+example (sm : CASTERSampling.{0} (Fin 4)) (W : WeightTable (Fin 4)) :
+    ℕ → WeightTable (Fin 4) := sm.emp W
+example (sm : SiteSampling.{0, 0} (Fin 4)) (M : MSCSite (Fin 4)) :
+    ℕ → SiteSupport (Fin 4) := sm.emp M
 
--- ⑮ 但**旧版**的「一致性」对**任何**估计量都成立（空洞的直接体现）
-example (E : QuartetFreq (Fin 4) → Cladogram (Fin 4)) (sm : MSCSampling.{0, 0} (Fin 4)) :
-    StatisticallyConsistent E sm :=
-  Phylo.Stat.SamplingAxiomVacuity.statisticallyConsistent_vacuous_fin4 E sm
-
--- ⑯ ★★★ 同一缺陷的另两处：`CASTERSampling (Fin 4)` 与 `SiteSampling`（后者为判据形式）
-example : ¬ Nonempty (CASTERSampling.{0} (Fin 4)) :=
-  Phylo.Stat.SamplingAxiomVacuity.not_nonempty_casterSampling_fin4
-
--- ⑰ ★★★ 修正版非空洞（CASTER / parsimony 两侧）
-example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.CASTERSamplingLaw.{0} (Fin 4)) :=
-  Phylo.Stat.SamplingAxiomVacuity.casterSamplingLaw_nonempty (Fin 4)
-
-example : Nonempty (Phylo.Stat.SamplingAxiomVacuity.SiteSamplingLaw.{0, 0} (Fin 4)) :=
-  Phylo.Stat.SamplingAxiomVacuity.siteSamplingLaw_nonempty (Fin 4)
+-- ⑮ ★★★ 修正后的树层谓词 `StatisticallyConsistent` **不是自动成立**的：
+--     常值估计量在「存在不同构理论树」时失败（`not_statisticallyConsistent_const`）——
+--     即「一致性」在修正后**有内容**，而非换个地方空洞。
+example (T : Cladogram.{0, 0} (Fin 4)) (sm : MSCSampling.{0, 0} (Fin 4))
+    (h : ∃ m : MSCFreq.{0, 0} (Fin 4), ¬ Nonempty (Iso T m.tree)) :
+    ¬ StatisticallyConsistent (fun _ => T) sm :=
+  not_statisticallyConsistent_const T sm h
 
 /-! ## 本批最后四块的反空真护栏（一般 `n` 计数 · ADR2011 Lemma 4 · 根部 `1/3`） -/
 

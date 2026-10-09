@@ -73,9 +73,11 @@ python kingman_check.py
 
 ## `W10Probe.lean` —— W10 **全批**的**反空真探针**（协调侧自写）
 
-**不是**数值脚本，是**能被 Lean 编译**的探针（**22 个 `example`**）：证明本批的构造与定理
+**不是**数值脚本，是**能被 Lean 编译**的探针（**23 个 `example`**）：证明本批的构造与定理
 **不是空真** —— 实例可居留、真树 quartet 概率**严格为正**、`1/3` **真的是求和**、
-`MSCSampling (Fin 4)` **真的是空类型**（空洞性发现的**回归护栏**）、四处修正版**真的有居民**、
+四处采样结构（`MSCSampling` / `USTARSampling` / `CASTERSampling` / `SiteSampling`）
+**修正后都有居民**（曾是**空类型**，2026-10-09 已治本）、`emp` **依赖真实律/模型的形状护栏**、
+树层谓词 `StatisticallyConsistent` **非自动成立**、
 M1 的测度层划分、一般 `n` 的计数、ADR2011 Lemma 4、以及**根部 `1/3` = 跳链质量的等式**。
 运行方式（**必须先 build 根模块**，否则 `import Phylo` 读到的是旧 olean）：
 

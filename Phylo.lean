@@ -80,7 +80,6 @@ import Phylo.Stat.MSCKingman
 import Phylo.Stat.MSCMeasure
 import Phylo.Stat.MSCProof
 import Phylo.Stat.MSCSamplingAE
-import Phylo.Stat.SamplingAxiomVacuity
 import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.NJst
 import Phylo.Stat.NJstWitness
@@ -89,7 +88,6 @@ import Phylo.Stat.QuartetDecides
 import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.RootJumpMass
-import Phylo.Stat.SamplingAxiomVacuity
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets

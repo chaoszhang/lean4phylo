@@ -60,12 +60,16 @@ import Phylo.SplitsDetermineTreeBase
 
 ⇒ `QuartetDecidesTree` 由 `def` 变**定理**，三条 `iso` 定理**已删除 `hQD` 参数**。
 
-## 下游收口（**无条件**，2026-10-08 起）
+## 下游收口（2026-10-08 起）
 
-* ★★★ `astral_iso` —— ASTRAL 输出与真树**同构**；
-* ★★★ `parsimony_iso` / `multiLocus_iso` —— 同理。
-  （`multiLocus_iso` 原名 `caster_iso`；它说的是**多标记 ASTRAL** 归约，**不是 CASTER**。
+* ★★★ `astral_iso` —— ASTRAL 输出与真树**同构**（**无条件**）；
+* ★★★ `multiLocus_iso` —— 多标记 ASTRAL 的同款收口（**无条件**）；
+  （原名 `caster_iso`；它说的是**多标记 ASTRAL** 归约，**不是 CASTER**。
   更名见 `Phylo/Stat/MultiLocusASTRAL.lean` 的文件头「更名记录」。）
+* ★★★ `parsimony_iso` —— parsimony 在**位点采样**（`SiteSampling`）下**最终**恢复真树
+  （依赖采样结构，**不是**无条件）；
+* ★★★ `astral_statisticallyConsistent_iso` —— ASTRAL 在 **MSC 采样**（`MSCSampling`）下
+  的**树层**统计一致性（落在 `MSC.StatisticallyConsistent` 上）。
 
 ## ⚠️ 修正记录（2026-10-08）：旧陈述**是假命题**；已由 **T0.6 治本**
 
@@ -357,14 +361,35 @@ theorem multiLocus_iso (m : MSCFreq.{u, v} X) (hT : m.tree.IsBinary) (M : MultiM
     Nonempty (Iso qt.tree m.tree) :=
   astral_iso m hT hqt (hM ▸ (multiLocus_isASTRAL M).mp h)
 
-/-- ★★★ **parsimony 恢复真树的拓扑**（**无条件**）。
+/-- ★★★ **parsimony 恢复真树的拓扑**（在**位点采样** `SiteSampling` 下）。
 
-由 `stable_argmax_site`（最简树 ⟹ 逐 quartet 一致）+ ★★★ `QuartetDecidesTree`。 -/
+由 `parsimony_statisticallyConsistent`（最简树 ⟹ 逐 quartet 一致）+ ★★★ `QuartetDecidesTree`。
+
+⚠️ 本定理**依赖采样结构 `sm`**（**不是**无条件）。 -/
 theorem parsimony_iso (M : MSCSite.{u, v} X) (hT : M.tree.IsBinary) (sm : SiteSampling.{u, v} X)
     {E : SiteSupport X → QuartetTree.{u, v} X} (hE : ∀ D, IsParsimony D (E D))
     (hEbin : ∀ D, (E D).tree.IsBinary)
     (hNE : ∃ q : QuartetChoice X, ¬ AgreesWith M.q q) :
-    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp n)).tree M.tree) := by
+    ∃ N : ℕ, ∀ n ≥ N, Nonempty (Iso (E (sm.emp M n)).tree M.tree) := by
   obtain ⟨N, hN⟩ := parsimony_statisticallyConsistent M sm hE hNE
   exact ⟨N, fun n hn =>
-    QuartetDecidesTree X (E (sm.emp n)) M.asQuartetTree (hEbin (sm.emp n)) hT (hN n hn)⟩
+    QuartetDecidesTree X (E (sm.emp M n)) M.asQuartetTree (hEbin (sm.emp M n)) hT (hN n hn)⟩
+
+/-! ## 树层统计一致性（落在采样谓词 `StatisticallyConsistent` 上） -/
+
+/-- ★★★ **ASTRAL 的树层统计一致性**：`MSCSampling` 修正后，本库叙事上的**树层**一致性谓词
+`StatisticallyConsistent` 对 **ASTRAL 型**估计量**真的成立**（不再空洞）。
+
+* 先引 `Stability.astral_statisticallyConsistent`（**quartet 层**，在 `MSCSampling` 上）；
+* 再用 ★★★ `QuartetDecidesTree`（quartet 一致 ⇒ **树同构**）升到树层
+  —— 与 `parsimony_iso` 的收口方式相同。 -/
+theorem astral_statisticallyConsistent_iso (sm : MSCSampling.{u, v} X)
+    {Q : QuartetFreq X → QuartetTree.{u, v} X} (hQ : ∀ D, IsASTRAL D (Q D))
+    (hQbin : ∀ D, (Q D).tree.IsBinary)
+    (hT : ∀ m : MSCFreq.{u, v} X, m.tree.IsBinary)
+    (hNE : ∀ m : MSCFreq.{u, v} X, ∃ q : QuartetChoice X, ¬ IsTrueChoice m q) :
+    StatisticallyConsistent (fun D => (Q D).tree) sm := by
+  intro m
+  obtain ⟨N, hN⟩ := astral_statisticallyConsistent m sm hQ (hNE m)
+  exact ⟨N, fun n hn =>
+    QuartetDecidesTree X (Q (sm.emp m n)) m.toQuartetTree (hQbin _) (hT m) (hN n hn)⟩
