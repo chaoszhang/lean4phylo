@@ -96,13 +96,13 @@ converges : ∀ 模型, ∀ ε > 0, ∃ N, ∀ n ≥ N, Close (emp n) (理论值
 # 2) 14 个精确复核脚本（动态扫描，无 Monte Carlo）
 bash scripts/msc/run_all.sh
 
-# 3) 反空真探针（22 条 example，需先 lake build Phylo）
+# 3) 反空真探针（**24** 条 example，需先 lake build Phylo）
 ~/w10/withlock.sh <镜像> ~/.elan/bin/lake env lean scripts/msc/W10Probe.lean
 ```
 
 **实测**：guard **全绿**（job 数 **3531 → 3825**）· `#print axioms` **只有**
 `[propext, Classical.choice, Quot.sound]` · **零 sorry / 零 axiom / 零 `native_decide`** ·
-14 个脚本**全 PASS** · 探针 **0 字节**。
+14 个脚本**全 PASS** · 探针 **0 字节**（24/24）。
 
 ⚠️ **构建提醒**：`FiveTaxonLemma4` 的内核 `decide` 实测 **~172 s / `MAXRSS` ~6.9 GB**
 （WSL 上限 ~8 GB，余量 ~1 GB）⇒ **整库 `lake build Phylo` 变重，且不能并发编译**
