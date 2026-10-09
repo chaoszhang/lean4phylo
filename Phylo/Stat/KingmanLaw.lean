@@ -116,9 +116,12 @@ W10a 已给出**所需的两块拼图**：
 ⇒ 两个缺口都只差**一个纤维求和**（`Finset.card_eq_sum_card_fiberwise` + `card_pairSet`），
 本文件**未做**（时间所限，如实记录）。 -/
 
-/-- ❌ **缺口：一次合并的「去向」计数** —— (2.1) 的**正向**语句，
+/-- ❌→✅ **缺口：一次合并的「去向」计数** —— (2.1) 的**正向**语句，
 也是「跳链每步均匀挑一个块对」的**计数依据**。
-`Q : PartK n (k+1)` 的一步去向 `P : PartK n k`（`MergeInto Q.1 P.1`）恰有 `C(k+1,2)` 个。 -/
+`Q : PartK n (k+1)` 的一步去向 `P : PartK n k`（`MergeInto Q.1 P.1`）恰有 `C(k+1,2)` 个。
+
+**已由 `Phylo/Stat/KingmanStep.lean` 补证**（`card_mergeTargets_cast`，**结构路线**、
+纯内核：`card_pairSet` ＋ `card_offDiag` ＋ 按去向的纤维分解）。本 `def` 保留为**接口/记录**。 -/
 def mergeTargets_gap : Prop :=
   ∀ (n k : ℕ), 1 ≤ k → ∀ Q : Phylo.Stat.KingmanJumpChain.PartK n (k + 1),
     ((Finset.univ.filter (fun P : Phylo.Stat.KingmanJumpChain.PartK n k =>

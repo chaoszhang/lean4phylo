@@ -72,6 +72,7 @@ import Phylo.Stat.InvariantsRank
 import Phylo.Stat.KingmanCoalescent
 import Phylo.Stat.KingmanJumpChain
 import Phylo.Stat.KingmanLaw
+import Phylo.Stat.KingmanStep
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MSC
 import Phylo.Stat.MSCInstance
