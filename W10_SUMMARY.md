@@ -37,7 +37,8 @@ W10i `RankedGeneTree`（Stadler–Degnan ranked）· W10k `CoalescentStats`（�
 
 **顺带补掉/新增**：`TrivialSplitCount`（缺口 G1：平凡 split 计数 `= 2n`）·
 `CoalescentHistoryCount`（**一般 `n`**：`|RankedTree n| = H_n`，纯内核）·
-`FiveTaxonLemma4`（**ADR2011 Lemma 4**：5 taxa 的 15 个无根拓扑**等概率**）。
+`FiveTaxonLemma4`（**ADR2011 Lemma 4**：5 taxa 的 15 个无根拓扑**等概率**）·
+**`KingmanStep`（跳链「一步去向计数」`= C(k+1,2)`，(2.1) 的正向语句，结构路线）**。
 
 ---
 
@@ -114,8 +115,8 @@ bash scripts/msc/run_all.sh
 
 | 缺口 | 位置 | 只差什么 |
 |---|---|---|
-| 轨迹律：`mergeTargets_gap` | `KingmanLaw.lean` | 「从 `k+1` 块出发一次合并的去向恰 `C(k+1,2)` 个」——W10a 已有 `merge_outcomes_card` / `card_pairSet` / `mergeOf_eq`，**只差一个纤维求和** |
-| 轨迹律：`jumpMeasure_step_gap` | 同上 | 一步联合律的两个边缘（左边缘用上面的计数） |
+| 轨迹律：`jumpMeasure_step_gap` | `KingmanLaw.lean` | **一步联合律的两个边缘** —— 左边缘用 `KingmanStep.card_mergeTargets_cast`（**已证**）、右边缘用 `partitionProb_merge_recursion_div` 求和；**两个阻塞点都已被拆掉**，只剩记账 |
+| ~~轨迹律：`mergeTargets_gap`~~ | ~~`KingmanLaw.lean`~~ | ✅ **已证**（`KingmanStep.lean`，见下面「本轮新增」） |
 | `pUV_normalization`（一般 `n`） | `DegnanSalter.lean` | 系数恒等式 `Σ_v c(u,v,k) = δ_{ku}`（= `Σ_k P_k = I` 的一行） |
 | `rankedFiberCount_gap` / `sd2012_eq4_uniform_rates_gap` / `ranked4_probability_gap` | `RankedGeneTree.lean` | 论文 Remark 6 的一般 `n`；式 (4) 的一般 `m`；`n = 4` 的概率表 |
 | 一般 `n` 的 MSC gene tree 分布 | — | **W10e/f/h 三个缺口共同的根** |
