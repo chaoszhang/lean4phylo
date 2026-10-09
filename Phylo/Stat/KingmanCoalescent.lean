@@ -469,4 +469,16 @@ theorem integral_sum_sojournJointLaw {n : ℕ} (hn : 2 ≤ n) :
     Finset.sum_congr rfl (fun j _ => inv_kingmanRate_add_two j)]
   exact Coalescent.expectedTotalCoalescenceTime hn
 
+/-- ★★★ **跨层桥接**：W10b 的**测度层**期望 `∫ Σ_i τ_i ∂(sojournJointLaw n)` **就是**
+`Coalescent` 那一侧的**实数层有限和** `Σ_j sojournMean (j+2)`
+—— 两边**各自**等于 `2(1 − 1/n)`，本定理把「**测度层的积分**」与「**实数层的闭式**」显式接上
+（于是 `sojournLaw` 的均值确实就是库内既有的 `sojournMean`，不只是数值上相等）。
+
+证明：两边分别用 `integral_sum_sojournJointLaw`（测度层）与
+`Coalescent.expectedTotalCoalescenceTime`（实数层）。 -/
+theorem integral_sum_sojournJointLaw_eq_sojournMean_sum {n : ℕ} (hn : 2 ≤ n) :
+    ∫ τ, ∑ i : Fin (n - 1), τ i ∂(sojournJointLaw n)
+      = ∑ j ∈ Finset.range (n - 1), Coalescent.sojournMean (j + 2) := by
+  rw [integral_sum_sojournJointLaw hn, Coalescent.expectedTotalCoalescenceTime hn]
+
 end Phylo.Stat.KingmanCoalescent
