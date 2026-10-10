@@ -407,7 +407,23 @@ example (X : Type*) [Fintype X] [DecidableEq X] [Nonempty X] (T : Phylogram X) :
     ¬ greedy_gap T :=
   not_greedy_gap T
 
-/-! ## §5.3 ★★★ 修复形态（开放目标）与「极大集套极大集」的**伪**（已证阴性结论） -/
+/-! ## §5.3 ★★★ 修复形态（开放目标）与「极大集套极大集」的**伪**（已证阴性结论）
+
+### 修复形态的**部分结果**（W12h 第二批）
+
+* ✅ **已证**：`greedy_gap_correct_shape_at_one`（`k = 1`，需 `|X| ≥ 2`）—— 因为
+  `pd_1 = 0`（`PD_of_card_le_one`）使**每个**单点都是极大 `1`-集，故取任一 `2`-极大集的
+  任一元素 `x`（`next` 存在由 `exists_maximizer_card`）即得 `prev = {x} ⊆ next`；
+* ✅ **已证**：`greedy_gap_correct_shape_at_card_sub_one`（`k = |X| - 1`）—— 取
+  `next := univ`（`(|X|-1)+1 = |X|` 元子集**唯一**）、`prev :=` 任一 `(|X|-1)`-极大集；
+* ⬜ **仍未证**：一般 `k`。**★D 证据**：数值脚本 `scripts/msc/w12h_greedy_gap_check.py`
+  在 `n = 2..6` 全部叶标号树 × **24587** 组权上核对该形态（脚本的 **P5**）—— **零反例**；
+  同时「下钻」猜想（每个 `(k+1)`-极大集**含**一个 `k`-极大集，脚本的 **P6**）也**零反例**。
+  ★ 若 P6 能在 Lean 中证出，则本 `def` 立刻可得（取 `next` 为任一 `(k+1)`-极大集，
+  P6 给出其内的 `k`-极大集作 `prev`）—— 这是本批留下的**具体后续路线**。
+  ⚠️ 零反例**不是**证明，故本 `def` 保持为**开放目标**；
+* ⬜ **未做**：Steel 式 (1) 的**加权**交换性质（树论：`e` 在 `u–v` 唯一路径上）——
+  本批**完全未**触碰。这是给出一般 `k` 的证明（或反例）的关键器材。 -/
 
 /-- ★★★ **修复形态（前提 `k + 1 ≤ card X`）**：原 `greedy_gap` 因 `k = |X|` 为**假**
 （`not_greedy_gap` 已反驳）；把前提改成 `k + 1 ≤ card X` 后，本批**未能证出**，
@@ -480,6 +496,52 @@ theorem correct_shape_of_profile (T : Phylogram (Fin 4))
   · intro S hS
     rw [h03]
     exact h2 S hS
+
+/-- ★★ **极大 `k`-集总存在**（`k ≤ |X|`）：`PD` 在有限多个 `k`-子集上取最大。 -/
+theorem exists_maximizer_card (T : Phylogram X) (k : ℕ) (hk : k ≤ Fintype.card X) :
+    ∃ A : Finset X, IsMaxPD T k A := by
+  classical
+  obtain ⟨A, hA⟩ := Finset.exists_max_image (Finset.univ.powersetCard k) (fun S => PD T S)
+    (Finset.powersetCard_nonempty.mpr hk)
+  exact ⟨A, (Finset.mem_powersetCard.mp hA.1).2,
+    fun S' hS' => hA.2 S' (Finset.mem_powersetCard.mpr ⟨Finset.subset_univ S', hS'⟩)⟩
+
+/-- ★★★ **正确形态在 `k = 1` 成立**（`|X| ≥ 2`）：`pd_1 = 0` ⇒ **每个**单点都是极大 `1`-集，
+故任取一个 `2`-极大集 `next` 与其任一元素 `x`，`prev := {x}` 满足全部要求。 -/
+theorem greedy_gap_correct_shape_at_one (T : Phylogram X) (hX : 2 ≤ Fintype.card X) :
+    ∃ prev next : Finset X,
+      prev ⊆ next ∧ prev.card = 1 ∧ next.card = 1 + 1 ∧
+        (∀ S : Finset X, S.card = 1 → PD T S ≤ PD T prev) ∧
+        (∀ S : Finset X, S.card = 1 + 1 → PD T S ≤ PD T next) := by
+  classical
+  obtain ⟨next, hnext⟩ := exists_maximizer_card T 2 hX
+  obtain ⟨x, hx⟩ : ∃ x : X, x ∈ next := Finset.card_pos.mp (by rw [hnext.1]; norm_num)
+  refine ⟨{x}, next, Finset.singleton_subset_iff.mpr hx, Finset.card_singleton x, ?_, ?_, ?_⟩
+  · rw [hnext.1]
+  · intro S hS
+    rw [PD_of_card_le_one T (S := S) (by omega),
+      PD_of_card_le_one T (S := ({x} : Finset X)) (by simp)]
+  · intro S hS
+    exact hnext.2 S (by omega)
+
+/-- ★★★ **正确形态在 `k = |X| - 1` 成立**：取 `next := univ`
+（`(|X|-1)+1 = |X|` 元子集**唯一**）、`prev :=` 任一 `(|X|-1)`-极大集，则 `prev ⊆ univ`。 -/
+theorem greedy_gap_correct_shape_at_card_sub_one (T : Phylogram X)
+    (hX : 1 ≤ Fintype.card X) :
+    ∃ prev next : Finset X,
+      prev ⊆ next ∧ prev.card = Fintype.card X - 1 ∧
+        next.card = (Fintype.card X - 1) + 1 ∧
+        (∀ S : Finset X, S.card = Fintype.card X - 1 → PD T S ≤ PD T prev) ∧
+        (∀ S : Finset X, S.card = (Fintype.card X - 1) + 1 → PD T S ≤ PD T next) := by
+  classical
+  obtain ⟨prev, hprev⟩ := exists_maximizer_card T (Fintype.card X - 1) (by omega)
+  refine ⟨prev, Finset.univ, Finset.subset_univ prev, hprev.1, ?_, hprev.2, ?_⟩
+  · rw [Finset.card_univ]; omega
+  · intro S hS
+    have hSuniv : S = Finset.univ := by
+      refine Finset.eq_univ_of_card S ?_
+      omega
+    rw [hSuniv]
 
 end PhyloDiversity
 

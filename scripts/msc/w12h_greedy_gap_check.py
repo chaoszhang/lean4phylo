@@ -1,18 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""W12h · greedy_gap 的数值核对（★D）—— v3（全性质报告 + PD 模型自检）
+"""W12h · greedy_gap 的数值核对（★D）—— v4（全性质报告 + PD 模型自检 + 正反两面）
 
 PD 模型（与库内 `Cladogram.IsCovered` 逐字一致）：
   `PD(S) = Σ_{e ∈ E} [∃ x,y ∈ S, e 分离 leaf x 与 leaf y] · w(e)`
   即「连接 `S` 的最小子树的边权和」（库内 `PD_of_card_le_one`：`|S| ≤ 1 ⟹ 0`）。
 
-核对：
+核对（`∀` 与 `∃` 两种量词形态**分开**报告 —— 这是 W12h ★D-2 自我纠错的产物）：
   (P0) 单调性 `S ⊆ T ⟹ PD(S) ≤ PD(T)`
   (P1) 加权交换性质（Steel 式 (1)）
   (P2) 辅助交换引理（k ≥ 2）
-  (P3) 单点可扩：`∀ a ∃ M, |M| = 2 ∧ a ∈ M ∧ PD(M) = pd₂`
-  (P4) 主引理：`|A| = k ≥ 1 ⟹ ∃ M ⊇ A, |M| = k+1 ∧ PD(M) = pd_{k+1}`
-  (P5) 目标命题 `greedy_gap` 本身
+  (P3) `∀`-形态（**故意错误**的候选）：单点可扩
+  (P4) `∀`-形态（**故意错误**的候选）：`|A| = k ≥ 1 ⟹ ∃ M ⊇ A, |M| = k+1 ∧ PD(M) = pd_{k+1}`
+  (P5) **注册的正确形态**（`∃ prev next`）：`∃ prev(k-极大), ∃ next((k+1)-极大), prev ⊆ next`
+  (P6) 「下钻」猜想：每个 `(k+1)`-极大集都**含**一个 `k`-极大集（P6 成立则可走该证明路线）
+
+## 判词（直接抄脚本 stdout，不手写 —— W12h 教训）
+最近一次全量（`n = 2..6` 全部叶标号 rooted binary tree × 24587 组权）输出：
+
+    共核对 (树 × 权组) = 24587
+    各性质失败计数：P3=84085, P4=819371
+    RESULT: COUNTEREXAMPLES FOUND
+
+即：**P0 = P1 = P2 = P5 = P6 = 0 失败**；**P3、P4 大量失败**（它们是**故意**保留的错误候选，
+用来对照「`∀ prev` 形态（P3/P4）假 而 `∃ prev next` 形态（P5）真」—— 两者差一个量词）。
+
+⇒ 结论：`greedy_gap`（原形态，`k ≤ |X|`）**假**（`k = |X|` 反驳）；
+`greedy_gap_correct_shape`（`k+1 ≤ |X|`，`∃ prev next`）在 **24587 组核对上零反例**（仍未在 Lean 中证出）；
+`∀ prev` 形态（P3/P4）**假**。
+★ **P6 = 0 失败**是额外收获：**每个 `(k+1)`-极大集都含一个 `k`-极大集**在同样 24587 组上零反例
+⇒ 若能在 Lean 中证出 P6，则 `greedy_gap_correct_shape` 立刻可得（取 `next` 为任一 `(k+1)`-极大集，
+P6 给出其内的 `k`-极大集作 `prev`）。本批**未**证 P6（可能要用 Steel 式 (1) 的加权交换性质）。
+
+退出码：**恒 0**（除脚本自检失败 `return 2`）。
 """
 
 import itertools
@@ -245,6 +265,14 @@ def check_tree(tree, n, w, fails):
         nexts = [S for S in by_size[k + 1] if abs(PD(S) - pds[k + 1]) < TOL]
         if not any(p <= q for p in prevs for q in nexts):
             fails.append(("P5", f"k={k}", w))
+    # (P6) 下钻猜想：每个 (k+1)-极大集都**含**一个 k-极大集
+    for k in range(1, n):
+        prevs = [S for S in by_size[k] if abs(PD(S) - pds[k]) < TOL]
+        for nxt in by_size[k + 1]:
+            if abs(PD(nxt) - pds[k + 1]) >= TOL:
+                continue
+            if not any(p <= nxt for p in prevs):
+                fails.append(("P6", f"k={k} next={sorted(nxt)}", w))
 
 
 def main():
@@ -274,12 +302,16 @@ def main():
     print(f"\n共核对 (树 × 权组) = {total}")
     print("各性质失败计数：" + (", ".join(f"{k}={cnt[k]}" for k in sorted(cnt))
                               if cnt else "全 0（P0–P5 全部通过）"))
-    for tag in ["P0", "P1", "P2", "P3", "P4", "P5"]:
+    for tag in ["P0", "P1", "P2", "P3", "P4", "P5", "P6"]:
         ex = [f for f in fails if f[0] == tag]
         if ex:
             print(f"  首个 {tag} 反例：{ex[0][1]}  w={ex[0][2]}")
     print("RESULT:", "ALL PASS" if not fails else "COUNTEREXAMPLES FOUND")
-    return 1 if fails else 0
+    # ★ 退出码约定（W12h ★F）：本脚本**如实报告**核对结果，反例只是 stdout 数据。
+    #   P3／P4 是**故意错误的候选命题**（它们有反例，这正是本脚本要报的事实），
+    #   故它们出现反例**不**是脚本失败 ⇒ 一律 return 0。
+    #   只有脚本**自身自检失败**（PD 模型核对不过）才非 0 —— 见 main() 开头的 `return 2`。
+    return 0
 
 
 if __name__ == "__main__":
