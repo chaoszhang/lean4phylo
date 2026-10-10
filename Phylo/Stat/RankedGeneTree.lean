@@ -643,9 +643,20 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
      ★★ **`attach_prod_LE`** —— `attach.prod` ↔ `Finset.prod` 桥接（用 `if h : B ∈ children T C ...`
      把 `children_mem` 的证据**内部化**，再 `dite_eq_left` 消去 ＋ `Finset.prod_attach`）；
      ★ **`two_le_card_of_child`**。
-   * ⬜ **仍缺 (c)**：用 `LE_induction` ＋ §5（`prod_hook_eq_hook_mul_prod_children`，需
-     `LaminarFamily T`）＋ §6（`multinomial_children_factorial`）归纳出**闭形式**
-     `LE T C hC · ∏_{D ⊆ C} hook T D = (hook T C)!`（配方见报告 §10）。
+   * **★★★ 第八轮 (c) 已落地** ✓：**hook-length 公式本体**
+     ```text
+     LE_mul_prod_hook_eq_factorial (hl : LaminarFamily T) :
+       LE T C hC · ∏_{D ∈ internalBelow T C} hook T D = (hook T C)!
+     ```
+     （§10；用 `LE_induction` ＋ §5 ＋ §6 ＋ `Nat.factorial_succ` 收口；
+     孩子 `< 2` 元素时分情形，两边都为 `1`）。
+   * **★B capstone**（§10.1）：由闭形式**反解**出
+     `LE Tcat univ = 1`、`LE Tbal univ = 2` —— **恰好等于既有纤维数**
+     `rankedFiberCount_012_3 = 1`、`rankedFiberCount_01_23 = 2` ✓
+     （仅**具体拓扑数值一致**，不是一般 `n` 的双射）。
+   * ⬜ **仍缺 (ii)**：`LE` 与 `rankedFiberCount` 的**显式双射**（对任意 `n`），
+     即「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」—— 这才是
+     `rankedFiberCount_gap` 的组合实体。
    ⬜ **仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
    （需自造 `LE` 的归纳原理 + `Finset.prod_attach` 对齐 —— Lean 基础设施问题），
    以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
