@@ -393,6 +393,115 @@ theorem not_compatible_of_four_nonempty {s t : Split X}
 
 end Split
 
+/-! ## §1.6 第十八轮：**(C) 装配**（不相容分裂 vs 树 split 相容）
+
+放在 `namespace Split`（上节）**之后**，故可直接引用 `Split.not_compatible_of_four_nonempty` ✓。 -/
+
+namespace Cladogram
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- `splitOfEdge` 的 `sideA` 就是 `u` 那一侧的叶集（一行 `simp`）。 -/
+theorem sideA_splitOfEdge {T : Cladogram X} {e : Sym2 T.V} {u : T.V} {hA hB} :
+    (T.splitOfEdge e u hA hB).sideA = T.sideLeaves e u := by
+  simp [splitOfEdge, Split.sideA]
+
+/-- ★★★ **(C)（带 `3 ≤ |W|`）**：`z ∉ W` 至多挂在一条 `W`-元素的悬挂路径上。
+
+**证明**：反设 `w₁ ≠ w₂` 且 `z` 同挂在二者上，取外边 `e₁ ∈ P(w₁)`、`e₂ ∈ P(w₂)` 使 `z` 与 `wᵢ` 在 `eᵢ` 同侧。
+* `e₁ = e₂`：由 `z ~ w₁`、`z ~ w₂` 与传递性得 `w₁ ~ w₂`，与核心引理的 `IsSep e₁ (leaf w₁) (leaf w₂)` 矛盾 ✓；
+* `e₁ ≠ e₂`：取第三元素 `w₃`（用 `3 ≤ |W|`）。四元组 `{w₁, w₂, z, w₃}` 上 `e₁` 实分裂 `w₁z | w₂w₃`、
+  `e₂` 实分裂 `w₂z | w₁w₃` ⇒ **四角全非空** ⇒ `Split.not_compatible_of_four_nonempty` 判**不相容** ✗，
+  而库内 `pairwiseCompatible T` 判树的 split **两两相容** ✓ ⇒ 矛盾 ✓。 -/
+theorem hangOff_disjoint_of_three (T : Cladogram X) (W : Finset X) {z : X} (_hz : z ∉ W)
+    (h3 : 3 ≤ W.card) : ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+      z ∈ HangOff T W w₁ → z ∈ HangOff T W w₂ → w₁ = w₂ := by
+  classical
+  intro w₁ hw₁ w₂ hw₂ hz₁ hz₂
+  by_contra hne
+  obtain ⟨e₁, hP₁, hsep₁⟩ := hz₁
+  obtain ⟨e₂, hP₂, hsep₂⟩ := hz₂
+  have hi₁ : T.inSide e₁ (T.leaf w₁) (T.leaf z) := of_not_not hsep₁
+  have hi₂ : T.inSide e₂ (T.leaf w₂) (T.leaf z) := of_not_not hsep₂
+  rcases eq_or_ne e₁ e₂ with heq | hne'
+  · have hz₁₂ : T.inSide e₁ (T.leaf w₁) (T.leaf w₂) := by
+      rw [← heq] at hi₂
+      exact inSide_trans T e₁ hi₁ ((inSide_comm T e₁ (T.leaf w₂) (T.leaf z)).mp hi₂)
+    exact (isSep_of_isPendantEdgeOf_of_ne hP₁ hw₂ (Ne.symm hne)) hz₁₂
+  · have hnot₁₂ : ¬ T.inSide e₁ (T.leaf w₁) (T.leaf w₂) :=
+      isSep_of_isPendantEdgeOf_of_ne hP₁ hw₂ (Ne.symm hne)
+    have hnot₂₁ : ¬ T.inSide e₂ (T.leaf w₂) (T.leaf w₁) :=
+      isSep_of_isPendantEdgeOf_of_ne hP₂ hw₁ hne
+    obtain ⟨w₃, hw₃, hw₃₁, hw₃₂⟩ : ∃ w₃ ∈ W, w₃ ≠ w₁ ∧ w₃ ≠ w₂ := by
+      by_contra hcon
+      have hsub : W ⊆ {w₁, w₂} := by
+        intro y hy
+        by_contra hy'
+        simp only [Finset.mem_insert, Finset.mem_singleton, not_or] at hy'
+        exact hcon ⟨y, hy, hy'.1, hy'.2⟩
+      have hle : W.card ≤ ({w₁, w₂} : Finset X).card := Finset.card_le_card hsub
+      have h2' : ({w₁, w₂} : Finset X).card ≤ 2 := by
+        have h := Finset.card_insert_le w₁ ({w₂} : Finset X)
+        simp only [Finset.card_singleton] at h
+        omega
+      omega
+    have hnot₁₃ : ¬ T.inSide e₁ (T.leaf w₁) (T.leaf w₃) :=
+      isSep_of_isPendantEdgeOf_of_ne hP₁ hw₃ hw₃₁
+    have hnot₂₃ : ¬ T.inSide e₂ (T.leaf w₂) (T.leaf w₃) :=
+      isSep_of_isPendantEdgeOf_of_ne hP₂ hw₃ hw₃₂
+    have hA₁ : (T.sideLeaves e₁ (T.leaf w₁)).Nonempty := ⟨w₁, T.mem_sideLeaves_self e₁ w₁⟩
+    have hB₁ : (Finset.univ \ T.sideLeaves e₁ (T.leaf w₁)).Nonempty :=
+      ⟨w₂, Finset.mem_sdiff.mpr ⟨Finset.mem_univ _,
+        fun h => hnot₁₂ ((T.mem_sideLeaves_iff_inSide).mp h)⟩⟩
+    have hA₂ : (T.sideLeaves e₂ (T.leaf w₂)).Nonempty := ⟨w₂, T.mem_sideLeaves_self e₂ w₂⟩
+    have hB₂ : (Finset.univ \ T.sideLeaves e₂ (T.leaf w₂)).Nonempty :=
+      ⟨w₁, Finset.mem_sdiff.mpr ⟨Finset.mem_univ _,
+        fun h => hnot₂₁ ((T.mem_sideLeaves_iff_inSide).mp h)⟩⟩
+    let s₁ : Split X := T.splitOfEdge e₁ (T.leaf w₁) hA₁ hB₁
+    let s₂ : Split X := T.splitOfEdge e₂ (T.leaf w₂) hA₂ hB₂
+    have hsA₁ : s₁.sideA = T.sideLeaves e₁ (T.leaf w₁) := sideA_splitOfEdge
+    have hsA₂ : s₂.sideA = T.sideLeaves e₂ (T.leaf w₂) := sideA_splitOfEdge
+    have memB : ∀ (s : Split X) {y : X}, y ∉ s.sideA → y ∈ s.sideB := by
+      intro s y hy
+      have hy' : y ∈ s.sideA ∪ s.sideB := by
+        rw [s.union_sides]
+        exact Finset.mem_univ y
+      rcases Finset.mem_union.mp hy' with h | h
+      · exact absurd h hy
+      · exact h
+    have c1 : (s₁.sideA ∩ s₂.sideA).Nonempty :=
+      ⟨z, Finset.mem_inter.mpr
+        ⟨by rw [hsA₁]; exact (T.mem_sideLeaves_iff_inSide).mpr hi₁,
+         by rw [hsA₂]; exact (T.mem_sideLeaves_iff_inSide).mpr hi₂⟩⟩
+    have c2 : (s₁.sideA ∩ s₂.sideB).Nonempty :=
+      ⟨w₁, Finset.mem_inter.mpr
+        ⟨by rw [hsA₁]; exact T.mem_sideLeaves_self e₁ w₁,
+         memB s₂ (by rw [hsA₂]
+                     exact fun h => hnot₂₁ ((T.mem_sideLeaves_iff_inSide).mp h))⟩⟩
+    have c3 : (s₁.sideB ∩ s₂.sideA).Nonempty :=
+      ⟨w₂, Finset.mem_inter.mpr
+        ⟨memB s₁ (by rw [hsA₁]
+                     exact fun h => hnot₁₂ ((T.mem_sideLeaves_iff_inSide).mp h)),
+         by rw [hsA₂]; exact T.mem_sideLeaves_self e₂ w₂⟩⟩
+    have c4 : (s₁.sideB ∩ s₂.sideB).Nonempty :=
+      ⟨w₃, Finset.mem_inter.mpr
+        ⟨memB s₁ (by rw [hsA₁]
+                     exact fun h => hnot₁₃ ((T.mem_sideLeaves_iff_inSide).mp h)),
+         memB s₂ (by rw [hsA₂]
+                     exact fun h => hnot₂₃ ((T.mem_sideLeaves_iff_inSide).mp h))⟩⟩
+    have hm₁ : s₁ ∈ T.splits := by
+      obtain ⟨a, b, hab, heab⟩ := exists_adj_of_mem (isCovered_edgeSet hP₁.1)
+      exact ⟨a, b, hab, T.leaf w₁, by rw [hsA₁, heab]⟩
+    have hm₂ : s₂ ∈ T.splits := by
+      obtain ⟨a, b, hab, heab⟩ := exists_adj_of_mem (isCovered_edgeSet hP₂.1)
+      exact ⟨a, b, hab, T.leaf w₂, by rw [hsA₂, heab]⟩
+    have hcomp : Split.Compatible s₁ s₂ :=
+      (pairwiseCompatible T : ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t)
+        s₁ hm₁ s₂ hm₂
+    exact Split.not_compatible_of_four_nonempty c1 c2 c3 c4 hcomp
+
+end Cladogram
+
 /-! ## §2 (A)：PD 求和装配 ＋ 条件形态的 `pdExchange_gap`
 
 第八轮记录的三条卡点绕法（本段全部遵守）：
@@ -570,6 +679,20 @@ theorem greedy_gap_correct_shape_of_hangOff_disjoint (T : Phylogram X)
         z ∈ Cladogram.HangOff T.toCladogram W w₂ → w₁ = w₂) :
     greedy_gap_correct_shape T :=
   greedy_gap_correct_shape_of_exchange T (pdExchange_gap_of_hangOff_disjoint T hC)
+
+/-- ★★★ **(C) 的无条件版 ⇒ 无条件 `pdExchange_gap`**（Steel 式 (1) 的加权交换性质）。 -/
+theorem pdExchange_gap_proof (T : Phylogram X) : pdExchange_gap T :=
+  pdExchange_gap_of_hangOff_disjoint T fun W _ hz h3 w₁ hw₁ w₂ hw₂ h1 h2 =>
+    Cladogram.hangOff_disjoint_of_three T.toCladogram W hz h3 w₁ hw₁ w₂ hw₂ h1 h2
+
+/-- ★★★ **修复形态（无条件）**：原 `def greedy_gap_correct_shape` **逐字保留**。 -/
+theorem greedy_gap_correct_shape_proof (T : Phylogram X) : greedy_gap_correct_shape T :=
+  greedy_gap_correct_shape_of_exchange T (pdExchange_gap_proof T)
+
+/-- ★B **反空真**：无条件版给出的正是 `def greedy_gap_correct_shape` 的闭合实例。 -/
+example (X : Type*) [Fintype X] [DecidableEq X] (T : Phylogram X) :
+    greedy_gap_correct_shape T :=
+  greedy_gap_correct_shape_proof T
 
 end Phylo.PhyloDiversity
 
