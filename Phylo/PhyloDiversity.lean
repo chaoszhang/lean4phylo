@@ -541,8 +541,32 @@ theorem greedy_gap_correct_shape_at_one (T : Phylogram X) (hX : 2 ≤ Fintype.ca
 `greedy_gap_correct_shape_of_exchange` 推出**修复形态**。
 
 数值核对（`scripts/msc/w12h_greedy_gap_check.py` 的 **P1**）在 `n = 2..6` 全部叶标号树 ×
-**24587** 组权上**零反例**；逐边分析表明它**不需树论**（只要 `IsCoveredE` 对第一自变量单调
-＋ `w ≥ 0`），但「选出那个 `x`」的组合论证本批未收敛。 -/
+**24587** 组权上**零反例**。
+
+## 施工图（W12h 第四轮：已读到文献证明，卡点已精确定位）
+
+文献 `references/md/Steel2005_PhylogeneticDiversityGreedyAlgorithm.md` 第 265–306 行的证明是：
+把 `T` 看成由 `T|W` 接上一族子树 `F` 得到，**选一条 `T|W` 的外边 `e`**（= 与 `W` 中某个叶
+`x` 相邻的悬挂边），使得**接在 `e` 上的任何 `F` 子树都不含 `W'` 的物种**；取 `x` = 该叶。
+于是 (2) `PD(W) = PD(W−{x}) + λ_W(e)`（只需**一条**边），且 (3) `PD(W'∪{x}) ≥ PD(W') + λ_W(e)`。
+存在性由**计数**得到：`|W'| < |W|` ⇒ `|W'∖W| < |W∖W'|`，而每个 `w ∈ W∖W'` 的悬挂边至多
+「消耗」一个 `W'∖W` 的元素 ⇒ 必有某个 `w` 的悬挂边上没有 `W'∖W` 的元素。
+
+**我方已把它化为可施工的两条**（第四轮推演，未形式化）：
+* (A) **选 `x` 的条件**：用 `P(w) := {e : cov(W,e) ∧ ¬cov(W∖{w},e)}`（`w` 的悬挂路径）与
+  `Out(w)` := `P(w)` 最内侧边的「`w` 侧」，则只要
+  **(W'∖W) ∩ Out(w) = ∅**，就有
+  `PD(W∖{w}) + PD(W'∪{w}) − PD(W) − PD(W') = Σ_{e∈Gain(w)} w_e − Σ_{e∈P(w)} w_e ≥ 0`
+  （因 `P(w) ⊆ Gain(w)`，其中 `Gain(w) := {e : ¬cov(W',e) ∧ cov(W'∪{w},e)}`）✓；
+* (B) **计数**：各 `w ∈ W` 的 `Out(w)` 两两不相交（树在互异 `W`-叶处的悬挂子树互不相交），
+  而 `Out(w) ∩ W = {w}` ⇒ `Σ_{w∈W∖W'} |(W'∖W) ∩ Out(w)| ≤ |W'∖W| < |W∖W'|`
+  ⇒ 存在 `w ∈ W∖W'` 使 `(W'∖W) ∩ Out(w) = ∅` ✓。
+
+**卡在哪一步（如实）**：`Out(w)`／`T|W`／悬挂子树 `F` 这一套**载体在本库不存在** ——
+`PhyloDiversity.lean` 只有 `IsSep`／`IsCovered`／`PD`；要形式化 (B) 的「互不相交」需要
+「`W` 的最小子树」的几何（`AttesonRadius` 的 `pathOf` 系列可能可复用，但 `T|W` 与
+悬挂子树分解没有现成件）。**故本 `def` 仍是开放缺口**（未被反驳 ✓，零反例 ✓，
+**但没有**用它当证明 ✓）。 -/
 def pdExchange_gap (T : Phylogram X) : Prop :=
   ∀ W W' : Finset X, 2 ≤ W'.card → W'.card < W.card →
     ∃ x ∈ W \ W', PD T (W.erase x) + PD T (W' ∪ {x}) ≥ PD T W + PD T W'
