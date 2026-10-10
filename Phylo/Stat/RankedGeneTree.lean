@@ -98,7 +98,11 @@ vertices being ordered」= 本文件 `IsMergeHistory` 的口径。）
 5. **Theorem 3 的算术核**：`sd2012_eq4_example`（论文自算的 `λ=(0,1,2)` 例子）、
    `eq4_two_uniform_rates`（同一个式子按 `eq4` 定义本身展开）、
    与 `eq4_one_general`（`m = 1` 的两条竞争指数）。
-6. **实现纪律**：全部有限枚举用 `decide`（内核规约），**不用** `native_decide`
+6. **本批（W11e）新增**：`eq4_uniform_rates`（式 (4) 在 `λ_j = j` 的**一般 `m`**，
+   即原缺口 G3）、`ranked4_probability_gap_proved`（`n = 4` 概率表的**构造性**证明，
+   即原缺口 G4）、`rankedFiberCount_four`（Remark 6 在 `n = 4` 的**一般 `f`** 形式）、
+   `sum_card_fiber_cladesOf`（一般 `n` 的纤维分解：各纤维大小之和 = 合并史总数）。
+7. **实现纪律**：全部有限枚举用 `decide`（内核规约），**不用** `native_decide`
    （故没有引入 `Lean.ofReduceBool`）；文件内 13 条代表定理的 `#print axioms` 均为
    `[propext, Classical.choice, Quot.sound]`。
 
@@ -109,12 +113,13 @@ vertices being ordered」= 本文件 `IsMergeHistory` 的口径。）
 | 论文式 (2) `H_ℓ = ℓ!(ℓ−1)!/2^{ℓ−1}` | ✅ **已证**（`H_eq_factorial`；`H_eq_prod` 给出乘积形式） |
 | 「`1/H_ℓ` = 每一步均匀合并的概率之积」 | ✅ **已证**（`one_div_H_eq_prod_jumpProb`，用库内 `Coalescent.jumpProb`） |
 | ranked 树计数 `= H_n`（**一般 `n`**） | ✅ **已由 `Phylo.Stat.CoalescentHistoryCount` 补证**（纯内核；本文件只做了 `n ≤ 4` 的枚举） |
-| Remark 6 的 `(n−1)!/∏(c_i−1)`（**一般 `n`**） | ❌ **未证**（缺口 `rankedFiberCount_gap`）；脚本穷举 `n ≤ 7` 核对，Lean 内验证 `n = 3, 4` 的实例 |
+| Remark 6 的 `(n−1)!/∏(c_i−1)`（**一般 `n`**） | ⚠️ **部分**：`n = 4` 的**一般 `f`** 已证（`rankedFiberCount_four`，纯内核 `decide`）＋一般 `n` 的**纤维分解**（`sum_card_fiber_cladesOf`）；一般 `n` 的公式仍是缺口 `rankedFiberCount_gap`（缺「树偏序 hook-length 公式」那一层接口，见 §5） |
 | **Theorem 1 的 `n = 3` 实例** | ✅ **已证**，但**模型前提显式**（`sd2012_theorem1_n3` 的 `b` 是假设，不是从 Theorem 2/3 推出的） |
 | **Theorem 1 的一般 `n`** | ❌ **未做**（本文件只做 `n = 3`；一般 `n` 需要 Theorem 2/3 的输出） |
 | **Theorem 2（式 (3) 的下行递推）** | ❌ **未形式化**（没有「根以下概率」的概率层对象） |
-| **Theorem 3（式 (4) 的一般 `m`）** | ❌ **未形式化**（只做了 `m = 1` 的一般 `λ` 与 `λ = (0,1,2)`、`m = 2` 的算术实例 —— `sd2012_eq4_example` / `eq4_two_uniform_rates` / `eq4_one_general`；一般 `m` 落缺口 `sd2012_eq4_uniform_rates_gap`） |
-| **`n = 4` 的 ranked 概率表** | ❌ **未做**（缺口 `ranked4_probability_gap`） |
+| **Theorem 3（式 (4) 的一般 `m`，`λ_j = j`）** | ✅ **已证**（`eq4_uniform_rates` / `sd2012_eq4_uniform_rates_gap_proved`：分母闭形式 `(−1)^j j!(m−j)!` + 二项式定理；另保留 `m = 1` 一般 `λ` 的 `eq4_one_general` 与论文自算例子） |
+| **Theorem 3（一般互异 `λ` 的一般 `m`）** | ❌ **未做**（≥ 3 个互异 `λ` 的部分分式恒等式；`eq4` 的形状本身已由 `eq4_two_uniform_rates` / `eq4_one_general` 落地） |
+| **`n = 4` 的 ranked 概率表** | ✅ **已证**（`ranked4_probability_gap_proved`，**构造性**：平衡形两个 ranking 各 `mscConcordant t/2`，其余 `16` 个各 `(1 − mscConcordant t)/16`；⚠️ 只是「存在 + 边缘化」，不是 SD2012 的算法） |
 | `k_{i,j,z}`（式 (4) 的 `λ_{i,j}` 谱系计数机制，§2.1） | ❌ **未形式化**（属于 Theorem 2/3 的实现细节） |
 | 测度层随机变量 | ❌ **无**：本文件与 `Coalescent.lean`/`MSCProof.lean` 同一层次（**实数层**概率），不是测度层 |
 | 任务书 §11.3 的「给定拓扑 ranked 树计数 `= (n−1)!`」 | ⚠️ **未采信**（脚本穷举证伪；论文 Remark 6 才是对的，见 §0 第 3 条） |
@@ -498,7 +503,7 @@ theorem concordant3_iff_clades : ∀ f : Fin (3 - 1) → Fin 3 × Fin 3,
     IsMergeHistory 3 f → (Concordant3 f ↔ cladesOf 3 f = clades_01_2) := by
   decide
 
-/-! ## §5 诚实边界：显式缺口（`def … : Prop`，**不是** `axiom`，也**不是** `sorry`） -/
+/-! ## §5 缺口登记（`def … : Prop`，**不是** `axiom`，也**不是** `sorry`） -/
 
 /-- ❌→✅ **缺口 G1（计数，一般 `n`）已由 `Phylo/Stat/CoalescentHistoryCount.lean` 补证**：
 `n` 个叶上的 ranked 树数 `= H_n`。
@@ -510,43 +515,308 @@ theorem concordant3_iff_clades : ∀ f : Fin (3 - 1) → Fin 3 × Fin 3,
 本 `def` 保留为**接口/文档**，不再表示缺口。 -/
 def rankedTree_card_gap : Prop := ∀ n : ℕ, 2 ≤ n → ((mergeHistories n).card : ℝ) = H n
 
-/-- ❌ **缺口 G2（论文 Remark 6，PDF 第 416–424 行）**：给定无次序拓扑的 ranking 数
+/-- ❌ **仍是缺口 G2（论文 Remark 6，PDF 第 416–424 行）**：给定无次序拓扑的 ranking 数
 `= (n−1)!/∏_{c ∈ clades, c.card ≥ 2} (c.card − 1)`（内部顶点 ↔ 大小 `≥ 2` 的 clade）。
 
-本文件在 Lean 内验证了 `n = 3` 与 `n = 4` 的两个实例（`card_rankings_01_2` /
-`card_rankings_01_23` / `card_rankings_012_3`），一般 `n` **未证**；
-`scripts/msc/stadler_degnan_ranked.py` 对 `n ≤ 7` 穷举核对过。
+本批**做到了**：
 
-⚠️ 顺带记录：**任务书 §11.3 建议的「给定拓扑下 ranked 树恰有 `(n−1)!` 个」是错的**
-（`n = 3` 已经反例：纤维数 `1 ≠ 2`）—— 请看 §0 冒烟测试第 3 条。 -/
+* `rankedFiberCount_four`：`n = 4` 的**一般 `f`**（不是逐例）—— 纯内核 `decide`；
+* `sum_card_fiber_cladesOf`：一般 `n` 的**纤维分解**（各纤维大小之和 `=` `|RankedTree n|`
+  `= H n`，后者接 `Phylo.Stat.CoalescentHistoryCount.card_mergeHistories_eq_H`）；
+* 原有 `n = 3, 4` 的逐例实例（`card_rankings_01_2` / `card_rankings_01_23` / `card_rankings_012_3`）。
+
+**缺的那一步（精确表述）**：把 `cladesOf n f` 提升成「clade 偏序/树」对象，然后按
+**树偏序的 hook-length 公式**数线性扩展：`#LinExt(T) = N!/∏_v s_v`
+（`N = n−1` 个内部顶点，`s_v` = `v` 子树内的内部顶点数 = `c_v − 1`）。
+等价的可证路线是「摘樱桃」递推 `f(T) = Σ_{cherries {a,b}} f(T_{ab})`
+（`T_{ab}` = 把 `{a,b}` 缩成一片叶，`f` = ranking 数）。
+两条都要求先把 `chainMap`/`cladesOf` 的编码接到树/偏序上
+（库内 `Phylo/Core.lean` 的 `Cladogram` 与合并史编码之间还缺一层接口）。
+本批**没有**做这一层，故一般 `n` 如实留成缺口。
+
+⚠️ ★B 反例检查（两条「显然」都是错的）：
+
+* 「给定拓扑下 ranked 树恰有 `(n−1)!` 个」**错**：`n = 3` 时纤维数 `1 ≠ 2 = (3−1)!`；
+* 「纤维大小与树形无关」**错**：`n = 4` 平衡形 `2` 个 vs caterpillar 形 `1` 个
+  （`card_rankings_01_23` / `card_rankings_012_3`）。
+  故任何「一般 `n` 均匀」的断言都必须先验。 -/
 def rankedFiberCount_gap : Prop :=
   ∀ (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
     ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
       = (n - 1).factorial
         / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1)
 
-/-- ❌ **缺口 G3（Theorem 3 式 (4) 在 `λ_j = j` 的一般 `m`）**：
+/-- ❌→✅ **缺口 G3（Theorem 3 式 (4) 在 `λ_j = j` 的一般 `m`）已证**：
 `Σ_{j=0}^{m} e^{−js}/∏_{k≠j}(k − j) = (1/m!)(1 − e^{−s})^m`。
-
-本文件只证了 `m = 2`、`λ = (0,1,2)`（`sd2012_eq4_example` 与按 `eq4` 定义展开的
-`eq4_two_uniform_rates`）与 `m = 1` 的**一般** `λ`（`eq4_one_general`，纯代数）；
-`λ_j = j` 的一般 `m ≤ 8` 由脚本用二项式定理**精确**核对。 -/
+Lean 内为 `eq4_uniform_rates`（一般 `m`，走「分母闭形式 `(−1)^j j!(m−j)!` + 二项式定理」）；
+本 `def` 保留为接口，`sd2012_eq4_uniform_rates_gap_proved` 就是它。 -/
 def sd2012_eq4_uniform_rates_gap : Prop :=
   ∀ (m : ℕ) (s : ℝ),
     eq4 m s (fun j => (j : ℝ)) = (1 / (m.factorial : ℝ)) * (1 - Real.exp (-s)) ^ m
 
-/-- ❌ **缺口 G4（`n = 4` 的 ranked 概率表 + 与非 ranked MSC 权重的边缘化一致性）**：
-存在 `Fin 4` 上 `18` 个 ranked 树的概率表 `p`，非负、总和 `1`，
-且「平衡形拓扑 `((0,1),(2,3))` 的两个 ranking 的概率之和 = 无次序 MSC 权重
-`mscConcordant t`」。
+/-- ❌→✅ **缺口 G4（`n = 4` 的 ranked 概率表 + 与非 ranked MSC 权重的边缘化一致性）已证**
+（**构造性**，见 `ranked4_probability_gap_proved`）：平衡形 `((0,1),(2,3))` 的两个 ranking
+各拿 `mscConcordant t / 2`，其余 `16` 个各拿 `(1 − mscConcordant t)/16`。
 
-⚠️ 本断言的强度：它**只有**「存在 + 边缘化」两部分，**没有**给出 SD2012 的**递推算法**
-（Theorem 2/3）；本文件**既没有构造 `p`、也没有证明**这个命题。 -/
+⚠️ 强度说明（**不夸大**）：这只填实了「存在 + 边缘化 + 非负 + 归一」，**没有**给出 SD2012 的
+递推算法（Theorem 2/3），也没有证明这个 `p` 与「物种树 + 枝长」模型一致 —— 原来这一条
+就只声称这两件事，本批把它证成了。 -/
 def ranked4_probability_gap : Prop :=
   ∀ t : ℝ, 0 < t → ∃ p : (Fin (4 - 1) → Fin 4 × Fin 4) → ℝ,
     (∀ f, IsMergeHistory 4 f → 0 ≤ p f) ∧
       (∑ f ∈ mergeHistories 4, p f) = 1 ∧
       (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23), p f)
         = MSCProof.mscConcordant t
+
+
+
+/-- `exp(−j·s) = (exp(−s))^j`（避免依赖 `Real.exp_nat_mul` 的 import 链）。 -/
+theorem exp_neg_mul_nat (s : ℝ) : ∀ j : ℕ, Real.exp (-(j : ℝ) * s) = Real.exp (-s) ^ j
+  | 0 => by simp
+  | (n + 1) => by
+    rw [Nat.cast_succ, show -(((n : ℝ)) + 1) * s = -s + (-(n : ℝ) * s) by ring, Real.exp_add,
+      exp_neg_mul_nat s n, pow_succ]
+    ring
+
+/-- `∏_{k<j}((j : ℝ) − k) = j!`。 -/
+theorem prod_range_sub_self (j : ℕ) :
+    (∏ k ∈ Finset.range j, ((j : ℝ) - (k : ℝ))) = (j.factorial : ℝ) := by
+  induction j with
+  | zero => simp
+  | succ n ih =>
+    rw [Finset.prod_range_succ']
+    push_cast
+    have h1 : (∏ k ∈ Finset.range n, ((n : ℝ) + 1 - ((k : ℝ) + 1)))
+        = (∏ k ∈ Finset.range n, ((n : ℝ) - (k : ℝ))) := by
+      apply Finset.prod_congr rfl
+      intro k _
+      ring
+    rw [h1, ih, Nat.factorial_succ]
+    push_cast
+    ring
+
+/-- `∏_{k<N}((k+1 : ℕ) : ℝ) = N!`。 -/
+theorem prod_range_succ_cast (N : ℕ) :
+    (∏ k ∈ Finset.range N, (((k + 1 : ℕ)) : ℝ)) = (N.factorial : ℝ) := by
+  induction N with
+  | zero => simp
+  | succ n ih =>
+    rw [Finset.prod_range_succ, ih, Nat.factorial_succ]
+    push_cast
+    ring
+
+/-- ★★ **式 (4) 分母的闭形式**（`λ_j = j`）：
+`∏_{k ∈ (range (m+1)).erase j}(k − j) = (−1)^j · j! · (m−j)!`（`j ≤ m`）。 -/
+theorem prod_erase_range_cast_sub (m j : ℕ) (hj : j ≤ m) :
+    (∏ k ∈ (Finset.range (m + 1)).erase j, ((k : ℝ) - (j : ℝ)))
+      = (-1) ^ j * (j.factorial : ℝ) * ((m - j).factorial : ℝ) := by
+  have hset : (Finset.range (m + 1)).erase j = Finset.range j ∪ Finset.Icc (j + 1) m := by
+    ext k
+    simp only [Finset.mem_erase, Finset.mem_range, Finset.mem_union, Finset.mem_Icc]
+    omega
+  have hdisj : Disjoint (Finset.range j) (Finset.Icc (j + 1) m) := by
+    rw [Finset.disjoint_left]
+    intro k hk hk'
+    simp only [Finset.mem_range] at hk
+    simp only [Finset.mem_Icc] at hk'
+    omega
+  rw [hset, Finset.prod_union hdisj]
+  have h1 : (∏ k ∈ Finset.range j, ((k : ℝ) - (j : ℝ)))
+      = (-1) ^ j * (j.factorial : ℝ) := by
+    rw [show (∏ k ∈ Finset.range j, ((k : ℝ) - (j : ℝ)))
+        = ∏ k ∈ Finset.range j, (-(((j : ℝ)) - (k : ℝ))) from
+      Finset.prod_congr rfl (fun k _ => by ring),
+      Finset.prod_neg, Finset.card_range, prod_range_sub_self]
+  have h2 : (∏ k ∈ Finset.Icc (j + 1) m, ((k : ℝ) - (j : ℝ))) = ((m - j).factorial : ℝ) := by
+    rw [show Finset.Icc (j + 1) m = Finset.Ico (j + 1) (m + 1) from by
+      ext k
+      simp only [Finset.mem_Icc, Finset.mem_Ico]
+      omega]
+    rw [Finset.prod_Ico_eq_prod_range]
+    rw [show m + 1 - (j + 1) = m - j from by omega]
+    have h3 : (∏ k ∈ Finset.range (m - j), ((((j + 1 + k : ℕ)) : ℝ) - (j : ℝ)))
+        = ∏ k ∈ Finset.range (m - j), ((((k + 1 : ℕ)) : ℝ)) := by
+      apply Finset.prod_congr rfl
+      intro k _
+      push_cast
+      ring
+    rw [h3, prod_range_succ_cast]
+  rw [h1, h2]
+
+/-- ★★★ **缺口 G3 已证（一般 `m`）**：`λ_j = j` 时式 (4) `= (1/m!)(1 − e^{−s})^m`。 -/
+theorem eq4_uniform_rates (m : ℕ) (s : ℝ) :
+    eq4 m s (fun j => (j : ℝ)) = (1 / (m.factorial : ℝ)) * (1 - Real.exp (-s)) ^ m := by
+  rw [eq4]
+  have hterm : ∀ j ∈ Finset.range (m + 1),
+      Real.exp (-(j : ℝ) * s) / (∏ k ∈ (Finset.range (m + 1)).erase j, ((k : ℝ) - (j : ℝ)))
+        = ((m.choose j : ℝ) * (-(Real.exp (-s))) ^ j) / (m.factorial : ℝ) := by
+    intro j hj
+    rw [Finset.mem_range] at hj
+    have hjm : j ≤ m := by omega
+    rw [prod_erase_range_cast_sub m j hjm, exp_neg_mul_nat s j, Nat.cast_choose ℝ hjm, neg_pow]
+    have hF : ((m.factorial : ℝ)) ≠ 0 := by exact_mod_cast Nat.factorial_ne_zero m
+    have hjf : ((j.factorial : ℝ)) ≠ 0 := by exact_mod_cast Nat.factorial_ne_zero j
+    have hmjf : (((m - j).factorial : ℝ)) ≠ 0 := by
+      exact_mod_cast Nat.factorial_ne_zero (m - j)
+    have hn : ((-1 : ℝ) ^ j) ≠ 0 := pow_ne_zero _ (by norm_num)
+    have hsq : (-1 : ℝ) ^ j * (-1) ^ j = 1 := by
+      rw [← pow_add, ← two_mul, pow_mul]
+      norm_num
+    have hunit : ((-1 : ℝ) ^ j)⁻¹ = (-1 : ℝ) ^ j := inv_eq_of_mul_eq_one_right hsq
+    simp only [div_eq_mul_inv, mul_inv_rev, hunit]
+    field_simp
+    ring
+  rw [Finset.sum_congr rfl hterm]
+  have hsplit : (∑ x ∈ Finset.range (m + 1),
+        (m.choose x : ℝ) * (-(Real.exp (-s))) ^ x / (m.factorial : ℝ))
+      = (∑ x ∈ Finset.range (m + 1), (m.choose x : ℝ) * (-(Real.exp (-s))) ^ x)
+        / (m.factorial : ℝ) := by
+    simp only [div_eq_mul_inv]
+    rw [← Finset.sum_mul]
+  rw [hsplit]
+  have hbin : (∑ j ∈ Finset.range (m + 1), (m.choose j : ℝ) * (-(Real.exp (-s))) ^ j)
+      = (1 - Real.exp (-s)) ^ m := by
+    rw [show (1 - Real.exp (-s)) = (-(Real.exp (-s)) + 1) by ring, add_pow]
+    refine Finset.sum_congr rfl (fun j _ => ?_)
+    rw [one_pow, mul_one]
+    ring
+  rw [hbin, one_div]
+  ring
+
+/-- ★★★ **缺口 `sd2012_eq4_uniform_rates_gap` 已证**。 -/
+theorem sd2012_eq4_uniform_rates_gap_proved : sd2012_eq4_uniform_rates_gap :=
+  fun m s => eq4_uniform_rates m s
+
+/-- ★★ **纤维分解（一般 `n`）**：按 clade 集分块，各纤维大小之和 = 合并史总数。 -/
+theorem sum_card_fiber_cladesOf (n : ℕ) :
+    ∑ t ∈ (mergeHistories n).image (cladesOf n),
+        ((mergeHistories n).filter (fun g => cladesOf n g = t)).card = (mergeHistories n).card :=
+  (Finset.card_eq_sum_card_image (cladesOf n) (mergeHistories n)).symm
+
+/-- `mscConcordant t ≤ 1`。 -/
+theorem mscConcordant_le_one (t : ℝ) : MSCProof.mscConcordant t ≤ 1 := by
+  rw [MSCProof.mscConcordant_closed]
+  have := Real.exp_pos (-t)
+  linarith
+
+/-- 补集纤维计数：`n = 4` 上非平衡（caterpillar）形的 ranked 树有 `16` 个。 -/
+theorem card_not_rankings_01_23 :
+    ((mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23))).card = 16 := by
+  have hsplit := Finset.card_filter_add_card_filter_not (s := mergeHistories 4)
+    (p := fun f => cladesOf 4 f = clades_01_23)
+  rw [card_rankings_01_23, card_mergeHistories_four] at hsplit
+  omega
+
+/-- ★★★ **缺口 G4 已证**：显式构造 `n = 4` 的概率表
+（平衡形两个 ranking 各拿 `mscConcordant t / 2`，其余 `16` 个各拿 `(1 − mscConcordant t)/16`）。 -/
+theorem ranked4_probability_gap_proved : ranked4_probability_gap := by
+  intro t ht
+  refine ⟨fun f => if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+      else (1 - MSCProof.mscConcordant t) / 16, ?_, ?_, ?_⟩
+  · intro f _
+    by_cases h : cladesOf 4 f = clades_01_23
+    · simp only [h, ↓reduceIte]
+      linarith [MSCProof.mscConcordant_nonneg ht.le]
+    · simp only [h, ↓reduceIte]
+      have h1 := mscConcordant_le_one t
+      linarith
+  · rw [← Finset.sum_filter_add_sum_filter_not (s := mergeHistories 4)
+      (p := fun f => cladesOf 4 f = clades_01_23)
+      (f := fun f => if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+        else (1 - MSCProof.mscConcordant t) / 16)]
+    have h1 : (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+        (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+          else (1 - MSCProof.mscConcordant t) / 16))
+        = ((mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23)).card
+            * (MSCProof.mscConcordant t / 2) := by
+      calc (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+            (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+              else (1 - MSCProof.mscConcordant t) / 16))
+          = ∑ _f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+              MSCProof.mscConcordant t / 2 := by
+            refine Finset.sum_congr rfl (fun f hf => ?_)
+            rw [Finset.mem_filter] at hf
+            simp only [hf.2, ↓reduceIte]
+        _ = ((mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23)).card
+              * (MSCProof.mscConcordant t / 2) := by
+            rw [Finset.sum_const, nsmul_eq_mul]
+    have h2 : (∑ f ∈ (mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23)),
+        (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+          else (1 - MSCProof.mscConcordant t) / 16))
+        = ((mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23))).card
+            * ((1 - MSCProof.mscConcordant t) / 16) := by
+      calc (∑ f ∈ (mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23)),
+            (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+              else (1 - MSCProof.mscConcordant t) / 16))
+          = ∑ _f ∈ (mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23)),
+              (1 - MSCProof.mscConcordant t) / 16 := by
+            refine Finset.sum_congr rfl (fun f hf => ?_)
+            rw [Finset.mem_filter] at hf
+            simp only [hf.2, ↓reduceIte]
+        _ = ((mergeHistories 4).filter (fun f => ¬ (cladesOf 4 f = clades_01_23))).card
+              * ((1 - MSCProof.mscConcordant t) / 16) := by
+            rw [Finset.sum_const, nsmul_eq_mul]
+    rw [h1, h2, card_rankings_01_23, card_not_rankings_01_23]
+    push_cast
+    ring
+  · have h1 : (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+        (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+          else (1 - MSCProof.mscConcordant t) / 16))
+        = ((mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23)).card
+            * (MSCProof.mscConcordant t / 2) := by
+      calc (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+            (if cladesOf 4 f = clades_01_23 then MSCProof.mscConcordant t / 2
+              else (1 - MSCProof.mscConcordant t) / 16))
+          = ∑ _f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23),
+              MSCProof.mscConcordant t / 2 := by
+            refine Finset.sum_congr rfl (fun f hf => ?_)
+            rw [Finset.mem_filter] at hf
+            simp only [hf.2, ↓reduceIte]
+        _ = ((mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23)).card
+              * (MSCProof.mscConcordant t / 2) := by
+            rw [Finset.sum_const, nsmul_eq_mul]
+    rw [h1, card_rankings_01_23]
+    ring
+
+set_option maxRecDepth 1000000 in
+set_option maxHeartbeats 0 in
+/-- ★★ **Remark 6 的 `n = 4` 情形（一般 `f`，不只逐例）**：纤维大小
+`= (4−1)!/∏_{C ∈ cladesOf 4 f, |C| ≥ 2}(|C| − 1)`。纯内核 `decide`（`18` 个纤维逐个核对）。 -/
+theorem rankedFiberCount_four_all :
+    (mergeHistories 4).filter (fun f =>
+      ((mergeHistories 4).filter (fun g => cladesOf 4 g = cladesOf 4 f)).card
+        ≠ (4 - 1).factorial
+          / ∏ C ∈ (cladesOf 4 f).filter (fun C => 2 ≤ C.card), (C.card - 1)) = ∅ := by
+  decide
+
+/-- ★★★ **`n = 4` 的 Remark 6 公式（一般 `f`）**。 -/
+theorem rankedFiberCount_four (f : Fin (4 - 1) → Fin 4 × Fin 4) (hf : IsMergeHistory 4 f) :
+    ((mergeHistories 4).filter (fun g => cladesOf 4 g = cladesOf 4 f)).card
+      = (4 - 1).factorial
+        / ∏ C ∈ (cladesOf 4 f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+  have h := rankedFiberCount_four_all
+  rw [Finset.filter_eq_empty_iff] at h
+  exact not_not.mp (h ((mem_mergeHistories (n := 4) f).mpr hf))
+
+/-! ### 反空真（★：一般定理在最小具体例子上落地） -/
+
+/-- ★ 非空实例：G3 的一般 `m` 定理在 `m = 2` 上就是已有的 `eq4_two_uniform_rates`。 -/
+example (s : ℝ) :
+    eq4 2 s (fun j => (j : ℝ)) = (1 / 2) * (1 - Real.exp (-s)) ^ 2 := by
+  rw [eq4_uniform_rates 2 s]
+  norm_num
+
+/-- ★ 非空实例：G4 的构造在 `t = 1` 上确实给出一个概率表（非空存在性）。 -/
+example : ∃ p : (Fin (4 - 1) → Fin 4 × Fin 4) → ℝ,
+    (∀ f, IsMergeHistory 4 f → 0 ≤ p f) ∧
+      (∑ f ∈ mergeHistories 4, p f) = 1 ∧
+      (∑ f ∈ (mergeHistories 4).filter (fun f => cladesOf 4 f = clades_01_23), p f)
+        = MSCProof.mscConcordant 1 :=
+  ranked4_probability_gap_proved 1 (by norm_num)
+
+/-- ★ 非空实例：G2 的 `n = 4` 一般公式在 caterpillar 形的代表上给出 `1`
+（`(((0,1),2),3)` 的 clade 集 = `clades_012_3`）。 -/
+example : (cladesOf 4 (fun k : Fin (4 - 1) => if (k : ℕ) = 0 then (0, 1) else
+      if (k : ℕ) = 1 then (0, 2) else (0, 3))) = clades_012_3 := by decide
 
 end Phylo.Stat.RankedGeneTree
