@@ -524,21 +524,26 @@ theorem minimal_example_treeSupport_lt_half (Tree : (Fin 3 → ℕ) → Cladogra
    `Equiv.instFintype` 提供，故本文件**新增 import** `Mathlib.Data.Fintype.Perm`）；
 8. `card_stableSet_mul_card_stab` —— **★③ 轨道-稳定化子计数式**（**W12a4 已证**）：
    `#(同纤维函数集) · #stab = #(Perm α)`，经局部 `MulAction`（前复合取逆，得左作用）
-   ＋ Mathlib `MulAction.card_orbit_mul_card_stabilizer_eq_card_group`。
+   ＋ Mathlib `MulAction.card_orbit_mul_card_stabilizer_eq_card_group`；
+9. `fiberEquiv_symm_apply`（`(fiberEquiv σ).symm (y:α) = ⟨b, y⟩`）· **★② `ofFiberPerms_injective`**
+   · `prod_factorial_le_card_stab` · **`card_stab_eq_prod_factorial`**（**W12a5 已证**）：
+   ②的出路是把一切搬到 **sigma 层**（`Σ b, ↥(fiberOf σ b)`）—— 那里两边指标都是 `b`，
+   **不需要任何依赖改写**；取 `.2` 的**底层值**（`(s.2 : α)` 不依赖 `s.1`）即可用 `congrArg`。
+   于是 `#stab = ∏_b (#fiberOf σ b)!` **双侧成立**（= 缺口 M 右端的乘积）。
 
-⚠️ **仍未证**（缺口 M 的最后两块）：
-* **② `#stab ≥ ∏_b (#fiberOf σ b)!`**（即 `ofFiberPerms` 的**单射**，等价于满射性）：
-  卡点是「同一个纤维元素的两种写法」`(ψ b) x` 与 `(ψ (σ x.1)) ⟨x.1, ·⟩` ——
-  它们**类型不同、仅命题相等**（指标 `b` vs `σ x.1`）。W12a4 实测 `rw`/`simp only`/`subst`/
-  `cases`/`conv` 五种均失败。
-  **W12a4 找到的出路（下一轮直接用）**：用 `Sigma.ext`（**显式接指标等式**）＋ `HEq`
-  处理第二个分量 —— 即把「依赖改写」换成「异质相等」，或先证一条
-  `(fiberEquiv σ).symm ⟨b, y⟩ = y.1`（`y : ↥(fiberOf σ b)`，指标在**变量**位置，
-  可用 `Sigma.ext (mem_fiberOf.mp y.2) …` 一次做完）。
-  有了它，`ofFiberPerms` 的**共轭**就是 `Equiv.sigmaCongrRight φ`，而后者在 sigma 层
-  **指标天然一致**，单射性是平凡的。
-* **④ 可实现性**：`∑ w = n → ∃ σ : Fin n → Fin n, weightOf σ = w`
-  （把上述「以固定 `σ` 为基准」的结论搬到任意 `w`；缺口闭合的最后一步）。 -/
+⚠️ **仍未证**（缺口 M 的最后一块）：**④ 可实现性**
+`(∑ w = n) → ∃ σ : Fin n → Fin n, weightOf σ = w`（把「以固定 `σ` 为基准」的结论搬到任意 `w`）。
+* 一旦有它，收尾是机械的：取 `σ₀` 使 `weightOf σ₀ = w`，则
+  `#{σ | weightOf σ = w} = #(同纤维函数集)`（由 `weightOf` 与 `fiberOf` 的定义相等）
+  × `#stab σ₀ = ∏ w!`（`card_stab_eq_prod_factorial`）
+  = `n!`（`card_stableSet_mul_card_stab` ＋ `Fintype.card_perm`）。
+* **④ 的两条落地路线**（W12a5 已核过器材）：
+  1. **`Finset`/`Nat` 前缀和切块**：`σ j := ` 满足 `S_i ≤ j.1 < S_i + w i` 的那个 `i`
+     （`S` = 前缀和；块 = `Finset.Ico`）。需要「块划分 `Fin n`」＋「`#{j | a ≤ j.1 < b} = b - a`
+     （后者用 `Finset.card_bij` 映到 `Finset.Ico a b` ＋ `Finset.card_Ico`）」；
+  2. **`Multiset` 构造**：`m := univ.val.bind (fun i => Multiset.replicate (w i) i)`
+     （`m.card = n`、`m.count i = w i`），再由 `m.toList` 取 `σ j := l.get ⟨j, …⟩`
+     —— 需要一条「`#{j | l.get j = i} = l.count i`」（对 `l` 归纳，约 15 行）。 -/
 
 open Classical
 
@@ -675,6 +680,62 @@ theorem card_stab_le_prod_factorial (σ : α → β) :
     (le_of_eq hprod)
 
 end StabBound
+
+section StabLower
+
+variable {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+
+omit [Fintype β] [DecidableEq α] in
+/-- ★ **逆纤维分解**：`fiberEquiv` 的逆把 `y : ↥(fiberOf σ b)` 送回 `⟨b, y⟩`。 -/
+theorem fiberEquiv_symm_apply {σ : α → β} {b : β} (y : ↥(fiberOf σ b)) :
+    (fiberEquiv σ).symm (y : α) = ⟨b, y⟩ := by
+  rw [Equiv.symm_apply_eq]
+  rfl
+
+omit [Fintype β] [DecidableEq α] in
+/-- ★★ **② `ofFiberPerms` 单射**（缺口 M 的 `≥` 方向）。
+
+**关键**：在 **sigma 层**工作 —— 那里两边的指标都是 `b`，**无需任何依赖改写**
+（这正是前四轮一直卡住的地方）。路线：`ofFiberPerms φ` 沿 `fiberEquiv σ` 共轭即
+`Equiv.sigmaCongrRight φ`；把 `h` 作用在 `(fiberEquiv σ) ⟨b, y⟩` 上，
+用 `fiberEquiv` 的单射性降到 sigma 层，最后取 `.2` 的**底层值**比较
+（`(s.2 : α)` 这个函数**不依赖** `s.1`，故 `congrArg` 合法）。 -/
+theorem ofFiberPerms_injective (σ : α → β) :
+    Function.Injective (fun φ : (∀ b : β, ↥(fiberOf σ b) ≃ ↥(fiberOf σ b)) =>
+      (⟨ofFiberPerms φ, comp_ofFiberPerms φ⟩ : {τ : Equiv.Perm α // σ ∘ τ = σ})) := by
+  intro φ₁ φ₂ h
+  have h' : ofFiberPerms φ₁ = ofFiberPerms φ₂ := congrArg Subtype.val h
+  funext b
+  apply Equiv.ext
+  intro y
+  have h3 : (fiberEquiv σ) ((Equiv.sigmaCongrRight φ₁) ⟨b, y⟩)
+      = (fiberEquiv σ) ((Equiv.sigmaCongrRight φ₂) ⟨b, y⟩) := by
+    have h4 := DFunLike.congr_fun h' ((fiberEquiv σ) ⟨b, y⟩)
+    simpa [ofFiberPerms, Equiv.trans_apply, Equiv.symm_apply_apply] using h4
+  have h2 : (Equiv.sigmaCongrRight φ₁) ⟨b, y⟩ = (Equiv.sigmaCongrRight φ₂) ⟨b, y⟩ :=
+    (fiberEquiv σ).injective h3
+  exact Subtype.ext
+    (congrArg (fun s : Sigma fun b' : β => ↥(fiberOf σ b') => (s.2 : α)) h2)
+
+/-- ★★★ **稳定化子的下界** `∏_b (#纤维 b)! ≤ #stab`（②的直接推论）。 -/
+theorem prod_factorial_le_card_stab (σ : α → β) :
+    (∏ b, Nat.factorial ((fiberOf σ b).card))
+      ≤ Fintype.card {τ : Equiv.Perm α // σ ∘ τ = σ} := by
+  have hprod : Fintype.card (∀ b : β, ↥(fiberOf σ b) ≃ ↥(fiberOf σ b))
+      = (∏ b, Nat.factorial ((fiberOf σ b).card)) := by
+    rw [Fintype.card_pi]
+    refine Finset.prod_congr rfl (fun b _ => ?_)
+    rw [Fintype.card_perm, Fintype.card_coe]
+  rw [← hprod]
+  exact Fintype.card_le_of_injective _ (ofFiberPerms_injective σ)
+
+/-- ★★★ **稳定化子的基数恰为 `∏_b (#纤维 b)!`**（①的上界与②的下界双侧夹住）。 -/
+theorem card_stab_eq_prod_factorial (σ : α → β) :
+    Fintype.card {τ : Equiv.Perm α // σ ∘ τ = σ}
+      = (∏ b, Nat.factorial ((fiberOf σ b).card)) :=
+  le_antisymm (card_stab_le_prod_factorial σ) (prod_factorial_le_card_stab σ)
+
+end StabLower
 
 open Classical
 
