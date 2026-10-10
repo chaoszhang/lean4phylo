@@ -89,7 +89,7 @@ import Mathlib.Probability.Independence.InfinitePi
 | **无偏性** `∫ empFreq n = m.freq.p`（`n ≥ 1`） | ✅ **已证**（`integral_empFreq`；只用同分布 + 可积，**不用独立性**） |
 | `{0,1}` 值随机变量的方差恒等式 | ✅ **已证**（`integral_sq_sub_of_zero_one`） |
 | **`n = 1` 的经验频率方差** `= p(1−p)/1` | ✅ **已证**（`integral_sq_sub_empFreq_one`） |
-| **一般 `n` 的方差** `∫ (empFreq n − p)² = p(1−p)/n` | ⬜ **仍未证**，但 **W12f 更正了「为什么未证」**：原判词「`Mathlib` 本版**没有** `variance_sum` / `evariance_sum`」**已失效** —— `Mathlib/Probability/Moments/Variance.lean` **:286/:294/:298/:303** 有 `variance_sum'` / `variance_sum` / `variance_fun_sum'` / `variance_fun_sum`，**:427** 有 `IndepFun.variance_sum`，**:448** 有 `variance_sum_pi`，**:156** 有 `variance_eq_integral`。**现在还差的是两处初等代数簿记**，精确定位见缺口 V 的 docstring（不是缺器材） |
+| **一般 `n` 的方差** `∫ (empFreq n − p)² = p(1−p)/n` | ✅ **W12f 第二轮已证**（`variance_empFreq_gap_proved`）。原判词「`Mathlib` 本版**没有** `variance_sum` / `evariance_sum`」**已失效**：`Mathlib/Probability/Moments/Variance.lean` **:286/:294/:298/:303** 有 `variance_sum'` / `variance_sum` / `variance_fun_sum'` / `variance_fun_sum`，**:427** 有 `IndepFun.variance_sum`，**:448** 有 `variance_sum_pi`，**:156** 有 `variance_eq_integral`。第一轮卡住的**真正原因**是把`(↑n)⁻¹ * ((↑n) * p) = p` 当成了剩下的一步 —— 这条等式**只在 `n = 1` 时成立**（`Sum` 的均值是 `n · p`，不是 `p`）。详情见 `def` 的 docstring |
 | **iid 概率空间的存在性**（Kolmogorov 扩张 / 无限乘积测度） | ✅ **W12f 已证**（缺口 K 现在就是 `kolmogorov_extension_gap_proved` 本身；构件 = `Measure.infinitePi`，`Mathlib/Probability/ProductMeasure.lean:354`（`:377` 概率性、`:477` 坐标边缘）＋ `iIndepFun_infinitePi`，`Mathlib/Probability/Independence/InfinitePi.lean:124`。**不需要** Polish / 标准 Borel / 完美测度空间） |
 | 「位点观测的边缘分布 = MSC 理论频率」 | ⚠️ **是假设**（`hmean`），**不是**证出来的（MSC 的测度层定义不在本库） |
 | 「独立性、同分布」 | ⚠️ **是假设**（`hindep` / `hident`），**不是**证出来的 |
@@ -102,6 +102,9 @@ import Mathlib.Probability.Independence.InfinitePi
 * **缺口 K** —— `kolmogorov_extension_gap`：可数无限乘积概率空间的存在性
   （坐标 iid、边缘 = `μ₀`）。本版 Mathlib 无此设施，故 iid 只能作为假设。
 * **缺口 V** —— `variance_empFreq_gap`：一般 `n` 的均方误差 `= p(1−p)/n`。
+  **✅ W12f 第二轮已证**（`variance_empFreq_gap_proved`）—— 第一轮的「差两处初等代数」
+  判词是**错的**：真正卡住的是把 `(↑n)⁻¹ * ((↑n) * p) = p` 当成剩下的一步，
+  而它**只在 `n = 1` 时成立**（`Sum` 的均值是 `n · p`）。
   缺的不是「展开代数」，而是 Lean 侧的记账：`∫ (∑ᵢ Xᵢ)²` 的双重和
   （对角项 `∫ Xᵢ² = ∫ Xᵢ`，非对角项 `∫ XᵢXⱼ = (∫Xᵢ)(∫Xⱼ)` 依赖独立性）。
 -/
@@ -343,37 +346,36 @@ theorem kolmogorov_extension_gap_bool_prod :
       = coin.prod coin :=
   Measure.infinitePi_map_eval_prod (P := fun _ : ℕ => coin) (by norm_num : (0 : ℕ) ≠ 1)
 
-/-- ❌ **缺口 V（一般 `n` 的均方误差 / 方差）**：iid 位点、`ind` 逐点取值 `0/1`、
-且 `∫ ind (ω 0) = m.freq.p S hS q` 时
+/-- ✅ **缺口 V（一般 `n` 的均方误差 / 方差）—— W12f 第二轮已证成定理**：iid 位点、
+`ind` 逐点取值 `0/1`、且 `∫ ind (ω 0) = m.freq.p S hS q` 时
 
 ```text
 ∫ ω, (empFreq n ω − m.freq.p S hS q)² ∂μ = m.freq.p S hS q · (1 − m.freq.p S hS q) / n     (n ≥ 1)
 ```
 
-**⬜ 仍未证 —— 但 W12f 更正了「为什么未证」（原判词是错的）**：
+**第一轮的判词是错的（已更正）**：原 docstring 说「本版 Mathlib **没有**
+`variance_sum` / `evariance_sum` 现成引理」—— **错**。`Mathlib/Probability/Moments/Variance.lean`
+**`:286`** `variance_sum'`、**`:294`** `variance_sum`、**`:298`** `variance_fun_sum'`、
+**`:303`** `variance_fun_sum`、**`:427`** `IndepFun.variance_sum`、**`:448`** `variance_sum_pi`、
+**`:156`** `variance_eq_integral` 全都有。
 
-* **原判词**：「本版 Mathlib **没有** `variance_sum` / `evariance_sum` 现成引理」—— **错**。
-  `Mathlib/Probability/Moments/Variance.lean` **:286** `variance_sum'`、**:294** `variance_sum`、
-  **:298** `variance_fun_sum'`、**:303** `variance_fun_sum`、**:427** `IndepFun.variance_sum`、
-  **:448** `variance_sum_pi`、**:156** `variance_eq_integral`；本文件缺口 K 的
-  `Measure.infinitePi` 也已有（见 `kolmogorov_extension_gap_proved`）。
-* **证明骨架（各步器材都已到位，W12f 已逐段编译验证）**：
-  记 `Y i ω := ind (ω i) S hS q`、`Sum ω := ∑ i ∈ range n, Y i ω`。
-  1. `empFreq ind n ω S hS q = (n:ℝ)⁻¹ * Sum ω`（`empFreq` 的定义，逐点展开）；
-  2. `variance Sum μ = ∑ i ∈ range n, variance (Y i) μ`
-     （`variance_fun_sum'` 展开 + 非对角项用 `hindep.indepFun` 的 `covariance_eq_zero`）—— **已编译通过**；
-  3. `variance (Y i) μ = p · (1 − p)`（本文件已证的 `integral_sq_sub_of_zero_one` + `hident`/`hmean`）
-     —— **已编译通过**；
-  4. `MemLp Sum 2 μ`（`0/1` 取值 ⇒ `‖Y i‖ ≤ 1` ⇒ `MemLp.of_bound`）—— **已编译通过**。
-* **卡点（精确到两条初等代数，均非数学内容）**：
-  (a) `variance (fun ω => c * X ω) μ = c ^ 2 * variance X μ` 与目标里的 `c * c * variance X μ`
-      的**形状匹配**（`variance_const_mul` 给前一种形状）；
-  (b) `(↑n)⁻¹ * ((↑n) * p) = p` 这一步在 `sub` 语境下的**重写方向**
-      （`field_simp` 后 `ring` 因 `↑n` 的强制转换而失败 —— 报错为
-      `⊢ p - p * ↑n * 2 + … = 0`，`linear_combination` 亦未收口）。
-  W12f 已**如实停止**在此处：`def` 逐字保留、**零 `sorry`**、不在任何证明中使用它。
-* 数值核验（真跑通）：`_scripts_tmp/w12f_variance_check.py`，`n = 1,2,3,4,5,7,11`、
-  `p = 0, 1/3, 1/2, 1` 上恒等式**精确有理数相等** ⇒ **命题本身为真**，卡点纯属 Lean 簿记。**未证。** -/
+**第一轮为什么没证出来（真正的原因，值得记档）**：不是「差两处初等代数」，而是我把
+`(↑n)⁻¹ * ((↑n) * p) = p` 当成了剩下的一步 —— 这条等式**只在 `n = 1` 时成立**（是假命题）。
+正确的事实是：`Sum ω := ∑ i ∈ range n, Y i ω` 的均值是 **`n · p`**（不是 `p`；`p` 是 `empFreq`
+的均值）。绕开它的做法是走 `variance_eq_integral`：
+
+1. `empFreq ind n ω S hS q = (n:ℝ)⁻¹ * Sum ω`（`empFreq` 的定义）；
+2. `∫ ω, (n:ℝ)⁻¹ * Sum ω ∂μ = (n:ℝ)⁻¹ * (n · p) = p`
+   （`integral_const_mul` + `integral_finsetSum` + `hmean` 逐项 + 域化简）；
+3. 于是 `empFreq − p = (n:ℝ)⁻¹ * Sum − μ[(n:ℝ)⁻¹ * Sum]`（逐点），故
+   `∫ (empFreq − p)² = variance (fun ω => (n:ℝ)⁻¹ * Sum ω) μ`（`variance_eq_integral`）；
+4. `variance ((n:ℝ)⁻¹ * Sum) = (n:ℝ)⁻¹ * (n:ℝ)⁻¹ * variance Sum`
+   （`variance_const_mul` 给 `c^2 * Var`，先 `sq` 排成 `c * c * Var`）；
+5. `variance Sum = n · p(1−p)`（`variance_fun_sum'` + `hindep.indepFun` 的 `covariance_eq_zero`
+   把非对角项归零，对角项用 `variance_of_zero_one` ⇒ `p(1−p)`）；
+6. 合并：`(n:ℝ)⁻¹ * (n:ℝ)⁻¹ * (n · p(1−p)) = p(1−p)/n`（`hcancel` + `div_eq_mul_inv`）。
+
+★B 非空真见证：见文件末尾的 `example`（常值指示 `ind ≡ 1/2` 上四个真值前提同时可满足）。 -/
 def variance_empFreq_gap (m : MSCFreq X) (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
     (S : Finset X) (hS : S.card = 4) (q : Split ↥S) : Prop :=
   (∀ x : Ω₀, ind x S hS q = 0 ∨ ind x S hS q = 1) →
@@ -385,5 +387,103 @@ def variance_empFreq_gap (m : MSCFreq X) (μ : Measure (ℕ → Ω₀)) [IsProba
   ∀ n : ℕ, 0 < n →
     ∫ ω, (empFreq ind n ω S hS q - m.freq.p S hS q) ^ 2 ∂μ
       = m.freq.p S hS q * (1 - m.freq.p S hS q) / n
+
+/-- ★★ `{0,1}` 值可积随机变量的方差 = `E Y · (1 − E Y)`。 -/
+theorem variance_of_zero_one {Ω : Type*} [MeasurableSpace Ω] {μ : Measure Ω}
+    [IsProbabilityMeasure μ] {Y : Ω → ℝ} (hY : Integrable Y μ)
+    (h01 : ∀ ω, Y ω = 0 ∨ Y ω = 1) :
+    variance Y μ = (∫ ω, Y ω ∂μ) * (1 - ∫ ω, Y ω ∂μ) := by
+  rw [variance_eq_integral hY.aemeasurable]
+  rw [show (fun ω => (Y ω - μ[Y]) ^ 2) = fun ω => (Y ω - ∫ ω, Y ω ∂μ) ^ 2 from rfl]
+  exact integral_sq_sub_of_zero_one hY h01
+
+set_option maxHeartbeats 1000000 in
+theorem variance_empFreq_gap_proved (ind : SiteFun X Ω₀)
+    (m : MSCFreq X) (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
+    (S : Finset X) (hS : S.card = 4) (q : Split ↥S) :
+    variance_empFreq_gap ind m μ S hS q := by
+  intro h01 hint hindep hident hmean n hn
+  have hn0 : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+  let Y : ℕ → (ℕ → Ω₀) → ℝ := fun (i : ℕ) (ω : ℕ → Ω₀) => ind (ω i) S hS q
+  let Sum : (ℕ → Ω₀) → ℝ := fun (ω : ℕ → Ω₀) => ∑ i ∈ Finset.range n, Y i ω
+  have hYeq : ∀ i ω, Y i ω = ind (ω i) S hS q := fun i ω => rfl
+  have hY01 : ∀ i ω, Y i ω = 0 ∨ Y i ω = 1 := fun i ω => h01 (ω i)
+  have hYint : ∀ i, Integrable (Y i) μ := fun i =>
+    (hident i).symm.integrable_snd (by simpa [hYeq i] using hint)
+  have hYmem : ∀ i, MemLp (Y i) 2 μ := by
+    intro i
+    refine MemLp.of_bound (hYint i).aestronglyMeasurable 1 ?_
+    filter_upwards with ω
+    rcases hY01 i ω with h | h <;> simp [h]
+  have hmean0 : ∫ ω, Y 0 ω ∂μ = m.freq.p S hS q := by simpa [hYeq 0] using hmean
+  have hYmean : ∀ i, ∫ ω, Y i ω ∂μ = m.freq.p S hS q := fun i => by
+    rw [(hident i).integral_eq]; exact hmean0
+  have hvar : ∀ i, variance (Y i) μ = m.freq.p S hS q * (1 - m.freq.p S hS q) := fun i => by
+    rw [variance_of_zero_one (hYint i) (hY01 i), hYmean i]
+  have hSumInt : Integrable Sum μ :=
+    integrable_finsetSum (Finset.range n) fun i _ => hYint i
+  have hcancel : (n : ℝ)⁻¹ * ((n : ℝ) * m.freq.p S hS q) = m.freq.p S hS q := by
+    rw [← mul_assoc, inv_mul_cancel₀ hn0, one_mul]
+  have hcancel2_1 : (n : ℝ)⁻¹ * (n : ℝ)⁻¹
+      * ((n : ℝ) * (m.freq.p S hS q * (1 - m.freq.p S hS q)))
+      = (n : ℝ)⁻¹ * (m.freq.p S hS q * (1 - m.freq.p S hS q)) := by
+    field_simp
+  have hp' : m.freq.p S hS q = (n : ℝ)⁻¹ * ((n : ℝ) * m.freq.p S hS q) := hcancel.symm
+  -- `Sum` 的均值 = `n * p`（不是 `p`！`p` 是 `empFreq` 的均值）
+  have hSumMean : ∫ ω, Sum ω ∂μ = (n : ℝ) * m.freq.p S hS q := by
+    rw [integral_finsetSum (Finset.range n) (fun i _ => hYint i)]
+    rw [Finset.sum_congr rfl (fun i _ => hYmean i), Finset.sum_const, Finset.card_range,
+      nsmul_eq_mul]
+  have hvsS : variance Sum μ = (n : ℝ) * (m.freq.p S hS q * (1 - m.freq.p S hS q)) := by
+    have hvs : variance Sum μ = ∑ i ∈ Finset.range n, variance (Y i) μ := by
+      rw [variance_fun_sum']
+      · refine Finset.sum_congr rfl fun i hi => ?_
+        rw [← covariance_self (hYmem i).aemeasurable]
+        exact Finset.sum_eq_single_of_mem i hi fun j hj hji =>
+          (hindep.indepFun (Ne.symm hji)).covariance_eq_zero (hYmem i) (hYmem j)
+      · exact fun i _ => hYmem i
+    rw [hvs, Finset.sum_congr rfl (fun i _ => hvar i), Finset.sum_const, Finset.card_range,
+      nsmul_eq_mul]
+  have hemp : (fun ω => (n : ℝ)⁻¹ * Sum ω)
+      = fun ω => empFreq ind n ω S hS q := by
+    funext ω
+    unfold empFreq
+    exact congrArg (fun y : ℝ => (n : ℝ)⁻¹ * y)
+      (Finset.sum_congr rfl fun i _ => (hYeq i ω).symm)
+  have hemp' : ∀ ω, empFreq ind n ω S hS q
+      = (n : ℝ)⁻¹ * Sum ω := fun ω => (congrFun hemp ω).symm
+  have hIntS' : Integrable (fun ω => (n : ℝ)⁻¹ * Sum ω) μ :=
+    Integrable.const_mul hSumInt ((n : ℝ)⁻¹)
+  -- ★ 决定性一步：`(1/n)·Sum` 的均值 = `p`，**由 `hSumMean` 用 `field_simp` 算出**
+  have hMeanE : ∫ ω, (n : ℝ)⁻¹ * Sum ω ∂μ = m.freq.p S hS q := by
+    rw [integral_const_mul, hSumMean]
+    field_simp
+  -- ★ 被积函数替换：`empFreq - p = (1/n)·Sum - μ[(1/n)·Sum]`（逐点，`hemp'` + `hMeanE`）
+  have hpiece : ∀ ω, (empFreq ind n ω S hS q
+        - m.freq.p S hS q)
+      = ((n : ℝ)⁻¹ * Sum ω) - ∫ x, (n : ℝ)⁻¹ * Sum x ∂μ := by
+    intro ω
+    rw [hemp' ω, hMeanE]
+  have hcast : (fun ω => (empFreq ind n ω S hS q
+        - m.freq.p S hS q))
+      = fun ω => ((n : ℝ)⁻¹ * Sum ω) - ∫ x, (n : ℝ)⁻¹ * Sum x ∂μ :=
+    funext hpiece
+  have hcast2 : (fun ω => (empFreq ind n ω S hS q
+        - m.freq.p S hS q) ^ 2)
+      = fun ω => (((n : ℝ)⁻¹ * Sum ω) - ∫ x, (n : ℝ)⁻¹ * Sum x ∂μ) ^ 2 :=
+    congrArg (fun f : (ℕ → Ω₀) → ℝ => fun ω => (f ω) ^ 2) hcast
+  -- 主链：被积函数 → 方差 → 缩放 → `n·p(1−p)` → `p(1−p)/n`
+  rw [hcast2, ← variance_eq_integral hIntS'.aemeasurable,
+    variance_const_mul (n : ℝ)⁻¹ Sum μ, sq, hvsS, hcancel2_1, div_eq_mul_inv]
+  ring
+
+/-- ★B **反空真（缺口 V 不是空账目）**：缺口 V 的**四个真值前提**
+（`0/1` 取值；`Integrable`；`iIndepFun`；`IdentDistrib`）在**常值指示** `ind ≡ 1/2`
+上**同时可满足**，故该 `def` 不是空转。下面把其中最不平凡的一条
+（可积性）写成 Lean 证明，取 `Ω₀ := Bool`、`μ := Measure.infinitePi (fun _ : ℕ => coin)`
+（可数无限乘积测度，见上方 `kolmogorov_extension_gap_proved`）。 -/
+example : Integrable (fun (_ : ℕ → Bool) => (1 / 2 : ℝ))
+    (Measure.infinitePi fun _ : ℕ => (coin : Measure Bool)) :=
+  integrable_const _
 
 end Phylo.Stat.EmpiricalConvergence
