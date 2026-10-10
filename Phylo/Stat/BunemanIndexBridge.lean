@@ -1151,4 +1151,23 @@ def minimalCluster_exists_gap : Prop :=
           ∃ u₀ ∈ F, (u₀.cluster ρ ∩ S.sideA).Nonempty ∧
             ∀ u ∈ F, (u.cluster ρ ∩ S.sideA).Nonempty → u₀.cluster ρ ⊆ u.cluster ρ
 
+/-! ### 11.7 ★D：**(★″)（`minimalCluster_exists_gap`）是假命题** ✗（W20 发现，勿再尝试证明）
+
+**反例（`α = Fin 5`，`ρ = 4`）**：
+* `F = { u₁ = {0,1} | {2,3,4},  u₂ = {2,3} | {0,1,4} }`（两条 split **两两相容** ✓：它们相离 ✓）；
+* `S = {0,2} | {1,3,4}`（`S ∉ F ± swap` ✓，且 `ρ = 4 ∈ S.sideB` ✓）；
+* `u₁.cluster 4 = {0,1}` ✓、`u₂.cluster 4 = {2,3}` ✓（两者都避开 `ρ = 4` ✓）；
+* 两者都"咬" `S.sideA = {0,2}`：`{0,1} ∩ {0,2} = {0} ≠ ∅` ✓、`{2,3} ∩ {0,2} = {2} ≠ ∅` ✓；
+* 但 **`{0,1}` 与 `{2,3}` 相离** ⇒ 谁也不包含谁 ⇒ **(★″) 的结论（存在被所有咬 `S.sideA` 者包含的 `u₀`）不成立** ✗。
+
+⇒ **W19 我把「相离與两者都咬 `S.sideA` 矛盾」当成了事实 —— 那是错的** ✗
+（相离的两个 cluster 完全可以各自咬到 `S.sideA` 的**不同点** ✓）。
+⇒ **本文件里的 `def minimalCluster_exists_gap` 是假命题** ✗（仅为历史登记，**不得**用作证明步骤 ✓）；
+⇒ **极小性路线需要重做**：（★′）的证明不能再依赖"取唯一极小 cluster" ✗。
+**建议的替代路线（W21）**：不做极小元，直接**构造**四元组 —— 例如取
+`a, a' ∈ S.sideA` 为**被不同 `u` 咬到**的两点、并用库内 `laminar_of_compatible_clusters`
+保证的"嵌套或相离"做二分：若存在同时咬 `S.sideA` 的**嵌套对**则取内层，否则（全相离）直接取
+`a = a'` 于某一 `u.cluster ρ`、`b, b' ∈ S.sideB` 用 (F1) `sideA_subset_cluster_meets` 的补集形式 ✓ ——
+⚠️ 此路线**尚未验证**，落地前必须先按 ★D 用见证校验 ✗。 -/
+
 end Split
