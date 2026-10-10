@@ -242,6 +242,137 @@ theorem isPendantEdgeOf_subset_gain_of_adj {T : Cladogram X} {W W' : Finset X} {
     exact ⟨w, Finset.mem_union_right _ (Finset.mem_singleton_self w), z,
       Finset.mem_union_left _ hz, key z hz⟩
 
+/-- 任意 `Sym2` 都是一对（非依赖消去，避开依赖 `motive` 的消去器问题）。 -/
+theorem sym2_eq_pair (T : Cladogram X) (e : Sym2 T.V) : ∃ a b : T.V, e = s(a, b) :=
+  Sym2.ind (fun a b => ⟨a, b, rfl⟩) e
+
+/-- `Edge` 可拆成一对**相邻**顶点（`SimpleGraph.mem_edgeSet` 的**图参数显式**）。 -/
+theorem exists_adj_of_mem {T : Cladogram X} {e : Sym2 T.V} (he : e ∈ T.graph.edgeSet) :
+    ∃ a b : T.V, T.graph.Adj a b ∧ e = s(a, b) := by
+  obtain ⟨a, b, hab⟩ := sym2_eq_pair T e
+  refine ⟨a, b, ?_, hab⟩
+  rw [hab] at he
+  exact (SimpleGraph.mem_edgeSet T.graph).mp he
+
+/-- `Edge` 版：取相邻的一对。 -/
+theorem exists_adj_of_edge (T : Cladogram X) (e : Edge T) :
+    ∃ a b : T.V, T.graph.Adj a b ∧ e.1 = s(a, b) :=
+  exists_adj_of_mem (T := T) e.2
+
 end Cladogram
+
+/-! ## §2 (A)：PD 求和装配 ＋ 条件形态的 `pdExchange_gap`
+
+第八轮记录的三条卡点绕法（本段全部遵守）：
+① **不用 `ring`** —— 实数重排用 `sub_self`／`sub_zero`／`sub_le_iff_le_add`／`add_le_add_iff_right`
+   ＋ `add_assoc`／`add_comm`／`sub_add_cancel`；
+② **不写弃用引理名** —— 逐边用 `by_cases` ＋ `simp [hA, hB, hP]`
+   （⚠️ 不用 `split_ifs with a b c`：自动闭合的分支会错位名字绑定 ✗）；
+③ `Edge` 取邻接用 `(SimpleGraph.mem_edgeSet T.graph).mp`，并用**非依赖**的 `sym2_eq_pair` 拆 `Sym2`。
+
+★ 第九轮补的正规形修正：**一律用 `insert w W'`**（`simp` 把 `W' ∪ {w}` 规范化成 `insert w W'`；
+假设与目标必须同形，否则 `simp` 报 unused argument 且留残余目标 ✗）。需要 `∪ {·}` 时用
+`Finset.union_singleton` 显式换算。 -/
+
+namespace Phylo.PhyloDiversity
+
+open Cladogram
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **差分定位**：`PD(W) − PD(W∖{w})` 恰好等于「`w` 的外边」的权和。 -/
+theorem PD_sub_erase (T : Phylogram X) (W : Finset X) (w : X) :
+    PD T W - PD T (W.erase w)
+      = ∑ e : Edge T.toCladogram,
+          (if Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 then T.w e else 0) := by
+  classical
+  rw [PD_def, PD_def, ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  by_cases hA : IsCoveredE T W e
+  · by_cases hB : IsCoveredE T (W.erase w) e
+    · have hP : ¬ Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 := fun h => h.2 hB
+      simp [hA, hB, hP]
+    · have hP : Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 := ⟨hA, hB⟩
+      simp [hA, hB, hP]
+  · have hB : ¬ IsCoveredE T (W.erase w) e :=
+      fun h => hA (Cladogram.IsCovered.mono (Finset.erase_subset _ _) h)
+    have hP : ¬ Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 := fun h => hA h.1
+    simp [hA, hB, hP]
+
+/-- ★★★ **差分定位（并集版，`insert` 正规形）**：`PD(insert w W') − PD(W')` 等于 `Gain(w)` 的权和。 -/
+theorem PD_sub_insert (T : Phylogram X) (W' : Finset X) (w : X) :
+    PD T (insert w W') - PD T W'
+      = ∑ e : Edge T.toCladogram,
+          (if ¬ IsCoveredE T W' e ∧ IsCoveredE T (insert w W') e then T.w e else 0) := by
+  classical
+  rw [PD_def, PD_def, ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  by_cases hE : IsCoveredE T (insert w W') e
+  · by_cases hA : IsCoveredE T W' e
+    · simp [hE, hA]
+    · simp [hE, hA]
+  · have hA : ¬ IsCoveredE T W' e :=
+      fun h => hE (Cladogram.IsCovered.mono (Finset.subset_insert w W') h)
+    simp [hE, hA]
+
+/-- ★★★ **(A) 装配**：若 `w` 的每条外边都在 `Gain(w)` 里，则交换不等式成立（`insert` 正规形）。 -/
+theorem pdExchange_of_gain {T : Phylogram X} {W W' : Finset X} {w : X}
+    (hGain : ∀ e : Edge T.toCladogram,
+      Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 →
+        ¬ IsCoveredE T W' e ∧ IsCoveredE T (insert w W') e) :
+    PD T W + PD T W' ≤ PD T (W.erase w) + PD T (insert w W') := by
+  classical
+  have h1 := PD_sub_erase T W w
+  have h2 := PD_sub_insert T W' w
+  have hle : (∑ e : Edge T.toCladogram,
+        (if Cladogram.IsPendantEdgeOf T.toCladogram W w e.1 then T.w e else 0))
+      ≤ ∑ e : Edge T.toCladogram,
+        (if ¬ IsCoveredE T W' e ∧ IsCoveredE T (insert w W') e then T.w e else 0) := by
+    refine Finset.sum_le_sum fun e _ => ?_
+    by_cases hP : Cladogram.IsPendantEdgeOf T.toCladogram W w e.1
+    · have hQ := hGain e hP
+      simp [hP, hQ.1, hQ.2]
+    · by_cases hQ : ¬ IsCoveredE T W' e ∧ IsCoveredE T (insert w W') e
+      · simp [hP, hQ, T.w_nonneg e]
+      · simp [hP, hQ]
+  have hmain : PD T W - PD T (W.erase w) ≤ PD T (insert w W') - PD T W' := by
+    rw [h1, h2]; exact hle
+  have h3 : PD T W ≤ PD T (insert w W') - PD T W' + PD T (W.erase w) :=
+    (sub_le_iff_le_add).mp hmain
+  have h4 : PD T W + PD T W' ≤ (PD T (insert w W') - PD T W' + PD T (W.erase w)) + PD T W' :=
+    (add_le_add_iff_right (PD T W')).mpr h3
+  have h5 : (PD T (insert w W') - PD T W' + PD T (W.erase w)) + PD T W'
+      = PD T (W.erase w) + PD T (insert w W') := by
+    rw [add_assoc, add_comm (PD T (W.erase w)) (PD T W'), ← add_assoc, sub_add_cancel,
+      add_comm (PD T (insert w W')) (PD T (W.erase w))]
+  rw [h5] at h4
+  exact h4
+
+/-- ★★★ **条件形态的 `pdExchange_gap`**（前提 ＝ (B) 的计数：存在 `w ∈ W∖W'`，
+其 `HangOff` 不含 `W'∖W` 的任何元素）。
+
+⚠️ 命名如实：这是**条件形态**（不是 `pdExchange_gap` 的证明）—— 由 (A)（`pdExchange_of_gain`）
+＋ 几何核（`isPendantEdgeOf_subset_gain_of_adj`）合成；前提 (B) 本批**未证**。 -/
+theorem pdExchange_gap_of_counting (T : Phylogram X)
+    (hcount : ∀ W W' : Finset X, 2 ≤ W'.card → W'.card < W.card →
+      ∃ w ∈ W \ W', ∀ z ∈ W' \ W, z ∉ Cladogram.HangOff T.toCladogram W w) :
+    pdExchange_gap T := by
+  classical
+  intro W W' hW' hlt
+  obtain ⟨w, hw, hwcount⟩ := hcount W W' hW' hlt
+  have hwW : w ∈ W := (Finset.mem_sdiff.mp hw).1
+  have hwW' : w ∉ W' := (Finset.mem_sdiff.mp hw).2
+  have hfin := pdExchange_of_gain (W := W) (W' := W') (w := w) fun e he => by
+    obtain ⟨a, b, hab, heab⟩ := Cladogram.exists_adj_of_edge T.toCladogram e
+    have he' : Cladogram.IsPendantEdgeOf T.toCladogram W w s(a, b) := heab ▸ he
+    have hkey := Cladogram.isPendantEdgeOf_subset_gain_of_adj hab
+      (Finset.card_pos.mp (by omega)) hwW' hwcount he'
+    exact ⟨fun h => hkey.1 (by simpa only [IsCoveredE, heab] using h),
+      by simpa only [IsCoveredE, heab, Finset.union_singleton] using hkey.2⟩
+  refine ⟨w, hw, ?_⟩
+  rw [Finset.union_singleton]
+  exact hfin
+
+end Phylo.PhyloDiversity
 
 end
