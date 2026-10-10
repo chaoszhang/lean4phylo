@@ -55,6 +55,7 @@ import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.SplitWeak
 import Phylo.Stat.ASTRAL
+import Phylo.Stat.Bootstrap
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
 import Phylo.Stat.CASTERF84
