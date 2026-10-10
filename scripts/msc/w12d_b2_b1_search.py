@@ -165,6 +165,10 @@ print("== n = 4：F 大小 ≤ 3，权重 ∈ {1,2} ==")
 check_families(4, 3, small_weights, "n=4")
 print("== n = 5：F 大小 ≤ 2，权重 = 1 ==")
 check_families(5, 2, unit_weights, "n=5")
+print("== n = 5：F 大小 ≤ 3，权重 = 1（B2 加压） ==")
+check_families(5, 3, unit_weights, "n=5-3")
+print("== n = 6：F 大小 ≤ 2，权重 = 1（B2 加压） ==")
+check_families(6, 2, unit_weights, "n=6-2")
 
 print("== 库内 FourPoint 与标准 FourPoint 的方向（对称 δ 小网格）==")
 

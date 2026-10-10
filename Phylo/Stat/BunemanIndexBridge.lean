@@ -910,4 +910,109 @@ example : FourPointStd (fun x y : Fin 4 => ∑ s ∈ cexF2, (1 : ℝ) * SplitMet
   fourPointOfSplitMetricSum_gap_correct_shape_proof cexF2 (fun _ => (1 : ℝ)) cexF2_compat
     (by intro s _; norm_num)
 
+/-! ## 11. (B2) 的**加法核心**与**归约**（W12p）
+
+`notIsDSplit_of_splitMetricSum_gap`（非成员不是 `max`-d-split）经本节的机械部分归约为
+**一条纯组合命题**（见 §11.3 的 `noWRealizer_exists_gap`）：
+
+* 逐 split 的五情形表已由差分恒等式给出（§10.2）：`X_u − W_u = 2[bPairW] − 2[bPairX]`、`X_u − P_u = 2[bPairP] − 2[bPairX]`；
+  本节补齐**第三条**：`P_u − W_u = 2[bPairW] − 2[bPairP]`（此处 `W_u = LHS_u` 为「同侧内和」）；
+* 求和 ⇒ `X − LHS = 2c_W − 2c_X`、`P − LHS = 2c_W − 2c_P`（`c_W/c_P/c_X` = 相应筛选和）；
+* ⇒ **若某四元组的 `c_W = 0`，则该四元组使 `IsDSplit` 失败** ⇒ `¬ IsDSplit` ✓（一个反例四元组即够）；
+* ⇒ 只剩「**存在四元组使 `c_W = 0`**」（`noWRealizer_exists_gap`，穷举无反例，见脚本）。 -/
+
+/-- ★★★ **逐 split 第三条差分恒等式**：`P_u − W_u = 2·[bPairW] − 2·[bPairP]`。 -/
+theorem splitMetric_diff_PW (u : Split X) (a a' b b' : X) :
+    (SplitMetric u a b + SplitMetric u a' b') - (SplitMetric u a a' + SplitMetric u b b')
+      = (if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairP u a a' b b' = true then (2 : ℝ) else 0) := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [SplitMetric, bPairW, bPairP, bSep, mem_sideB_iff, ha, ha', hb, hb'] <;>
+    norm_num
+
+/-- ★★★ **拆和（P − W）**：`P − W = 2c_W − 2c_P`。 -/
+theorem splitMetricSum_diff_PW (F : Finset (Split X)) (w : Split X → ℝ) (a a' b b' : X) :
+    (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+        - ((∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b'))
+      = 2 * (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u)
+        - 2 * (∑ u ∈ F.filter (fun u => bPairP u a a' b b' = true), w u) := by
+  have h1 : (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+      = ∑ u ∈ F, (w u * SplitMetric u a b + w u * SplitMetric u a' b') :=
+    Finset.sum_add_distrib.symm
+  have h2 : (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+      = ∑ u ∈ F, (w u * SplitMetric u a a' + w u * SplitMetric u b b') :=
+    Finset.sum_add_distrib.symm
+  rw [h1, h2, ← Finset.sum_sub_distrib]
+  rw [show (∑ u ∈ F, (w u * SplitMetric u a b + w u * SplitMetric u a' b'
+        - (w u * SplitMetric u a a' + w u * SplitMetric u b b')))
+      = ∑ u ∈ F, w u * ((if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+          - (if bPairP u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by
+      rw [show w u * SplitMetric u a b + w u * SplitMetric u a' b'
+            - (w u * SplitMetric u a a' + w u * SplitMetric u b b')
+          = w u * ((SplitMetric u a b + SplitMetric u a' b')
+            - (SplitMetric u a a' + SplitMetric u b b')) from by ring,
+        splitMetric_diff_PW u a a' b b']]
+  rw [show (∑ u ∈ F, w u * ((if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairP u a a' b b' = true then (2 : ℝ) else 0)))
+      = ∑ u ∈ F, (w u * (if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - w u * (if bPairP u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by ring]
+  rw [Finset.sum_sub_distrib,
+    sum_mul_ite_eq F w (fun u => bPairW u a a' b b' = true) 2,
+    sum_mul_ite_eq F w (fun u => bPairP u a a' b b' = true) 2]
+
+/-! ### 11.1 归约：`c_W = 0` 的四元组 ⇒ `¬ IsDSplit`（一个反例四元组即够） -/
+
+/-- ★★★ **归约**：若某四元组（`a,a' ∈ S.sideA`、`b,b' ∈ S.sideB`）**没有 `W`-实现者**
+（即 `c_W = 0`），则 `S` **不是** `δ̂ := Σ w·δ_u` 的 `d`-split（`IsDSplit` 的 `max` 形式）。 -/
+theorem not_isDSplit_of_no_W_realizer (F : Finset (Split X)) (w : Split X → ℝ)
+    (hw : ∀ s ∈ F, 0 < w s) (S : Split X) {a a' b b' : X} (ha : a ∈ S.sideA) (ha' : a' ∈ S.sideA)
+    (hb : b ∈ S.sideB) (hb' : b' ∈ S.sideB)
+    (hW0 : (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u) = 0) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) S.sideA S.sideB := by
+  intro hDS
+  have h1 := hDS a ha a' ha' b hb b' hb'
+  have hXW := splitMetricSum_diff_W F w a a' b b'
+  have hPW := splitMetricSum_diff_PW F w a a' b b'
+  rw [hW0] at hXW hPW
+  have hXnn : 0 ≤ ∑ u ∈ F.filter (fun u => bPairX u a a' b b' = true), w u :=
+    Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+  have hPnn : 0 ≤ ∑ u ∈ F.filter (fun u => bPairP u a a' b b' = true), w u :=
+    Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+  have hXle : (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+      ≤ (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b') := by
+    linarith
+  have hPle : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      ≤ (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b') := by
+    linarith
+  exact not_lt_of_ge (max_le hXle hPle) h1
+
+/-! ### 11.2 (★′) 纯组合命题（登记）与 (B2) 的条件收口 -/
+
+/-- ⬜ **(★′)（W12p 登记；未证）**：两两相容 `F` ＋ 正权重、`S ∉ F ± swap` 时，**存在**四元组
+`a, a' ∈ S.sideA`、`b, b' ∈ S.sideB`，使**没有** `u ∈ F` 把 `{a,a'}` 与 `{b,b'}` 分开
+（等价说法：该四元组的 `c_W = 0`）。
+
+⇒ 由 §11.1 的 `not_isDSplit_of_no_W_realizer`，(★′) 一成立即得 (B2)（见
+`notIsDSplit_of_splitMetricSum_gap_proof`）✓。
+**穷举证据**（`scripts/msc/w12d_b2_b1_search.py`）：`n = 4`（`F` ≤ 3）、`n = 5`（`F` ≤ 2, 3）、`n = 6`（`F` ≤ 2）
+的**全部**两两相容族上，(B2) 反例 **0** 例、(★′) 亦无例外 ✓（脚本 `exit 0`）。 -/
+def noWRealizer_exists_gap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
+      ∀ S : Split α, (∀ t ∈ F, t ≠ S ∧ t.swap ≠ S) →
+        ∃ a ∈ S.sideA, ∃ a' ∈ S.sideA, ∃ b ∈ S.sideB, ∃ b' ∈ S.sideB,
+          (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u) = 0
+
+/-- ★★★ **(B2) 的收口形态（条件版）**：由 (★′) `noWRealizer_exists_gap` **即得**注册形态
+`notIsDSplit_of_splitMetricSum_gap`（原 `def` 逐字保留 ✓）。
+即：本轮的机械部分（三条差分恒等式 ＋ 归约）把 (B2) **完全归结**为 (★′) 这条纯组合命题 ✓。 -/
+theorem notIsDSplit_of_splitMetricSum_gap_proof (h : noWRealizer_exists_gap.{0}) :
+    notIsDSplit_of_splitMetricSum_gap.{0} := by
+  intro α _ _ F w hF hw S hS
+  obtain ⟨a, ha, a', ha', b, hb, b', hb', hW0⟩ := h F w hF hw S hS
+  exact not_isDSplit_of_no_W_realizer F w hw S ha ha' hb hb' hW0
+
 end Split
