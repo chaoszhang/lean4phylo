@@ -52,3 +52,34 @@ theorem symmDiffCard_triangle {β : Type*} [DecidableEq β] (S R T : Finset β) 
   intro x hx
   simp only [Finset.mem_union, Finset.mem_sdiff] at hx ⊢
   tauto
+
+/-- ★★ **对称差的基数公式**（W11h / Q2-① 的通用器材）：
+
+`|S △ S'| = |S| + |S'| − 2·|S ∩ S'|`。
+
+用于把「quartet 距离 ≤ …」这类不等式化归到**基数**运算上（`RF` 与 `quartet` 两个距离
+共用本骨架 `symmDiffCard`）。 -/
+theorem symmDiffCard_eq_card_add_sub_two_inter {β : Type*} [DecidableEq β]
+    (S S' : Finset β) :
+    symmDiffCard S S' = S.card + S'.card - 2 * (S ∩ S').card := by
+  have h1 : (S \ S').card = S.card - (S ∩ S').card := by
+    rw [Finset.card_sdiff, Finset.inter_comm]
+  have h2 : (S' \ S).card = S'.card - (S ∩ S').card := Finset.card_sdiff
+  have hdisj : Disjoint (S \ S') (S' \ S) := by
+    rw [Finset.disjoint_left]
+    intro x hx hx'
+    exact (Finset.mem_sdiff.mp hx).2 (Finset.mem_sdiff.mp hx').1
+  have hsub : (S ∩ S').card ≤ S.card := Finset.card_le_card Finset.inter_subset_left
+  have hsub' : (S ∩ S').card ≤ S'.card := Finset.card_le_card Finset.inter_subset_right
+  rw [symmDiffCard_def, Finset.card_union_of_disjoint hdisj, h1, h2]
+  omega
+
+/-- ★★ **上界**：对称差不超过两集大小之和（Q2-①「quartet 距离 ≤ …」的最朴素形式）。 -/
+theorem symmDiffCard_le_card_add {β : Type*} [DecidableEq β] (S S' : Finset β) :
+    symmDiffCard S S' ≤ S.card + S'.card := by
+  rw [symmDiffCard_def]
+  calc ((S \ S') ∪ (S' \ S)).card
+      ≤ (S \ S').card + (S' \ S).card := Finset.card_union_le _ _
+    _ ≤ S.card + S'.card :=
+        Nat.add_le_add (Finset.card_le_card (Finset.sdiff_subset))
+          (Finset.card_le_card (Finset.sdiff_subset))
