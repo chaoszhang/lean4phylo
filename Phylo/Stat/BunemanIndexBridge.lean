@@ -645,4 +645,40 @@ theorem not_PairP_and_PairX {F : Finset (Split X)}
   rintro ⟨⟨u, huF, hu⟩, ⟨v, hvF, hv⟩⟩
   exact not_compatible_of_PairP_PairX hu hv (hF u huF v hvF)
 
+/-! ## 10. 修复形态的**计算核心**：进展与精确卡点（W12m）
+
+**目标**（`Split.fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
+满足文献四点条件 `FourPointStd`。收尾算法见 §9 docstring；本节记录**已落地部分**与**剩余卡点**（不写半成品）。
+
+### 已落地
+* `Split.mem_sideB_iff : x ∈ u.sideB ↔ x ∉ u.sideA`（两侧互补；逐 split 求值的第一块砖）✓。
+
+### 剩余（下一轮施工图）
+按 §9 的五情形表做**逐 split 求值**，再按配对谓词拆和。本轮已确认**两个工具链坑**（省后人时间）：
+
+1. **`if` 的条件不能是我定义的 `Prop` 谓词**：`SplitMetric` 自带的 `if` 能算，是因为其条件直接由
+   `∈ sideA/sideB` 构成（可判定实例现成）；而 `if PairW u a a' b b' then 2 else 0` **缺
+   `Decidable (PairW …)`**（`PairW`、`Separates` 都是 `def`，实例搜索不展开）✗。
+   ⇒ 三条出路：把配对谓词写成 `abbrev`；把条件直接写成 `∈ sideA` 的布尔组合；或回避 `if`（条件引理）。
+2. **`norm_num` 不回溯**：把五情形写成**析取**后 `first | Or.inl ⟨by norm_num, …⟩ | …` 会失败 ——
+   对假等式 `norm_num` 不是「失败」而是「化成 `False` 却留下目标」⇒ `first` 不换分支 ✗。
+   ⇒ 应写成**条件引理**（`PairW ⟹ (0,2,2)` 等；目标是合取，`norm_num` 可闭）✓ 方向已验证。
+
+**建议下一轮**：定义 `bSep (u) (x y) : Bool := decide (x ∈ u.sideA) != decide (y ∈ u.sideA)`，
+把 `SplitMetric u x y` 改写为 `if bSep u x y then 1 else 0`（`Bool` 条件**恒可判定**），
+所有逐 split 求值都在 `Bool` 上做，再用 §9 的三条族级引理完成拆和。 -/
+
+/-- `x ∈ u.sideB ↔ x ∉ u.sideA`（两侧互补；逐 split 求值的基础砖）。 -/
+theorem mem_sideB_iff (u : Split X) (x : X) : x ∈ u.sideB ↔ x ∉ u.sideA := by
+  constructor
+  · intro hb ha
+    exact (Finset.disjoint_left.mp (disjoint_sides u)) ha hb
+  · intro ha
+    have h : x ∈ u.sideA ∪ u.sideB := by
+      rw [union_sides]
+      exact Finset.mem_univ x
+    rcases Finset.mem_union.mp h with h' | h'
+    · exact absurd h' ha
+    · exact h'
+
 end Split
