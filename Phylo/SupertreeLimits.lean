@@ -1143,15 +1143,81 @@ def two_parent_trees_core : Prop :=
     (∀ q ∈ prof, ∃ s ∈ F, (∃ p ∈ q, p ⊆ s.sideA) ∧ (∃ p' ∈ q, p' ⊆ s.sideB)) →
     ∀ s ∈ F, s ∈ famP1 ∨ s ∈ famP2
 
-/-! **W12a13 状态（如实登记）**：树层归约（`two_parent_trees_core → two_parent_trees_classification`）
-本轮**未落地** ✗ —— 卡在**库内树相容性引理的名字/陈述**上：`Phylo/Split.lean:894` 的
-`pairwiseCompatible (T : Cladogram X) : T.PairwiseCompatible` 在我的文件里
-（i）`Phylo.pairwiseCompatible` 报 unknown identifier ✗、（ii）不带前缀时虽能解析，
-但它的第二参数类型与我给出的 `a ∈ T.splits` 精确不匹配（`Application type mismatch` ✗，
-报错文本还被截断，看不清期望类型）。
-⇒ **下一轮第一步**：读 `Phylo/Split.lean:880–900` 的 **namespace 块**确认全名与参数顺序
-（按你的提醒「需要库内全名就读 namespace 块」✓），再把这条桥补上；
-其余部分（`F` 的构造、非平凡性由 quartet 配对为 2 元集得到、`Finset.card_le_card`、
-`classical` 解决 `filter` 的 `DecidablePred` ✓）本轮都已试通 ✓。 -/
+/-! **W12a14**：桥已补上 ✓。上一轮卡住的那一行，真因是**库内引理的真实形态**：
+读 `Phylo/Split.lean` 的 namespace 块 ＋ `#check` 确认，全名是**根级** `pairwiseCompatible`
+（`Cladogram.pairwiseCompatible` 与 `Split.pairwiseCompatible` **都不存在** ✗），
+其结论 `T.PairwiseCompatible` 是一个 **`def`**（`= ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t`）
+⇒ **不能直接把它当函数应用** ✗；用**显式类型归属**让 elaborate 在正确类型上展开即可 ✓。 -/
+
+/-- ★★★ **桥：有限核心 ⟹ 分类定理**（缺口第 4 条的树层形态）。
+
+树 `T` 的非平凡 split 族 `F` 自动满足核心的三条前提：非平凡（构造）、两两相容
+（`pairwiseCompatible T`）、展示 `prof`（`DisplaysQP` 的见证 split 必非平凡 ——
+因为 quartet 的每个配对都是 2 元集）。 -/
+theorem two_parent_trees_classification_of_core (h : two_parent_trees_core) :
+    two_parent_trees_classification := by
+  classical
+  intro T hT s hs
+  by_cases htriv : (∃ x : Fin 6, s.sideA = {x}) ∨ (∃ x : Fin 6, s.sideA = {x}ᶜ)
+  · exact Or.inr (Or.inr htriv)
+  · have hntA : 2 ≤ s.sideA.card := by
+      have h1 : 1 ≤ s.sideA.card := Finset.card_pos.mpr (s.nonempty 0)
+      rcases Nat.lt_or_ge s.sideA.card 2 with h2 | h2
+      · obtain ⟨x, hx⟩ := Finset.card_eq_one.mp (by omega : s.sideA.card = 1)
+        exact absurd (Or.inl ⟨x, hx⟩) htriv
+      · exact h2
+    have hntB : 2 ≤ s.sideB.card := by
+      have h1 : 1 ≤ s.sideB.card := Finset.card_pos.mpr (s.nonempty 1)
+      rcases Nat.lt_or_ge s.sideB.card 2 with h2 | h2
+      · obtain ⟨x, hx⟩ := Finset.card_eq_one.mp (by omega : s.sideB.card = 1)
+        refine absurd (Or.inr ⟨x, ?_⟩) htriv
+        rw [← hx, Split.sideB_eq_compl, compl_compl]
+      · exact h2
+    set F : Finset (Split (Fin 6)) := Finset.univ.filter (fun t : Split (Fin 6) =>
+      T.IsSplitOf t ∧ 2 ≤ t.sideA.card ∧ 2 ≤ t.sideB.card) with hF
+    have hsF : s ∈ F := by
+      rw [hF, Finset.mem_filter]
+      exact ⟨Finset.mem_univ _, hs, hntA, hntB⟩
+    have hF1 : ∀ a ∈ F, T.IsSplitOf a := by
+      intro a ha
+      rw [hF] at ha
+      exact (Finset.mem_filter.mp ha).right.1
+    have hF2 : ∀ a ∈ F, 2 ≤ a.sideA.card ∧ 2 ≤ a.sideB.card := by
+      intro a ha
+      rw [hF] at ha
+      exact (Finset.mem_filter.mp ha).right.2
+    have hcomp : ∀ a ∈ F, ∀ b ∈ F, Split.Compatible a b := by
+      intro a ha b hb
+      have ha' : a ∈ T.splits := by
+        change T.IsSplitOf a
+        exact hF1 a ha
+      have hb' : b ∈ T.splits := by
+        change T.IsSplitOf b
+        exact hF1 b hb
+      exact (pairwiseCompatible T :
+        ∀ s ∈ T.splits, ∀ t ∈ T.splits, Split.Compatible s t) a ha' b hb'
+    have hcard : ∀ (q : QTop (Fin 6)) (p : Finset (Fin 6)), q ∈ prof → p ∈ q →
+        p.card = 2 := by
+      intro q p hq hp
+      simp only [prof, Finset.mem_insert, Finset.mem_singleton] at hq
+      rcases hq with rfl | rfl | rfl <;>
+        (simp only [q1, q2, q3, Finset.mem_insert, Finset.mem_singleton] at hp
+         rcases hp with rfl | rfl <;> decide)
+    have hdisp : ∀ q ∈ prof, ∃ a ∈ F,
+        (∃ p ∈ q, p ⊆ a.sideA) ∧ (∃ p' ∈ q, p' ⊆ a.sideB) := by
+      intro q hq
+      obtain ⟨a, ha, hsubA, hsubB⟩ := hT q hq
+      refine ⟨a, ?_, hsubA, hsubB⟩
+      rw [hF, Finset.mem_filter]
+      refine ⟨Finset.mem_univ _, ha, ?_, ?_⟩
+      · obtain ⟨p, hp, hpsub⟩ := hsubA
+        calc 2 = p.card := (hcard q p hq hp).symm
+          _ ≤ a.sideA.card := Finset.card_le_card hpsub
+      · obtain ⟨p', hp', hpsub⟩ := hsubB
+        calc 2 = p'.card := (hcard q p' hq hp').symm
+          _ ≤ a.sideB.card := Finset.card_le_card hpsub
+    rcases h F hF2 hcomp hdisp s hsF with h1 | h2
+    · exact Or.inl h1
+    · exact Or.inr (Or.inl h2)
 
 end SBD
