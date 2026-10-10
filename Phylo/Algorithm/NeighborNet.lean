@@ -2623,6 +2623,36 @@ theorem pairVal_comm {n : ℕ} (δ : Pair n → ℝ) (x y : Fin n) : pairVal δ 
     · rw [dite_eq_right h, dite_eq_left h', dite_eq_left h']
     · rw [dite_eq_right h, dite_eq_right h', dite_eq_right h, dite_eq_right h']
 
+/-! ### 11.7 形状引理（W12g-14）：`MlmFun` 的三支 = `½·tri` / `½·quad`
+
+第 13 轮已把 `MlmFun` 体里的位置换成**具名 def**（`dPrev/dNext/hZero/hOne/hLast`）⇒
+下面三条引理的两侧位置项**语法同形**，`ring` 才能认出同一原子 ✓（教训 175 ✓）。 -/
+
+/-- ★ **L 支形状**：`MlmFun n δ idx = ½ · tri (pairVal δ) z o L`。 -/
+theorem MlmFun_l (n : ℕ) (δ : Pair n → ℝ) (idx : Arc n)
+    (hL : idx.1.1.val = 0 ∧ idx.1.2.val = 0) :
+    MlmFun n δ idx
+      = (1 / 2) * tri (fun x y => pairVal δ x y) (hZero idx) (hOne idx) (hLast idx) := by
+  simp only [MlmFun, tri]
+  rw [dite_eq_left hL]
+
+/-- ★ **H 支形状**：`MlmFun n δ idx = ½ · quad (pairVal δ) L z j j1`。 -/
+theorem MlmFun_h (n : ℕ) (δ : Pair n → ℝ) (idx : Arc n) (hH : idx.1.1.val = 0)
+    (hne : idx.1.2.val ≠ 0) :
+    MlmFun n δ idx
+      = (1 / 2) * quad (fun x y => pairVal δ x y) (hLast idx) (hZero idx) idx.1.2 (dNext idx) := by
+  simp only [MlmFun, quad]
+  rw [dite_eq_right (fun hc => hne hc.2), dite_eq_left hH]
+  ring
+
+/-- ★ **D 支形状**：`MlmFun n δ idx = ½ · quad (pairVal δ) i0 i j j1`。 -/
+theorem MlmFun_d (n : ℕ) (δ : Pair n → ℝ) (idx : Arc n) (hne : idx.1.1.val ≠ 0) :
+    MlmFun n δ idx
+      = (1 / 2) * quad (fun x y => pairVal δ x y) (dPrev idx) idx.1.1 idx.1.2 (dNext idx) := by
+  simp only [MlmFun, quad]
+  rw [dite_eq_right (fun hc => hne hc.1), dite_eq_right hne]
+  ring
+
 end FunctionalMaterial
 
 end WeightAlgebra
