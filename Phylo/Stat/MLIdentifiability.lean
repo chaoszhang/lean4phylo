@@ -417,15 +417,62 @@ theorem fourTaxon_argmax_eq_truth {t : Fin 3}
   norm_num
 /-! ## 6. 显式缺口（**不硬编、不弱化**） -/
 
-/-- ❌ **缺口（一般模型类的可识别性输入 · 模型层）**：对 **JC69 / K80 / GTR**、
-任意 `n ≥ 4`、任意枝长，**期望对数似然在真树处唯一最大**（Chang 1996 的 identifiability 定理）。
+/-- ⬜ **缺口（一般模型类的可识别性输入 · 模型层）** —— **假设槽**，不是普遍真命题：
+对 **JC69 / K80 / GTR**、任意 `n ≥ 4`、任意枝长，**期望对数似然在真树处唯一最大**
+（Chang 1996 的 identifiability 定理）。
 
 **为何落缺口而不是硬编**：本库尚无「一般 `n` 的位点模式似然」对象（即 `expected` 从何而来），
 故此处只能把该**输入**抽象声明为谓词。本文件已把它的**下游**证成定理
 （`exists_gap` ＋ `argmax_eq_truth_of_close` ＋ `ml_statisticallyConsistent`），
-并给出 `n = 3` 三分支 MSC 的**已证**实例（`threeTaxon_gap`）。 -/
+并给出 `n = 3` 三分支 MSC 的**已证**实例（`threeTaxon_gap`）。
+
+⚠️ ★D **它不是普遍真命题**：本 `Prop` 含 `Θ`/`truth`/`expected` 三个参数，是个**谓词**
+（不是「对三者一切取值都成立」的全称命题），故严格说它**不是假命题**，而是**假设槽**。
+但它**作为全称命题确实为假** —— 见 `generalModelIdentifiability_gap_false`：
+`Θ := Fin 2`、`expected := fun _ => 0` 时断言退化成 `0 < 0`。
+
+⚠️ ★B **它不是空转定义（可满足）**：见 `generalModelIdentifiability_gap_satisfiable`
+（`Θ := Fin 2`、`truth := 0`、`expected := fun θ => if θ = 0 then 1 else 0`）与
+`generalModelIdentifiability_gap_nonempty`（`n = 3` 三分支 MSC 的**模型层**实例）。
+⇒ 这三条把该 `def` 的边界钉死：**非空的假设槽**，下游引擎真的需要它，
+且它**不能**被无条件断言。 -/
 def generalModelIdentifiability_gap (Θ : Type) [Fintype Θ] (truth : Θ) (expected : Θ → ℝ) : Prop :=
   ∀ θ : Θ, θ ≠ truth → expected θ < expected truth
+
+/-- ★D **反例：该 `Prop` 作为全称命题为假**（它只能当**假设槽**用）。
+
+取 `Θ := Fin 2`、`expected := fun _ => 0`：断言退化为 `∀ θ ≠ 0, (0 : ℝ) < 0`，显然为假。
+本定理的作用是**防止**把 `generalModelIdentifiability_gap` 当成无条件事实使用。 -/
+theorem generalModelIdentifiability_gap_false :
+    ¬ (∀ (Θ : Type) [Fintype Θ] (truth : Θ) (expected : Θ → ℝ),
+        generalModelIdentifiability_gap Θ truth expected) := by
+  intro h
+  exact absurd (h (Fin 2) 0 (fun _ => 0) 1 (by decide)) (by norm_num)
+
+/-- ★B **反空真（可满足）**：`Θ := Fin 2`、`truth := 0`、
+`expected := fun θ => if θ = 0 then 1 else 0` 时缺口成立（非真拓扑的期望得分 `0 < 1`）
+—— 故该 `def` 不是空转定义。 -/
+theorem generalModelIdentifiability_gap_satisfiable :
+    generalModelIdentifiability_gap (Fin 2) 0 (fun θ => if θ = 0 then (1 : ℝ) else 0) := by
+  intro θ hθ
+  fin_cases θ
+  · exact absurd rfl hθ
+  · norm_num
+
+/-- ★B **反空真（模型层实例，非玩具）**：`n = 3` 三分支 MSC 下
+`mscDiscordant t < mscConcordant t`（`t > 0`，`MSCProof.mscDiscordant_lt_mscConcordant`），
+即 `expected := fun b => if b = 0 then mscConcordant t else mscDiscordant t`、`truth := 0`
+时该 `Prop` **真的**成立 —— 缺口在**具体模型**上非空。 -/
+theorem generalModelIdentifiability_gap_nonempty {t : ℝ} (ht : 0 < t) :
+    generalModelIdentifiability_gap (Fin 2) 0
+      (fun b : Fin 2 => if b = 0 then MSCProof.mscConcordant t else MSCProof.mscDiscordant t) := by
+  intro θ hθ
+  fin_cases θ
+  · exact absurd rfl hθ
+  · change (if ((1 : Fin 2) = 0) then MSCProof.mscConcordant t
+        else MSCProof.mscDiscordant t) < MSCProof.mscConcordant t
+    rw [ite_eq_right (by decide : ¬ ((1 : Fin 2) = 0))]
+    exact MSCProof.mscDiscordant_lt_mscConcordant ht
 
 /-- ★ **缺口只在模型层**：一旦模型层输入（上方谓词）到位，**下游无条件成立** ——
 这正是 `MLProblem.exists_gap` 的同一论证（`wrong := (· ≠ truth)`）。 -/

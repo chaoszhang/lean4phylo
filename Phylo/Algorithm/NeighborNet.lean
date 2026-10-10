@@ -1288,4 +1288,353 @@ theorem zeroDist_realized (X : Type*) [Fintype X] [DecidableEq X] :
   intro x y _
   simp [phyleticDist]
 
+/-! ## 9. 缺口 1 的推进（W12g-3）：**非负性（一般 `n`）** + `n = 3, 4` 实例
+
+§7 已证「权重由距离**唯一确定**」（显式逆矩阵 `M`）—— 实现方向最难的一半。剩下两件事：
+
+* **(i) 非负性 `w ≥ 0`**：由 Kalmanson 不等式**逐条**给出（`kalmanson_triangle/H/D`，**一般 `n`**，
+  不依赖 Bandelt–Dress）：内部弧 `[i,j]`（`i ≥ 1`）↔ 不等式 (2) 于 `(i−1,i,j,j+1)`；
+  前缀弧 `[0,j]` ↔ 不等式 (1) 于 `(0,j,j+1,n−1)`；单元素弧 ↔ 三角不等式（`i = j` 情形）。
+* **(ii) 恒等 `phyleticDist F w = d`**：本节对 `n = 3, 4` 逐点验证
+  （`circularRealization_fin3/fin4`）；一般 `n` 另立 `circularWeights_realization_gap`。
+
+数值核对（逆矩阵还原、**筛选式**非负性/恒等、非负性的四元组路线图）：
+`scripts/msc/w12g_circular_realization_small_n.py`。 -/
+
+section CircularRealization
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **非负性（三角不等式）**：Kalmanson 的 `i = j` 情形。 -/
+theorem kalmanson_triangle {n : ℕ} (f : X ≃ Fin n) (d : X → X → ℝ)
+    (hdiag : ∀ x, d x x = 0) (hd : IsCircularDist f d)
+    (a b c : Fin n) (hab : a ≤ b) (hbc : b ≤ c) :
+    0 ≤ d (f.symm a) (f.symm b) + d (f.symm a) (f.symm c) - d (f.symm b) (f.symm c) := by
+  have h := (hd a a b c le_rfl hab hbc).1
+  rw [hdiag (f.symm a)] at h
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **非负性（前缀弧 `[0,j]`）**：Kalmanson 不等式 (1) 于四元组 `(a,b,c,e)`。 -/
+theorem kalmanson_H {n : ℕ} (f : X ≃ Fin n) (d : X → X → ℝ) (hsym : ∀ x y, d x y = d y x)
+    (hd : IsCircularDist f d) (a b c e : Fin n) (hab : a ≤ b) (hbc : b ≤ c) (hce : c ≤ e) :
+    0 ≤ d (f.symm e) (f.symm b) + d (f.symm a) (f.symm c)
+      - d (f.symm a) (f.symm b) - d (f.symm e) (f.symm c) := by
+  have h := (hd a b c e hab hbc hce).1
+  rw [hsym (f.symm e) (f.symm b), hsym (f.symm e) (f.symm c)]
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **非负性（内部弧 `[i,j]`，`i ≥ 1`）**：Kalmanson 不等式 (2) 于四元组 `(a,b,c,e)`。 -/
+theorem kalmanson_D {n : ℕ} (f : X ≃ Fin n) (d : X → X → ℝ)
+    (hd : IsCircularDist f d) (a b c e : Fin n) (hab : a ≤ b) (hbc : b ≤ c) (hce : c ≤ e) :
+    0 ≤ d (f.symm a) (f.symm c) + d (f.symm b) (f.symm e)
+      - d (f.symm b) (f.symm c) - d (f.symm a) (f.symm e) := by
+  have h := (hd a b c e hab hbc hce).2
+  linarith
+
+/-! ### 9.1 `n = 3` 实例（`X = Fin 3`，环序 = 恒等） -/
+
+/-- 平凡 split `{0} | {1,2}`（`Fin 3`）。 -/
+def c₀ : Split (Fin 3) := ofSideA {0} (by decide) (by decide)
+
+/-- 平凡 split `{1} | {0,2}`（`Fin 3`）。 -/
+def c₁ : Split (Fin 3) := ofSideA {1} (by decide) (by decide)
+
+/-- 平凡 split `{2} | {0,1}`（`Fin 3`）。 -/
+def c₂ : Split (Fin 3) := ofSideA {2} (by decide) (by decide)
+
+/-- ★ 环形族（`Fin 3`：恒等环序下的全部三条 split）。 -/
+def G₃ : Finset (Split (Fin 3)) := {c₀, c₁, c₂}
+
+/-- ★ **显式解出的权重**（§7 的逆矩阵行：L / D / H）。 -/
+noncomputable def v₃ (d : Fin 3 → Fin 3 → ℝ) : Split (Fin 3) → ℝ := fun s =>
+  if s = c₀ then (d 0 1 + d 0 2 - d 1 2) / 2
+  else if s = c₁ then (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2
+  else if s = c₂ then (d 2 1 - d 0 1 - d 2 2 + d 0 2) / 2
+  else 0
+
+@[simp] theorem c₀_ne_c₁ : c₀ ≠ c₁ := by decide
+
+@[simp] theorem c₀_ne_c₂ : c₀ ≠ c₂ := by decide
+
+@[simp] theorem c₁_ne_c₂ : c₁ ≠ c₂ := by decide
+
+@[simp] theorem c₁_ne_c₀ : c₁ ≠ c₀ := fun h => c₀_ne_c₁ h.symm
+
+@[simp] theorem c₂_ne_c₀ : c₂ ≠ c₀ := fun h => c₀_ne_c₂ h.symm
+
+@[simp] theorem c₂_ne_c₁ : c₂ ≠ c₁ := fun h => c₁_ne_c₂ h.symm
+
+@[simp] theorem v₃_c₀ (d : Fin 3 → Fin 3 → ℝ) : v₃ d c₀ = (d 0 1 + d 0 2 - d 1 2) / 2 := by
+  simp [v₃]
+
+@[simp] theorem v₃_c₁ (d : Fin 3 → Fin 3 → ℝ) :
+    v₃ d c₁ = (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2 := by
+  simp [v₃]
+
+@[simp] theorem v₃_c₂ (d : Fin 3 → Fin 3 → ℝ) :
+    v₃ d c₂ = (d 2 1 - d 0 1 - d 2 2 + d 0 2) / 2 := by
+  simp [v₃]
+
+theorem phyleticDist_triple (a b c : Split (Fin 3)) (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c)
+    (w : Split (Fin 3) → ℝ) (x y : Fin 3) :
+    phyleticDist ({a, b, c} : Finset (Split (Fin 3))) w x y
+      = w a * sepInd a x y + (w b * sepInd b x y + w c * sepInd c x y) := by
+  simp only [phyleticDist, sepInd]
+  rw [Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, hab, hac]),
+    Finset.sum_insert (by simp [Finset.mem_singleton, hbc]), Finset.sum_singleton]
+
+/-- ★★★ **`n = 3` 的恒等**（干净上下文：只带具体的对称/对角等式）。 -/
+theorem v₃_realizes (d : Fin 3 → Fin 3 → ℝ)
+    (h01 : d 0 1 = d 1 0) (h02 : d 0 2 = d 2 0) (h12 : d 1 2 = d 2 1)
+    (hd1 : d 1 1 = 0) (hd2 : d 2 2 = 0) :
+    ∀ x y : Fin 3, x ≠ y → phyleticDist G₃ (v₃ d) x y = d x y := by
+  intro x y hxy
+  rw [show G₃ = ({c₀, c₁, c₂} : Finset (Split (Fin 3))) from rfl,
+    phyleticDist_triple c₀ c₁ c₂ c₀_ne_c₁ c₀_ne_c₂ c₁_ne_c₂ (v₃ d) x y]
+  simp only [v₃_c₀, v₃_c₁, v₃_c₂]
+  fin_cases x <;> fin_cases y <;>
+    simp_all [sepInd, c₀, c₁, c₂] <;>
+    linarith [h01, h02, h12, hd1, hd2]
+
+/-- ★★★ **`n = 3` 实例（修复形态）**：环形（Kalmanson）+ 对称 + 零对角 `d` 由**非负**加权
+环形族实现 —— 权重恰是 §7 逆矩阵的行（`v₃`）；非负性用一般 `n` 的 `kalmanson_*` 引理。 -/
+theorem circularRealization_fin3 (d : Fin 3 → Fin 3 → ℝ) (hdiag : ∀ x, d x x = 0)
+    (hsym : ∀ x y, d x y = d y x) (hd : IsCircularDist (Equiv.refl (Fin 3)) d) :
+    ∃ (F : Finset (Split (Fin 3))) (w : Split (Fin 3) → ℝ),
+      Circular (↑F : Set (Split (Fin 3))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+        ∀ x y : Fin 3, x ≠ y → phyleticDist F w x y = d x y := by
+  refine ⟨G₃, v₃ d, ?_, ?_, ?_⟩
+  · refine circular_of_trivial _ ?_
+    intro s hs
+    have hs' : s ∈ G₃ := hs
+    simp only [G₃, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl
+    · exact Or.inl ⟨0, by simp [c₀]⟩
+    · exact Or.inl ⟨1, by simp [c₁]⟩
+    · exact Or.inl ⟨2, by simp [c₂]⟩
+  · intro s hs
+    have hs' : s ∈ G₃ := hs
+    simp only [G₃, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl
+    · rw [v₃_c₀]
+      have h := kalmanson_triangle (Equiv.refl (Fin 3)) d hdiag hd 0 1 2 (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₃_c₁]
+      have h := kalmanson_D (Equiv.refl (Fin 3)) d hd 0 1 1 2 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₃_c₂]
+      have h := kalmanson_H (Equiv.refl (Fin 3)) d hsym hd 0 1 2 2 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+  · exact v₃_realizes d (hsym 0 1) (hsym 0 2) (hsym 1 2) (hdiag 1) (hdiag 2)
+
+/-! ### 9.2 `n = 4` 实例（`X = Fin 4`，环序 = 恒等） -/
+
+/-- 代表弧 `[0,0]` 的 split：`{0} | {1,2,3}`。 -/
+def e₀₀ : Split (Fin 4) := ofSideA {0} (by decide) (by decide)
+
+/-- 代表弧 `[0,1]` 的 split：`{0,1} | {2,3}`。 -/
+def e₀₁ : Split (Fin 4) := ofSideA {0, 1} (by decide) (by decide)
+
+/-- 代表弧 `[0,2]` 的 split：`{0,1,2} | {3}`。 -/
+def e₀₂ : Split (Fin 4) := ofSideA {0, 1, 2} (by decide) (by decide)
+
+/-- 代表弧 `[1,1]` 的 split：`{1} | {0,2,3}`。 -/
+def e₁₁ : Split (Fin 4) := ofSideA {1} (by decide) (by decide)
+
+/-- 代表弧 `[1,2]` 的 split：`{1,2} | {0,3}`。 -/
+def e₁₂ : Split (Fin 4) := ofSideA {1, 2} (by decide) (by decide)
+
+/-- 代表弧 `[2,2]` 的 split：`{2} | {0,1,3}`。 -/
+def e₂₂ : Split (Fin 4) := ofSideA {2} (by decide) (by decide)
+
+/-- ★ 环形族（`Fin 4`：环序 `0,1,2,3` 的代表弧 `[i,j]`，`j ≤ 2`；共 `binom 4 2 = 6` 条）。 -/
+def G₄ : Finset (Split (Fin 4)) := {e₀₀, e₀₁, e₀₂, e₁₁, e₁₂, e₂₂}
+
+/-- ★ **显式解出的权重**（§7 的逆矩阵行：L / H / D）。 -/
+noncomputable def v₄ (d : Fin 4 → Fin 4 → ℝ) : Split (Fin 4) → ℝ := fun s =>
+  if s = e₀₀ then (d 0 1 + d 0 3 - d 1 3) / 2
+  else if s = e₀₁ then (d 3 1 - d 0 1 - d 3 2 + d 0 2) / 2
+  else if s = e₀₂ then (d 3 2 - d 0 2 - d 3 3 + d 0 3) / 2
+  else if s = e₁₁ then (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2
+  else if s = e₁₂ then (d 0 2 - d 1 2 - d 0 3 + d 1 3) / 2
+  else if s = e₂₂ then (d 1 2 - d 2 2 - d 1 3 + d 2 3) / 2
+  else 0
+
+@[simp] theorem e₀₀_sideA : e₀₀.sideA = ({0} : Finset (Fin 4)) := by simp [e₀₀]
+
+@[simp] theorem e₀₁_sideA : e₀₁.sideA = ({0, 1} : Finset (Fin 4)) := by simp [e₀₁]
+
+@[simp] theorem e₀₂_sideA : e₀₂.sideA = ({0, 1, 2} : Finset (Fin 4)) := by simp [e₀₂]
+
+@[simp] theorem e₁₁_sideA : e₁₁.sideA = ({1} : Finset (Fin 4)) := by simp [e₁₁]
+
+@[simp] theorem e₁₂_sideA : e₁₂.sideA = ({1, 2} : Finset (Fin 4)) := by simp [e₁₂]
+
+@[simp] theorem e₂₂_sideA : e₂₂.sideA = ({2} : Finset (Fin 4)) := by simp [e₂₂]
+
+theorem isCyclicArc_e₀₀ : IsCyclicArc (Equiv.refl (Fin 4)) e₀₀.sideA := by
+  refine ⟨0, 0, by decide, Or.inl ?_⟩
+  rw [e₀₀_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_e₀₁ : IsCyclicArc (Equiv.refl (Fin 4)) e₀₁.sideA := by
+  refine ⟨0, 1, by decide, Or.inl ?_⟩
+  rw [e₀₁_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_e₀₂ : IsCyclicArc (Equiv.refl (Fin 4)) e₀₂.sideA := by
+  refine ⟨0, 2, by decide, Or.inl ?_⟩
+  rw [e₀₂_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_e₁₁ : IsCyclicArc (Equiv.refl (Fin 4)) e₁₁.sideA := by
+  refine ⟨1, 1, by decide, Or.inl ?_⟩
+  rw [e₁₁_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_e₁₂ : IsCyclicArc (Equiv.refl (Fin 4)) e₁₂.sideA := by
+  refine ⟨1, 2, by decide, Or.inl ?_⟩
+  rw [e₁₂_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_e₂₂ : IsCyclicArc (Equiv.refl (Fin 4)) e₂₂.sideA := by
+  refine ⟨2, 2, by decide, Or.inl ?_⟩
+  rw [e₂₂_sideA]; ext x; fin_cases x <;> decide
+
+@[simp] theorem e₀₁_ne_e₀₀ : e₀₁ ≠ e₀₀ := by decide
+@[simp] theorem e₀₂_ne_e₀₀ : e₀₂ ≠ e₀₀ := by decide
+@[simp] theorem e₀₂_ne_e₀₁ : e₀₂ ≠ e₀₁ := by decide
+@[simp] theorem e₁₁_ne_e₀₀ : e₁₁ ≠ e₀₀ := by decide
+@[simp] theorem e₁₁_ne_e₀₁ : e₁₁ ≠ e₀₁ := by decide
+@[simp] theorem e₁₁_ne_e₀₂ : e₁₁ ≠ e₀₂ := by decide
+@[simp] theorem e₁₂_ne_e₀₀ : e₁₂ ≠ e₀₀ := by decide
+@[simp] theorem e₁₂_ne_e₀₁ : e₁₂ ≠ e₀₁ := by decide
+@[simp] theorem e₁₂_ne_e₀₂ : e₁₂ ≠ e₀₂ := by decide
+@[simp] theorem e₁₂_ne_e₁₁ : e₁₂ ≠ e₁₁ := by decide
+@[simp] theorem e₂₂_ne_e₀₀ : e₂₂ ≠ e₀₀ := by decide
+@[simp] theorem e₂₂_ne_e₀₁ : e₂₂ ≠ e₀₁ := by decide
+@[simp] theorem e₂₂_ne_e₀₂ : e₂₂ ≠ e₀₂ := by decide
+@[simp] theorem e₂₂_ne_e₁₁ : e₂₂ ≠ e₁₁ := by decide
+@[simp] theorem e₂₂_ne_e₁₂ : e₂₂ ≠ e₁₂ := by decide
+
+@[simp] theorem v₄_e₀₀ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₀₀ = (d 0 1 + d 0 3 - d 1 3) / 2 := by simp [v₄]
+
+@[simp] theorem v₄_e₀₁ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₀₁ = (d 3 1 - d 0 1 - d 3 2 + d 0 2) / 2 := by simp [v₄]
+
+@[simp] theorem v₄_e₀₂ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₀₂ = (d 3 2 - d 0 2 - d 3 3 + d 0 3) / 2 := by simp [v₄]
+
+@[simp] theorem v₄_e₁₁ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₁₁ = (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2 := by simp [v₄]
+
+@[simp] theorem v₄_e₁₂ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₁₂ = (d 0 2 - d 1 2 - d 0 3 + d 1 3) / 2 := by simp [v₄]
+
+@[simp] theorem v₄_e₂₂ (d : Fin 4 → Fin 4 → ℝ) :
+    v₄ d e₂₂ = (d 1 2 - d 2 2 - d 1 3 + d 2 3) / 2 := by simp [v₄]
+
+theorem phyleticDist_six (w : Split (Fin 4) → ℝ) (x y : Fin 4) :
+    phyleticDist G₄ w x y
+      = w e₀₀ * sepInd e₀₀ x y + (w e₀₁ * sepInd e₀₁ x y + (w e₀₂ * sepInd e₀₂ x y
+        + (w e₁₁ * sepInd e₁₁ x y + (w e₁₂ * sepInd e₁₂ x y + w e₂₂ * sepInd e₂₂ x y)))) := by
+  simp only [phyleticDist, sepInd, G₄]
+  rw [Finset.sum_insert (by
+        simp [Finset.mem_insert, Finset.mem_singleton, (e₀₁_ne_e₀₀).symm, (e₀₂_ne_e₀₀).symm,
+          (e₁₁_ne_e₀₀).symm, (e₁₂_ne_e₀₀).symm, (e₂₂_ne_e₀₀).symm]),
+    Finset.sum_insert (by
+        simp [Finset.mem_insert, Finset.mem_singleton, (e₀₂_ne_e₀₁).symm, (e₁₁_ne_e₀₁).symm,
+          (e₁₂_ne_e₀₁).symm, (e₂₂_ne_e₀₁).symm]),
+    Finset.sum_insert (by
+        simp [Finset.mem_insert, Finset.mem_singleton, (e₁₁_ne_e₀₂).symm, (e₁₂_ne_e₀₂).symm,
+          (e₂₂_ne_e₀₂).symm]),
+    Finset.sum_insert (by
+        simp [Finset.mem_insert, Finset.mem_singleton, (e₁₂_ne_e₁₁).symm, (e₂₂_ne_e₁₁).symm]),
+    Finset.sum_insert (by simp [Finset.mem_singleton, (e₂₂_ne_e₁₂).symm]),
+    Finset.sum_singleton]
+  try ring
+
+/-- ★★★ **`n = 4` 的恒等**（干净上下文：只带具体的对称/对角等式）。 -/
+theorem v₄_realizes (d : Fin 4 → Fin 4 → ℝ)
+    (h01 : d 0 1 = d 1 0) (h02 : d 0 2 = d 2 0) (h03 : d 0 3 = d 3 0)
+    (h12 : d 1 2 = d 2 1) (h13 : d 1 3 = d 3 1) (h23 : d 2 3 = d 3 2)
+    (hd1 : d 1 1 = 0) (hd2 : d 2 2 = 0) (hd3 : d 3 3 = 0) :
+    ∀ x y : Fin 4, x ≠ y → phyleticDist G₄ (v₄ d) x y = d x y := by
+  intro x y hxy
+  rw [phyleticDist_six (v₄ d) x y]
+  simp only [v₄_e₀₀, v₄_e₀₁, v₄_e₀₂, v₄_e₁₁, v₄_e₁₂, v₄_e₂₂]
+  fin_cases x <;> fin_cases y <;>
+    simp_all [sepInd, e₀₀, e₀₁, e₀₂, e₁₁, e₁₂, e₂₂] <;>
+    linarith [h01, h02, h03, h12, h13, h23, hd1, hd2, hd3]
+
+/-- ★★★ **`n = 4` 实例（修复形态）**：环形（Kalmanson）+ 对称 + 零对角 `d` 由**非负**加权
+环形族实现；权重是 §7 逆矩阵的行（`v₄`），非负性用一般 `n` 的 `kalmanson_*` 引理。 -/
+theorem circularRealization_fin4 (d : Fin 4 → Fin 4 → ℝ) (hdiag : ∀ x, d x x = 0)
+    (hsym : ∀ x y, d x y = d y x) (hd : IsCircularDist (Equiv.refl (Fin 4)) d) :
+    ∃ (F : Finset (Split (Fin 4))) (w : Split (Fin 4) → ℝ),
+      Circular (↑F : Set (Split (Fin 4))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+        ∀ x y : Fin 4, x ≠ y → phyleticDist F w x y = d x y := by
+  refine ⟨G₄, v₄ d, ?_, ?_, ?_⟩
+  · refine ⟨4, Equiv.refl (Fin 4), fun s hs => ?_⟩
+    have hs' : s ∈ G₄ := hs
+    simp only [G₄, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl | rfl | rfl | rfl
+    · exact Or.inl isCyclicArc_e₀₀
+    · exact Or.inl isCyclicArc_e₀₁
+    · exact Or.inl isCyclicArc_e₀₂
+    · exact Or.inl isCyclicArc_e₁₁
+    · exact Or.inl isCyclicArc_e₁₂
+    · exact Or.inl isCyclicArc_e₂₂
+  · intro s hs
+    have hs' : s ∈ G₄ := hs
+    simp only [G₄, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl | rfl | rfl | rfl
+    · rw [v₄_e₀₀]
+      have h := kalmanson_triangle (Equiv.refl (Fin 4)) d hdiag hd 0 1 3 (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₄_e₀₁]
+      have h := kalmanson_H (Equiv.refl (Fin 4)) d hsym hd 0 1 2 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₄_e₀₂]
+      have h := kalmanson_H (Equiv.refl (Fin 4)) d hsym hd 0 2 3 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₄_e₁₁]
+      have h := kalmanson_D (Equiv.refl (Fin 4)) d hd 0 1 1 2 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₄_e₁₂]
+      have h := kalmanson_D (Equiv.refl (Fin 4)) d hd 0 1 2 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v₄_e₂₂]
+      have h := kalmanson_D (Equiv.refl (Fin 4)) d hd 1 2 2 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+  · exact v₄_realizes d (hsym 0 1) (hsym 0 2) (hsym 0 3) (hsym 1 2) (hsym 1 3) (hsym 2 3)
+      (hdiag 1) (hdiag 2) (hdiag 3)
+
+/-! ### 9.3 一般 `n` 的剩余缺口：**恒等**（非负性已证） -/
+
+/-- ⬜ **新登记缺口（W12g-3）**：一般 `n` 的**权重–距离恒等**
+`phyleticDist F w = d`（`n = 3,4` 见 `circularRealization_fin3/fin4`）。
+
+⚠️ **非负性不再是缺口**（`kalmanson_triangle/H/D` 对一般 `n` 已证）。剩下的只是恒等，
+其正路是**线性代数**：把 §7 的逆矩阵 `M`（三行泛函）与 `A`（弧 ↔ 点对指示）都写成线性映射，
+`M ∘ A = id` 由 §7 的隔离引理给出，而「弧族权空间」与「对称零对角点对函数空间」维数都是
+`binom n 2` ⇒ `A ∘ M = id` ⇒ 恒等。本库尚缺的是这两空间的**维数簿记**（`finrank`）。
+（BdD 1992 的孤立指数 `α_S ≥ 0` 与本库的 `w ≥ 0` 等价，⚠️ 该文**未入库** ⇒ 只作待核实归属。） -/
+def circularWeights_realization_gap (n : ℕ) : Prop :=
+  ∀ (d : Fin n → Fin n → ℝ), (∀ x, d x x = 0) → (∀ x y, d x y = d y x) →
+    IsCircularDist (Equiv.refl (Fin n)) d →
+      ∃ (F : Finset (Split (Fin n))) (w : Split (Fin n) → ℝ),
+        Circular (↑F : Set (Split (Fin n))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+          ∀ x y : Fin n, x ≠ y → phyleticDist F w x y = d x y
+
+end CircularRealization
+
 end NeighborNet

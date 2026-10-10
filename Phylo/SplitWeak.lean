@@ -440,6 +440,47 @@ def fourPointCharacterization_gap : Prop :=
       ∃ δ : α → α → ℝ, FourPoint δ ∧
         ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s
 
+/-! ## 7.1 瓶颈 (B1)/(B2)（W12k 登记为**有名有姓的题**；均由协调侧指定）
+
+`fourPointCharacterization_gap` 的 **`⟹`** 方向（两两相容 ⟹ 存在满足四点条件的 `δ`）归结为下面两条；
+它们同时是 `weakCompatibilityRealization` / `canonicalSplitDecomposition` 的瓶颈。
+取 `δ := Σ_{S ∈ F} w_S · δ_S`（`δ_S` = `SplitMetric S`，`w_S > 0`）：
+**(B1)** 证明 `δ` 满足四点条件（「树度量」一侧）；
+**(B2)** 证明**非成员**不是 `δ` 的 d-split（等价说法：隔离指数为 `0`；BdD Thm 1 的取正/凸性论证）。 -/
+
+/-- ⬜ **瓶颈 (B1)（W12k 登记，未证）**：两两相容族 `F` 与正权重 `w` 的 split 度量组合
+`δ := Σ_{S∈F} w_S · δ_S` 满足**四点条件**。
+
+这是 `fourPointCharacterization_gap` 的 `⟹` 方向的**第一半**（「四点条件 ⟹ 树度量」一侧）：
+两两相容的 split 系统恰是一棵树的边，正权重之和应为**树度量**，故四点条件成立。
+
+⚠️ **弱**相容**不够**：`Fin 5` 上 `{0,1}|{2,3,4}` 与 `{0,2}|{1,3,4}` 弱相容，但
+`δ := δ_S + δ_T` 在四元组 `(0,1,2,3)` 上的三对和为 `(δ(0,2)+δ(1,3), δ(0,1)+δ(2,3), δ(0,3)+δ(1,2)) = (3,1,4)`，
+最大者只出现一次 ⇒ **不满足**四点条件。故本缺口**必须**用**强**（两两）相容。
+
+⚠️ 另注：本库 `def FourPoint` 的**第三合取项**疑有笔误（末项 `δ a b + δ a' b` 应为 `δ a b + δ a' b'`），
+见 `Phylo/Stat/BunemanIndexBridge.lean` §5 的 ★D(ii)；若该笔误将来修正，本条陈述需同步核对。 -/
+def fourPointOfSplitMetricSum_gap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
+      FourPoint (fun x y => ∑ s ∈ F, w s * SplitMetric s x y)
+
+/-- ⬜ **瓶颈 (B2)（W12k 登记，未证）**：**非成员不是 d-split**（= 非成员的隔离指数为 `0`）。
+
+`δ := Σ_{S∈F} w_S · δ_S`（`F` 两两相容、`w > 0`）时，任何与 `F` 的每个成员都**不同**
+（含 `swap`）的 split `S` **不是** `δ` 的 `d`-split。这是 BdD Thm 1 的**取正/凸性论证**，
+也是 `fourPointCharacterization_gap` 的 `⟹` 方向第二半与
+`weakCompatibilityRealization` / `canonicalSplitDecomposition` 的**共同**瓶颈。
+
+（隔离指数的精确形式见 `Phylo/BunemanTree.lean:107` 的 `bunemanIndex`，
+「`α > 0` ⟺ 两配对都为正」的桥见 `Phylo/Stat/BunemanIndexBridge.lean`
+的 `Split.bunemanIndex_pos_iff_isDSplitStrong`。） -/
+def notIsDSplit_of_splitMetricSum_gap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
+      ∀ s : Split α, (∀ t ∈ F, t ≠ s ∧ t.swap ≠ s) →
+        ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) s.sideA s.sideB
+
 end Split
 
 /-! ## 8. 树的 split 系统弱相容（`Phylo/Split.lean:894` 的接口） -/

@@ -235,4 +235,110 @@ theorem not_isDSplit_implies_bunemanIndex_pos :
   have h1 := h cexDelta cexSplit cex_isDSplit
   linarith [cex_bunemanIndex_neg]
 
+
+/-! ## 5. ★★★ `fourPointCharacterization_gap` 的 **`⟸` 一半**（本轮已证）
+
+缺口（`Phylo/SplitWeak.lean:414`）：
+
+```text
+(∀ s ∈ F, ∀ t ∈ F, s.Compatible t) ↔
+  ∃ δ, FourPoint δ ∧ ∀ s, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s
+```
+
+**`⟸`（本节结论）**：给定**对称** `δ`、`FourPoint δ`，且 `F` 恰为其 d-split 集（商掉 `swap`），
+则 `F` **两两相容**。核心是不依赖 `F` 的引理 `compatible_of_fourPoint_isDSplit`
+（Buneman 的两 split 版：`δ` 对称 + 四点条件 + 两个 d-split ⟹ 相容）。
+
+### ⚠️ 两处必须记下的**忠实性问题**（★D）
+
+**(i) 缺口右边没要求 `δ` 对称。** BdD 全篇的 `d` 都是**对称**函数（文献 503–509 行的四点条件
+本就写在对称函数上），本节的 `⟸` 需要显式带上 `∀ x y, δ x y = δ y x`。
+证明中**只有一处**用到对称：把 `IsDSplit s` 结论里的 `δ c b` 换成 `δ b c`。
+
+**(ii) `Split.FourPoint` 的第三个合取项与它自己的 docstring 不符（疑为笔误）。**
+docstring 说三个表达式是 `d(a,a')+d(b,b')`、`d(a,b)+d(a',b')`、`d(a,b')+d(a',b)`（最大者至少取两次）；
+但 `def` 第 3 项写的是
+
+```text
+δ a b' + δ a' b ≤ max (δ a a' + δ b b') (δ a b + δ a' b)     -- 末项应为 δ a b + δ a' b'
+```
+
+末项 `δ a b + δ a' b`（两对共享端点 `b`）**不是**三个表达式之一 ⇒ 本库的 `FourPoint`
+与文献的四点条件**不等价**。本节的证明**绕开**了这一项：
+只需 `FourPoint` 的**第一个**合取项（它是正确的：`δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b)`），
+在 `(a,a',b,b') = (A,C,B,D)` 与 `(A,D,B,C)` 两个取法上使用。故本定理对**本库原文**成立，
+`def FourPoint` 与缺口陈述**逐字未改**。
+
+### 证明（取法与 `Phylo/BunemanTree.lean:218` 的 Lemma 8 一致）
+
+若 `s, t` 不相容，则四个交 `A∩A'`、`A∩B'`、`B∩A'`、`B∩B'` 全非空，取
+`A ∈ s.sideA ∩ t.sideA`、`C ∈ s.sideA ∩ t.sideB`、`B ∈ s.sideB ∩ t.sideA`、`D ∈ s.sideB ∩ t.sideB`。
+记 `S1 := δ A C + δ B D`、`S2 := δ A B + δ C D`、`U := δ A D + δ B C`，则
+
+* `IsDSplit s`（内部对 `(A,C)`、`(B,D)`）给 `S1 < max (S2) (δ A D + δ C B)`，
+  **对称**把它变成 `S1 < max S2 U`；
+* `IsDSplit t`（内部对 `(A,B)`、`(C,D)`）给 `S2 < max S1 U`；
+* `FourPoint δ A D B C` 的第一合取项给 `U ≤ max S2 S1`（`= max S1 S2`）；
+
+三者与「最大者至少两次」矛盾（纯实数引理 `not_two_pos_of_fourPoint`）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **纯实数引理**：若 `U ≤ max S1 S2`（「最大者至少两次」的必要一半），
+则不可能同时有 `S1 < max S2 U` 与 `S2 < max S1 U`。 -/
+theorem not_two_pos_of_fourPoint {S1 S2 U : ℝ}
+    (h3 : U ≤ max S1 S2) (h4 : S1 < max S2 U) (h5 : S2 < max S1 U) : False := by
+  rcases lt_or_ge S2 S1 with hlt | hge
+  · have hU : S1 < U := by
+      by_contra hc
+      have hc' : U ≤ S1 := not_lt.mp hc
+      have : max S2 U ≤ S1 := max_le (le_of_lt hlt) hc'
+      linarith [h4]
+    have hmax : max S1 S2 ≤ S1 := max_le le_rfl (le_of_lt hlt)
+    linarith [h3, hmax, hU]
+  · have hU : S2 < U := by
+      by_contra hc
+      have hc' : U ≤ S2 := not_lt.mp hc
+      have : max S1 U ≤ S2 := max_le hge hc'
+      linarith [h5]
+    have hmax : max S1 S2 ≤ S2 := max_le hge le_rfl
+    linarith [h3, hmax, hU]
+
+/-- ★★★ **四点条件 + 两个 d-split ⟹ 相容**（Buneman 的两 split 版；`⟸` 方向的核心）。
+
+⚠️ 需要 `δ` **对称**（文件头 ★D (i)）；这是文献的 setting（BdD 的 `d` 恒对称）。 -/
+theorem compatible_of_fourPoint_isDSplit {δ : X → X → ℝ} (hsym : ∀ x y, δ x y = δ y x)
+    (hfp : FourPoint δ) {s t : Split X}
+    (hs : IsDSplit δ s.sideA s.sideB) (ht : IsDSplit δ t.sideA t.sideB) : s.Compatible t := by
+  by_contra h
+  obtain ⟨A, hAs, hAt⟩ : ∃ A : X, A ∈ s.sideA ∧ A ∈ t.sideA :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inl hd)
+  obtain ⟨C, hCs, hCt⟩ : ∃ C : X, C ∈ s.sideA ∧ C ∈ t.sideB :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inl hd))
+  obtain ⟨B, hBs, hBt⟩ : ∃ B : X, B ∈ s.sideB ∧ B ∈ t.sideA :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inr (Or.inl hd)))
+  obtain ⟨D, hDs, hDt⟩ : ∃ D : X, D ∈ s.sideB ∧ D ∈ t.sideB :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inr (Or.inr hd)))
+  have hU : δ A D + δ B C ≤ max (δ A C + δ B D) (δ A B + δ C D) := by
+    have h0 := (hfp A D B C).1
+    rw [hsym D B, hsym D C, max_comm] at h0
+    exact h0
+  have hs' : δ A C + δ B D < max (δ A B + δ C D) (δ A D + δ B C) := by
+    have h0 := hs A hAs C hCs B hBs D hDs
+    rwa [hsym C B] at h0
+  have ht' : δ A B + δ C D < max (δ A C + δ B D) (δ A D + δ B C) :=
+    ht A hAt B hBt C hCt D hDt
+  exact not_two_pos_of_fourPoint hU hs' ht'
+
+/-- ★★★ **`fourPointCharacterization_gap` 的 `⟸` 一半**（已证）：
+
+「存在**对称**的 `δ`：`FourPoint δ` 且其 d-split 集**恰为** `F`（商掉 `swap`）」⟹ `F` **两两相容**。 -/
+theorem pairwiseCompatible_of_exists_symm_fourPoint_isDSplit {F : Finset (Split X)}
+    (h : ∃ δ : X → X → ℝ, (∀ x y, δ x y = δ y x) ∧ FourPoint δ ∧
+      ∀ s : Split X, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s) :
+    ∀ s ∈ F, ∀ t ∈ F, s.Compatible t := by
+  obtain ⟨δ, hsym, hfp, hδ⟩ := h
+  intro s hs t ht
+  exact compatible_of_fourPoint_isDSplit hsym hfp
+    ((hδ s).mpr ⟨s, hs, Or.inl rfl⟩) ((hδ t).mpr ⟨t, ht, Or.inl rfl⟩)
+
 end Split

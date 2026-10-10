@@ -5,6 +5,11 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.MSC
 import Mathlib.Probability.StrongLaw
+-- W12f：**可数无限乘积测度**（Kolmogorov 扩张）在 Mathlib 里**有** ——
+-- `Measure.infinitePi`（`Mathlib/Probability/ProductMeasure.lean:354`）与
+-- `iIndepFun_infinitePi`（`Mathlib/Probability/Independence/InfinitePi.lean:124`），
+-- 故缺口 K 由本文件的 `kolmogorov_extension_gap` 直接**证出**（不再是假设）。
+import Mathlib.Probability.Independence.InfinitePi
 
 /-!
 # `Phylo.Stat.EmpiricalConvergence` —— 大数定律 ⇒ 经验 quartet 频率的**几乎必然**收敛
@@ -43,8 +48,13 @@ import Mathlib.Probability.StrongLaw
 
 ## 3. iid 是**假设**，不是**构造**（逐条说明）
 
-本版 Mathlib **没有**无限乘积测度（`Measure.infinitePi` / Kolmogorov 扩张搜索无结果，
-见缺口 K），故本文件**没有构造** iid 概率空间，而把下面几条**逐条列为假设**：
+**【W12f 更正】本版 Mathlib 其实**有**无限乘积测度**（`Measure.infinitePi`，
+`Mathlib/Probability/ProductMeasure.lean:354`；见缺口 K 的**已证**定理
+`kolmogorov_extension_gap`）—— 原 docstring 那句「搜索无结果」**已过时**。
+本节表格与下面的 `empFreq_tendsto_ae` 等定理**本身没有改动**（★C：不改已入库定理的陈述），
+它们仍以 iid 为**显式前提**；但「iid 位点概率空间」现在终于是**可构造**的了
+（`kolmogorov_extension_gap_proved`）：
+
 
 | 条目 | 内容 | 在本文件中的身份 |
 |---|---|---|
@@ -79,8 +89,8 @@ import Mathlib.Probability.StrongLaw
 | **无偏性** `∫ empFreq n = m.freq.p`（`n ≥ 1`） | ✅ **已证**（`integral_empFreq`；只用同分布 + 可积，**不用独立性**） |
 | `{0,1}` 值随机变量的方差恒等式 | ✅ **已证**（`integral_sq_sub_of_zero_one`） |
 | **`n = 1` 的经验频率方差** `= p(1−p)/1` | ✅ **已证**（`integral_sq_sub_empFreq_one`） |
-| **一般 `n` 的方差** `∫ (empFreq n − p)² = p(1−p)/n` | ❌ **未证**（缺口 V：需要双重和 + 独立性交叉项展开，`Mathlib` 本版**没有** `variance_sum` / `evariance_sum`） |
-| **iid 概率空间的存在性**（Kolmogorov 扩张 / 无限乘积测度） | ❌ **未构造**（缺口 K；本版 Mathlib 无 `Measure.infinitePi`） |
+| **一般 `n` 的方差** `∫ (empFreq n − p)² = p(1−p)/n` | ⬜ **仍未证**，但 **W12f 更正了「为什么未证」**：原判词「`Mathlib` 本版**没有** `variance_sum` / `evariance_sum`」**已失效** —— `Mathlib/Probability/Moments/Variance.lean` **:286/:294/:298/:303** 有 `variance_sum'` / `variance_sum` / `variance_fun_sum'` / `variance_fun_sum`，**:427** 有 `IndepFun.variance_sum`，**:448** 有 `variance_sum_pi`，**:156** 有 `variance_eq_integral`。**现在还差的是两处初等代数簿记**，精确定位见缺口 V 的 docstring（不是缺器材） |
+| **iid 概率空间的存在性**（Kolmogorov 扩张 / 无限乘积测度） | ✅ **W12f 已证**（缺口 K 现在就是 `kolmogorov_extension_gap_proved` 本身；构件 = `Measure.infinitePi`，`Mathlib/Probability/ProductMeasure.lean:354`（`:377` 概率性、`:477` 坐标边缘）＋ `iIndepFun_infinitePi`，`Mathlib/Probability/Independence/InfinitePi.lean:124`。**不需要** Polish / 标准 Borel / 完美测度空间） |
 | 「位点观测的边缘分布 = MSC 理论频率」 | ⚠️ **是假设**（`hmean`），**不是**证出来的（MSC 的测度层定义不在本库） |
 | 「独立性、同分布」 | ⚠️ **是假设**（`hindep` / `hident`），**不是**证出来的 |
 | `MSCSampling.converges`（既有公理） | ⚠️ **仍是公理化的**；本文件的 a.e. 形式是它的**概率版**，但**不是**它的推论（后者是确定性的 `∃ N`，没有概率空间） |
@@ -98,7 +108,7 @@ import Mathlib.Probability.StrongLaw
 
 open Filter MeasureTheory ProbabilityTheory
 
-open scoped Topology
+open scoped Topology ENNReal
 
 namespace Phylo.Stat.EmpiricalConvergence
 
@@ -235,25 +245,103 @@ theorem integral_sq_sub_empFreq_one (m : MSCFreq X) (μ : Measure (ℕ → Ω₀
     (fun ω => hind (ω 0)), hmean]
   ring
 
+/-- ★B 用得到的**均匀硬币概率测度**（`Ω = Bool`）：`2⁻¹ • Measure.count` ——
+`{true}` 与 `{false}` 各占 `1/2`（`coin_true` / `coin_false`）。缺口 K 的非空真见证在此测度上给出。 -/
+noncomputable def coin : Measure Bool := (2 : ℝ≥0∞)⁻¹ • (Measure.count : Measure Bool)
+
+theorem coin_univ : coin Set.univ = 1 := by
+  have h : (Measure.count : Measure Bool) Set.univ = 2 := by
+    rw [Measure.count_apply_finite]
+    · simp
+    · simp
+  rw [coin, Measure.smul_apply, h, smul_eq_mul]
+  exact ENNReal.inv_mul_cancel (by norm_num : (2 : ℝ≥0∞) ≠ 0) (by norm_num : (2 : ℝ≥0∞) ≠ ⊤)
+
+instance : IsProbabilityMeasure coin where
+  measure_univ := coin_univ
+
+/-- `coin {true} = 1/2`。 -/
+theorem coin_true : coin {true} = 1 / 2 := by
+  rw [coin, Measure.smul_apply, Measure.count_singleton, smul_eq_mul]
+  norm_num
+
+/-- `coin {false} = 1/2`。 -/
+theorem coin_false : coin {false} = 1 / 2 := by
+  rw [coin, Measure.smul_apply, Measure.count_singleton, smul_eq_mul]
+  norm_num
+
 /-! ## 4. 诚实边界：显式缺口（`def … : Prop`，**不是** `axiom`，也**不是** `sorry`）
 
 下面两条把本文件**没有**做到的东西写成显式命题（规格 §10.3 的要求：宁可留缺口，
 不许把未证内容伪装成定理）。它们在本文件中**从未被当作假设使用**。 -/
 
-/-- ❌ **缺口 K（Kolmogorov 扩张 / 无限乘积测度）**：对任意概率测度 `μ₀`，存在
-`μ : Measure (ℕ → Ω₀)`，使坐标映射 `ω ↦ ω i` 在 `μ` 下**独立**且每个坐标的边缘恰为 `μ₀`。
+/-- ✅ **缺口 K（Kolmogorov 扩张 / 无限乘积测度）—— W12f 已证成定理**：对任意概率测度
+`μ₀`，存在 `μ : Measure (ℕ → Ω₀)`，使坐标映射 `ω ↦ ω i` 在 `μ` 下**独立**且每个坐标的
+边缘恰为 `μ₀`（陈述与原来的 `def` **逐字相同**；此处保留 `def` 形式 —— 它带 `[IsProbabilityMeasure μ₀]`
+参数，故 `theorem` 的形式不可用（`theorem` 的**类型**必须是命题，不能是 `… → Prop`），
+证明放在**同名不同词条**的 `kolmogorov_extension_gap_proved` 里）。
 
-**未构造**：本版 Mathlib 没有可数无限乘积测度（`Measure.infinitePi` 不存在）。
-把「位点 iid」写成**假设**的根源就在这里：有了本缺口，「iid 位点概率空间」才是可构造的，
-`empFreq_tendsto_ae` 的 `hindep` / `hident` 才不必再假设。
+**证明**（见 `kolmogorov_extension_gap_proved`）：取 `μ := Measure.infinitePi (fun _ : ℕ => μ₀)`
+（**一般族**概率测度的乘积测度）：
 
-⚠️ 诚实说明：对**任意**可测空间 `Ω₀`，可数乘积上 iid 测度的存在性还需额外条件
-（如 `Ω₀` 为**标准 Borel / 完美测度**空间）；本 `Prop` 是**最简形式**的存在性陈述，
-其充分条件**未**在此讨论。**未证。** -/
+* `Measure.infinitePi`：`Mathlib/Probability/ProductMeasure.lean:354`；
+* 概率性 `instance : IsProbabilityMeasure (infinitePi μ)`：同文件 **:377**；
+* 坐标边缘 `lemma infinitePi_map_eval (i : ι) : (infinitePi μ).map (fun x ↦ x i) = μ i`：
+  同文件 **:477**；
+* 独立性 `ProbabilityTheory.iIndepFun_infinitePi`：
+  `Mathlib/Probability/Independence/InfinitePi.lean:124`
+  （`iIndepFun (fun i ω ↦ X i (ω i)) (infinitePi P)`，前提只是各 `X i` **可测**；
+  这里取 `X i := id`）。
+
+⚠️ **W12f 更正（原 docstring 的两条断言：一条过时，一条方向反了）**：
+
+1. 「本版 Mathlib 没有可数无限乘积测度（`Measure.infinitePi` 不存在）」—— **错**：它**存在**，
+   见上面的文件与行号（`leanprover/lean4:v4.35.0-rc3` 的 Mathlib）。
+2. 「对**任意**可测空间 `Ω₀`，可数乘积上 iid 测度的存在性还需额外条件（如 `Ω₀` 为
+   **标准 Borel / 完美测度**空间）」—— **不需要**。`ProductMeasure.lean:354` 的
+   `variable` 上下文只有 `{X : ι → Type*} {mX : ∀ i, MeasurableSpace (X i)}` 与
+   `[∀ i, IsProbabilityMeasure (μ i)]`：**没有** Polish / 标准 Borel / 完美测度 /
+   可数生成之类的假设，`ι` 也**任意**（此处取 `ℕ`）。故原缺口比原 docstring 所担心的
+   **更强地**成立 —— 这是「原缺口其实易证」的一个实例。
+
+★B 非空真见证（见下）：`kolmogorov_extension_gap_nonempty`（`Ω₀ = Bool`、`μ₀ =` 均匀硬币
+测度时该 `μ` **真的**存在）、`kolmogorov_extension_gap_bool_mass`（边缘是真事实：
+`{true}` 的测度 `= 1/2`）、`kolmogorov_extension_gap_bool_prod`（坐标 `0`、`1` **真的**独立：
+联合分布 = 边缘之积）。 -/
 def kolmogorov_extension_gap (μ₀ : Measure Ω₀) [IsProbabilityMeasure μ₀] : Prop :=
   ∃ μ : Measure (ℕ → Ω₀), IsProbabilityMeasure μ ∧
     (∀ i : ℕ, Measure.map (fun ω : ℕ → Ω₀ => ω i) μ = μ₀) ∧
     iIndepFun (fun i (ω : ℕ → Ω₀) => ω i) μ
+
+/-- ★★★ **缺口 K 的证明**（= `def kolmogorov_extension_gap` 的**证明**，陈述由 `def` 给出、
+一字不改）—— 构件是 Mathlib 的 `Measure.infinitePi` / `Measure.infinitePi_map_eval` /
+`iIndepFun_infinitePi`。 -/
+theorem kolmogorov_extension_gap_proved (μ₀ : Measure Ω₀) [IsProbabilityMeasure μ₀] :
+    kolmogorov_extension_gap (Ω₀ := Ω₀) μ₀ := by
+  refine ⟨Measure.infinitePi (fun _ : ℕ => μ₀), inferInstance, ?_, ?_⟩
+  · intro i
+    exact Measure.infinitePi_map_eval (fun _ : ℕ => μ₀) i
+  · exact iIndepFun_infinitePi (P := fun _ : ℕ => μ₀) (X := fun _ (x : Ω₀) => x)
+      (fun _ => measurable_id)
+
+/-- ★B **非空真见证（具体型 + 具体概率测度）**：`Ω₀ := Bool` 上的**均匀硬币测度**
+`coin := 2⁻¹ • Measure.count`（`{true}` 与 `{false}` 各占 `1/2`）**真的**满足缺口 K。 -/
+theorem kolmogorov_extension_gap_nonempty :
+    kolmogorov_extension_gap (Ω₀ := Bool) coin :=
+  kolmogorov_extension_gap_proved (Ω₀ := Bool) coin
+
+/-- ★B **非空真见证（边缘不是空转）**：`Ω₀ := Bool`、`μ₀ := coin` 时，
+`infinitePi` 的坐标 `0` 的边缘**恰是** `coin`，故 `{true}` 的测度 = `1/2`。 -/
+theorem kolmogorov_extension_gap_bool_mass :
+    (Measure.infinitePi (fun _ : ℕ => coin)).map (fun ω : ℕ → Bool => ω 0) {true} = 1 / 2 := by
+  rw [Measure.infinitePi_map_eval, coin_true]
+
+/-- ★B **非空真见证（独立性不是空转）**：`Ω₀ := Bool`、`μ₀ := coin` 时，坐标 `0` 与坐标 `1`
+的**联合分布** = 两个边缘的乘积（即两坐标独立）—— 由 `infinitePi` 的投影极限性质给出。 -/
+theorem kolmogorov_extension_gap_bool_prod :
+    (Measure.infinitePi (fun _ : ℕ => coin)).map (fun ω : ℕ → Bool => (ω 0, ω 1))
+      = coin.prod coin :=
+  Measure.infinitePi_map_eval_prod (P := fun _ : ℕ => coin) (by norm_num : (0 : ℕ) ≠ 1)
 
 /-- ❌ **缺口 V（一般 `n` 的均方误差 / 方差）**：iid 位点、`ind` 逐点取值 `0/1`、
 且 `∫ ind (ω 0) = m.freq.p S hS q` 时
@@ -262,10 +350,30 @@ def kolmogorov_extension_gap (μ₀ : Measure Ω₀) [IsProbabilityMeasure μ₀
 ∫ ω, (empFreq n ω − m.freq.p S hS q)² ∂μ = m.freq.p S hS q · (1 − m.freq.p S hS q) / n     (n ≥ 1)
 ```
 
-**未证**：缺的不是代数（`n = 1` 已在 `integral_sq_sub_empFreq_one` 证出），
-而是 Lean 侧的双重和记账：把 `(∑ᵢ Xᵢ)²` 展开成 `∑ᵢ∑ⱼ XᵢXⱼ`，
-对角项用 `Xᵢ² = Xᵢ`、非对角项用独立性 `∫XᵢXⱼ = (∫Xᵢ)(∫Xⱼ)`；
-本版 Mathlib **没有** `variance_sum` / `evariance_sum` 现成引理（见文件头 §5）。**未证。** -/
+**⬜ 仍未证 —— 但 W12f 更正了「为什么未证」（原判词是错的）**：
+
+* **原判词**：「本版 Mathlib **没有** `variance_sum` / `evariance_sum` 现成引理」—— **错**。
+  `Mathlib/Probability/Moments/Variance.lean` **:286** `variance_sum'`、**:294** `variance_sum`、
+  **:298** `variance_fun_sum'`、**:303** `variance_fun_sum`、**:427** `IndepFun.variance_sum`、
+  **:448** `variance_sum_pi`、**:156** `variance_eq_integral`；本文件缺口 K 的
+  `Measure.infinitePi` 也已有（见 `kolmogorov_extension_gap_proved`）。
+* **证明骨架（各步器材都已到位，W12f 已逐段编译验证）**：
+  记 `Y i ω := ind (ω i) S hS q`、`Sum ω := ∑ i ∈ range n, Y i ω`。
+  1. `empFreq ind n ω S hS q = (n:ℝ)⁻¹ * Sum ω`（`empFreq` 的定义，逐点展开）；
+  2. `variance Sum μ = ∑ i ∈ range n, variance (Y i) μ`
+     （`variance_fun_sum'` 展开 + 非对角项用 `hindep.indepFun` 的 `covariance_eq_zero`）—— **已编译通过**；
+  3. `variance (Y i) μ = p · (1 − p)`（本文件已证的 `integral_sq_sub_of_zero_one` + `hident`/`hmean`）
+     —— **已编译通过**；
+  4. `MemLp Sum 2 μ`（`0/1` 取值 ⇒ `‖Y i‖ ≤ 1` ⇒ `MemLp.of_bound`）—— **已编译通过**。
+* **卡点（精确到两条初等代数，均非数学内容）**：
+  (a) `variance (fun ω => c * X ω) μ = c ^ 2 * variance X μ` 与目标里的 `c * c * variance X μ`
+      的**形状匹配**（`variance_const_mul` 给前一种形状）；
+  (b) `(↑n)⁻¹ * ((↑n) * p) = p` 这一步在 `sub` 语境下的**重写方向**
+      （`field_simp` 后 `ring` 因 `↑n` 的强制转换而失败 —— 报错为
+      `⊢ p - p * ↑n * 2 + … = 0`，`linear_combination` 亦未收口）。
+  W12f 已**如实停止**在此处：`def` 逐字保留、**零 `sorry`**、不在任何证明中使用它。
+* 数值核验（真跑通）：`_scripts_tmp/w12f_variance_check.py`，`n = 1,2,3,4,5,7,11`、
+  `p = 0, 1/3, 1/2, 1` 上恒等式**精确有理数相等** ⇒ **命题本身为真**，卡点纯属 Lean 簿记。**未证。** -/
 def variance_empFreq_gap (m : MSCFreq X) (μ : Measure (ℕ → Ω₀)) [IsProbabilityMeasure μ]
     (S : Finset X) (hS : S.card = 4) (q : Split ↥S) : Prop :=
   (∀ x : Ω₀, ind x S hS q = 0 ∨ ind x S hS q = 1) →

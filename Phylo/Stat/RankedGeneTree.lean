@@ -539,12 +539,93 @@ def rankedTree_card_gap : Prop := ∀ n : ℕ, 2 ≤ n → ((mergeHistories n).c
 * 「给定拓扑下 ranked 树恰有 `(n−1)!` 个」**错**：`n = 3` 时纤维数 `1 ≠ 2 = (3−1)!`；
 * 「纤维大小与树形无关」**错**：`n = 4` 平衡形 `2` 个 vs caterpillar 形 `1` 个
   （`card_rankings_01_23` / `card_rankings_012_3`）。
-  故任何「一般 `n` 均匀」的断言都必须先验。 -/
+  故任何「一般 `n` 均匀」的断言都必须先验。
+
+## ★D 命题核对（数值脚本，**真跑通**）
+
+脚本：`_scripts_tmp/w12f_ranked_fiber_check.py`（与本文件同源口径的**独立**实现：
+`stepMap` / `chainMap` / `IsStep` / `IsMergeHistory` / `blocksOf` / `cladesOf` 逐条照抄，
+用整数与 `frozenset` 精确计算，无浮点）。命令 `python3 _scripts_tmp/w12f_ranked_fiber_check.py 6`，
+`exit 0`。摘要：
+
+```text
+n=2  #mergeHistories=1     H_n=1     #clade_sets=1    fiber histogram={1: 1}
+n=3  #mergeHistories=3     H_n=3     #clade_sets=3    fiber histogram={1: 3}
+n=4  #mergeHistories=18    H_n=18    #clade_sets=15   fiber histogram={1: 12, 2: 3}
+n=5  #mergeHistories=180   H_n=180   #clade_sets=105  fiber histogram={1: 60, 3: 30, 2: 15}
+n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4: 180, 3: 180, 6: 90, 2: 90, 8: 45}
+各 n 上公式 (n-1)!/∏_{|C|≥2}(|C|-1) 与观测纤维大小**逐纤维完全一致**，mismatches = 0；ALL_OK
+```
+
+⇒ **命题为真**（`n ≤ 6` 全部 `2700 + 180 + 18 + 3 + 1` 个合并史、共 `1069` 个 clade 集**零反例**）；
+⇒ 两条「显然」结论被**独立复现**为假（`(n−1)! = 120 ≠` 任何 `n = 6` 纤维大小；
+纤维 histogram 有 `1,2,3,4,6,8` 六种大小）。
+
+## W12f 做到了什么 / 没做到什么（**不夸大**）
+
+**新增（本批）**：
+
+* ★B `mem_fiber_self` / `one_le_card_fiber_cladesOf`：纤维**非空**（`f` 是自己的见证）；
+* ★★ `rankedFiberCount_three_all` / `rankedFiberCount_three`：Remark 6 的 `n = 3`
+  **一般 `f`** 形式（纯内核 `decide`；原文件只有逐个拓扑的 `card_rankings_01_2`）；
+* 上面那条数值核对脚本。
+
+**仍然没做到（一般 `n`）—— 精确的「缺什么」**：
+
+1. **命题本身为真**（脚本 `n ≤ 6` 零反例），故**不是** ★D 意义上的假命题；
+2. 证明路线有两条，都需要**同一层新接口**：
+   * **hook-length 路线**：把 `cladesOf n f` 提升成「clade 包含偏序」上的**树对象**，
+     则 `|C| − 1` 恰是内部顶点 `C` 的**子树内部顶点数**（= hook length），
+     命题化为「森林偏序的线性扩展数 = `N!/∏ s_v`」。⚠️ **Mathlib 里没有**
+     hook-length 公式（`grep hook_length` 全库 0 命中），`linearExtension` 侧只有
+     `Mathlib/Order/Extension/Linear.lean` 的基础设施（无计数公式）；
+   * **摘樱桃路线**：`f(T) = Σ_{cherries {a,b}} f(T_{ab})` —— 同样要先有「树对象」。
+3. 这层接口**在本文件内做不出来**：`IsMergeHistory` 的编码是 `(Fin (n-1) → Fin n × Fin n)`
+   的函数，从 `cladesOf` 反推父子关系需要一套新的树/偏序结构 + 计数定理，
+   **必然要新建模块**（并按 ★G 把注册行写进报告，由协调侧处理）。
+
+⇒ 一般 `n` **如实保留缺口**。 -/
 def rankedFiberCount_gap : Prop :=
   ∀ (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
     ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
       = (n - 1).factorial
         / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1)
+
+/-- ★B **反空真（纤维非空）**：每个合并史 `f` 都在**自己**的 `cladesOf n`-纤维里，
+故 `rankedFiberCount_gap` 的左边**从不为空集**（`f` 是显式见证）—— 缺口不是空账目。 -/
+theorem mem_fiber_self {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    f ∈ (mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f) :=
+  Finset.mem_filter.mpr ⟨(mem_mergeHistories (n := n) f).mpr hf, rfl⟩
+
+/-- ★B **反空真（纤维基数下界）**：`cladesOf n f` 的纤维**至少含 `f`**，
+故其基数 `≥ 1`（`rankedFiberCount_gap` 的断言不是 `0 = 0` 之类的空转）。 -/
+theorem one_le_card_fiber_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) :
+    1 ≤ ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card :=
+  Finset.card_pos.mpr ⟨f, mem_fiber_self hf⟩
+
+set_option maxRecDepth 100000 in
+/-- ★★ **Remark 6 的 `n = 3` 一般 `f` 实例**（本批新增：原文件只有逐个拓扑的
+`card_rankings_01_2`，这里是**一般 `f`**）—— 由纯内核 `decide` 枚举 `18` 个候选编码求得。
+
+⚠️ 这一步是**纯枚举**（不是 hook-length 证明）：`n = 3` 太小，枚举便宜且可靠。
+一般 `n` 的 `decide` 会随 `n` 指数爆炸（`n = 4` 已是 `16^3 = 4096` 个候选），
+故 `n ≥ 5` 不能这样硬算 —— 见 §5 缺口的说明。 -/
+theorem rankedFiberCount_three_all :
+    (mergeHistories 3).filter (fun f =>
+      ((mergeHistories 3).filter (fun g => cladesOf 3 g = cladesOf 3 f)).card
+        ≠ (3 - 1).factorial
+          / ∏ C ∈ (cladesOf 3 f).filter (fun C => 2 ≤ C.card), (C.card - 1)) = ∅ := by
+  decide
+
+/-- ★★ **Remark 6 的 `n = 3` 一般 `f` 形式**（由 `rankedFiberCount_three_all` 取出）。 -/
+theorem rankedFiberCount_three (f : Fin (3 - 1) → Fin 3 × Fin 3) (hf : IsMergeHistory 3 f) :
+    ((mergeHistories 3).filter (fun g => cladesOf 3 g = cladesOf 3 f)).card
+      = (3 - 1).factorial
+        / ∏ C ∈ (cladesOf 3 f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+  have h := rankedFiberCount_three_all
+  rw [Finset.filter_eq_empty_iff] at h
+  exact not_not.mp (h ((mem_mergeHistories (n := 3) f).mpr hf))
 
 /-- ❌→✅ **缺口 G3（Theorem 3 式 (4) 在 `λ_j = j` 的一般 `m`）已证**：
 `Σ_{j=0}^{m} e^{−js}/∏_{k≠j}(k − j) = (1/m!)(1 − e^{−s})^m`。
