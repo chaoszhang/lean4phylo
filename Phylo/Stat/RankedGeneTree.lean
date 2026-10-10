@@ -631,10 +631,21 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
    * §6 `multinomial_mul_prod_factorial` / `multinomial_children_factorial`（计数恒等式）。
    * 第五轮又**自造了 `LE`（线性扩展数）并给出其递推定义方程**（§8 `LE` / `LE_eq`）；
    * 第六轮尝试补 **(a) `LE` 的归纳原理 ＋ (b) `attach.prod` 桥接**，**未落地**，
-     但发现了**关键的命题级障碍**（已落 §9 文档 + §9.1 的 ★B 反例见证）：
+     并发现了**命题级障碍**（已落 §9.1/§9.2 的已核反例）：
      **`B ∈ children T D` 不蕴含 `2 ≤ B.card`**（`T = {∅,{0}}`、`D = {0}` 时 `∅` 是孩子），
-     故归纳原理必须**加强前提**（排除退化孩子）；另有 `InvImage`/`hook` 在
-     `Finset (Finset α)` 上的**确定性 `whnf` 超时**（`maxHeartbeats` 提到 800000 仍超时）。
+     且 `hgood`（「≥2 成员的孩子都 ≥2」）**一般也不成立**
+     （`T = {∅,{0},{0,1}}`、`C = {0,1}` ⇒ `children = {{0}}`、`|{0}| = 1`）。
+   * **第七轮 (a)(b) 已落地** ✓（`Phylo/Stat/HookLength.lean` §9）：
+     ★★ **`LE_induction`** —— 自造归纳原理，`step` **直接接收**孩子的 `2 ≤ B.card`
+     （递归所需的 `hook_lt_of_mem_children` 用**父的** `2 ≤ C.card`，由载体给出
+     ⇒ 无需 `hgood`）；用 `Nat.strongRecOn` 在 `ℕ` 上递归（避开 `InvImage`+`hook` 的
+     `whnf` 超时）；
+     ★★ **`attach_prod_LE`** —— `attach.prod` ↔ `Finset.prod` 桥接（用 `if h : B ∈ children T C ...`
+     把 `children_mem` 的证据**内部化**，再 `dite_eq_left` 消去 ＋ `Finset.prod_attach`）；
+     ★ **`two_le_card_of_child`**。
+   * ⬜ **仍缺 (c)**：用 `LE_induction` ＋ §5（`prod_hook_eq_hook_mul_prod_children`，需
+     `LaminarFamily T`）＋ §6（`multinomial_children_factorial`）归纳出**闭形式**
+     `LE T C hC · ∏_{D ⊆ C} hook T D = (hook T C)!`（配方见报告 §10）。
    ⬜ **仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
    （需自造 `LE` 的归纳原理 + `Finset.prod_attach` 对齐 —— Lean 基础设施问题），
    以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
