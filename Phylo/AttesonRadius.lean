@@ -940,6 +940,256 @@ theorem fourPoint_merge (δ : Dissimilarity X) (hfp : δ.FourPoint) {i j : X}
           linarith [hDD, not_le.mp hcase2]
         nlinarith [hAi, hPi, hAj, h0, hθ1]
     · right; nlinarith [hAi, hAj, h0, hθ1]
+/-! ## 10. ★★★ 类型迁移 `X ↝ (X∖{i,j}) ∪ {u}`（W12e3）
+
+W12e2 已把归约步的 `FourPoint` 一半证成 ★★★ `fourPoint_merge`；本节补齐**装置**：
+标签类型 `Y`、合并映射 `q`、相异度 `δm`、基数等式，以及缺口的三条取值性质与 `δm.FourPoint`。
+
+⚠️ **★D 命题核查（先说结论）**：§8 的原 `def atteson_reduction_gap` 的第二条合取
+`∀ x y, x ≠ i → x ≠ j → y ≠ i → y ≠ j → q x ≠ q y ∧ …` 在 `x = y` 时要求 `q x ≠ q x` ——
+**为假**（★★★ `atteson_reduction_gap_refuted`，用 ★C 例子 `exDiss` 与 `x = y = 2`）。
+⇒ 本节的**修复形态** `atteson_reduction_gap_correct_shape` 只补一条 `x ≠ y`
+（★★★ `atteson_reduction_gap_correct_shape_proved` 把它**证成定理**）。 -/
+
+/-- ★★★ **反例检查：`atteson_reduction_gap` 为假**（第二条合取在 `x = y` 时自相矛盾）。
+
+取 ★C 例子 `exDiss`（`Fin 4`，`i = 0`、`j = 1`、`θ = 1/2`；前提由 ★★ `exDiss_isCherry_01`
+与 ★★ `exDiss_fourPoint` 给出）与 `x = y = 2 ∉ {0,1}`：该合取要求 `q 2 ≠ q 2`，矛盾。 -/
+theorem atteson_reduction_gap_refuted : ¬ atteson_reduction_gap (X := Fin 4) := by
+  intro h
+  obtain ⟨Y, _, _, q, δm, _, hval, _, _⟩ :=
+    h exDiss 0 1 (1 / 2) exDiss_isCherry_01 exDiss_fourPoint (by norm_num) (by norm_num)
+  exact (hval 2 2 (by decide) (by decide) (by decide) (by decide)).1 rfl
+
+/-- ★★★ **旧标签类型** `X ∖ {i,j}`（Finset 子类型：基数由 `Finset.card_sdiff` 直接给出）。 -/
+abbrev MergeOld (X : Type*) [Fintype X] [DecidableEq X] (i j : X) :=
+  ↥((Finset.univ : Finset X) \ {i, j})
+
+/-- ★★★ **合并后的标签类型** `Y = (X∖{i,j}) ∪ {u}`，新标签 `u = Sum.inr ()`。 -/
+abbrev MergeIdx (X : Type*) [Fintype X] [DecidableEq X] (i j : X) :=
+  MergeOld X i j ⊕ Unit
+
+/-- ★★★ **合并映射** `q : X → Y`：`i, j ↦ u`，其余 `x ↦ inl x`。 -/
+noncomputable def mergeQ (i j : X) : X → MergeIdx X i j :=
+  fun x => if h : x = i ∨ x = j then Sum.inr () else Sum.inl ⟨x, by
+    simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Finset.mem_insert,
+      Finset.mem_singleton, not_or]
+    exact not_or.mp h⟩
+
+theorem mergeQ_of_ne {x : X} (hx : x ≠ i) (hy : x ≠ j) :
+    mergeQ i j x = Sum.inl ⟨x, by
+      simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Finset.mem_insert,
+        Finset.mem_singleton, not_or]
+      exact ⟨hx, hy⟩⟩ := by
+  rw [mergeQ]
+  exact dite_eq_right (fun h => h.elim hx hy)
+
+theorem mergeQ_i : mergeQ i j i = (Sum.inr () : MergeIdx X i j) := by
+  rw [mergeQ]
+  exact dite_eq_left (Or.inl rfl)
+
+theorem mergeQ_j : mergeQ i j j = (Sum.inr () : MergeIdx X i j) := by
+  rw [mergeQ]
+  exact dite_eq_left (Or.inr rfl)
+
+/-- 旧标签的分量不等于 `i`。 -/
+theorem mergeOld_ne_left (a : MergeOld X i j) : a.1 ≠ i := by
+  have h := a.2
+  rw [Finset.mem_sdiff] at h
+  intro hi
+  exact h.2 (by rw [hi]; exact Finset.mem_insert_self i {j})
+
+/-- 旧标签的分量不等于 `j`。 -/
+theorem mergeOld_ne_right (a : MergeOld X i j) : a.1 ≠ j := by
+  have h := a.2
+  rw [Finset.mem_sdiff] at h
+  intro hj
+  exact h.2 (by rw [hj]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self j))
+
+/-- ★★★ **合并度量**：旧–旧取 `δ`，`u`–旧取凸组合 `θ·δ i x + (1−θ)·δ j x`，`u`–`u` 取 `0`。 -/
+noncomputable def mergeVal (δ : Dissimilarity X) (i j : X) (θ : ℝ) :
+    MergeIdx X i j → MergeIdx X i j → ℝ
+  | Sum.inl x, Sum.inl y => δ.val x.1 y.1
+  | Sum.inl x, Sum.inr _ => θ * δ.val i x.1 + (1 - θ) * δ.val j x.1
+  | Sum.inr _, Sum.inl y => θ * δ.val i y.1 + (1 - θ) * δ.val j y.1
+  | Sum.inr _, Sum.inr _ => 0
+
+theorem mergeVal_symm (δ : Dissimilarity X) (i j : X) (θ : ℝ) :
+    ∀ a b : MergeIdx X i j, mergeVal δ i j θ a b = mergeVal δ i j θ b a := by
+  intro a b
+  cases a with
+  | inl x =>
+    cases b with
+    | inl y => exact δ.symm x.1 y.1
+    | inr u => rfl
+  | inr u =>
+    cases b with
+    | inl y => rfl
+    | inr v => rfl
+
+theorem mergeVal_self (δ : Dissimilarity X) (i j : X) (θ : ℝ) :
+    ∀ a : MergeIdx X i j, mergeVal δ i j θ a a = 0 := by
+  intro a
+  cases a with
+  | inl x => exact δ.diag x.1
+  | inr u => rfl
+
+/-- ★★★ **合并相异度** `δm : Dissimilarity Y`（类型迁移的产物）。
+
+⚠️ 库内 `Dissimilarity` 只有 `val` / `symm` / `diag` **三个字段**，**没有**三角不等式字段
+（`Phylo/Algorithm/NJ.lean:61`），故构造只需这三条。 -/
+noncomputable def mergeDissim (δ : Dissimilarity X) (i j : X) (θ : ℝ) :
+    Dissimilarity (MergeIdx X i j) where
+  val := mergeVal δ i j θ
+  symm := mergeVal_symm δ i j θ
+  diag := mergeVal_self δ i j θ
+
+/-- ★★★ **基数**：`card Y + 1 = card X`（`i ≠ j` 取自 `IsCherry` 的第一项）。 -/
+theorem card_mergeIdx (hij : i ≠ j) :
+    Fintype.card (MergeIdx X i j) + 1 = Fintype.card X := by
+  classical
+  have hpair : ({i, j} : Finset X).card = 2 := Finset.card_pair_eq_two_iff.mpr hij
+  have hle : 2 ≤ Fintype.card X := by
+    have h := Finset.card_le_card (Finset.subset_univ ({i, j} : Finset X))
+    rwa [Finset.card_univ, hpair] at h
+  have hcard : ((Finset.univ : Finset X) \ {i, j}).card = Fintype.card X - 2 := by
+    rw [Finset.card_sdiff, Finset.inter_eq_left.mpr (Finset.subset_univ _), Finset.card_univ,
+      hpair]
+  have hcoe : Fintype.card (MergeOld X i j) = ((Finset.univ : Finset X) \ {i, j}).card :=
+    Fintype.card_coe _
+  rw [Fintype.card_sum, Fintype.card_unit, hcoe, hcard]
+  omega
+
+/-- ★★★ **旧–旧取值不变**（修复形态：`x ≠ y` 是原缺口漏掉的那一条）。 -/
+theorem mergeDissim_val_of_ne (δ : Dissimilarity X) (i j : X) (θ : ℝ) {x y : X}
+    (hx : x ≠ i) (hx' : x ≠ j) (hy : y ≠ i) (hy' : y ≠ j) (hxy : x ≠ y) :
+    mergeQ i j x ≠ mergeQ i j y ∧
+      (mergeDissim δ i j θ).val (mergeQ i j x) (mergeQ i j y) = δ.val x y := by
+  constructor
+  · rw [mergeQ, mergeQ, dite_eq_right (fun h => h.elim hx hx'),
+      dite_eq_right (fun h => h.elim hy hy')]
+    intro h
+    exact hxy (congrArg Subtype.val (Sum.inl.inj h))
+  · rw [mergeQ, mergeQ, dite_eq_right (fun h => h.elim hx hx'),
+      dite_eq_right (fun h => h.elim hy hy')]
+    rfl
+
+/-- ★★★ **新标签处取凸组合**：`δm.val (q x) (q j) = θ·δ x i + (1−θ)·δ x j`。 -/
+theorem mergeDissim_val_merged (δ : Dissimilarity X) (i j : X) (θ : ℝ) {x : X}
+    (hx : x ≠ i) (hx' : x ≠ j) :
+    (mergeDissim δ i j θ).val (mergeQ i j x) (mergeQ i j j)
+      = θ * δ.val x i + (1 - θ) * δ.val x j := by
+  rw [mergeQ, dite_eq_right (fun h => h.elim hx hx'), mergeQ, dite_eq_left (Or.inr rfl)]
+  show θ * δ.val i x + (1 - θ) * δ.val j x = θ * δ.val x i + (1 - θ) * δ.val x j
+  rw [δ.symm x i, δ.symm x j]
+
+/-- ★★★ **含新标签（首位）的四点条件**：由 ★★★ `fourPoint_merge` 直接得到。 -/
+theorem mergeDissim_fourPoint_merged (δ : Dissimilarity X) (hfp : δ.FourPoint) {i j : X}
+    (hch : δ.IsCherry i j) {θ : ℝ} (h0 : 0 ≤ θ) (h1 : θ ≤ 1) (a b c : MergeOld X i j) :
+    (mergeDissim δ i j θ).val (Sum.inr ()) (Sum.inl a)
+        + (mergeDissim δ i j θ).val (Sum.inl b) (Sum.inl c) ≤
+      (mergeDissim δ i j θ).val (Sum.inr ()) (Sum.inl b)
+        + (mergeDissim δ i j θ).val (Sum.inl a) (Sum.inl c) ∨
+    (mergeDissim δ i j θ).val (Sum.inr ()) (Sum.inl a)
+        + (mergeDissim δ i j θ).val (Sum.inl b) (Sum.inl c) ≤
+      (mergeDissim δ i j θ).val (Sum.inr ()) (Sum.inl c)
+        + (mergeDissim δ i j θ).val (Sum.inl a) (Sum.inl b) :=
+  fourPoint_merge δ hfp hch h0 h1 (mergeOld_ne_left a) (mergeOld_ne_right a)
+    (mergeOld_ne_left b) (mergeOld_ne_right b) (mergeOld_ne_left c) (mergeOld_ne_right c)
+
+/-- ★★★ **`δm` 满足四点条件**（16 种「新旧标签分布」逐个处理）：
+
+* 全旧标签：就是 `δ.FourPoint`；
+* 恰一个新标签（4 个位置）：归约到 ★★★ `fourPoint_merge`（不同位置对应老标签的置换）；
+* 两个新标签：`d(u,u) = 0`，需要 `δ x y ≤ d(u,x) + d(u,y)`（`hH1`，由
+  `FourPoint (x,y,i,i)` 与 `(x,y,j,j)` 的凸组合给出）；
+* 三个/四个新标签：两侧同值时用对称性收口。
+
+故 `δm.FourPoint` **不再需要额外假设**（`Dissimilarity` 无三角不等式字段，
+退化四元组由 `FourPoint` 的自身实例补足）。 -/
+theorem mergeDissim_fourPoint (δ : Dissimilarity X) (hfp : δ.FourPoint) {i j : X}
+    (hch : δ.IsCherry i j) {θ : ℝ} (h0 : 0 ≤ θ) (h1 : θ ≤ 1) :
+    (mergeDissim δ i j θ).FourPoint := by
+  intro a b c d
+  have hθ1 : (0 : ℝ) ≤ 1 - θ := by linarith
+  have hH1 : ∀ x y : MergeOld X i j,
+      δ.val x.1 y.1 ≤ (θ * δ.val i x.1 + (1 - θ) * δ.val j x.1)
+        + (θ * δ.val i y.1 + (1 - θ) * δ.val j y.1) := by
+    intro x y
+    have hx : δ.val x.1 y.1 ≤ δ.val i x.1 + δ.val i y.1 := by
+      rcases hfp x.1 y.1 i i with h | h <;>
+        linarith [h, δ.diag i, δ.symm x.1 i, δ.symm y.1 i]
+    have hy : δ.val x.1 y.1 ≤ δ.val j x.1 + δ.val j y.1 := by
+      rcases hfp x.1 y.1 j j with h | h <;>
+        linarith [h, δ.diag j, δ.symm x.1 j, δ.symm y.1 j]
+    nlinarith [hx, hy, h0, hθ1]
+  rcases a with x | ua <;> rcases b with y | ub <;> rcases c with z | uc <;>
+      rcases d with w | ud <;>
+    simp only [mergeDissim, mergeVal]
+  · exact hfp x.1 y.1 z.1 w.1
+  · rcases mergeDissim_fourPoint_merged δ hfp hch h0 h1 z x y with h | h <;>
+      simp only [mergeDissim, mergeVal] at h
+    · right; linarith [h, δ.symm z.1 y.1]
+    · left; linarith [h, δ.symm z.1 x.1]
+  · rcases mergeDissim_fourPoint_merged δ hfp hch h0 h1 w x y with h | h <;>
+      simp only [mergeDissim, mergeVal] at h
+    · left; linarith [h, δ.symm w.1 y.1]
+    · right; linarith [h, δ.symm w.1 x.1]
+  · exact Or.inl (by linarith [hH1 x y])
+  · rcases mergeDissim_fourPoint_merged δ hfp hch h0 h1 x z w with h | h <;>
+      simp only [mergeDissim, mergeVal] at h
+    · right; linarith
+    · left; linarith
+  · right; linarith
+  · left; linarith
+  · left; linarith
+  · simpa only [mergeDissim, mergeVal] using
+      mergeDissim_fourPoint_merged δ hfp hch h0 h1 y z w
+  · left; linarith
+  · right; linarith
+  · left; linarith
+  · exact Or.inl (by linarith [hH1 z w])
+  · left; linarith
+  · left; linarith
+  · left; linarith
+
+/-! ## 11. ★★★ 修复形态：把 `x ≠ y` 补回第二条合取 -/
+
+universe u
+
+/-- ★★★ **`atteson_reduction_gap` 的修复形态**：与 §8 的原缺口**只差一处实质内容**
+—— 补回 `x ≠ y`（原缺口在 `x = y` 时自相矛盾，见 ★★★ `atteson_reduction_gap_refuted`）。
+
+⚠️ 另有一处**写法层面**的调整：`Y` 的宇宙随 `X` 走（`Type u`）。原缺口写死 `Type`
+（即 `Type 0`），这在 `X : Type u`（`u > 0`）时要求一个**小类型** `Y : Type 0`；
+数学上仍可满足（取 `Y := Fin (card X - 1)`），但需把 `δm` 沿一个枚举搬运。
+本节的重心是数学内容（`δm.FourPoint`），故采用与 `X` 同宇宙的 `Y`（本 `def` 形如
+`Phylo/ConsensusAxioms.lean` 的 `mnCorollary_gap`：把 `X` 量化在 `Prop` 内）。 -/
+def atteson_reduction_gap_correct_shape : Prop :=
+  ∀ {X : Type u} [Fintype X] [DecidableEq X] (δ : Dissimilarity X) (i j : X) (θ : ℝ),
+    δ.IsCherry i j → δ.FourPoint → 0 ≤ θ → θ ≤ 1 →
+      ∃ (Y : Type u) (_ : Fintype Y) (_ : DecidableEq Y) (q : X → Y) (δm : Dissimilarity Y),
+        Fintype.card Y + 1 = Fintype.card X ∧
+        (∀ x y : X, x ≠ i → x ≠ j → y ≠ i → y ≠ j → x ≠ y →
+          q x ≠ q y ∧ δm.val (q x) (q y) = δ.val x y) ∧
+        (∀ x : X, x ≠ i → x ≠ j →
+          δm.val (q x) (q j) = θ * δ.val x i + (1 - θ) * δ.val x j) ∧
+        δm.FourPoint
+
+/-- ★★★ **修复形态已证成**（W12e3 收口）：类型迁移装置 `Y := (X∖{i,j}) ∪ {u}`、`q := mergeQ`、
+`δm := mergeDissim` 一次性满足全部四条（基数、旧–旧不变、凸组合、`δm.FourPoint`）。
+
+⇒ `atteson_reduction_gap` 的**唯一**障碍只是陈述层面的 `x ≠ y`（已修），
+数学内容（`δm.FourPoint`）由 ★★★ `fourPoint_merge` 承担。 -/
+theorem atteson_reduction_gap_correct_shape_proved :
+    atteson_reduction_gap_correct_shape := by
+  classical
+  intro α _ _ δ i j θ hch hfp h0 h1
+  exact ⟨MergeIdx α i j, inferInstance, inferInstance, mergeQ i j, mergeDissim δ i j θ,
+    card_mergeIdx hch.1,
+    fun x y hx hx' hy hy' hxy => mergeDissim_val_of_ne δ i j θ hx hx' hy hy' hxy,
+    fun x hx hx' => mergeDissim_val_merged δ i j θ hx hx',
+    mergeDissim_fourPoint δ hfp hch h0 h1⟩
 
 
 end Dissimilarity
