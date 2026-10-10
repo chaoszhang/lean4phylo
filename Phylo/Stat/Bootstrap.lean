@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.ConsensusExtra
+import Mathlib.Data.Fintype.Perm
 
 /-!
 # `Phylo.Stat.Bootstrap` —— bootstrap 支持度（Felsenstein 1985）
@@ -518,23 +519,26 @@ theorem minimal_example_treeSupport_lt_half (Tree : (Fin 3 → ℕ) → Cladogra
 5. `stableSet_eq_orbitSet` —— 由 3+4 立得：**「同纤维计数的函数集 = 一条轨道」**（集合等式）；
 6. `stabToFiberPerm` / `ofFiberPerms` / `comp_ofFiberPerms` —— 稳定化子与「逐纤维置换之积」
    之间的两个方向（后者经 `fiberEquiv` 的典范路线构造，**无需手工求逆**）；
-7. `stabToFiberPerm_injective` —— 稳定化子**单射地**嵌入「逐纤维置换之积」
-   （这是 `#stab ≤ ∏_b (#fiberOf σ b)!` 的数学内容）。
+7. `stabToFiberPerm_injective` ＋ `card_stab_le_prod_factorial` —— 稳定化子的**上界**
+   `#stab ≤ ∏_b (#fiberOf σ b)!`（**W12a4 已证**；`Fintype {τ // σ ∘ τ = σ}` 由
+   `Equiv.instFintype` 提供，故本文件**新增 import** `Mathlib.Data.Fintype.Perm`）；
+8. `card_stableSet_mul_card_stab` —— **★③ 轨道-稳定化子计数式**（**W12a4 已证**）：
+   `#(同纤维函数集) · #stab = #(Perm α)`，经局部 `MulAction`（前复合取逆，得左作用）
+   ＋ Mathlib `MulAction.card_orbit_mul_card_stabilizer_eq_card_group`。
 
-⚠️ **仍未证**（下一轮的精确剩余，按难度排序）：
-* `#stab ≤ ∏_b (#fiberOf σ b)!`（**只剩类型类配置**）：数学证明已就位
-  （`Fintype.card_le_of_injective _ (stabToFiberPerm_injective σ)` ＋ `Fintype.card_pi` ＋
-  `Fintype.card_perm`），但 `Fintype {τ : Equiv.Perm α // σ ∘ τ = σ}` 在本版 Mathlib
-  **不被 instance 搜索综合**（`W12a3` 实测 `synthInstanceFailed`）；
-  绕过办法：改用 `Nat.card`（`Finite` 可用），或显式 `Fintype.ofFinite`。
-* **反向不等式 `≥`**：即 `ofFiberPerms` 的满射性 —— 需要
-  `(ψ b) x` 与 `(ψ (σ x.1)) ⟨x.1, ·⟩` 的**依赖指标换写**（两种写法类型不同、仅命题相等，
-  需要 `Eq.ndrec`/`subst` 层的处理；朴素 `rw`/`simp only`/`subst` 均实测失败）。
-* **轨道-稳定化子的计数式** `#(同纤维函数集) · #stab = #(Perm α)`：用
-  `Finset.card_eq_sum_card_fiberwise` 数 `τ ↦ σ ∘ τ` 的纤维（每条纤维 ≅ `stab`，由
-  「`σ ∘ τ = σ ∘ τ'` ⟹ `τ' ∘ τ⁻¹ ∈ stab`」给出）。
-* **可实现性**：`∑ w = n` 时 `∃ σ : Fin n → Fin n, weightOf σ = w`（本轮**未做**；
-  这是把上述「以固定 `σ` 为基准」的结论搬到任意 `w` 所必需的桥）。 -/
+⚠️ **仍未证**（缺口 M 的最后两块）：
+* **② `#stab ≥ ∏_b (#fiberOf σ b)!`**（即 `ofFiberPerms` 的**单射**，等价于满射性）：
+  卡点是「同一个纤维元素的两种写法」`(ψ b) x` 与 `(ψ (σ x.1)) ⟨x.1, ·⟩` ——
+  它们**类型不同、仅命题相等**（指标 `b` vs `σ x.1`）。W12a4 实测 `rw`/`simp only`/`subst`/
+  `cases`/`conv` 五种均失败。
+  **W12a4 找到的出路（下一轮直接用）**：用 `Sigma.ext`（**显式接指标等式**）＋ `HEq`
+  处理第二个分量 —— 即把「依赖改写」换成「异质相等」，或先证一条
+  `(fiberEquiv σ).symm ⟨b, y⟩ = y.1`（`y : ↥(fiberOf σ b)`，指标在**变量**位置，
+  可用 `Sigma.ext (mem_fiberOf.mp y.2) …` 一次做完）。
+  有了它，`ofFiberPerms` 的**共轭**就是 `Equiv.sigmaCongrRight φ`，而后者在 sigma 层
+  **指标天然一致**，单射性是平凡的。
+* **④ 可实现性**：`∑ w = n → ∃ σ : Fin n → Fin n, weightOf σ = w`
+  （把上述「以固定 `σ` 为基准」的结论搬到任意 `w`；缺口闭合的最后一步）。 -/
 
 open Classical
 
@@ -651,6 +655,92 @@ theorem stabToFiberPerm_injective (σ : α → β) :
 end Stable
 
 end FiberCount
+
+section StabBound
+
+variable {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+
+/-- ★★★ **稳定化子的上界** `#stab ≤ ∏_b (#纤维 b)!`（缺口 M 右端的乘积）。
+`Fintype {τ : Equiv.Perm α // σ ∘ τ = σ}` 由 `Equiv.instFintype`
+（`Mathlib.Data.Fintype.Perm`，本文件已新增该 import）＋子类型实例给出。 -/
+theorem card_stab_le_prod_factorial (σ : α → β) :
+    Fintype.card {τ : Equiv.Perm α // σ ∘ τ = σ}
+      ≤ (∏ b, Nat.factorial ((fiberOf σ b).card)) := by
+  have hprod : Fintype.card (∀ b : β, ↥(fiberOf σ b) ≃ ↥(fiberOf σ b))
+      = (∏ b, Nat.factorial ((fiberOf σ b).card)) := by
+    rw [Fintype.card_pi]
+    refine Finset.prod_congr rfl (fun b _ => ?_)
+    rw [Fintype.card_perm, Fintype.card_coe]
+  exact le_trans (Fintype.card_le_of_injective _ (stabToFiberPerm_injective σ))
+    (le_of_eq hprod)
+
+end StabBound
+
+open Classical
+
+section OrbitStab
+
+variable {α β : Type*} [Fintype α] [Fintype β] [DecidableEq α] [DecidableEq β]
+
+/-- 前复合作用（**局部**实例，取逆以得到**左**作用）：`τ • σ = σ ∘ τ⁻¹`。 -/
+local instance instSMulPermFun : SMul (Equiv.Perm α) (α → β) := ⟨fun τ σ => σ ∘ τ.symm⟩
+
+local instance instMulActionPermFun : MulAction (Equiv.Perm α) (α → β) where
+  one_smul σ := by funext a; rfl
+  mul_smul τ₁ τ₂ σ := by
+    funext a
+    show σ ((τ₁ * τ₂)⁻¹ a) = σ (τ₂.symm (τ₁.symm a))
+    rw [mul_inv_rev]
+    rfl
+
+/-- ★★★ **③ 轨道-稳定化子计数式**（缺口 M 的倒数第二块）：
+
+```text
+#(以 σ 为基准的「同纤维计数」函数集) · #(稳定化子) = #(Perm α)
+```
+
+证明：前复合作用（`τ • σ = σ ∘ τ⁻¹`）下的**轨道**恰是同纤维函数集
+（`stableSet_eq_orbitSet` ＋ `Set.mem_range`），**稳定化子** `{τ | τ • σ = σ}` 恰是
+`{τ | σ ∘ τ = σ}`（取逆重标号）；再用 Mathlib 的轨道-稳定化子定理
+`MulAction.card_orbit_mul_card_stabilizer_eq_card_group`。 -/
+theorem card_stableSet_mul_card_stab (σ : α → β) :
+    Fintype.card {σ' : α → β // ∀ b, (fiberOf σ' b).card = (fiberOf σ b).card}
+      * Fintype.card {τ : Equiv.Perm α // σ ∘ τ = σ} = Fintype.card (Equiv.Perm α) := by
+  have hmem : ∀ σ' : α → β,
+      (σ' ∈ MulAction.orbit (Equiv.Perm α) σ) ↔ (∃ τ : Equiv.Perm α, σ' = σ ∘ τ) := by
+    intro σ'
+    constructor
+    · intro h
+      obtain ⟨g, hg⟩ := Set.mem_range.mp h
+      exact ⟨g.symm, hg.symm⟩
+    · rintro ⟨τ, h⟩
+      exact ⟨τ.symm, by show σ ∘ (τ.symm).symm = σ'; rw [Equiv.symm_symm]; exact h.symm⟩
+  have hset : (MulAction.orbit (Equiv.Perm α) σ)
+      = {σ' : α → β | ∀ b, (fiberOf σ' b).card = (fiberOf σ b).card} := by
+    ext σ'
+    rw [hmem σ', stableSet_eq_orbitSet σ]
+    simp
+  have horb : Fintype.card (MulAction.orbit (Equiv.Perm α) σ)
+      = Fintype.card {σ' : α → β // ∀ b, (fiberOf σ' b).card = (fiberOf σ b).card} :=
+    Fintype.card_congr (Equiv.subtypeEquivRight fun σ' => by
+      rw [hset]
+      rfl)
+  have hstab : Fintype.card (MulAction.stabilizer (Equiv.Perm α) σ)
+      = Fintype.card {τ : Equiv.Perm α // σ ∘ τ = σ} := by
+    refine Fintype.card_congr (Equiv.subtypeEquivRight fun τ => ?_)
+    constructor
+    · intro h
+      change σ ∘ ⇑τ.symm = σ at h
+      have h2 := congrArg (fun g => g ∘ ⇑τ) h
+      simpa [Function.comp_assoc, Equiv.symm_comp_self] using h2.symm
+    · intro h
+      show σ ∘ ⇑τ.symm = σ
+      have h2 := congrArg (fun g => g ∘ ⇑τ.symm) h
+      simpa [Function.comp_assoc, Equiv.self_comp_symm] using h2.symm
+  rw [← horb, ← hstab,
+    MulAction.card_orbit_mul_card_stabilizer_eq_card_group (Equiv.Perm α) σ]
+
+end OrbitStab
 
 /-- ★ **桥**：`weightOf` 就是纤维基数（本文件 §3 的定义与 §6.0 的 `fiberOf` 逐字一致）。 -/
 theorem weightOf_eq_card_fiberOf {n : ℕ} (σ : Resample n) (i : Fin n) :
