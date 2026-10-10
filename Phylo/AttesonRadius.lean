@@ -1605,3 +1605,56 @@ theorem attesonW_cast_eq_Q_opposite (T : Cladogram X) {a b : T.V} (hab : T.graph
 
 end Cladogram
 
+
+/-! ## 17. ★★★ 求和装配 ①②③：Fubini 与内层计数（W12e11）
+
+Atteson Lemma 10 的收口 `Q(i,j) = (n−2)δ(i,j) − S_i − S_j = Σ_e w_e(i,j)·l(e)` 需要把
+`S_x = Σ_k d(x,k)` 也写成**沿边**的和：
+
+* ① §15 可加性逐项展开 `d(x,k) = Σ_e [e ∈ P_xk]·w_e`；
+* ② `Finset.sum_comm`（Fubini）交换两层和；
+* ③ `Finset.sum_mul` 把 `w_e` 提出内层和（指示函数归一），再用 §14 的 ★★★
+　`card_filter_pathOf_edges`（配 `inSide_or_inSide` 定侧）把内层和换成 `sideLeafCount`：
+
+　　`Σ_k d(i,k) = Σ_e |L_{x_i}(e)|·w_e`，其中 `x_i` 是与叶 `i` **异侧**的 `e` 的端点。
+
+（收口的最后一步 —— 把 `attesonQ` 与上式逐边对照 —— 用 §16 的两条逐边比较即可，
+留下轮；本轮把 ①②③ 落成可复用的定理。） -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+omit [DecidableEq X] in
+/-- ★★★ **Fubini（步骤 ①②③ 的因子部分）**：`Σ_k d(i,k) = Σ_e (Σ_k [e ∈ P_ik])·w_e`。 -/
+theorem sum_dist_eq_sum_card (T : Phylogram X) (i : X) :
+    (∑ k : X, T.dist (T.leaf i) (T.leaf k))
+      = ∑ e : Sym2 T.V,
+          (∑ k : X, (if e ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges then (1 : ℝ) else 0))
+            * T.wExt e := by
+  have h1 : ∀ k : X, T.dist (T.leaf i) (T.leaf k)
+      = ∑ e : Sym2 T.V,
+          (if e ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges then T.wExt e else (0 : ℝ)) :=
+    fun k => dist_eq_sum_pathOf T (T.leaf i) (T.leaf k)
+  rw [Finset.sum_congr rfl fun k _ => h1 k, Finset.sum_comm]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  rw [Finset.sum_mul]
+  refine Finset.sum_congr rfl fun k _ => ?_
+  by_cases h : e ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges <;> simp [h]
+
+/-- ★★★ **内层计数（步骤 ③）**：叶 `i` 在 `s(a,b)` 的 `a` 侧时 `Σ_k [e ∈ P_ik] = |L_b(e)|`。 -/
+theorem sum_ite_pathOf_eq_sideLeafCount (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i : X} (hi : T.inSide s(a, b) a (T.leaf i)) :
+    (∑ k : X, (if s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges then (1 : ℝ) else 0))
+      = (T.sideLeafCount s(a, b) b : ℝ) := by
+  have hcard := card_filter_pathOf_edges T hab hi
+  have h := Finset.card_filter (fun k : X => s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges)
+      (s := (Finset.univ : Finset X))
+  rw [← hcard, h]
+  push_cast
+  rfl
+
+end Cladogram
+
