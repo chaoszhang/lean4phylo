@@ -357,6 +357,42 @@ theorem not_inSide_of_inSide_of_not_inSide {T : Cladogram X} {e : Sym2 T.V} {a b
 
 end Cladogram
 
+/-! ## §1.5 第十四–十五轮：**不相容分裂**的纯组合核（`(C)` 的 `e₁ ≠ e₂` 情形的最后一击）
+
+若两个 split 的**四个角**都非空，则二者**不相容**。与库内
+`Cladogram.pairwiseCompatible : T.PairwiseCompatible`（树的 split 系统两两相容 ✓）一合即得矛盾。
+
+★ **重要更正（第十五轮）**：**(C) 在 `|W| = 2` 时是假的** ✗ —— 反例：`W = {w₁, w₂}`，树为 `w₁ — p — w₂`
+且 `z` 挂在 `p` 上（`p` 度 3 ✓）：此时 `W∖{w₁} = {w₂}` 是**单元集**、永不分边 ⇒ `P(w₁) ∋ (w₁,p), (p,w₂)`，
+最内侧为 `(p,w₂)`，其外侧 `{w₁,p,z} ∋ z` ⇒ `z ∈ HangOff(w₁)` ✓；对称地 `z ∈ HangOff(w₂)` ✓
+⇒ `w₁ ≠ w₂` 却同挂一点 ✗。故 (C) 必须带条件 **`3 ≤ |W|`**（正是 Steel (1) 的 `2 ≤ |W'| < |W|` 给出的 ✓）。
+⇒ 已入库的 `pdExchange_gap_of_hangOff_disjoint`／`greedy_gap_correct_shape_of_hangOff_disjoint`
+的假设形式（对**所有** `W`）因此**取不到**（假设在该例为假）—— 需改用带 `3 ≤ W.card` 的版本 ✓。 -/
+
+namespace Split
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **四角非空 ⇒ 不相容**（纯 `Finset` 组合，不涉树结构）。
+
+⚠️ 写法：`Finset.Nonempty` 是 `∃ x, x ∈ s`（**只有 2 个分量**）✗ 不能写三分量模式；
+「交集的成员证明」是 `Quot.lift` **不透明项** ⇒ 只能经 `Finset.mem_inter.mp` 取两侧 ✓。 -/
+theorem not_compatible_of_four_nonempty {s t : Split X}
+    (h1 : (s.sideA ∩ t.sideA).Nonempty) (h2 : (s.sideA ∩ t.sideB).Nonempty)
+    (h3 : (s.sideB ∩ t.sideA).Nonempty) (h4 : (s.sideB ∩ t.sideB).Nonempty) :
+    ¬ Compatible s t := by
+  rintro (h | h | h | h)
+  · obtain ⟨a, ha⟩ := h1
+    exact (Finset.disjoint_left.mp h) (Finset.mem_inter.mp ha).1 (Finset.mem_inter.mp ha).2
+  · obtain ⟨a, ha⟩ := h2
+    exact (Finset.disjoint_left.mp h) (Finset.mem_inter.mp ha).1 (Finset.mem_inter.mp ha).2
+  · obtain ⟨a, ha⟩ := h3
+    exact (Finset.disjoint_left.mp h) (Finset.mem_inter.mp ha).1 (Finset.mem_inter.mp ha).2
+  · obtain ⟨a, ha⟩ := h4
+    exact (Finset.disjoint_left.mp h) (Finset.mem_inter.mp ha).1 (Finset.mem_inter.mp ha).2
+
+end Split
+
 /-! ## §2 (A)：PD 求和装配 ＋ 条件形态的 `pdExchange_gap`
 
 第八轮记录的三条卡点绕法（本段全部遵守）：
