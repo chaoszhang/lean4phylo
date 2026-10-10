@@ -656,27 +656,36 @@ theorem iso_preserves_splits_gap :
 ⇒ **本 `Prop` 不是可证伪的**（我早前"两条不忠实"的担心只涉及**措辞**，不涉及真值）；
 它**真**，且真内容正是**分类定理**（机器已在小模型上证实）。
 
-**Lean 内仍缺什么（按依赖顺序）**：
-1. **两棵显式 `Cladogram.{0,0} (Fin 6)`**，其 split 系统**恰为** `P₁`、`P₂`
-   —— 库内没有「由相容 split 族构造**精确** split 系统的 `Cladogram`」的现成零件：
-   `Phylo.Stat.Supertree.supertree_displays_of_pairwiseCompatible` 只给 **⊇**（可能多出 split），
-   而本 `Prop` 的第 3 条与其最后一行的 `⊆` 都要求**精确**；
-   （`Phylo/BunemanTree.lean` 的 `bunemanSplits` 给出的是「由距离函数诱导」的精确 split 系统，
-   本处需要的是「由相容族直接构造」，是另一条路。）
-2. **树 → split 系统的桥**：`T.IsSplitOf s` ⟹ `s` 是 `T` 的边-split，且证 quartet 的见证 split
-   必非平凡、全体见证两两相容（库内 `Cladogram.PairwiseCompatible` ＋ `splits`）。
-3. **分类定理**（第 1 条的机器结果在 Lean 内的对应）：可由**可计算代理**（把 split 编码成
-   「不含 `0` 的一侧」`Finset (Fin 6)`）陈述，但 W12a 实测**两条 `decide` 路线都走不通**：
-   * 带 `∀ A B C : Finset (Fin 6)` 的版本：**综合不出可计算的 `Fintype (Finset (Fin 6))`**
-     ⇒ `failed to synthesize Decidable (∀ A B C : Finset (Fin 6), …)`；
-   * **不带量词**的实例级版本（`sideCompatible A B := A ∩ B = ∅ ∨ A ∩ Bᶜ = ∅ ∨ …`、
-     `sideDisplays A q := (∃ p ∈ q, p ⊆ A) ∧ (∃ p' ∈ q, p' ⊆ Aᶜ)`）：
-     `Decidable` 在 `∩ = ∅` / `∃ p ∈ q, p ⊆ A` 形态下**同样综合不出来**
-     （换成 `Disjoint` 亦失败）⇒ 需改写成 `Bool`/位掩码判据才可能 `decide`，本轮**未做**。
-   ⇒ 本轮 Lean 侧**未**新增定理（机器见证在 `scripts/msc/w12a_twoparent_check.py` 内，
-     含每条 split 族的**显式树构造**核验：`V=10, E=9`、内部点度 ≥ 3、叶度 1、split 系统逐条吻合 ✓）。
+**Lean 内仍缺什么（W12a8 修正：原「缺精确构造」的判断是错的 ✓）**：
+1. ~~两棵显式 `Cladogram.{0,0} (Fin 6)`，其 split 系统**恰为** `P₁`、`P₂`~~
+   **❌ 该器材库内早有**：`Phylo/ConsensusExtra.lean:222` 的
+   ```text
+   theorem isSplitOf_iff_mem_or_trivial (fam : Finset (Split X)) (ρ : X)
+       (hcomp : …) (hnt : …) (hswap : ∀ s ∈ fam, s.swap ∈ fam) (h3 : 3 ≤ card X) :
+     ∃ M : Cladogram.{u,u} X,
+       ∀ s, M.IsSplitOf s ↔ s ∈ fam ∨ (∃ x, s.sideA = {x}) ∨ (∃ x, s.sideA = {x}ᶜ)
+   ```
+   即「相容非平凡族 ⟹ **精确** split 系统的 cladogram」的 `↔` 版**已落地**
+   （比 `Phylo.Supertree.exists_cladogram_of_compatible` 的**边侧刻画**更强；本文件 §4 之前
+   引用的 `supertree_displays_of_pairwiseCompatible` 只是它的 `⊇` 弱化版）。
+   两点使用须知：(i) 它在**另一个模块**（本文件未 import `Phylo.ConsensusExtra`）；
+   (ii) 它多要一个 `hswap`：族对 `swap` 封闭 —— 本处取 `fam := P₁ ∪ swap(P₁)` 即可 ✓。
+   ⇒ 代入后 `T₁`/`T₂` 的 split 系统被**完全刻画**，第 3 条（`σ` 互换）即化为**显式 split 族**的
+     `Finset` 等式（无 `∀ s` ⇒ 可 `decide` ✓）。
+2. **树 → split 系统的桥**（见证 split 必非平凡、全体见证两两相容）—— 库内亦已有
+   （`Cladogram.pairwiseCompatible`、`Split.cluster` 系列、`Split.ext_sideA` 等）✓。
+3. **分类定理（唯一真正的剩余 ✗）**：每个展示 `prof` 的 `Cladogram (Fin 6)`，其非平凡
+   split 系统**恰是** `P₁` 或 `P₂`（无序意义）。W12a 实测两条 `decide` 路线**都走不通**：
+   * `∀ A B C : Finset (Fin 6), …` 版本：**综合不出可计算的 `Fintype (Finset (Fin 6))`**
+     ⇒ `failed to synthesize Decidable (∀ A B C : Finset (Fin 6), …)`（**不是**慢）；
+   * **不带量词**的实例级版本（`A ∩ B = ∅ ∨ A ∩ Bᶜ = ∅ ∨ …`、`(∃ p ∈ q, p ⊆ A) ∧ …`）：
+     `Decidable` **同样综合不出来**（换 `Disjoint` 也失败）⇒ 须改写成 `Bool`/位掩码
+     （`Fin 64` 解码）判据才可能 `decide`；或走**手写情形分析**（原文 Figure 1 的论证，
+     估计 100–200 行）。
+   机器见证已在 `scripts/msc/w12a_twoparent_check.py`（236 个相容族穷举、parent 族**恰 2**、
+   每条族的**显式树构造**核验 `V=10, E=9` ✓）。
 
-**终局 ⬜ 保留缺口**（真值已确认为**真**，缺的是器材）。 -/
+**终局 ⬜ 保留缺口**（真值已确认为**真**，唯一剩余器材 = 上面的**分类定理**）。 -/
 def two_parent_trees_gap : Prop :=
   ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
     (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
