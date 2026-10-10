@@ -1111,4 +1111,21 @@ theorem notMem_sideNotMem (u : Split X) (ρ : X) : ρ ∉ sideNotMem u ρ := by
     exact Finset.disjoint_left.mp (disjoint_sides u) h
   · simpa only [sideNotMem, h, ite_false] using h
 
+/-! ### 11.5 ★C 卫生：(F1) 与库内 `cluster` 对齐（**避免重复造轮子**） -/
+
+/-- ★ **`sideNotMem` 与库内 `Split.cluster` 是同一个东西**（两者定义体逐字相同）✓ ——
+库内已有 `notMem_cluster`、`cluster_eq_sideA_or_compl`、`sidesCompatible_cluster`、
+以及**层析引理 `laminar_of_compatible_clusters`** ✓，故 (★′) 极小性一步应直接用库内 API，
+本文件不再重复实现（W18 发现的 ★C 卫生问题 ✓）。 -/
+theorem sideNotMem_eq_cluster (u : Split X) (ρ : X) : sideNotMem u ρ = u.cluster ρ := rfl
+
+/-- ★★★ **(F1) 的 `cluster` 形式**：若 `S.sideA ⊆ u.cluster ρ` 且 `u` 的两侧既不是 `S.sideA`
+也不是 `S.sideB`，则 `u.cluster ρ ∩ S.sideB ≠ ∅` ✓ —— 与库内 `laminar_of_compatible_clusters`
+配套使用（两者都以 `cluster` 为口径）；原 `sideNotMem` 形式的 (F1) **逐字保留** ✓（★C）。 -/
+theorem sideA_subset_cluster_meets (S u : Split X) (ρ : X)
+    (hA : u.sideA ≠ S.sideA) (hA' : u.sideA ≠ S.sideB) (h : S.sideA ⊆ u.cluster ρ) :
+    (u.cluster ρ ∩ S.sideB).Nonempty := by
+  rw [← sideNotMem_eq_cluster] at h ⊢
+  exact sideA_subset_sideNotMem_meets S u hA hA' h
+
 end Split
