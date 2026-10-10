@@ -58,8 +58,9 @@ import Phylo.Aho
   （Bryant–Steel 1995 Theorem 2 中 `[R,L]` 连通即反例）。
   **W11a/F7 已把该反例形式化**：见 **§5**（有根团的**镶嵌性** `isRootedClade_laminar`）
   与 **§6**（`fourLeafCounterexample` · `pairwiseCompatible_not_sufficient` ·
-  `not_displayedByTree_fourLeafCounterexample`）；并给出**显式缺口**
-  `rootedTriplet_aho_disconnect_gap` / `rootedTriplet_aho_converse_gap`。
+  `not_displayedByTree_fourLeafCounterexample`）；原**两条显式缺口**
+  `rootedTriplet_aho_disconnect_gap` / `rootedTriplet_aho_converse_gap` 已在 **§6.3（W12b）**
+  由 `def` 升格为**同名 `theorem`**（陈述逐字未改）。
 -/
 
 open Phylo
@@ -874,7 +875,8 @@ end RootedTree
   这也正是 Bryant–Steel 1995 **Theorem 2**（766–769 行）在 `S = {a,b,c,d}` 上的
   `[R,S]` **连通**反例（边 `{a,b}, {a,c}, {a,d}` 构成星形）。
 * **正确的判据**是 Aho 的**递归** `AhoOK`（§3）：`exists_rootedTree_of_ahoOK`（§4）已证
-  「`AhoOK` ⟹ 存在展示树」；反方向仍是显式缺口（见本节末）。 -/
+  「`AhoOK` ⟹ 存在展示树」；反方向**「展示树 ⟹ `AhoOK`」已在 §6.3（W12b）证成**
+  （`rootedTriplet_aho_converse_gap`），连同 Theorem 2 的 (⟹)（`rootedTriplet_aho_disconnect_gap`）。 -/
 
 namespace RootedTriplet
 
@@ -1150,39 +1152,474 @@ example : ∃ T : RootedTree.{0, 0} (Fin 3),
 不是靠空族取巧）。 -/
 example : fourLeafCounterexample.card = 3 := by decide
 
-/-! ### 6.3 仍是**显式缺口**的部分（文献陈述，本节未证） -/
+/-! ### 6.3 叶集，与 **F7 收尾**（W12b：原两条缺口已证成定理）
+
+本小节保留原缺口 1 / 缺口 2 的**名字与陈述**，把 `def …_gap : Prop := …` 升格为
+**同名 `theorem`**（陈述逐字未改），并补齐证明所需的器材与引理。 -/
 
 omit [Fintype X] in
 /-- 三元组族 `R` 的**叶集**（`R` 中所有支撑集的并）。 -/
 def systemLeaves (R : Finset (RootedTriplet X)) : Finset X :=
   R.biUnion fun t => t.leaves
 
-/-- ★ **显式缺口 1 —— Bryant–Steel Theorem 2 的 (⟹)**：若 `T` 展示 `R` 的每个三元组，
-则对每个 `S ⊇ leaves(R)`（`|S| ≥ 3`），图 `[R,S]` **不连通**。
+/-! #### 6.3.1 证明器材（W12b）
 
-文献：Bryant & Steel 1995，定理陈述 **766–769 行**，证明 **777–785 行**。
-**缺什么**：证明要用**限制树** `T|S`（“考虑子树 `T|s`，它有最大元素 `M`；`M` 的每个直接后代
-给出一个块”）—— 库内 `Phylo/Split.lean` 的 `Split.restrict` 只覆盖 **split 层**，
-`RootedTree` 层的 `T|S`（抑制非 `S` 叶、抑制度 2 顶点）尚未建立。
-**为什么不硬编**：不用额外假设「假装」证出来；此处只把文献陈述落成 `Prop`。 -/
-def rootedTriplet_aho_disconnect_gap : Prop :=
-  ∀ (R : Finset (RootedTriplet X)) (T : RootedTree.{u, u} X),
-    (∀ t ∈ R, T.DisplaysTriplet t) →
-    ∀ S : Finset X, (∀ t ∈ R, t.leaves ⊆ S) → 3 ≤ S.card →
-      ¬ (tripletGraph S R).Preconnected
+**核心想法**（**不需要** Bryant–Steel 777–785 行里的限制树 `T|S`）：有根树的团族是**镶嵌族**
+（`RootedTree.isRootedClade_laminar`，§5）。把与 `S` 相交（或落在某个覆盖团内）的团按包含关系取**极大者**，
+则 `[R,S]` 的一条边（来自被展示的 `ab|c`，其见证团 `C` 含 `a,b` 而不含 `c ∈ S ⊆ 覆盖团`）
+**不可能跨越两个不同的极大团**：若极大团 `D ⊊ C`，则 `C` 也在同一层次的候选族里，由 `D` 的极大性得 `C ⊆ D`，矛盾。
+于是不同极大团中的点在图里不可达（`w12b_not_preconnected_of_family`）；「`S` 落在单个团内」的情形
+再按基数**强归纳**下降（`w12b_clade_induction`）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- 沿走道保持的映射在可达点处取值相同。 -/
+private theorem w12b_fst_eq_of_reachable {V : Type*} {G : SimpleGraph V} {g : V → Finset X}
+    (h : ∀ a b, G.Adj a b → g a = g b) {u v : V} (hr : G.Reachable u v) : g u = g v := by
+  obtain ⟨p⟩ := hr
+  induction p with
+  | nil => rfl
+  | cons hadj p ih => exact (h _ _ hadj).trans ih
+
+omit [DecidableEq X] in
+/-- **器材 A**：非根叶的单点 `{x}` 是 rooted clade（叶 `x` 的唯一邻边的**远离根**一侧恰为 `{x}`）。
+
+证明复用 §5 的机制：`leaf_iff_degree_one` 给出唯一邻点 `q`（`degree_eq_one_iff_existsUnique_adj`），
+删去边 `⟦leaf x, q⟧` 后 `leaf x` **孤立**（`deleteEdges_adj`），故根不在该侧、该侧叶集为 `{x}`
+（`reachable_eq_of_isIsolated` + `leaf` 的单射性）。 -/
+theorem w12b_singleton_clade {T : RootedTree X} {x : X} (hx : T.leaf x ≠ T.root) :
+    RootedTree.IsRootedClade T ({x} : Finset X) := by
+  classical
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.leaf_iff_degree_one (T.leaf x)).mp ⟨x, rfl⟩
+  obtain ⟨q, hq, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  have hiso : (T.graph.deleteEdges {s(T.leaf x, q)}).IsIsolated (T.leaf x) := by
+    intro w hw
+    rw [deleteEdges_adj] at hw
+    obtain ⟨hadj, hnotin⟩ := hw
+    rw [huniq w hadj] at hnotin
+    exact hnotin (by simp)
+  refine ⟨T.leaf x, q, hq, ?_, ?_⟩
+  · intro hr
+    exact hx (reachable_eq_of_isIsolated hiso (reachable_comm.mp hr)).symm
+  · refine (Finset.eq_singleton_iff_unique_mem.mpr ⟨?_, ?_⟩).symm
+    · exact (RootedTree.mem_sideLeaves_iff_inSide T).mpr (Reachable.refl _)
+    · intro y hy
+      rw [RootedTree.mem_sideLeaves_iff_inSide T] at hy
+      exact T.leaf.injective (reachable_eq_of_isIsolated hiso hy)
+
+/-- 反链中相交的有根团相等（镶嵌性 + 反链）。 -/
+private theorem w12b_eq_of_meet {T : RootedTree X} {F : Finset (Finset X)}
+    (hclade : ∀ D ∈ F, RootedTree.IsRootedClade T D)
+    (hanti : ∀ D₁ ∈ F, ∀ D₂ ∈ F, D₁ ⊆ D₂ → D₂ ⊆ D₁)
+    {D₁ D₂ : Finset X} (h₁ : D₁ ∈ F) (h₂ : D₂ ∈ F) (hx : (D₁ ∩ D₂).Nonempty) :
+    D₁ = D₂ := by
+  classical
+  obtain ⟨x, hx⟩ := hx
+  rw [Finset.mem_inter] at hx
+  rcases RootedTree.isRootedClade_laminar T (hclade D₁ h₁) (hclade D₂ h₂)
+      ⟨x, Finset.mem_inter.mpr hx⟩ with h | h
+  · exact Finset.Subset.antisymm h (hanti D₁ h₁ D₂ h₂ h)
+  · exact Finset.Subset.antisymm (hanti D₂ h₂ D₁ h₁ h) h
+
+/-- **`[R,S]` 的边不跨越两个不同的「极大团」**（本文件缺口 1 的技术核心）。 -/
+private theorem w12b_not_adj {T : RootedTree X} {R : Finset (RootedTriplet X)} {S : Finset X}
+    {F : Finset (Finset X)}
+    (hdisp : ∀ t ∈ R, t.leaves ⊆ S → RootedTree.DisplaysTriplet T t)
+    (hclade : ∀ D ∈ F, RootedTree.IsRootedClade T D)
+    (hanti : ∀ D₁ ∈ F, ∀ D₂ ∈ F, D₁ ⊆ D₂ → D₂ ⊆ D₁)
+    (hstep : ∀ D ∈ F, ∀ t ∈ R, t.leaves ⊆ S → ∀ C : Finset X, RootedTree.IsRootedClade T C →
+      t.pair ⊆ C → t.out ∉ C → D ⊆ C → C ⊆ D)
+    {D₁ D₂ : Finset X} (h₁ : D₁ ∈ F) (h₂ : D₂ ∈ F) (hne : D₁ ≠ D₂)
+    {a b : X} (ha : a ∈ D₁) (hb : b ∈ D₂) (haS : a ∈ S) (hbS : b ∈ S) :
+    ¬ (tripletGraph S R).Adj ⟨a, haS⟩ ⟨b, hbS⟩ := by
+  classical
+  intro hadj
+  rw [tripletGraph_adj] at hadj
+  obtain ⟨-, t, ht, hle, hapair, hbpair⟩ := hadj
+  obtain ⟨C, hCclade, hCpair, hCout⟩ :=
+    (RootedTree.displaysTriplet_iff_isRootedClade T t).mp (hdisp t ht hle)
+  rcases RootedTree.isRootedClade_laminar T hCclade (hclade D₁ h₁)
+      ⟨a, Finset.mem_inter.mpr ⟨hCpair hapair, ha⟩⟩ with hsub | hsub
+  · exact hne (w12b_eq_of_meet hclade hanti h₁ h₂
+      ⟨b, Finset.mem_inter.mpr ⟨hsub (hCpair hbpair), hb⟩⟩)
+  · exact hne (w12b_eq_of_meet hclade hanti h₁ h₂
+      ⟨b, Finset.mem_inter.mpr
+        ⟨hstep D₁ h₁ t ht hle C hCclade hCpair hCout hsub (hCpair hbpair), hb⟩⟩)
+
+/-- **家族版主引理**：两个不同的「极大团」给出 `[R,S]` 中一对不可达点。 -/
+private theorem w12b_not_preconnected_of_family {T : RootedTree X}
+    {R : Finset (RootedTriplet X)} {S : Finset X} {F : Finset (Finset X)}
+    (hdisp : ∀ t ∈ R, t.leaves ⊆ S → RootedTree.DisplaysTriplet T t)
+    (hclade : ∀ D ∈ F, RootedTree.IsRootedClade T D)
+    (hanti : ∀ D₁ ∈ F, ∀ D₂ ∈ F, D₁ ⊆ D₂ → D₂ ⊆ D₁)
+    (hstep : ∀ D ∈ F, ∀ t ∈ R, t.leaves ⊆ S → ∀ C : Finset X, RootedTree.IsRootedClade T C →
+      t.pair ⊆ C → t.out ∉ C → D ⊆ C → C ⊆ D)
+    (hcover : ∀ x ∈ S, ∃ D ∈ F, x ∈ D)
+    (hmeet : ∀ D ∈ F, (D ∩ S).Nonempty)
+    {D₁ D₂ : Finset X} (h₁ : D₁ ∈ F) (h₂ : D₂ ∈ F) (hne : D₁ ≠ D₂) :
+    ¬ (tripletGraph S R).Preconnected := by
+  classical
+  let g : X → Finset X := fun x => if h : ∃ D ∈ F, x ∈ D then Classical.choose h else ∅
+  let gS : ↥S → Finset X := fun u => g u.1
+  have hgmem : ∀ x (hx : x ∈ S), g x ∈ F := by
+    intro x hx
+    have h : ∃ D ∈ F, x ∈ D := hcover x hx
+    rw [show g x = Classical.choose h from dite_eq_left h]
+    exact (Classical.choose_spec h).1
+  have hgself : ∀ x (hx : x ∈ S), x ∈ g x := by
+    intro x hx
+    have h : ∃ D ∈ F, x ∈ D := hcover x hx
+    rw [show g x = Classical.choose h from dite_eq_left h]
+    exact (Classical.choose_spec h).2
+  have hgeq : ∀ {D : Finset X}, D ∈ F → ∀ x (hx : x ∈ S), x ∈ D → D = g x := by
+    intro D hD x hx hxD
+    exact w12b_eq_of_meet hclade hanti hD (hgmem x hx)
+      ⟨x, Finset.mem_inter.mpr ⟨hxD, hgself x hx⟩⟩
+  have hnoadj : ∀ (u v : ↥S), (tripletGraph S R).Adj u v → gS u = gS v := by
+    intro u v huv
+    by_contra hneq
+    exact w12b_not_adj hdisp hclade hanti hstep (hgmem u.1 u.2) (hgmem v.1 v.2)
+      (fun hh => hneq hh) (hgself u.1 u.2) (hgself v.1 v.2) u.2 v.2 huv
+  obtain ⟨a, ha⟩ := hmeet D₁ h₁
+  obtain ⟨b, hb⟩ := hmeet D₂ h₂
+  rw [Finset.mem_inter] at ha hb
+  intro hpc
+  have h0 : gS ⟨a, ha.2⟩ = gS ⟨b, hb.2⟩ :=
+    w12b_fst_eq_of_reachable hnoadj (hpc ⟨a, ha.2⟩ ⟨b, hb.2⟩)
+  have h1 : D₁ = g a := hgeq h₁ a ha.2 ha.1
+  have h2 : D₂ = g b := hgeq h₂ b hb.2 hb.1
+  exact hne (by rw [h1, h2]; exact h0)
 
 omit [Fintype X] in
-/-- ★ **显式缺口 2 —— Aho/ONETREE 的完备性（BUILD 反方向）**：若某棵有根树展示 `R` 的全部
+/-- 「`[R,S]` 不连通 ⟹ 块数 ≥ 2」（连通分支 = Aho 的划分 `π_C`）。 -/
+private theorem w12b_two_le_blocks_of_not_preconnected (R : Finset (RootedTriplet X))
+    (S : Finset X) (h : ¬ (tripletGraph S R).Preconnected) :
+    2 ≤ (tripletBlocks S R).card := by
+  classical
+  have h' : ∃ u v : ↥S, ¬ (tripletGraph S R).Reachable u v := by
+    simpa only [SimpleGraph.Preconnected, not_forall] using h
+  obtain ⟨u, v, huv⟩ := h'
+  have hne : compSet S R u ≠ compSet S R v := by
+    intro hh
+    apply huv
+    have hmem : v.1 ∈ compSet S R u := by rw [hh]; exact self_mem_compSet S R v
+    obtain ⟨hv, hr⟩ := mem_compSet.mp hmem
+    have hv' : (⟨v.1, hv⟩ : ↥S) = v := Subtype.ext rfl
+    rwa [hv'] at hr
+  have h1 : compSet S R u ∈ tripletBlocks S R := mem_tripletBlocks.mpr ⟨u, rfl⟩
+  have h2 : compSet S R v ∈ tripletBlocks S R := mem_tripletBlocks.mpr ⟨v, rfl⟩
+  have hlt := Finset.one_lt_card.mpr ⟨compSet S R u, h1, compSet S R v, h2, hne⟩
+  omega
+
+omit [Fintype X] in
+/-- `|S| = 2` 时 `[R,S]` 无边（三元组有 3 个叶），故不连通。 -/
+private theorem w12b_not_preconnected_of_card_two (R : Finset (RootedTriplet X)) (S : Finset X)
+    (h2 : S.card = 2) : ¬ (tripletGraph S R).Preconnected := by
+  classical
+  obtain ⟨a, haS, b, hbS, hab⟩ := Finset.one_lt_card.mp (by omega : 1 < S.card)
+  have hnoedge : ∀ u v : ↥S, ¬ (tripletGraph S R).Adj u v := by
+    intro u v huv
+    rw [tripletGraph_adj] at huv
+    obtain ⟨-, t, ht, hle, -⟩ := huv
+    have hc := Finset.card_le_card hle
+    rw [t.card_leaves] at hc
+    omega
+  intro hpc
+  have hiso : (tripletGraph S R).IsIsolated (⟨a, haS⟩ : ↥S) := fun w => hnoedge _ _
+  have hEq : (⟨b, hbS⟩ : ↥S) = ⟨a, haS⟩ := reachable_eq_of_isIsolated hiso (hpc _ _)
+  exact hab (congrArg Subtype.val hEq).symm
+
+/-- **无团覆盖 `S` 时的顶部分支**：与 `S` 相交的极大团 ≥ 2 个，故图不连通
+（唯一极大团的情形会给出包含 `S` 的团，被 `hnoc` 排除）。 -/
+private theorem w12b_top {T : RootedTree X} {R : Finset (RootedTriplet X)} {S : Finset X}
+    (hdisp : ∀ t ∈ R, t.leaves ⊆ S → RootedTree.DisplaysTriplet T t)
+    (h3 : 3 ≤ S.card)
+    (hroot : ∀ x, x ∈ S → T.leaf x ≠ T.root)
+    (hnoc : ∀ C : Finset X, RootedTree.IsRootedClade T C → ¬ S ⊆ C) :
+    ¬ (tripletGraph S R).Preconnected := by
+  classical
+  have hSne : S.Nonempty := Finset.card_pos.mp (by omega)
+  set F : Finset (Finset X) := (Finset.univ : Finset (Finset X)).filter (fun D =>
+      RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧
+        ∀ D', RootedTree.IsRootedClade T D' → (D' ∩ S).Nonempty → D ⊆ D' → D' ⊆ D) with hF
+  have memF : ∀ D, D ∈ F ↔ (RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧
+      ∀ D', RootedTree.IsRootedClade T D' → (D' ∩ S).Nonempty → D ⊆ D' → D' ⊆ D) := by
+    intro D
+    rw [hF]
+    simp
+  have hclade : ∀ D ∈ F, RootedTree.IsRootedClade T D := fun D hD => ((memF D).mp hD).1
+  have hmeet : ∀ D ∈ F, (D ∩ S).Nonempty := fun D hD => ((memF D).mp hD).2.1
+  have hanti : ∀ D₁ ∈ F, ∀ D₂ ∈ F, D₁ ⊆ D₂ → D₂ ⊆ D₁ := by
+    intro D₁ h₁ D₂ h₂ hsub
+    exact ((memF D₁).mp h₁).2.2 D₂ (hclade D₂ h₂) (hmeet D₂ h₂) hsub
+  have hstep : ∀ D ∈ F, ∀ t ∈ R, t.leaves ⊆ S → ∀ C : Finset X, RootedTree.IsRootedClade T C →
+      t.pair ⊆ C → t.out ∉ C → D ⊆ C → C ⊆ D := by
+    intro D hD t ht hle C hCc hpair hout hsub
+    obtain ⟨a, ha⟩ := Finset.card_pos.mp (by rw [t.card_pair]; omega : 0 < t.pair.card)
+    have haS : a ∈ S := hle (t.pair_subset_leaves ha)
+    exact ((memF D).mp hD).2.2 C hCc
+      ⟨a, Finset.mem_inter.mpr ⟨hpair ha, haS⟩⟩ hsub
+  have hcover : ∀ x ∈ S, ∃ D ∈ F, x ∈ D := by
+    intro x hxS
+    set K : Finset (Finset X) := (Finset.univ : Finset (Finset X)).filter (fun D =>
+        RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧ x ∈ D) with hK
+    have hKne : K.Nonempty := by
+      refine ⟨{x}, ?_⟩
+      rw [hK]
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      exact ⟨w12b_singleton_clade (hroot x hxS),
+        ⟨x, Finset.mem_inter.mpr ⟨Finset.mem_singleton_self x, hxS⟩⟩,
+        Finset.mem_singleton_self x⟩
+    obtain ⟨D, hDK, hDmax⟩ := Finset.exists_max_image K Finset.card hKne
+    rw [hK] at hDK
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hDK
+    obtain ⟨hDclade, hDmeet, hxD⟩ := hDK
+    refine ⟨D, ?_, hxD⟩
+    rw [memF D]
+    refine ⟨hDclade, hDmeet, ?_⟩
+    intro D' hD'clade hD'meet hsub
+    have hD'K : D' ∈ K := by
+      rw [hK]
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      exact ⟨hD'clade, hD'meet, hsub hxD⟩
+    intro y hy
+    rw [← Finset.eq_of_subset_of_card_le hsub (hDmax D' hD'K)] at hy
+    exact hy
+  by_cases h2 : 2 ≤ F.card
+  · obtain ⟨D₁, hD₁, D₂, hD₂, hne⟩ := Finset.one_lt_card.mp (by omega : 1 < F.card)
+    exact w12b_not_preconnected_of_family hdisp hclade hanti hstep hcover hmeet hD₁ hD₂ hne
+  · have hF1 : F.card = 1 := by
+      obtain ⟨x, hxS⟩ := hSne
+      obtain ⟨D, hDF, -⟩ := hcover x hxS
+      have hpos : 0 < F.card := Finset.card_pos.mpr ⟨D, hDF⟩
+      omega
+    obtain ⟨D, hDFeq⟩ := Finset.card_eq_one.mp hF1
+    have hDF : D ∈ F := by rw [hDFeq]; exact Finset.mem_singleton_self D
+    have hSD : S ⊆ D := by
+      intro x hxS
+      obtain ⟨D', hD'F, hxD'⟩ := hcover x hxS
+      rw [hDFeq] at hD'F
+      rwa [Finset.mem_singleton.mp hD'F] at hxD'
+    exact absurd hSD (hnoc D (hclade D hDF))
+
+/-- **有团覆盖 `S` 时的下降分支**：对覆盖团按基数强归纳。极小覆盖团的「极大真子团」≥ 2 个
+（由 `w12b_singleton_clade` 保证存在），两个不同极大真子团之间无边（`w12b_not_preconnected_of_family`）；
+若极小覆盖团的次分解唯一，则该子团也是覆盖团，与极小性矛盾，归纳假设收尾。 -/
+private theorem w12b_clade_induction {T : RootedTree X} {R : Finset (RootedTriplet X)}
+    {S : Finset X}
+    (hdisp : ∀ t ∈ R, t.leaves ⊆ S → RootedTree.DisplaysTriplet T t)
+    (h3 : 3 ≤ S.card)
+    (hroot : ∀ x, x ∈ S → T.leaf x ≠ T.root) :
+    ∀ C : Finset X, RootedTree.IsRootedClade T C → S ⊆ C →
+      ¬ (tripletGraph S R).Preconnected := by
+  classical
+  intro C
+  refine Finset.strongInductionOn (p := fun C => RootedTree.IsRootedClade T C → S ⊆ C →
+      ¬ (tripletGraph S R).Preconnected) C ?_
+  intro C ih hCclade hSC
+  set F : Finset (Finset X) := (Finset.univ : Finset (Finset X)).filter (fun D =>
+      RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧ D ⊂ C ∧
+        ∀ D', RootedTree.IsRootedClade T D' → (D' ∩ S).Nonempty → D' ⊂ C → D ⊆ D' → D' ⊆ D)
+    with hF
+  have memF : ∀ D, D ∈ F ↔ (RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧ D ⊂ C ∧
+      ∀ D', RootedTree.IsRootedClade T D' → (D' ∩ S).Nonempty → D' ⊂ C → D ⊆ D' → D' ⊆ D) := by
+    intro D
+    rw [hF]
+    simp
+  have hclade : ∀ D ∈ F, RootedTree.IsRootedClade T D := fun D hD => ((memF D).mp hD).1
+  have hmeet : ∀ D ∈ F, (D ∩ S).Nonempty := fun D hD => ((memF D).mp hD).2.1
+  have hsubC : ∀ D ∈ F, D ⊂ C := fun D hD => ((memF D).mp hD).2.2.1
+  have hanti : ∀ D₁ ∈ F, ∀ D₂ ∈ F, D₁ ⊆ D₂ → D₂ ⊆ D₁ := by
+    intro D₁ h₁ D₂ h₂ hsub
+    exact ((memF D₁).mp h₁).2.2.2 D₂ (hclade D₂ h₂) (hmeet D₂ h₂) (hsubC D₂ h₂) hsub
+  have hstep : ∀ D ∈ F, ∀ t ∈ R, t.leaves ⊆ S → ∀ C' : Finset X,
+      RootedTree.IsRootedClade T C' → t.pair ⊆ C' → t.out ∉ C' → D ⊆ C' → C' ⊆ D := by
+    intro D hD t ht hle C' hC'c hpair hout hsub
+    obtain ⟨a, ha⟩ := Finset.card_pos.mp (by rw [t.card_pair]; omega : 0 < t.pair.card)
+    have haS : a ∈ S := hle (t.pair_subset_leaves ha)
+    have houtC : t.out ∈ C := hSC (hle (t.out_mem_leaves))
+    have hC'C : C' ⊆ C := by
+      rcases RootedTree.isRootedClade_laminar T hC'c hCclade
+          ⟨a, Finset.mem_inter.mpr ⟨hpair ha, hSC haS⟩⟩ with h | h
+      · exact h
+      · exact absurd (h houtC) hout
+    have hC'ne : C' ≠ C := by
+      intro hh
+      rw [← hh] at houtC
+      exact hout houtC
+    exact ((memF D).mp hD).2.2.2 C' hC'c
+      ⟨a, Finset.mem_inter.mpr ⟨hpair ha, haS⟩⟩
+      (Finset.ssubset_iff_subset_ne.mpr ⟨hC'C, hC'ne⟩) hsub
+  have hcover : ∀ x ∈ S, ∃ D ∈ F, x ∈ D := by
+    intro x hxS
+    set K : Finset (Finset X) := (Finset.univ : Finset (Finset X)).filter (fun D =>
+        RootedTree.IsRootedClade T D ∧ (D ∩ S).Nonempty ∧ D ⊂ C ∧ x ∈ D) with hK
+    have hKne : K.Nonempty := by
+      refine ⟨{x}, ?_⟩
+      rw [hK]
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      refine ⟨w12b_singleton_clade (hroot x hxS),
+        ⟨x, Finset.mem_inter.mpr ⟨Finset.mem_singleton_self x, hxS⟩⟩, ?_,
+        Finset.mem_singleton_self x⟩
+      rw [Finset.ssubset_iff_subset_ne]
+      refine ⟨?_, ?_⟩
+      · intro y hy
+        rw [Finset.mem_singleton] at hy
+        rw [hy]
+        exact hSC hxS
+      · intro hh
+        have hc : C.card = 1 := by rw [← hh]; simp
+        have := Finset.card_le_card hSC
+        omega
+    obtain ⟨D, hDK, hDmax⟩ := Finset.exists_max_image K Finset.card hKne
+    rw [hK] at hDK
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hDK
+    obtain ⟨hDclade, hDmeet, hDC, hxD⟩ := hDK
+    refine ⟨D, ?_, hxD⟩
+    rw [memF D]
+    refine ⟨hDclade, hDmeet, hDC, ?_⟩
+    intro D' hD'clade hD'meet hD'C hsub
+    have hD'K : D' ∈ K := by
+      rw [hK]
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      exact ⟨hD'clade, hD'meet, hD'C, hsub hxD⟩
+    intro y hy
+    rw [← Finset.eq_of_subset_of_card_le hsub (hDmax D' hD'K)] at hy
+    exact hy
+  by_cases h2 : 2 ≤ F.card
+  · obtain ⟨D₁, hD₁, D₂, hD₂, hne⟩ := Finset.one_lt_card.mp (by omega : 1 < F.card)
+    exact w12b_not_preconnected_of_family hdisp hclade hanti hstep hcover hmeet hD₁ hD₂ hne
+  · have hF1 : F.card = 1 := by
+      obtain ⟨x, hxS⟩ := Finset.card_pos.mp (by omega : 0 < S.card)
+      obtain ⟨D, hDF, -⟩ := hcover x hxS
+      have hpos : 0 < F.card := Finset.card_pos.mpr ⟨D, hDF⟩
+      omega
+    obtain ⟨D, hDFeq⟩ := Finset.card_eq_one.mp hF1
+    have hDF : D ∈ F := by rw [hDFeq]; exact Finset.mem_singleton_self D
+    have hSD : S ⊆ D := by
+      intro x hxS
+      obtain ⟨D', hD'F, hxD'⟩ := hcover x hxS
+      rw [hDFeq] at hD'F
+      rwa [Finset.mem_singleton.mp hD'F] at hxD'
+    exact ih D (hsubC D hDF) (hclade D hDF) hSD
+
+/-- ★★ **缺口 1 的强形式**（本文件两条缺口共用的引擎）：只要「叶子含于 `S`」的三元组都被 `T` 展示，
+`[R,S]` 就不连通。
+
+分支：① `S` 含根叶 `x₀` ⟹ `x₀` 不属于任何团（团都不含根），在 `[R,S]` 中是**孤立点**，不连通；
+② 否则所有 `x ∈ S` 的 `{x}` 都是团（`w12b_singleton_clade`），再按「是否存在包含 `S` 的团」分流到
+`w12b_clade_induction`（存在）与 `w12b_top`（不存在）。 -/
+theorem w12b_disconnect_aux (T : RootedTree.{u, u} X) (R : Finset (RootedTriplet X))
+    (S : Finset X) (hdisp : ∀ t ∈ R, t.leaves ⊆ S → T.DisplaysTriplet t)
+    (h3 : 3 ≤ S.card) : ¬ (tripletGraph S R).Preconnected := by
+  classical
+  by_cases hroot : ∃ x ∈ S, T.leaf x = T.root
+  · obtain ⟨x₀, hx₀S, hx₀r⟩ := hroot
+    have hnoadj : (tripletGraph S R).IsIsolated (⟨x₀, hx₀S⟩ : ↥S) := by
+      intro y hy
+      rw [tripletGraph_adj] at hy
+      obtain ⟨-, t, ht, hle, hpair, -⟩ := hy
+      obtain ⟨C, hCclade, hCpair, -⟩ :=
+        (RootedTree.displaysTriplet_iff_isRootedClade T t).mp (hdisp t ht hle)
+      obtain ⟨p, q, hpq, hroot', rfl⟩ := hCclade
+      have hmem : x₀ ∈ T.sideLeaves (s(p, q)) p := hCpair hpair
+      rw [RootedTree.mem_sideLeaves_iff_inSide T] at hmem
+      rw [hx₀r] at hmem
+      exact hroot' (reachable_comm.mpr hmem)
+    obtain ⟨y, hy⟩ :=
+      Finset.card_pos.mp (by rw [Finset.card_erase_of_mem hx₀S]; omega : 0 < (S.erase x₀).card)
+    rw [Finset.mem_erase] at hy
+    intro hpc
+    have hEq : (⟨y, hy.2⟩ : ↥S) = ⟨x₀, hx₀S⟩ :=
+      reachable_eq_of_isIsolated hnoadj (hpc ⟨x₀, hx₀S⟩ ⟨y, hy.2⟩)
+    exact hy.1 (congrArg Subtype.val hEq)
+  · simp only [not_exists, not_and] at hroot
+    by_cases hcl : ∃ C, RootedTree.IsRootedClade T C ∧ S ⊆ C
+    · obtain ⟨C₀, hC₀, hSC₀⟩ := hcl
+      exact w12b_clade_induction hdisp h3 hroot C₀ hC₀ hSC₀
+    · simp only [not_exists, not_and] at hcl
+      exact w12b_top hdisp h3 hroot hcl
+
+/-- ★★★ **原缺口 1（W12b 已证成定理）—— Bryant–Steel Theorem 2 的 (⟹)**：若 `T` 展示 `R` 的每个三元组，
+则对每个 `S ⊇ leaves(R)`（`|S| ≥ 3`），图 `[R,S]` **不连通**。
+
+文献：Bryant & Steel 1995，定理陈述 **766–769 行**，证明 **777–785 行**
+（`references/md/BryantSteel1995_ExtensionOperationsLeafLabelledTrees.md`）。
+
+**证明**（**不需要**文献证明里的限制树 `T|S`）：策略见 §6.3.1；主引擎是 `w12b_disconnect_aux`（强形式），
+技术核心是 `w12b_not_adj`（`[R,S]` 的边**不跨越两个不同的极大团**，只用现成的
+`RootedTree.isRootedClade_laminar`），外部器材是 `w12b_singleton_clade`（非根叶的单点是团）。
+**陈述与 `def` 版本逐字相同**，仅把 `def … : Prop :=` 升格为 `theorem … : `。 -/
+theorem rootedTriplet_aho_disconnect_gap :
+    ∀ (R : Finset (RootedTriplet X)) (T : RootedTree.{u, u} X),
+      (∀ t ∈ R, T.DisplaysTriplet t) →
+      ∀ S : Finset X, (∀ t ∈ R, t.leaves ⊆ S) → 3 ≤ S.card →
+        ¬ (tripletGraph S R).Preconnected := by
+  intro R T hdisp S _hleaves h3
+  exact w12b_disconnect_aux T R S (fun t ht _ => hdisp t ht) h3
+
+/-- **缺口 2 的引擎**：展示树存在时 `AhoOK` 对**任何** `S` 成立（只要 `S` 内的三元组被展示）。
+对 `S.card` 强归纳：`|S| ≤ 1` 用 `AhoOK.small`；否则由 `w12b_disconnect_aux`（`|S| ≥ 3`）
+或 `w12b_not_preconnected_of_card_two`（`|S| = 2`）得 `¬ Preconnected`，
+经 `w12b_two_le_blocks_of_not_preconnected` 转成「块数 ≥ 2」，每个块套归纳假设
+（块真包含于 `S`：`tripletBlocks_ssubset_of_two_le_card`；块内三元组被展示由
+`tripletBlocks_subset` + 假设给出）。 -/
+private theorem w12b_ahoOK (T : RootedTree.{u, u} X) (R : Finset (RootedTriplet X)) :
+    ∀ S : Finset X, (∀ t ∈ R, t.leaves ⊆ S → T.DisplaysTriplet t) → AhoOK S R := by
+  classical
+  intro S
+  refine Finset.strongInductionOn (p := fun S => (∀ t ∈ R, t.leaves ⊆ S →
+      T.DisplaysTriplet t) → AhoOK S R) S ?_
+  intro S ih h
+  rcases Nat.lt_or_ge S.card 2 with hlt | hge
+  · exact AhoOK.small (by omega)
+  · have hblk : 2 ≤ (tripletBlocks S R).card := by
+      have hnp : ¬ (tripletGraph S R).Preconnected := by
+        rcases Nat.lt_or_ge S.card 3 with hlt3 | hge3
+        · exact w12b_not_preconnected_of_card_two R S (by omega)
+        · exact w12b_disconnect_aux T R S h hge3
+      exact w12b_two_le_blocks_of_not_preconnected R S hnp
+    refine AhoOK.step hge hblk (fun B hB => ?_)
+    exact ih B (tripletBlocks_ssubset_of_two_le_card hblk hB)
+      (fun t ht htB => h t ht (htB.trans (tripletBlocks_subset S R hB)))
+
+/-- ★★★ **原缺口 2（W12b 已证成定理）—— Aho/ONETREE 的完备性（BUILD 反方向）**：若某棵有根树展示 `R` 的全部
 三元组，则递归判据 `AhoOK`（在叶集 `systemLeaves R` 上）**成功**。
 
 这是本文件 ★★★ `exists_rootedTree_of_ahoOK` 的**逆**，二者合起来才是完整的有根版 Aho 定理。
 文献：Bryant & Steel 1995 **759–760 行**（“The algorithm returns a tree if and only if the input
 set of rooted triples is consistent”）；Aho et al. 1981 Theorem 1 的反方向。
-**缺什么**：同缺口 1（需要限制树 /「块 = 远离根的团」的对应）。
+
+**证明**：`w12b_ahoOK`（对 `S.card` 强归纳，见上）。
 **注**：`S = univ` 的版本**不可直接**陈述 —— `R = ∅` 时 `AhoOK univ ∅` 为真但
-`∃ T` 的存在性对**非空** `R` 才实质；故这里取 `S = systemLeaves R`（Aho 算法真正的工作集）。 -/
-def rootedTriplet_aho_converse_gap : Prop :=
-  ∀ R : Finset (RootedTriplet X), DisplayedByTree R → AhoOK (systemLeaves R) R
+`∃ T` 的存在性对**非空** `R` 才实质；故这里取 `S = systemLeaves R`（Aho 算法真正的工作集）。
+**陈述与 `def` 版本逐字相同**；原 `def` 上的 `omit [Fintype X]` 对陈述本无效果
+（`DisplayedByTree` 经 `T.DisplaysTriplet` 已引用 `[Fintype X]`，见 `#check` 的签名），
+故证明中直接使用该实例。 -/
+theorem rootedTriplet_aho_converse_gap :
+    ∀ R : Finset (RootedTriplet X), DisplayedByTree R → AhoOK (systemLeaves R) R := by
+  rintro R ⟨T, hT⟩
+  exact w12b_ahoOK T R (systemLeaves R) (fun t ht _ => hT t ht)
+
+/-! #### 6.3.2 反空真（新定理**可居留**且结论非平凡） -/
+
+/-- 反空真 E：**缺口 1 的定理**在具体实例上给出真结论（`Fin 4`，`R = {01|2}`，`S = univ`）。 -/
+example : ¬ (tripletGraph (Finset.univ : Finset (Fin 4))
+    ({ex_ab_c} : Finset (RootedTriplet (Fin 4)))).Preconnected := by
+  obtain ⟨T, hT⟩ := exists_rootedTree_displays_of_singleton (by decide) ex_ab_c
+  exact rootedTriplet_aho_disconnect_gap _ T (fun t ht => by
+      rw [Finset.mem_singleton] at ht
+      rw [ht]
+      exact hT) Finset.univ (fun _ _ => Finset.subset_univ _) (by decide)
+
+/-- 反空真 F：**缺口 2 的定理**在具体实例上给出真的 `AhoOK`（同一 `{01|2}`；族非空、且叶集非空）。 -/
+example : AhoOK (systemLeaves ({ex_ab_c} : Finset (RootedTriplet (Fin 4))))
+    ({ex_ab_c} : Finset (RootedTriplet (Fin 4))) := by
+  obtain ⟨T, hT⟩ := exists_rootedTree_displays_of_singleton (by decide) ex_ab_c
+  exact rootedTriplet_aho_converse_gap _ ⟨T, fun t ht => by
+      rw [Finset.mem_singleton] at ht
+      rw [ht]
+      exact hT⟩
 
 end RootedTriplet
 
