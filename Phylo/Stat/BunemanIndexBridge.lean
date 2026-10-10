@@ -565,4 +565,84 @@ def canonicalSplitDecomposition_gap_correct_shape : Prop :=
       (∀ s ∈ F, 0 < c s) ∧ SplitPrimeStd δ₀ ∧
         ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
 
+/-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
+
+**目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
+满足**文献**四点条件 `FourPointStd`（数学内容 = 树度量满足四点条件）。
+本节把它**唯一的结构性障碍**证掉，并记录**完整的收尾算法**。
+
+### 已完成：三种配对两两不相容
+
+对固定四元组 `(a,a',b,b')` 定义三种**配对**
+（`PairW = {a,a'}|{b,b'}`、`PairP = {a,b}|{a',b'}`、`PairX = {a,b'}|{a',b}`），则**任意两种**的
+实现者都**不兼容**（库内 `not_compatible_of_separates` 直接给出）⇒ **两两相容的 `F` 中至多一种配对可被实现** ✓。
+
+### 收尾算法（已推完；本轮未形式化，见报告「诚实边界」）
+
+记 `δ̂ := Σ_{u∈F} w_u·δ_u`（`w_u > 0`），对四元组 `(a,a',b,b')` 记
+`W := δ̂aa' + δ̂bb'`、`P := δ̂ab + δ̂a'b'`、`X := δ̂ab' + δ̂a'b`；并令
+`c_W := Σ_{u ∈ F, u 实现 W-配对} w_u`，`c_P`、`c_X` 同理（本节结论：三者**至多一个非零**）。逐 `u` 的取值只有五种
+（`σ` = 该点在 `u` 的哪一侧，`4` 点分布）：
+
+| 分布 | `(W_u,P_u,X_u)` |
+|---|---|
+| 全在同一侧 | `(0,0,0)` |
+| `1|3` 分布 | `(1,1,1)` |
+| `{a,a'} | {b,b'}` | `(0,2,2)` |
+| `{a,b} | {a',b'}` | `(2,0,2)` |
+| `{a,b'} | {a',b}` | `(2,2,0)` |
+
+⇒ `X − W = 2(c_W − c_X)`、`X − P = 2(c_P − c_X)`；由「至多一种配对被实现」：
+若 `c_X > 0`（唯一非零）则 `X − W < 0` ⇒ `X < W` ✓；若 `c_W > 0` 则 `X = P` ✓；若 `c_P > 0` 则 `X = W` ✓；
+三者皆零则 `X = W = P` ✓ —— 四种情形都给出 **`X ≤ max W P`**。
+对 `W`、`P` 各自重复同一论证（把三种配对轮换）即得 `FourPointStd` 的三个合取项 ✓。
+退化情形（四点有重合，例如 `a = a'`）自动成立：此时 `P = X` 精确相等 ⇒ 「最大者至少取两次」✓。 -/
+
+/-- 四元组上的 **W-配对**：`u` 把 `{a,a'}` 与 `{b,b'}` 分开。 -/
+def PairW (u : Split X) (a a' b b' : X) : Prop := u.Separates a a' b b'
+
+/-- 四元组上的 **P-配对**：`u` 把 `{a,b}` 与 `{a',b'}` 分开。 -/
+def PairP (u : Split X) (a a' b b' : X) : Prop := u.Separates a b a' b'
+
+/-- 四元组上的 **X-配对**：`u` 把 `{a,b'}` 与 `{a',b}` 分开。 -/
+def PairX (u : Split X) (a a' b b' : X) : Prop := u.Separates a b' a' b
+
+/-- ★★ **W-配对与 P-配对不相容**。 -/
+theorem not_compatible_of_PairW_PairP {u v : Split X} {a a' b b' : X}
+    (hu : PairW u a a' b b') (hv : PairP v a a' b b') : ¬ u.Compatible v :=
+  not_compatible_of_separates (s := u) (t := v) (a := a) (b := a') (c := b) (e := b') hu hv
+
+/-- ★★ **W-配对与 X-配对不相容**。 -/
+theorem not_compatible_of_PairW_PairX {u v : Split X} {a a' b b' : X}
+    (hu : PairW u a a' b b') (hv : PairX v a a' b b') : ¬ u.Compatible v :=
+  not_compatible_of_separates (s := u) (t := v) (a := a) (b := a') (c := b') (e := b)
+    ((separates_comm_last u a a' b b').mp hu) hv
+
+/-- ★★ **P-配对与 X-配对不相容**。 -/
+theorem not_compatible_of_PairP_PairX {u v : Split X} {a a' b b' : X}
+    (hu : PairP u a a' b b') (hv : PairX v a a' b b') : ¬ u.Compatible v :=
+  not_compatible_of_separates (s := u) (t := v) (a := a) (b := b) (c := b') (e := a')
+    ((separates_comm_last u a b a' b').mp hu) ((separates_comm_last v a b' a' b).mp hv)
+
+/-- ★★★ **两两相容的 `F` 中至多一种配对可被实现**（W/P 版）。 -/
+theorem not_PairW_and_PairP {F : Finset (Split X)}
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t) {a a' b b' : X} :
+    ¬ ((∃ u ∈ F, PairW u a a' b b') ∧ (∃ v ∈ F, PairP v a a' b b')) := by
+  rintro ⟨⟨u, huF, hu⟩, ⟨v, hvF, hv⟩⟩
+  exact not_compatible_of_PairW_PairP hu hv (hF u huF v hvF)
+
+/-- ★★★ **两两相容的 `F` 中至多一种配对可被实现**（W/X 版）。 -/
+theorem not_PairW_and_PairX {F : Finset (Split X)}
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t) {a a' b b' : X} :
+    ¬ ((∃ u ∈ F, PairW u a a' b b') ∧ (∃ v ∈ F, PairX v a a' b b')) := by
+  rintro ⟨⟨u, huF, hu⟩, ⟨v, hvF, hv⟩⟩
+  exact not_compatible_of_PairW_PairX hu hv (hF u huF v hvF)
+
+/-- ★★★ **两两相容的 `F` 中至多一种配对可被实现**（P/X 版）。 -/
+theorem not_PairP_and_PairX {F : Finset (Split X)}
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t) {a a' b b' : X} :
+    ¬ ((∃ u ∈ F, PairP u a a' b b') ∧ (∃ v ∈ F, PairX v a a' b b')) := by
+  rintro ⟨⟨u, huF, hu⟩, ⟨v, hvF, hv⟩⟩
+  exact not_compatible_of_PairP_PairX hu hv (hF u huF v hvF)
+
 end Split

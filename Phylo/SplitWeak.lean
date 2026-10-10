@@ -463,7 +463,9 @@ def weakCompatibilityRealization_gap : Prop :=
 **正确形态**（残差改为忠实形态 `SplitPrimeStd`）登记为
 `Split.canonicalSplitDecomposition_gap_correct_shape`（同文件，未证）。
 另注（协调侧机器判定）：库内 `SplitPrime`（处处 `¬Max`）**严格强于**文献形态（处处 `¬Strong`）——
-`¬Max ⟹ ¬Strong` 而反向不成立；不过本缺口的致命伤是**非空侧条件缺失**，比这一条更基本。 -/
+`¬Max ⟹ ¬Strong` 而反向不成立；不过本缺口的致命伤是**非空侧条件缺失**，比这一条更基本。
+⚠️ 一旦确认 `SplitPrime` **恒假**（不可满足），「`SplitPrime` 比 `SplitPrimeStd` 严格」这个比较
+就**不再有实际用途**（前者抓不到任何 `δ`）⇒ 无需为它形式化分离反例（W12l 决定：只在 docstring 登记）。 -/
 def canonicalSplitDecomposition_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -522,7 +524,11 @@ def fourPointOfSplitMetricSum_gap : Prop :=
 
 （隔离指数的精确形式见 `Phylo/BunemanTree.lean:107` 的 `bunemanIndex`，
 「`α > 0` ⟺ 两配对都为正」的桥见 `Phylo/Stat/BunemanIndexBridge.lean`
-的 `Split.bunemanIndex_pos_iff_isDSplitStrong`。） -/
+的 `Split.bunemanIndex_pos_iff_isDSplitStrong`。）
+
+⚠️ **W12l 措辞更正**：这里的「隔离指数为 `0`」应读作 **`α_S ≤ 0`** —— 穷举显示非成员的 `α` 可以是**负**的
+（例：`F = { {0,1}|{2,3} }`、`S = {0,2}|{1,3}` 时 `α_S = −1`；见 `scripts/msc/w12d_b2_b1_search.py`）；
+与库内 `IsDSplit`（`max` 形式）的否定对应的是 `α_S ≤ 0`，而**不是** `α_S = 0`。 -/
 def notIsDSplit_of_splitMetricSum_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
