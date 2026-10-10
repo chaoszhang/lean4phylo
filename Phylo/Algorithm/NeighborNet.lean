@@ -2845,6 +2845,78 @@ theorem phyleticDist_arcFinset (n : ℕ) (δ : Pair n → ℝ) (x y : Fin n) :
   simp only [weightOf_arcSplit]
   rw [← pairVal_alm n (Mlm n δ) x y, Alm_comp_Mlm n δ]
 
+/-! ### 11.11 第 5 步 ②（W12g-18）：显式权重的**非负性**
+
+`Mlm n δ a ≥ 0`：用 `MlmFun_l/h/d` 把三支写成 `½·tri` / `½·quad`，再分别对 §9 的
+`kalmanson_triangle` / `kalmanson_H` / `kalmanson_D`（取 `f := Equiv.refl`、位置用 `hZero/hOne/hLast/dPrev/dNext`）＋ `linarith`。
+
+⚠️ 注意：这里**不需要** `3 ≤ n` —— §9 的三条 `kalmanson_*` 只要求位置的序 `a ≤ b ≤ c`（`≤ c ≤ e`），
+而 `hZero ≤ hOne ≤ hLast`、`hZero ≤ a.1.2 ≤ dNext ≤ hLast` 都由 `Arc` 的护栏直接给出 ✓
+（`tri_sepInd_l` 那条路才需要 `3 ≤ n`，本路线不用它 ✓）。 -/
+
+/-- ★★ **L 支非负性**：`0 ≤ Mlm n δ a`（`a.1.1.val = 0 ∧ a.1.2.val = 0`）。 -/
+theorem nonneg_Mlm_l (n : ℕ) (δ : Pair n → ℝ) (a : Arc n)
+    (hL : a.1.1.val = 0 ∧ a.1.2.val = 0) (hdiag : ∀ x, pairVal δ x x = 0)
+    (hd : IsCircularDist (Equiv.refl (Fin n)) (fun x y => pairVal δ x y)) :
+    0 ≤ Mlm n δ a := by
+  have hshape : Mlm n δ a
+      = (1 / 2) * tri (fun x y => pairVal δ x y) (hZero a) (hOne a) (hLast a) := by
+    rw [show Mlm n δ a = MlmFun n δ a from rfl]
+    exact MlmFun_l n δ a hL
+  rw [hshape]
+  have h := kalmanson_triangle (Equiv.refl (Fin n)) (fun x y => pairVal δ x y) hdiag hd
+    (hZero a) (hOne a) (hLast a)
+    (Fin.le_iff_val_le_val.mpr (by simp only [hZero_val, hOne_val]; omega))
+    (Fin.le_iff_val_le_val.mpr (by simp only [hOne_val, hLast_val]; omega))
+  simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+  rw [show tri (fun x y => pairVal δ x y) (hZero a) (hOne a) (hLast a)
+      = pairVal δ (hZero a) (hOne a) + pairVal δ (hZero a) (hLast a)
+        - pairVal δ (hOne a) (hLast a) from rfl] at *
+  linarith
+
+/-- ★★ **H 支非负性**：`0 ≤ Mlm n δ a`（`a.1.1.val = 0`、`a.1.2.val ≠ 0`）。 -/
+theorem nonneg_Mlm_h (n : ℕ) (δ : Pair n → ℝ) (a : Arc n) (hH : a.1.1.val = 0)
+    (hne : a.1.2.val ≠ 0) (hsym : ∀ x y, pairVal δ x y = pairVal δ y x)
+    (hd : IsCircularDist (Equiv.refl (Fin n)) (fun x y => pairVal δ x y)) :
+    0 ≤ Mlm n δ a := by
+  have hshape : Mlm n δ a
+      = (1 / 2) * quad (fun x y => pairVal δ x y) (hLast a) (hZero a) a.1.2 (dNext a) := by
+    rw [show Mlm n δ a = MlmFun n δ a from rfl]
+    exact MlmFun_h n δ a hH hne
+  rw [hshape]
+  have h := kalmanson_H (Equiv.refl (Fin n)) (fun x y => pairVal δ x y) hsym hd
+    (hZero a) a.1.2 (dNext a) (hLast a)
+    (Fin.le_iff_val_le_val.mpr (Nat.zero_le _))
+    (Fin.le_iff_val_le_val.mpr (Nat.le_succ _))
+    (Fin.le_iff_val_le_val.mpr (by have hh := a.2.2; show a.1.2.val + 1 ≤ n - 1; omega))
+  simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+  rw [show quad (fun x y => pairVal δ x y) (hLast a) (hZero a) a.1.2 (dNext a)
+      = pairVal δ (hLast a) a.1.2 + pairVal δ (hZero a) (dNext a)
+        - pairVal δ (hZero a) a.1.2 - pairVal δ (hLast a) (dNext a) from by
+      simp only [quad]; ring] at *
+  linarith
+
+/-- ★★ **D 支非负性**：`0 ≤ Mlm n δ a`（`a.1.1.val ≠ 0`）。 -/
+theorem nonneg_Mlm_d (n : ℕ) (δ : Pair n → ℝ) (a : Arc n) (hne : a.1.1.val ≠ 0)
+    (hd : IsCircularDist (Equiv.refl (Fin n)) (fun x y => pairVal δ x y)) :
+    0 ≤ Mlm n δ a := by
+  have hshape : Mlm n δ a
+      = (1 / 2) * quad (fun x y => pairVal δ x y) (dPrev a) a.1.1 a.1.2 (dNext a) := by
+    rw [show Mlm n δ a = MlmFun n δ a from rfl]
+    exact MlmFun_d n δ a hne
+  rw [hshape]
+  have h := kalmanson_D (Equiv.refl (Fin n)) (fun x y => pairVal δ x y) hd
+    (dPrev a) a.1.1 a.1.2 (dNext a)
+    (Fin.le_iff_val_le_val.mpr (Nat.sub_le _ _))
+    a.2.1
+    (Fin.le_iff_val_le_val.mpr (Nat.le_succ _))
+  simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+  rw [show quad (fun x y => pairVal δ x y) (dPrev a) a.1.1 a.1.2 (dNext a)
+      = pairVal δ (dPrev a) a.1.2 + pairVal δ a.1.1 (dNext a)
+        - pairVal δ a.1.1 a.1.2 - pairVal δ (dPrev a) (dNext a) from by
+      simp only [quad]; ring] at *
+  linarith
+
 end FunctionalMaterial
 
 end WeightAlgebra
