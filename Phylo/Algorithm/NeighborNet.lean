@@ -2610,6 +2610,23 @@ theorem weightOf_arcSplit (n : ℕ) (δ : Pair n → ℝ) (a : Arc n) :
   · intro hmem
     exact absurd (Finset.mem_univ a) hmem
 
+/-- ★ `pairVal` 在对角线上为 `0`。 -/
+theorem pairVal_self {n : ℕ} (δ : Pair n → ℝ) (x : Fin n) : pairVal δ x x = 0 := by
+  unfold pairVal
+  rw [dite_eq_right (lt_irrefl x), dite_eq_right (lt_irrefl x)]
+
+/-- ★★ **`pairVal` 对称**（第 4 步用 `dOf δ x y := pairVal δ x y` 造对称零对角函数时要用）。 -/
+theorem pairVal_comm {n : ℕ} (δ : Pair n → ℝ) (x y : Fin n) : pairVal δ x y = pairVal δ y x := by
+  unfold pairVal
+  by_cases h : x < y
+  · rw [dite_eq_left h]
+    by_cases h' : y < x
+    · exact absurd h' (not_lt.mpr (le_of_lt h))
+    · rw [dite_eq_right h', dite_eq_left h]
+  · by_cases h' : y < x
+    · rw [dite_eq_right h, dite_eq_left h', dite_eq_left h']
+    · rw [dite_eq_right h, dite_eq_right h', dite_eq_right h, dite_eq_right h']
+
 end FunctionalMaterial
 
 end WeightAlgebra
