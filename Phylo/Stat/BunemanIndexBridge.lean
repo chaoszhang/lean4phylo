@@ -1052,4 +1052,50 @@ theorem notIsDSplit_of_splitMetricSum_gap_proof (h : noWRealizer_exists_gap.{0})
   obtain ⟨a, ha, a', ha', b, hb, b', hb', hW0⟩ := h F w hF hw S hS
   exact not_isDSplit_of_no_W_realizer F w hw S ha ha' hb hb' hW0
 
+/-! ### 11.3 (F1)：层析极小性路线的第一步 -/
+
+/-- `u` 的**不含 `ρ` 的那一侧**（`ρ` 固定；(R2)/(F1) 里的 `u*`）。 -/
+def sideNotMem (u : Split X) (ρ : X) : Finset X := if ρ ∈ u.sideA then u.sideB else u.sideA
+
+/-- `x ∈ u.sideA ↔ x ∉ u.sideB`（`mem_sideB_iff` 的对偶读法）。 -/
+theorem mem_sideA_iff_not_mem_sideB (u : Split X) (x : X) : x ∈ u.sideA ↔ x ∉ u.sideB := by
+  rw [← not_iff_not, not_not]
+  exact (mem_sideB_iff u x).symm
+
+/-- ★★★ **(F1)**：设 `u* := sideNotMem u ρ`（`u` 的不含 `ρ` 的一侧）。若 `S.sideA ⊆ u*`，
+且 `u` 的两侧既不是 `S.sideA` 也不是 `S.sideB`（即 `u ∉ {S, S.swap}` 的**侧等价形式**，
+以避免依赖结构外延引理），则 `u* ∩ S.sideB ≠ ∅` ✓。
+
+证明（纯集合包含）：反设 `u* ∩ S.sideB = ∅`；由 `S.sideA ⊆ u*` ＋ `S.sideA ∪ S.sideB = univ`
+得 `u* = S.sideA`，再用 `u*` 的定义与两侧互补（`mem_sideB_iff`）推出 `u.sideA = S.sideB`
+或 `u.sideA = S.sideA`，与两条假设矛盾 ✓。 -/
+theorem sideA_subset_sideNotMem_meets (S u : Split X) {ρ : X}
+    (hA : u.sideA ≠ S.sideA) (hA' : u.sideA ≠ S.sideB) (h : S.sideA ⊆ sideNotMem u ρ) :
+    (sideNotMem u ρ ∩ S.sideB).Nonempty := by
+  classical
+  have key : ∀ U : Finset X, S.sideA ⊆ U → U ∩ S.sideB = ∅ → U = S.sideA := by
+    intro U hsub hemp
+    refine Finset.Subset.antisymm (fun x hx => ?_) hsub
+    by_contra hxS
+    have hxB : x ∈ S.sideB := (mem_sideB_iff S x).mpr hxS
+    have hmem : x ∈ U ∩ S.sideB := Finset.mem_inter.mpr ⟨hx, hxB⟩
+    rw [hemp] at hmem
+    exact Finset.notMem_empty x hmem
+  by_cases hu : ρ ∈ u.sideA
+  · have hB : sideNotMem u ρ = u.sideB := by simp only [sideNotMem, hu, ite_true]
+    rw [hB] at h ⊢
+    by_cases hne : (u.sideB ∩ S.sideB).Nonempty
+    · exact hne
+    · have heqA : u.sideA = S.sideB := by
+        refine Finset.ext fun x => ?_
+        rw [mem_sideA_iff_not_mem_sideB u x,
+          key u.sideB h (Finset.not_nonempty_iff_eq_empty.mp hne)]
+        exact (mem_sideB_iff S x).symm
+      exact absurd heqA hA'
+  · have hAe : sideNotMem u ρ = u.sideA := by simp only [sideNotMem, hu, ite_false]
+    rw [hAe] at h ⊢
+    by_cases hne : (u.sideA ∩ S.sideB).Nonempty
+    · exact hne
+    · exact absurd (key u.sideA h (Finset.not_nonempty_iff_eq_empty.mp hne)) hA
+
 end Split
