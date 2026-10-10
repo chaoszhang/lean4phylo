@@ -85,6 +85,7 @@ import Phylo.Stat.EdgeInvariants
 import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.FiveTaxonLemma4
 import Phylo.Stat.HadamardTransform
+import Phylo.Stat.HookLength
 import Phylo.Stat.Identifiability
 import Phylo.Stat.IndependentContrasts
 import Phylo.Stat.InvariantsRank
