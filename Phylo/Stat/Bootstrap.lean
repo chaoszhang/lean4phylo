@@ -516,11 +516,91 @@ theorem minimal_example_treeSupport_lt_half (Tree : (Fin 3 → ℕ) → Cladogra
 
 **未证**：缺的是「多重集排列数」的记账（`Finset` 的重排与多项式系数之间的双射）。
 本文件只证了**不依赖它**的那部分（`sum_weightOf`、`sum_weightOf_over_resamples`、
-以及 `n = 3` 直接枚举的 `minimal_example_count`）。**本文件不在任何证明中使用它。** -/
+以及 `n = 3` 直接枚举的 `minimal_example_count`）。**本文件不在任何证明中使用它。**
+
+### W12a 现状（命题已复核为**真**；**仍缺口** ⬜）—— ★D 器材盘点
+
+* **真值复核**：`scripts/msc/w12a_gap_check.py` Part II 对 `n ≤ 6` **全函数枚举**
+  （精确整数）逐权重向量验证 `cnt · ∏ wᵢ! = n!`，无例外。
+  **模型一致性已核对**：该脚本的 `weight_of(s, n) := tuple(sum(1 for j if s[j] = i))`
+  与 Lean 的 `weightOf σ i := (univ.filter fun j => σ j = i).card` **逐字对应**；
+  脚本的 `sum(w) = n` 对应 `IsBootstrapWeight w := ∑ i, w i = n`（均按 `n` 个下标求和）。
+  另有**Lean 内**的最小例（见本条下方 `example`）机器验证 `n = 2, 3` 的具体实例。
+* **★D 器材盘点（现查 `~/lean4phylo-t85/.lake/packages/mathlib/`）**：
+  * ✅ `Nat.multinomial_spec : (∏ i ∈ s, (f i)!) * multinomial s f = (∑ i ∈ s, f i)!`
+    （`Data/Nat/Choose/Multinomial.lean:76`）—— 目标的**算术半边**已现成：
+    只要证出 `count = Nat.multinomial Finset.univ w`，再用 `mul_comm` 即得。
+  * ✅ `Multiset.countPerms`（同文件 `:235`，docstring 即「The number of permutations of a
+    given multiset」）与其递归 `countPerms_filter_ne`（`:239`）。
+  * ✅ 多项式定理 `Finset.sum_pow`（`Multinomial.lean:356`：`s.sum x ^ n = ∑ k ∈ s.sym n,
+    k.val.countPerms * (k.val.map x).prod`）。
+  * ✅ `Fintype.card_perm`（`Data/Fintype/Perm.lean:155`）、
+    `MulAction.card_orbit_mul_card_stabilizer_eq_card_group`
+    （`GroupTheory/GroupAction/Quotient.lean:184`）。
+  * ❌ **缺**：「给定纤维大小的**函数计数**」引理 —— 全库**没有**把
+    `#{σ : α → β | ∀ b, #(σ ⁻¹' {b}) = w b}` 与 `Nat.multinomial`/`countPerms` 连起来的现成引理
+    （`grep -rn 'countPerms' Mathlib/` 只有系数本身的递归；`Multinomial.lean` 内无任何
+    `Fintype.card` 型结论）。
+* **两条可行路线**（均已定位到需要自己写的部分）：
+  1. **纤维分解归纳**（推荐）：对任意有限类型陈述
+     `Fintype.card {σ : α → β // ∀ b, (univ.filter fun a => σ a = b).card = w b} = Nat.multinomial univ w`，
+     对 `Fintype.card α` 强归纳：取 `b₀`（`w b₀ > 0`），按「`b₀` 的纤维 `S`」分解
+     （`Finset.card_eq_sum_card_fiberwise` + `Finset.card_powersetCard` + `Fintype.card_sigma`），
+     余下部份定义在子类型 `↥Sᶜ → {b // b ≠ b₀}` 上，再用 `Finsupp.multinomial_update`
+     （= `Nat.multinomial_insert` 的 `Finsupp` 版）配平。
+     ⚠️ **必须对任意有限类型陈述**（不能只对 `Fin n`）：删掉一个值后定义域变成**子类型**，
+     所以要一条「计数只依赖基数」的搬运（`Fintype.card_congr` 沿 `Equiv`）。
+     估计 150–250 行；这是**本轮未能落地**的原因。
+  2. **轨道-稳定化子**：`Perm (Fin n)` 用**前复合**作用在 `Fin n → Fin n` 上（需自建
+     `MulAction` 实例），轨道 = 纤维集、稳定化子 ≅ `∀ i, Perm ↥(fiber i)`，
+     再由 `card_orbit_mul_card_stabilizer_eq_card_group` + `Fintype.card_perm` 得
+     `count * ∏ wᵢ! = n!`。同样需要自建「轨道 = 同纤维函数集」与稳定化子的 `Equiv`。 -/
 def multinomial_weight_count_gap : Prop :=
   ∀ (n : ℕ) (w : Fin n → ℕ), IsBootstrapWeight w →
     (Finset.univ.filter fun σ : Resample n => weightOf σ = w).card
       * (∏ i, Nat.factorial (w i)) = Nat.factorial n
+
+/-! ### ★C 最小例子（**Lean 内**机器验证）：目标等式在具体权重向量上的实例
+
+三重作用：(i) 缺口陈述**不是空真**（确有实例满足）；(ii) **核对** Lean 定义
+（`Resample` / `weightOf`）与脚本 `w12a_gap_check.py` 的模型（`(2,0)` 给 `1·2 = 2`、
+`(1,1)` 给 `2·1 = 2`、`(0,2)` 给 `1·2 = 2`，与脚本输出一致）；(iii) 给出 `Nat.multinomial` 路线
+的落地校验点（`n = 3` 的 `(1,1,1)`：`6·1 = 3!`）。 -/
+
+/-- `n = 2`，`w = (2,0)`：只有常函数 `σ ≡ 0`，`1 · (2!·0!) = 2 = 2!`。 -/
+example :
+    (Finset.univ.filter fun σ : Resample 2 =>
+        weightOf σ = (fun i : Fin 2 => if i = 0 then 2 else 0)).card
+      * (∏ i, Nat.factorial ((fun i : Fin 2 => if i = 0 then 2 else 0) i))
+      = Nat.factorial 2 := by decide
+
+/-- `n = 2`，`w = (1,1)`：`σ = id` 与 `σ = swap`，`2 · (1!·1!) = 2 = 2!`。 -/
+example :
+    (Finset.univ.filter fun σ : Resample 2 =>
+        weightOf σ = (fun _ : Fin 2 => 1)).card
+      * (∏ i, Nat.factorial ((fun _ : Fin 2 => 1) i))
+      = Nat.factorial 2 := by decide
+
+/-- `n = 2`，`w = (0,2)`：只有 `σ ≡ 1`，`1 · (0!·2!) = 2 = 2!`。 -/
+example :
+    (Finset.univ.filter fun σ : Resample 2 =>
+        weightOf σ = (fun i : Fin 2 => if i = 0 then 0 else 2)).card
+      * (∏ i, Nat.factorial ((fun i : Fin 2 => if i = 0 then 0 else 2) i))
+      = Nat.factorial 2 := by decide
+
+/-- `n = 3`，`w = (1,1,1)`：`3! = 6` 个置换，`6 · 1 = 3!`。 -/
+example :
+    (Finset.univ.filter fun σ : Resample 3 =>
+        weightOf σ = (fun _ : Fin 3 => 1)).card
+      * (∏ i, Nat.factorial ((fun _ : Fin 3 => 1) i))
+      = Nat.factorial 3 := by decide
+
+/-- `n = 3`，`w = (3,0,0)`：只有常函数 `σ ≡ 0`，`1 · 3! = 3!`。 -/
+example :
+    (Finset.univ.filter fun σ : Resample 3 =>
+        weightOf σ = (fun i : Fin 3 => if i = 0 then 3 else 0)).card
+      * (∏ i, Nat.factorial ((fun i : Fin 3 => if i = 0 then 3 else 0) i))
+      = Nat.factorial 3 := by decide
 
 /-- ❌ **缺口 C（支持度 → 置信度）**：把 `bootstrapSupport`（重抽样树族中的**频率**）
 读成「真树含该 split」的**置信度**，需要三样本库都没有的零件：

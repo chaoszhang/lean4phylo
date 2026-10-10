@@ -553,14 +553,110 @@ def msc_split_probability_object_gap : Prop :=
 有了它 + `mscP_add_swap_of_isConc` / `mscP_add_swap_of_not_isConc`，Theorem 4.1 的 `n = 4`
 实例就是 `mscDiscordant t ≤ mscDiscordant t ≤ mscConcordant t`（`MSCProof.mscDiscordant_lt_mscConcordant`）。
 
-**未证**：`Split (Fin 4)` 的 `Fintype` 实例（`Fintype.ofInjective` 拉回）无法被 `decide`
-归约，而 `MSCProof.card_filter_two` 这条计数桥只覆盖 `↥univ` 口径的 `2|2` split。**未证。** -/
-def card_separates_four_gap : Prop :=
-  ((Finset.univ : Finset (Split (Fin 4))).filter
-      (fun r => Separates r ({0, 2} : Finset (Fin 4)) ({1, 3} : Finset (Fin 4)))).card = 2 ∧
+**W12a 状态（已证）**：`def` 升为 `theorem`，**陈述逐字不改**。
+路线（**不走 `decide`** —— `Split (Fin 4)` 的 `Fintype` 来自 `Fintype.ofInjective`，不可归约）：
+对**互补**的 `2` 元对 `(Y₀,Y₁)`，`Separates r Y₀ Y₁ ↔ r.sideA = Y₀ ∨ r.sideA = Y₁`
+（用 `Split.sideB_eq_sdiff` + 两侧不交把「另一支」逼成补集）；再用 **`r ↦ r.sideA` 单射**
+（`Phylo.Stat.CASTERTopoSplit.eq_of_sideA_eq`）把滤子映到**二元集** `{Y₀,Y₁}`，
+其基数为 `2`（`Y₀ ≠ Y₁` 来自不交 + 非空）。三族各 `2` 由同一条 `count2` 三次实例化得到。 -/
+theorem card_separates_four_gap :
     ((Finset.univ : Finset (Split (Fin 4))).filter
-      (fun r => Separates r ({0, 3} : Finset (Fin 4)) ({1, 2} : Finset (Fin 4)))).card = 2 ∧
-    ((Finset.univ : Finset (Split (Fin 4))).filter
-      (fun r => Separates r ({0, 1} : Finset (Fin 4)) ({2, 3} : Finset (Fin 4)))).card = 2
+        (fun r => Separates r ({0, 2} : Finset (Fin 4)) ({1, 3} : Finset (Fin 4)))).card = 2 ∧
+      ((Finset.univ : Finset (Split (Fin 4))).filter
+        (fun r => Separates r ({0, 3} : Finset (Fin 4)) ({1, 2} : Finset (Fin 4)))).card = 2 ∧
+      ((Finset.univ : Finset (Split (Fin 4))).filter
+        (fun r => Separates r ({0, 1} : Finset (Fin 4)) ({2, 3} : Finset (Fin 4)))).card = 2 := by
+  -- ① 互补 2 元对：`Separates` 等价于「`sideA` 恰是其中一支」
+  have key : ∀ (Y₀ Y₁ : Finset (Fin 4)) (r : Split (Fin 4)),
+      Y₀.card = 2 → Y₁.card = 2 → Disjoint Y₀ Y₁ → Y₀ ∪ Y₁ = Finset.univ →
+      (Separates r Y₀ Y₁ ↔ r.sideA = Y₀ ∨ r.sideA = Y₁) := by
+    intro Y₀ Y₁ r h0 h1 hd hu
+    -- 两支各自的不交关系：`(Y₀,Y₁)` 互补对之间（`hd`）、以及 split 两侧之间
+    have hnot : ∀ x : Fin 4, x ∈ Y₀ → x ∈ Y₁ → False :=
+      fun x a b => Finset.disjoint_left.mp hd a b
+    have hnotr : ∀ x : Fin 4, x ∈ r.sideA → x ∈ r.sideB → False :=
+      fun x a b => Finset.disjoint_left.mp r.disjoint_sides a b
+    have hsub : ∀ {x : Fin 4}, x ∈ r.sideA → x ∈ Y₀ ∪ Y₁ := by
+      intro x _; rw [hu]; exact Finset.mem_univ x
+    constructor
+    · rintro (⟨hA, hB⟩ | ⟨hA, hB⟩)
+      · left
+        refine Finset.Subset.antisymm (fun x hx => ?_) hA
+        rcases Finset.mem_union.mp (hsub hx) with h | h
+        · exact h
+        · exact (hnotr x hx (hB h)).elim
+      · right
+        refine Finset.Subset.antisymm (fun x hx => ?_) hA
+        rcases Finset.mem_union.mp (hsub hx) with h | h
+        · exact (hnotr x hx (hB h)).elim
+        · exact h
+    · intro hdis
+      rcases hdis with hEq | hEq
+      · refine Or.inl ⟨fun x hx => ?_, fun x hx => ?_⟩
+        · rw [hEq]; exact hx
+        · rw [r.sideB_eq_sdiff, Finset.mem_sdiff]
+          refine ⟨Finset.mem_univ _, fun hxA => ?_⟩
+          rw [hEq] at hxA
+          exact (hnot x hxA hx).elim
+      · refine Or.inr ⟨fun x hx => ?_, fun x hx => ?_⟩
+        · rw [hEq]; exact hx
+        · rw [r.sideB_eq_sdiff, Finset.mem_sdiff]
+          refine ⟨Finset.mem_univ _, fun hxA => ?_⟩
+          rw [hEq] at hxA
+          exact (hnot x hx hxA).elim
+  -- ② 计数：把滤子经 `r ↦ r.sideA` 搬到二元集 `{Y₀, Y₁}`
+  have count2 : ∀ (Y₀ Y₁ : Finset (Fin 4)),
+      Y₀.card = 2 → Y₁.card = 2 → Disjoint Y₀ Y₁ → Y₀ ∪ Y₁ = Finset.univ →
+      ((Finset.univ : Finset (Split (Fin 4))).filter (fun r => Separates r Y₀ Y₁)).card = 2 := by
+    intro Y₀ Y₁ h0 h1 hd hu
+    have hne01 : Y₀ ≠ Y₁ := by
+      intro hEq
+      obtain ⟨x, hx⟩ := Finset.card_pos.mp (by omega : 0 < Y₀.card)
+      exact (Finset.disjoint_left.mp hd hx (hEq ▸ hx)).elim
+    have hne : Y₀.Nonempty := Finset.card_pos.mp (by omega)
+    have hcom : Y₀ᶜ.Nonempty := Phylo.compl_nonempty_of_ne_univ (by
+      intro hU
+      rw [hU, Finset.card_univ, Fintype.card_fin] at h0
+      omega)
+    have hne' : Y₁.Nonempty := Finset.card_pos.mp (by omega)
+    have hcom' : Y₁ᶜ.Nonempty := Phylo.compl_nonempty_of_ne_univ (by
+      intro hU
+      rw [hU, Finset.card_univ, Fintype.card_fin] at h1
+      omega)
+    have hf : ((Finset.univ : Finset (Split (Fin 4))).filter (fun r => Separates r Y₀ Y₁))
+        = (Finset.univ : Finset (Split (Fin 4))).filter
+            (fun r => r.sideA = Y₀ ∨ r.sideA = Y₁) :=
+      Finset.filter_congr fun r _ => key Y₀ Y₁ r h0 h1 hd hu
+    set s : Finset (Split (Fin 4)) := (Finset.univ : Finset (Split (Fin 4))).filter
+      (fun r => r.sideA = Y₀ ∨ r.sideA = Y₁) with hs
+    have hinj : Set.InjOn (fun r : Split (Fin 4) => r.sideA) ↑s := by
+      intro r1 _ r2 _ h
+      exact Phylo.Stat.CASTERTopoSplit.eq_of_sideA_eq h
+    have himg : s.image (fun r : Split (Fin 4) => r.sideA) = {Y₀, Y₁} := by
+      ext T
+      constructor
+      · intro hT
+        obtain ⟨r, hr, rfl⟩ := Finset.mem_image.mp hT
+        rw [hs, Finset.mem_filter] at hr
+        simpa [Finset.mem_insert, Finset.mem_singleton] using hr.2
+      · intro hT
+        rcases Finset.mem_insert.mp hT with hT0 | hT1
+        · refine Finset.mem_image.mpr ⟨Phylo.splitOf Y₀ hne hcom, ?_, ?_⟩
+          · rw [hs, Finset.mem_filter]
+            exact ⟨Finset.mem_univ _, Or.inl (Phylo.splitOf_sideA Y₀ hne hcom)⟩
+          · rw [Phylo.splitOf_sideA Y₀ hne hcom]
+            exact hT0.symm
+        · rw [Finset.mem_singleton] at hT1
+          refine Finset.mem_image.mpr ⟨Phylo.splitOf Y₁ hne' hcom', ?_, ?_⟩
+          · rw [hs, Finset.mem_filter]
+            exact ⟨Finset.mem_univ _, Or.inr (Phylo.splitOf_sideA Y₁ hne' hcom')⟩
+          · rw [Phylo.splitOf_sideA Y₁ hne' hcom']
+            exact hT1.symm
+    rw [hf, ← Finset.card_image_of_injOn hinj, himg, Finset.card_insert_of_notMem,
+      Finset.card_singleton]
+    simp [hne01]
+  exact ⟨count2 {0, 2} {1, 3} (by decide) (by decide) (by decide) (by decide),
+    count2 {0, 3} {1, 2} (by decide) (by decide) (by decide) (by decide),
+    count2 {0, 1} {2, 3} (by decide) (by decide) (by decide) (by decide)⟩
 
 end Phylo.Stat.SplitProbabilities
