@@ -562,6 +562,273 @@ theorem arrowTreeQuasiOrder_gap_refuted : ¬ arrowTreeQuasiOrder_gap.{u} := by
       ULift.up 0, ULift.up 1, ⟨rfl, rfl, rfl⟩, ?_⟩
     rintro ⟨i, i', hii, ⟨hi, -, -⟩, ⟨hi', -, -⟩⟩
     exact hii (hi.trans hi'.symm)
+/-! ## 9. ★★★ `mnCorollary_gap` 的收口（W12e4）
+
+路线（与派单略有不同，★D 核过后选的更短路径）：把推论归结为**决定性族** `𝒟 = decisiveFamily C`
+的三条纯组合性质 —— **非空**（由 (A) autonomous）、**向上封闭**（由 (M)）、**置换不变**（由 (S)）——
+它们合起来给出 `𝒟 = {D : t ≤ |D|}`（`t` = 最小票数），再由 n-tree 值性 + 交叉簇把 `t` 逼成
+**严格多数** `k < 2t`。
+
+⚠️ **不需要「交封闭」**（派单里提到的那一条）：向上封闭 ＋ 置换不变就已经定死 `𝒟` 的形状
+（置换不变把「成员资格」压成「只看基数」，向上封闭把基数补成阈值）；
+★D 脚本 `scripts/msc/w12e_mn_corollary_check.py` 对 `k = 0…4` **穷举全部子集族**验证了这条组合核心
+（15 个满足三条性质的族全部是阈值族、0 反例；去掉置换不变性时 `k = 2` 有 2 个反例、`k = 3` 有 15 个）。
+⇒ 对称性 (S) 是不可省的，交封闭是可省的。 -/
+
+/-! ### 9.1 (b) 实现引理：任意支持集都能被 n-tree 剖面实现 -/
+
+/-- ★★★ **实现引理**：对任意 `D : Finset (Fin k)` 与簇 `X`，存在**全 n-tree** 剖面使 `X`
+的支持集恰为 `D`（`i ∈ D ↦ {X}`，否则 `↦ ∅`）。 -/
+theorem exists_nTree_profile_support_eq {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ}
+    {X : Finset α} (hX : IsCluster X) (D : Finset (Fin k)) :
+    ∃ P : Profile (α := α) k, (∀ i, IsNTree (P i)) ∧ support P X = D := by
+  classical
+  refine ⟨fun i => if i ∈ D then ({X} : Finset (Finset α)) else ∅, ?_, ?_⟩
+  · intro i
+    by_cases h : i ∈ D
+    · simpa [h] using isNTree_singleton (α := α) hX
+    · simpa [h] using isNTree_empty (α := α)
+  · ext i
+    simp only [support, Finset.mem_filter, Finset.mem_univ, true_and]
+    by_cases h : i ∈ D <;> simp [h]
+
+/-! ### 9.2 (a) 决定性族的闭包性质 -/
+
+/-- ★★★ **决定性族向上封闭**（由 (M) 单调性）：`D ∈ 𝒟`、`D ⊆ D'` ⟹ `D' ∈ 𝒟`。 -/
+theorem decisiveFamily_upward {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ}
+    {C : ConsensusFn (α := α) k} (hM : Monotone C)
+    {D D' : Finset (Fin k)} (hD : D ∈ decisiveFamily C) (hsub : D ⊆ D') :
+    D' ∈ decisiveFamily C := by
+  classical
+  rw [mem_decisiveFamily] at hD ⊢
+  obtain ⟨P, X, hX, hmem, hsup⟩ := hD
+  refine ⟨fun i => if i ∈ D' then ({X} : Finset (Finset α)) else ∅, X, hX, ?_, ?_⟩
+  · refine hM P _ X hX (fun i hi => ?_) hmem
+    have hiD : i ∈ D := by rw [← hsup]; simpa [support] using hi
+    simp [hsub hiD]
+  · ext i
+    simp only [support, Finset.mem_filter, Finset.mem_univ, true_and]
+    by_cases h : i ∈ D' <;> simp [h]
+
+/-- 置换剖面的支持集 = 支持集的**像**。 -/
+theorem support_comp_perm {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ}
+    (P : Profile (α := α) k) (σ : Equiv.Perm (Fin k)) (X : Finset α) :
+    support (fun i => P (σ i)) X = (support P X).image σ.symm := by
+  ext i
+  simp only [support, Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+  constructor
+  · intro hi
+    exact ⟨σ i, hi, by simp⟩
+  · rintro ⟨j, hj, rfl⟩
+    simpa using hj
+
+/-- ★★★ **决定性族置换不变**（由 (S) 对称性）：`D ∈ 𝒟` ⟹ `D.image σ ∈ 𝒟`。 -/
+theorem decisiveFamily_perm {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ}
+    {C : ConsensusFn (α := α) k} (hS : Symmetric C)
+    {D : Finset (Fin k)} (hD : D ∈ decisiveFamily C) (σ : Equiv.Perm (Fin k)) :
+    D.image σ ∈ decisiveFamily C := by
+  classical
+  rw [mem_decisiveFamily] at hD ⊢
+  obtain ⟨P, X, hX, hmem, hsup⟩ := hD
+  refine ⟨fun i => P (σ.symm i), X, hX, ?_, ?_⟩
+  · rw [hS P σ.symm]
+    exact hmem
+  · rw [support_comp_perm, hsup]
+    rfl
+
+/-- ★★★ **等基数的 Finset 由置换相联系**（`D ≃ D'` 与 `Dᶜ ≃ D'ᶜ` 拼成 `Fin k` 的置换；
+再用「像 ⊆ `D'` ＋ 基数相等」收口）。这是把 (S) 的「置换不变」变成「只看基数」的关键一步。 -/
+theorem exists_perm_image_eq {k : ℕ} {D D' : Finset (Fin k)} (h : D.card = D'.card) :
+    ∃ σ : Equiv.Perm (Fin k), D.image σ = D' := by
+  classical
+  let e : ↥D ≃ ↥D' := Fintype.equivOfCardEq (by rw [Fintype.card_coe, Fintype.card_coe, h])
+  have hccard : Dᶜ.card = D'ᶜ.card := by
+    rw [Finset.card_compl, Finset.card_compl, h]
+  let e' : ↥Dᶜ ≃ ↥D'ᶜ :=
+    Fintype.equivOfCardEq (by rw [Fintype.card_coe, Fintype.card_coe, hccard])
+  let φ : Fin k → Fin k := fun x => if hx : x ∈ D then (e ⟨x, hx⟩ : Fin k)
+    else (e' ⟨x, by simpa using hx⟩ : Fin k)
+  let ψ : Fin k → Fin k := fun y => if hy : y ∈ D' then (e.symm ⟨y, hy⟩ : Fin k)
+    else (e'.symm ⟨y, by simpa using hy⟩ : Fin k)
+  have hφψ : ∀ x, ψ (φ x) = x := by
+    intro x
+    by_cases hx : x ∈ D
+    · have hx' : (e ⟨x, hx⟩ : Fin k) ∈ D' := (e ⟨x, hx⟩).2
+      simp only [φ, ψ, dite_eq_left hx, dite_eq_left hx']
+      rw [show (⟨(e ⟨x, hx⟩ : Fin k), hx'⟩ : ↥D') = e ⟨x, hx⟩ from Subtype.ext rfl]
+      simp
+    · have hx'' : ¬ ((e' ⟨x, by simpa using hx⟩ : Fin k) ∈ D') :=
+        fun hmem => (Finset.mem_compl.mp (e' ⟨x, by simpa using hx⟩).2) hmem
+      simp only [φ, ψ, dite_eq_right hx, dite_eq_right hx'']
+      rw [show (⟨(e' ⟨x, by simpa using hx⟩ : Fin k), Finset.mem_compl.mpr hx''⟩ : ↥D'ᶜ)
+          = e' ⟨x, by simpa using hx⟩ from Subtype.ext rfl]
+      simp
+  have hψφ : ∀ y, φ (ψ y) = y := by
+    intro y
+    by_cases hy : y ∈ D'
+    · have hy' : (e.symm ⟨y, hy⟩ : Fin k) ∈ D := (e.symm ⟨y, hy⟩).2
+      simp only [φ, ψ, dite_eq_left hy, dite_eq_left hy']
+      rw [show (⟨(e.symm ⟨y, hy⟩ : Fin k), hy'⟩ : ↥D) = e.symm ⟨y, hy⟩ from Subtype.ext rfl]
+      simp
+    · have hy'' : ¬ ((e'.symm ⟨y, by simpa using hy⟩ : Fin k) ∈ D) :=
+        fun hmem => (Finset.mem_compl.mp (e'.symm ⟨y, by simpa using hy⟩).2) hmem
+      simp only [φ, ψ, dite_eq_right hy, dite_eq_right hy'']
+      rw [show (⟨(e'.symm ⟨y, by simpa using hy⟩ : Fin k), Finset.mem_compl.mpr hy''⟩ : ↥Dᶜ)
+          = e'.symm ⟨y, by simpa using hy⟩ from Subtype.ext rfl]
+      simp
+  let σ : Equiv.Perm (Fin k) :=
+    { toFun := φ, invFun := ψ, left_inv := hφψ, right_inv := hψφ }
+  refine ⟨σ, Finset.eq_of_subset_of_card_le ?_ ?_⟩
+  · intro x hx
+    obtain ⟨y, hy, rfl⟩ := Finset.mem_image.mp hx
+    show φ y ∈ D'
+    simp only [φ, dite_eq_left hy]
+    exact (e ⟨y, hy⟩).2
+  · rw [Finset.card_image_of_injective _ σ.injective, h]
+
+/-- ★★★ **交叉簇的存在**：只要有**一个**簇，就有两个**交叉**的簇。 -/
+theorem exists_crossing_clusters {α : Type*} [Fintype α] [DecidableEq α]
+    (hX : ∃ X : Finset α, IsCluster X) :
+    ∃ X Y : Finset α, IsCluster X ∧ IsCluster Y ∧
+      ¬ (X ⊆ Y ∨ Y ⊆ X ∨ Disjoint X Y) := by
+  classical
+  obtain ⟨X, hc2, hcuniv⟩ := hX
+  obtain ⟨a, haX⟩ := Finset.card_pos.mp (by omega : 0 < X.card)
+  have hb : ∃ b ∈ X, b ≠ a := by
+    by_contra hcon
+    have hsub : X ⊆ {a} := by
+      intro x hx
+      by_contra hxa
+      exact hcon ⟨x, hx, by simpa using hxa⟩
+    have := Finset.card_le_card hsub
+    simp at this
+    omega
+  obtain ⟨b, hbX, hba⟩ := hb
+  have hc : ∃ c, c ∉ X := by
+    by_contra hcon
+    refine hcuniv (Finset.eq_univ_of_forall fun c => ?_)
+    by_contra hcx
+    exact hcon ⟨c, hcx⟩
+  obtain ⟨c, hcX⟩ := hc
+  have hca : c ≠ a := fun he => hcX (he ▸ haX)
+  have hcb : c ≠ b := fun he => hcX (he ▸ hbX)
+  have hab : a ≠ b := hba.symm
+  have hca' : a ≠ c := fun he => hca he.symm
+  have hcb' : b ≠ c := fun he => hcb he.symm
+  have hcard_ab : ({a, b} : Finset α).card = 2 := by
+    rw [Finset.card_insert_of_notMem (by simp [hab]), Finset.card_singleton]
+  have hcard_ac : ({a, c} : Finset α).card = 2 := by
+    rw [Finset.card_insert_of_notMem (by simp [hca']), Finset.card_singleton]
+  refine ⟨{a, b}, {a, c}, ⟨by simp [hcard_ab], ?_⟩, ⟨by simp [hcard_ac], ?_⟩, ?_⟩
+  · intro he
+    have : c ∈ ({a, b} : Finset α) := he.symm ▸ (Finset.mem_univ c)
+    rw [Finset.mem_insert, Finset.mem_singleton] at this
+    rcases this with h | h
+    · exact hca h
+    · exact hcb h
+  · intro he
+    have : b ∈ ({a, c} : Finset α) := he.symm ▸ (Finset.mem_univ b)
+    rw [Finset.mem_insert, Finset.mem_singleton] at this
+    rcases this with h | h
+    · exact hba h
+    · exact hcb' h
+  · rintro (hsub | hsub | hdisj)
+    · have : b ∈ ({a, c} : Finset α) := hsub (by simp : b ∈ ({a, b} : Finset α))
+      rw [Finset.mem_insert, Finset.mem_singleton] at this
+      rcases this with h | h
+      · exact hba h
+      · exact hcb' h
+    · have : c ∈ ({a, b} : Finset α) := hsub (by simp : c ∈ ({a, c} : Finset α))
+      rw [Finset.mem_insert, Finset.mem_singleton] at this
+      rcases this with h | h
+      · exact hca h
+      · exact hcb h
+    · exact (Finset.disjoint_left.mp hdisj)
+        (by simp : a ∈ ({a, b} : Finset α)) (by simp : a ∈ ({a, c} : Finset α))
+
+/-! ### 9.3 决定性族 ⟹ 阈值规则 -/
+
+/-- 决定性族规则在 `𝒟 = {D : t ≤ |D|}` 时就是阈值规则。 -/
+theorem decisiveRule_eq_thresholdRule {α : Type*} [Fintype α] [DecidableEq α] {k t : ℕ}
+    {C : ConsensusFn (α := α) k} (h : decisiveFamily C = {D | t ≤ D.card})
+    (P : Profile (α := α) k) :
+    decisiveRule (α := α) k (decisiveFamily C) P = ThresholdRule (α := α) k t P := by
+  classical
+  ext X
+  rw [mem_decisiveRule, mem_thresholdRule]
+  constructor
+  · rintro ⟨hX, hmem⟩
+    exact ⟨hX, by rw [h] at hmem; exact hmem⟩
+  · rintro ⟨hX, hmem⟩
+    exact ⟨hX, by rw [h]; exact hmem⟩
+
+/-- ★★★ **决定性族 = 阈值族**（非空 ＋ 向上封闭 ＋ 置换不变 ⟹ `𝒟 = {D : t ≤ |D|}`，
+`t` = `𝒟` 中最小票数）。 -/
+theorem decisiveFamily_eq_threshold {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ}
+    {C : ConsensusFn (α := α) k} (hM : Monotone C) (hS : Symmetric C)
+    (hne : (decisiveFamily C).Nonempty) :
+    ∃ t : ℕ, decisiveFamily C = {D | t ≤ D.card} := by
+  classical
+  have hex : ∃ n : ℕ, ∃ D ∈ decisiveFamily C, D.card = n := by
+    obtain ⟨D, hD⟩ := hne
+    exact ⟨D.card, D, hD, rfl⟩
+  refine ⟨Nat.find hex, ?_⟩
+  ext D
+  constructor
+  · intro hD
+    by_contra hlt
+    exact Nat.find_min hex (not_le.mp hlt) ⟨D, hD, rfl⟩
+  · intro hle
+    obtain ⟨D₁, hD₁sub, hD₁card⟩ :=
+      Finset.exists_subset_card_eq (s := D) (n := Nat.find hex) hle
+    obtain ⟨D₂, hD₂, hD₂card⟩ := Nat.find_spec hex
+    have hcard : D₂.card = D₁.card := by rw [hD₂card, hD₁card]
+    obtain ⟨σ, hσ⟩ := exists_perm_image_eq hcard
+    have hD₁ : D₁ ∈ decisiveFamily C := by
+      rw [← hσ]
+      exact decisiveFamily_perm hS hD₂ σ
+    exact decisiveFamily_upward hM hD₁ hD₁sub
+
+/-! ### 9.4 ★★★ 推论本体（原 `def mnCorollary_gap` 逐字保留，这里证成定理） -/
+
+/-- ★★★ **McMorris–Neumann 推论**（文献 429–436 行）：满足 `(MN)`、`(M)`、`(S)`、`(A)`、
+n-tree 值且输出只含簇的共识函数**恰是严格多数阈值规则**（`k < 2t`）。
+
+若 `α` **没有簇**，则 `C P = ∅ = ThresholdRule k t P`（`ClusterValued` 逼出 `C P = ∅`），取
+`t := k + 1` 即得；否则由 (A) 取到簇、`𝒟` 非空，再用 §9.3 的形状 ＋ ★★★
+`thresholdRule_not_isNTree_of_le`（弱多数不可能保持 n-tree）逼出 `k < 2t`。 -/
+theorem mnCorollary_gap_proof :
+    ∀ {α : Type*} [Fintype α] [DecidableEq α] {k : ℕ} (C : ConsensusFn (α := α) k),
+      MNSet C → Monotone C → Symmetric C → Autonomous C → NTreeValued C → ClusterValued C →
+        ∃ t : ℕ, k < 2 * t ∧
+          ∀ P : Profile (α := α) k, (∀ i, IsNTree (P i)) →
+            C P = ThresholdRule (α := α) k t P := by
+  intro α _ _ k C hMN hM hS hA hNT hCl
+  by_cases hclu : ∃ X : Finset α, IsCluster X
+  · have hX₀ : IsCluster hclu.choose := hclu.choose_spec
+    obtain ⟨X₁, Y₁, hX₁, hY₁, hcross₁⟩ := exists_crossing_clusters (α := α) hclu
+    obtain ⟨P₀, _, hmem₀⟩ := hA hclu.choose hX₀
+    have hne : (decisiveFamily C).Nonempty :=
+      ⟨support P₀ hclu.choose, P₀, hclu.choose, hX₀, hmem₀, rfl⟩
+    obtain ⟨t, ht⟩ := decisiveFamily_eq_threshold (α := α) (k := k) hM hS hne
+    have hCP : ∀ P : Profile (α := α) k, C P = ThresholdRule (α := α) k t P := by
+      intro P
+      rw [eq_decisiveRule_of_mnSet hMN hCl P, decisiveRule_eq_thresholdRule ht P]
+    have hkt : k < 2 * t := by
+      by_contra hcon
+      exact (thresholdRule_not_isNTree_of_le (α := α) (k := k) (t := t) (not_lt.mp hcon)
+          hX₁ hY₁ hcross₁)
+        (fun P hP => by rw [← hCP P]; exact hNT P hP)
+    exact ⟨t, hkt, fun P _ => hCP P⟩
+  · refine ⟨k + 1, by omega, fun P _ => ?_⟩
+    have h1 : ThresholdRule (α := α) k (k + 1) P = ∅ := by
+      refine Finset.eq_empty_iff_forall_notMem.mpr fun X hX => ?_
+      rw [mem_thresholdRule] at hX
+      exact hclu ⟨X, hX.1⟩
+    have h2 : C P = ∅ := by
+      refine Finset.eq_empty_iff_forall_notMem.mpr fun X hX => ?_
+      exact hclu ⟨X, hCl P X hX⟩
+    rw [h1, h2]
 
 
 end NTreeConsensus
