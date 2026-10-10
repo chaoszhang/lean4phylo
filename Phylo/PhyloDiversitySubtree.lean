@@ -546,24 +546,26 @@ theorem exists_unblocked_of_hangOff_disjoint (T : Cladogram X) {W W' : Finset X}
 
 ⚠️ 命名如实：结论以 **(C)（挂点两两不交）**为前提；**(C) 本批未证**。 -/
 theorem pdExchange_gap_of_hangOff_disjoint (T : Phylogram X)
-    (hC : ∀ (W : Finset X) (z : X), z ∉ W → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+    (hC : ∀ (W : Finset X) (z : X), z ∉ W → 3 ≤ W.card → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
       z ∈ Cladogram.HangOff T.toCladogram W w₁ →
         z ∈ Cladogram.HangOff T.toCladogram W w₂ → w₁ = w₂) :
     pdExchange_gap T := by
   classical
   refine pdExchange_gap_of_counting T fun W W' hW' hlt => ?_
+  have h3 : 3 ≤ W.card := by omega
   have hcard : (W' \ W).card < (W \ W').card := by
     have ha := Finset.card_inter_add_card_sdiff W' W
     have hb := Finset.card_inter_add_card_sdiff W W'
     rw [Finset.inter_comm W W'] at hb
     omega
-  exact exists_unblocked_of_hangOff_disjoint T.toCladogram (hC W) hcard
+  exact exists_unblocked_of_hangOff_disjoint T.toCladogram
+    (fun z hz w₁ hw₁ w₂ hw₂ h1 h2 => hC W z hz h3 w₁ hw₁ w₂ hw₂ h1 h2) hcard
 
 /-- ★★★ **(C) ⇒ 修复形态**（原 `def greedy_gap_correct_shape` **逐字保留**）：
 由 `pdExchange_gap_of_hangOff_disjoint` 与已入库的
 `greedy_gap_correct_shape_of_exchange` 合成。⚠️ **条件形态**（前提 ＝ (C) ✓），命名如实。 -/
 theorem greedy_gap_correct_shape_of_hangOff_disjoint (T : Phylogram X)
-    (hC : ∀ (W : Finset X) (z : X), z ∉ W → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+    (hC : ∀ (W : Finset X) (z : X), z ∉ W → 3 ≤ W.card → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
       z ∈ Cladogram.HangOff T.toCladogram W w₁ →
         z ∈ Cladogram.HangOff T.toCladogram W w₂ → w₁ = w₂) :
     greedy_gap_correct_shape T :=
