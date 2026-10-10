@@ -2333,6 +2333,139 @@ theorem quad_zero {X : Type*} (u w v z : X) : quad (fun _ _ : X => (0 : ℝ)) u 
 theorem tri_zero {X : Type*} (u v w : X) : tri (fun _ _ : X => (0 : ℝ)) u v w = 0 := by
   simp [tri]
 
+/-- `sepInd` 在对角线上为 `0`。 -/
+theorem sepInd_diag {n : ℕ} (s : Split (Fin n)) (x : Fin n) : sepInd s x x = 0 := by
+  have hc : s.sideB = s.sideAᶜ := sideB_eq_compl s
+  unfold sepInd
+  rw [ite_eq_right]
+  rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+  · rw [hc, Finset.mem_compl] at h2; exact h2 h1
+  · rw [hc, Finset.mem_compl] at h1; exact h1 h2
+
+/-- ★ `φ ↦ quad φ u w v z` 是**线性映射**（`hlin` 的 D/H 支原料）。 -/
+noncomputable def quadLM {X : Type*} (u w v z : X) : (X → X → ℝ) →ₗ[ℝ] ℝ where
+  toFun φ := quad φ u w v z
+  map_add' φ ψ := by simp only [quad, Pi.add_apply]; ring
+  map_smul' c φ := by simp only [quad, Pi.smul_apply, smul_eq_mul, RingHom.id_apply]; ring
+
+/-- ★ `φ ↦ tri φ u v w` 是**线性映射**（`hlin` 的 L 支原料）。 -/
+noncomputable def triLM {X : Type*} (u v w : X) : (X → X → ℝ) →ₗ[ℝ] ℝ where
+  toFun φ := tri φ u v w
+  map_add' φ ψ := by simp only [tri, Pi.add_apply]; ring
+  map_smul' c φ := by simp only [tri, Pi.smul_apply, smul_eq_mul, RingHom.id_apply]; ring
+
+/-- ★★ **`quad_sum_family`**（`hlin`）：`quad` 在「函数族的有限线性组合」上线性。 -/
+theorem quad_sum_family {ι : Type*} [Fintype ι] {X : Type*} (c : ι → ℝ) (φ : ι → X → X → ℝ)
+    (u w v z : X) :
+    quad (fun p q => ∑ i, c i * φ i p q) u w v z = ∑ i, c i * quad (φ i) u w v z := by
+  have hsum : (fun p q => ∑ i, c i * φ i p q) = ∑ i, c i • φ i := by
+    funext p q
+    simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
+  rw [hsum]
+  change (quadLM u w v z) (∑ i, c i • φ i) = ∑ i, c i * quad (φ i) u w v z
+  rw [map_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [map_smul, smul_eq_mul]
+  rfl
+
+/-- ★★ **`tri_sum_family`**（`hlin` 的 L 支）。 -/
+theorem tri_sum_family {ι : Type*} [Fintype ι] {X : Type*} (c : ι → ℝ) (φ : ι → X → X → ℝ)
+    (u v w : X) :
+    tri (fun p q => ∑ i, c i * φ i p q) u v w = ∑ i, c i * tri (φ i) u v w := by
+  have hsum : (fun p q => ∑ i, c i * φ i p q) = ∑ i, c i • φ i := by
+    funext p q
+    simp only [Finset.sum_apply, Pi.smul_apply, smul_eq_mul]
+  rw [hsum]
+  change (triLM u v w) (∑ i, c i • φ i) = ∑ i, c i * tri (φ i) u v w
+  rw [map_sum]
+  refine Finset.sum_congr rfl fun i _ => ?_
+  rw [map_smul, smul_eq_mul]
+  rfl
+
+/-- ★ **`hz` 原料**：`Alm` 相等 ⇒ 差函数为 `0`。 -/
+theorem alm_diff_eq_zero (n : ℕ) {b₁ b₂ : Arc n → ℝ} (h : Alm n b₁ = Alm n b₂) :
+    (fun p q : Fin n => ∑ i : Arc n, (b₁ i - b₂ i) * sepInd (arcSplit i) p q) = 0 := by
+  funext p q
+  simp only [Pi.zero_apply]
+  by_cases hpq : p = q
+  · subst hpq
+    refine Finset.sum_eq_zero fun i _ => ?_
+    rw [sepInd_diag, mul_zero]
+  · have hdiff : (∑ i : Arc n, b₁ i * sepInd (arcSplit i) p q)
+        = ∑ i : Arc n, b₂ i * sepInd (arcSplit i) p q := by
+      rcases lt_or_gt_of_ne hpq with hlt | hgt
+      · have hh := congrFun h ⟨(p, q), hlt⟩
+        change (∑ i : Arc n, b₁ i * sepInd (arcSplit i) p q)
+          = ∑ i : Arc n, b₂ i * sepInd (arcSplit i) p q at hh
+        exact hh
+      · have hh := congrFun h ⟨(q, p), hgt⟩
+        change (∑ i : Arc n, b₁ i * sepInd (arcSplit i) q p)
+          = ∑ i : Arc n, b₂ i * sepInd (arcSplit i) q p at hh
+        calc (∑ i : Arc n, b₁ i * sepInd (arcSplit i) p q)
+            = ∑ i : Arc n, b₁ i * sepInd (arcSplit i) q p :=
+              Finset.sum_congr rfl fun i _ => by rw [sepInd_comm]
+          _ = ∑ i : Arc n, b₂ i * sepInd (arcSplit i) q p := hh
+          _ = ∑ i : Arc n, b₂ i * sepInd (arcSplit i) p q :=
+              Finset.sum_congr rfl fun i _ => by rw [sepInd_comm]
+    have hsplit : (∑ i : Arc n, (b₁ i - b₂ i) * sepInd (arcSplit i) p q)
+        = (∑ i : Arc n, b₁ i * sepInd (arcSplit i) p q)
+          - ∑ i : Arc n, b₂ i * sepInd (arcSplit i) p q := by
+      rw [← Finset.sum_sub_distrib]
+      exact Finset.sum_congr rfl fun i _ => by ring
+    rw [hsplit, hdiff, sub_self]
+
+/-- ★★ **`Alm` 单射（`3 ≤ n`）**：对每个弧 `idx` 用 §7 的 `weights_eq_of_functional`，
+泛函取 §7 逆矩阵的对应行（L / H / D），前提由 `hper_*` ＋ `arc_eq_of_coord`/`arc_snd_ne_last` ＋ 零函数引理给出。 -/
+theorem alm_injective_of_three_le {n : ℕ} (hn : 3 ≤ n) : Function.Injective (Alm n) := by
+  intro b₁ b₂ h
+  have hz0 := alm_diff_eq_zero n h
+  funext idx
+  by_cases hL : idx.1.1.val = 0 ∧ idx.1.2.val = 0
+  · refine weights_eq_of_functional (arcSplit (n := n)) b₁ b₂ idx
+      (fun δ => tri δ (hZero idx) (hOne idx) (hLast idx))
+      (fun i => (i.1.1.val = 0 ∧ i.1.2.val = 0) ∨ (i.1.1.val = 1 ∧ i.1.2.val = n - 1))
+      ?_ ?_ ?_ ?_ (Or.inl hL)
+    · exact tri_sum_family (fun i => b₁ i - b₂ i) (fun i => sepInd (arcSplit i))
+        (hZero idx) (hOne idx) (hLast idx)
+    · rw [hz0]
+      exact tri_zero (hZero idx) (hOne idx) (hLast idx)
+    · intro i
+      exact hper_l idx hL.1 hL.2 hn i
+    · intro i hi
+      rcases hi with hi | hi
+      · exact arc_eq_of_coord (by omega) (by omega)
+      · exact absurd hi.2 (arc_snd_ne_last i)
+  · by_cases hH : idx.1.1.val = 0
+    · have hne0 : idx.1.2.val ≠ 0 := fun h0 => hL ⟨hH, h0⟩
+      have hidxj : 1 ≤ idx.1.2.val := by omega
+      refine weights_eq_of_functional (arcSplit (n := n)) b₁ b₂ idx
+        (fun δ => quad δ (hLast idx) (hZero idx) idx.1.2 (dNext idx))
+        (fun i => (i.1.1.val = 0 ∧ i.1.2.val = idx.1.2.val) ∨
+          (i.1.1.val = idx.1.2.val + 1 ∧ i.1.2.val = n - 1))
+        ?_ ?_ ?_ ?_ (Or.inl ⟨hH, rfl⟩)
+      · exact quad_sum_family (fun i => b₁ i - b₂ i) (fun i => sepInd (arcSplit i))
+          (hLast idx) (hZero idx) idx.1.2 (dNext idx)
+      · rw [hz0]
+        exact quad_zero (hLast idx) (hZero idx) idx.1.2 (dNext idx)
+      · intro i
+        exact hper_h idx hH hidxj i
+      · intro i hi
+        rcases hi with hi | hi
+        · exact arc_eq_of_coord (by omega) hi.2
+        · exact absurd hi.2 (arc_snd_ne_last i)
+    · refine weights_eq_of_functional (arcSplit (n := n)) b₁ b₂ idx
+        (fun δ => quad δ (dPrev idx) idx.1.1 idx.1.2 (dNext idx))
+        (fun i => i.1.1.val = idx.1.1.val ∧ i.1.2.val = idx.1.2.val)
+        ?_ ?_ ?_ ?_ ⟨rfl, rfl⟩
+      · exact quad_sum_family (fun i => b₁ i - b₂ i) (fun i => sepInd (arcSplit i))
+          (dPrev idx) idx.1.1 idx.1.2 (dNext idx)
+      · rw [hz0]
+        exact quad_zero (dPrev idx) idx.1.1 idx.1.2 (dNext idx)
+      · intro i
+        exact hper_d idx hH i
+      · intro i hi
+        exact arc_eq_of_coord hi.1 hi.2
+
 end FunctionalMaterial
 
 end WeightAlgebra
