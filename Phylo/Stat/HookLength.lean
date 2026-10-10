@@ -578,4 +578,73 @@ example : hook ({({0, 1} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0, 1} = 
   rw [hook_def]
   decide
 
+/-! ## §9 第六轮：(a) `LE` 归纳原理 与 (b) `attach.prod` 桥接 —— **未落地**（如实登记）
+
+本轮目标是把 §10 闭形式归纳所需的两件 Lean 基础设施做出来。**两件都没能过 elaboration**，
+下面把**精确失败模式**与**根因分析**记全，供后续轮次接手。
+
+### (a) `LE` 的归纳原理
+
+**想要的形状**：`∀ C ∈ T, 2 ≤ C.card → (∀ B ∈ children T C, P B) → P C` ⇒
+`∀ C ∈ T, 2 ≤ C.card → P C`（对 `hook T C` 良基归纳）。
+
+⚠️ **根因（本轮最重要的发现）**：把归纳假设用在孩子 `B` 上时，
+`hook_lt_of_mem_children` 需要 **孩子自己的** 前提 `2 ≤ B.card`，
+但 **`B ∈ children T D` 并不蕴含 `2 ≤ B.card`**！**反例**：
+取 `T = {∅, {y}}`、`D = {y}`，则 `∅ ⊂ {y}` 且 `T` 中没有 `D'` 满足 `∅ ⊊ D' ⊊ {y}`，
+故 `∅ ∈ children T D`，而 `∅.card = 0`。
+⇒ 归纳原理需要**额外的结构假设**把这种退化的孩子排除掉
+（例如「`T` 中每个 ≥2 元素的成员，其孩子都 ≥2 元素」，或对
+`T = cladesOf n f` 直接验证）。**这不是 Lean 簿记问题，而是原理本身需要加强前提。**
+
+**另外两个（次要的）elaboration 障碍**（都已试过、都失败）：
+
+1. `WellFounded.induction (r := InvImage (· < ·) (hook T)) (InvImage.wf (r := (· < ·)) … )`
+   —— 在**独立探针**里同形状通过，但在本模块报
+   `… of sort Prop but is expected to have type Finset α`（隐式 `C`/`α` 错配）；
+   即使把 `maxHeartbeats` 提到 800000，仍报**确定性 `whnf` 超时**
+   （`InvImage` + `hook` 在 `Finset (Finset α)` + `Classical.decEq` 下的定义展开代价过高）。
+2. `Nat.strongRecOn` 版本 —— motive 必须是 `Sort`，写成 `∀ D, D ∈ T → 2 ≤ D.card → hook T D = m → P D`
+   时 Lean 报 `motive has type Prop of sort Type but is expected to have type …`。
+
+### (b) `attach.prod` 桥接
+
+`Finset.prod_attach` 本身给出
+`(s.attach.prod (fun Bx => f Bx.1)) = ∏ b ∈ s, f b`；难点全在**载体依赖**：
+`LE T B _` 的证据参数是 `B ∈ T`（由 `children_mem B.2` 给出），
+而写成 `∏ B ∈ children T C, LE T B (…)` 时，`∏` 的绑定**不把该成员证据放进局部上下文**
+（这正是 `attach` 形式的优点），于是 `(by assumption)` 拿不到 `B ∈ children T C`；
+`rename_i` 也只会捕到 `DecidableEq α`。⇒ 需要先把 `prod` 换成 `attach.prod` 形式再重写，
+这与 (a) 是同一处卡点。
+
+⇒ **(a)(b) 本轮如实未落地**；**没有**用 `sorry`、半成品或改写命题来冒充。
+本轮唯一可用增量是本轮**证出来的**下面这条（它是 (a) 的必要子步骤）：
+「孩子 ≥2 ⇒ 父 ≥2」。 -/
+
+/-- 孩子有 ≥ 2 个元素时，父也有（由 `B ⊂ C` 得 `B.card < C.card`）。 -/
+theorem two_le_card_of_child {T : Finset (Finset α)} {C B : Finset α}
+    (hB : B ∈ children T C) (hB2 : 2 ≤ B.card) : 2 ≤ C.card := by
+  have hlt : B.card < C.card := Finset.card_lt_card (children_ssubset hB)
+  omega
+
+/-! ### §9.1 ★B 反例见证（**已在 Lean 里核对**）
+
+上面「(a) 根因」那条反例，这里落成可复算的 `example`：
+在 `T = {∅, {0}}`（`Fin 2` 上）里，`∅` 是 `{0}` 的孩子，但 `∅.card = 0`。 -/
+
+/-- 反例族：`T = {∅, {0}}`。 -/
+def Tcex : Finset (Finset (Fin 2)) := {∅, {0}}
+
+/-- ★B：`∅ ∈ children Tcex {0}`（孩子可以只有 0 个元素 ⇒ `2 ≤ B.card` 不可推出）。 -/
+example : (∅ : Finset (Fin 2)) ∈ children Tcex {0} := by
+  rw [mem_children]
+  refine ⟨by decide, by decide, ?_⟩
+  intro D hDT hDsub hDsub2
+  fin_cases hDT <;> simp_all
+
+/-- ★B：该孩子的钩长为 `0`（而父 `{0}` 的钩长也是 `0`）。 -/
+example : hook Tcex (∅ : Finset (Fin 2)) = 0 := by
+  rw [hook_def]
+  decide
+
 end Phylo.Stat.HookLength
