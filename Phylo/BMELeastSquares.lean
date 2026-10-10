@@ -584,6 +584,47 @@ theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Ph
     intro k
     exact hnorm (idx.symm k).1 (idx.symm k).2
 
+/-! ## 10. ★★★ 子树倍增和接口（W12e18）：(d) 的等价形式
+
+`BmePauplinNormalization`（§7 = (d)）的**逐边**和
+
+　`Σ_{(i,j) ∈ plane} 2^{1−p_ij}·[e ∈ P_ij]`
+
+在交叉对 `i ∈ A`、`j ∈ B`（`e = s(a,b)` 的两侧）上满足 `p_ij = d_a(i) + 1 + d_b(j)`，故
+`2^{1−p_ij} = 2^{−d_a(i)}·2^{−d_b(j)}`；`plane` 是**有序**对 ⇒ 该和 `= 2·D_e(a)·D_e(b)`，其中
+
+　`D_e(u) := Σ_{x ∈ L_u(e)} (1/2)^{d_u(x)}`（`d_u(x)` = `u` 到叶 `x` 的路径边数）。
+
+⇒ **(d) ⟺ 每条边两侧的倍增和都等于 1**（这就是接下来要证的组合命题）。
+
+★D 穷举证据（`scripts/msc/w12e_bme_check.py`，n ≤ 6 全部标号无根二叉拓扑、**1068 次边检查**、
+精确有理数）：对每条边的**两侧**都有 `D = 1`，**0 反例** ✓（该检查本轮新增，脚本 md5 `e8f59914…` ✓）。
+
+本节先落下这个**接口**（定义 ＋ 非负性）；恒等式 `D = 1` 本身（= (d) 的本体）**未证** ✗，
+需对树做结构化归纳（「子树内叶到根的路径边数和」的分层），见 W12e18 报告。 -/
+
+/-- ★★★ **子树倍增和（(d) 的核心量）**：从 `u` 出发，沿 `u` 侧各叶的路径边数 `d_u(x)` 的
+`2^{−d_u(x)}` 加权和：
+
+　`D_e(u) := Σ_{x ∈ L_u(e)} (1/2)^{d_u(x)}`。
+
+★D 穷举（`scripts/msc/w12e_bme_check.py`：n ≤ 6 全部标号无根二叉拓扑、**1068 次边检查**）实测：
+对**每条边** `e = s(a,b)` 的两侧都有 `D_e(a) = 1`、`D_e(b) = 1`（**0 反例** ✓）。
+而 (d) 的 `plane` 和等于 `2·D_e(a)·D_e(b)`（交叉对 `i ∈ A, j ∈ B` 满足
+`2^{1−p_ij} = 2^{−d_a(i)}·2^{−d_b(j)}` ✓）⇒
+
+　**(d) ⟺ 每条边两侧的倍增和都等于 1** —— 这就是把 `BmePauplinNormalization` 归约到的
+「子树倍增和恒等式」（下一步的证明对象）。 -/
+noncomputable def sideDoublingSum (T : Cladogram X) (e : Sym2 T.V) (u : T.V) : ℝ :=
+  ∑ x ∈ T.sideLeaves e u, (1 / 2) ^ ((T.pathOf u (T.leaf x)).edges.length)
+
+omit [DecidableEq X] in
+/-- ★★ **倍增和非负**。 -/
+theorem sideDoublingSum_nonneg (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
+    0 ≤ sideDoublingSum T e u := by
+  refine Finset.sum_nonneg fun x _ => ?_
+  exact pow_nonneg (by norm_num) _
+
 end Dissimilarity
 
 end NJ
