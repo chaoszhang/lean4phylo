@@ -95,6 +95,7 @@ import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
 import Phylo.Stat.TrivialSplitCount
 import Phylo.Supertree
+import Phylo.SupertreeLimits
 import Phylo.TreeDistance
 
 /-!
