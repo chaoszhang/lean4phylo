@@ -380,7 +380,14 @@ theorem exists_weaklyCompatible_not_pairwiseCompatible :
 def SplitMetric (s : Split α) (x y : α) : ℝ :=
   if (x ∈ s.sideA ∧ y ∈ s.sideB) ∨ (x ∈ s.sideB ∧ y ∈ s.sideA) then 1 else 0
 
-/-- **split-prime**：对**每个** split 的隔离指数都是 `0`（文献 673–684 行）。 -/
+/-- **split-prime**：对**每个** split 的隔离指数都是 `0`（文献 673–684 行）。
+
+⚠️ **W12k ★D：本 `def` 不可满足 ✗**（`def` 原文未改）。取 `A = ∅` 时 `IsDSplit δ ∅ B` 是**空真**
+（`∀ a ∈ ∅, …`）⇒ `¬ IsDSplit δ ∅ B` **为假** ⇒ `SplitPrime δ` 对**任何** `δ` 都不成立：
+形式化见 `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_splitPrime`。
+根因：BdD 的「(partial) split」两侧**非空**，本定义**漏了非空侧条件**。
+忠实形态登记为 `Split.SplitPrimeStd`（非空侧 + 强形式；同文件），
+且库内形态（补齐非空侧后）⟹ 忠实形态（`splitPrimeStd_of_splitPrimeNE`）。 -/
 def SplitPrime (δ : α → α → ℝ) : Prop := ∀ A B : Finset α, ¬ IsDSplit δ A B
 
 /-- **四点条件**（文献 503–509 行）：三个表达式中**最大者至少取到两次**。
@@ -391,6 +398,32 @@ def FourPoint (δ : α → α → ℝ) : Prop :=
     δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) ∧
       δ a b + δ a' b' ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) ∧
         δ a b' + δ a' b ≤ max (δ a a' + δ b b') (δ a b + δ a' b)
+
+/-- **标准四点条件**（文献形态；W12k 新增，与本文件 `def FourPoint` **并存**）：
+
+三对和 `d(a,a')+d(b,b')`、`d(a,b)+d(a',b')`、`d(a,b')+d(a',b)` 中**最大者至少取到两次**
+（等价写法：每个 ≤ 其余两者的 `max`）。
+
+⚠️ **与 `def FourPoint` 的确切差异**（★D，W12k）：
+
+* 本文件 `def FourPoint` 的**第三**合取项末项写的是 `δ a b + δ a' b`（两对**共享端点 `b`**，
+  不是三个表达式之一）；本定义末项是正确的 `δ a b + δ a' b'`。
+* **方向**（穷举：`n = 3` 网格、`n = 4` 网格、`n = 5` 随机 20000）：**仅本库形态真** = `0`，
+  **仅标准形态真** = `6 / 65 / 25` ⇒ 「本库 `FourPoint` ⟹ `FourPointStd`」（见
+  `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.fourPointStd_of_fourPoint`），反向**不成立**。
+* **严重性**：**真实树度量几乎全都不满足本库形态** —— 随机树 + 随机正边权，`n = 4` 的 3000 个
+  有效树度量里只有 **1** 个满足；`n = 5/6/7` 是 **0/3000**。本仓 `scripts/msc/w12d_b2_b1_search.py`
+  独立复核：`n = 4/5` 的两两相容 split 族（= 树度量）上，**标准形态违反 0 例**，
+  **本库形态违反 68/75 例**。
+* ⇒ 「本库 `FourPoint`」把**树度量这一真实对象类几乎整体排除在外** ✗；凡以它为**前提**的定理
+  在标准前提下**不能**直接用（需先补 `fourPointStd_of_fourPoint` 那条桥的**反方向**，而那不成立）。
+  最小显式见证（4 叶平衡树 `((0,1),(2,3))`、全部边权 `1`，即本库 `SplitMetric` 之和）见
+  `BunemanIndexBridge.lean` 的 `Split.cexTreeVal_not_fourPoint`。 -/
+def FourPointStd (δ : α → α → ℝ) : Prop :=
+  ∀ a a' b b' : α,
+    δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) ∧
+      δ a b + δ a' b' ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) ∧
+        δ a b' + δ a' b ≤ max (δ a a' + δ b b') (δ a b + δ a' b')
 
 /-- ⬜ **缺口 1（Theorem 3 的逆，1683–1699 行）**：弱相容 ⟹ `Σ` 恰是某个对称 `δ` 的
 `d`-split 全体（取 `δ := Σ_{S∈Σ} λ_S δ_S`，`λ_S > 0`，且隔离指数 `α_S = λ_S`）。
@@ -422,7 +455,15 @@ def weakCompatibilityRealization_gap : Prop :=
 任一对称 `δ` 可写成 `δ = δ₀ + Σ_{S ∈ Σ} c_S · δ_S`，其中 `c_S > 0`、残差 `δ₀` **split-prime**。
 
 未落原因：需要先把「度量」「四点条件」与树的边权（`Phylogram.dist`）接起来，
-并证明残差的 split-prime 性（隔离指数为 0）。 -/
+并证明残差的 split-prime 性（隔离指数为 0）。
+
+⚠️ **W12k ★D：本缺口是假命题** ✗（`def` 原文未改）。其结论要求 `∃ δ₀, SplitPrime δ₀`，
+而 `SplitPrime` **不可满足**（见上一条：`A = ∅` 使 `IsDSplit` 空真）⇒ 对**任何** `δ` 都不存在这样的分解：
+形式化反驳见 `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_canonicalSplitDecomposition_gap`。
+**正确形态**（残差改为忠实形态 `SplitPrimeStd`）登记为
+`Split.canonicalSplitDecomposition_gap_correct_shape`（同文件，未证）。
+另注（协调侧机器判定）：库内 `SplitPrime`（处处 `¬Max`）**严格强于**文献形态（处处 `¬Strong`）——
+`¬Max ⟹ ¬Strong` 而反向不成立；不过本缺口的致命伤是**非空侧条件缺失**，比这一条更基本。 -/
 def canonicalSplitDecomposition_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -458,8 +499,15 @@ def fourPointCharacterization_gap : Prop :=
 `δ := δ_S + δ_T` 在四元组 `(0,1,2,3)` 上的三对和为 `(δ(0,2)+δ(1,3), δ(0,1)+δ(2,3), δ(0,3)+δ(1,2)) = (3,1,4)`，
 最大者只出现一次 ⇒ **不满足**四点条件。故本缺口**必须**用**强**（两两）相容。
 
-⚠️ 另注：本库 `def FourPoint` 的**第三合取项**疑有笔误（末项 `δ a b + δ a' b` 应为 `δ a b + δ a' b'`），
-见 `Phylo/Stat/BunemanIndexBridge.lean` §5 的 ★D(ii)；若该笔误将来修正，本条陈述需同步核对。 -/
+⚠️ **W12k 更正：本缺口是假命题** ✗。理由：前提「`F` 两两相容 + `w > 0`」下 `δ := Σ w_S·δ_S` **恒为树（伪）度量**，
+而**真实树度量几乎全都不满足本库 `def FourPoint`**（穷举：`n = 4` 的 3000 个随机树度量里仅 1 个满足，
+`n = 5/6/7` 为 0/3000；`scripts/msc/w12d_b2_b1_search.py` 独立复核：两两相容族上本库形态违反 68/75 例、
+标准形态违反 0 例）⇒ **前提真、结论假** ✓。
+具体见证：`F := {δ_{0|123}} ∪ {δ_{01|23}}`（两两相容 ✓）、`w ≡ 1`，在四元组 `(0,0,1,2)` 上本库第三式给出
+`LHS = 3 > RHS = 2` ⇒ 形式化反驳见 `Phylo/Stat/BunemanIndexBridge.lean` 的
+`Split.not_fourPointOfSplitMetricSum` ✓。
+**正确的（诚实）目标**：把结论换成 `FourPointStd`（文献形态，`Phylo/SplitWeak.lean` 的 `def FourPointStd`），
+登记为本文件的 `fourPointOfSplitMetricSum_gap_correct_shape`（在 `BunemanIndexBridge.lean` 中，见下）。 -/
 def fourPointOfSplitMetricSum_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →

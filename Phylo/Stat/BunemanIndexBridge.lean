@@ -341,4 +341,228 @@ theorem pairwiseCompatible_of_exists_symm_fourPoint_isDSplit {F : Finset (Split 
   exact compatible_of_fourPoint_isDSplit hsym hfp
     ((hδ s).mpr ⟨s, hs, Or.inl rfl⟩) ((hδ t).mpr ⟨t, ht, Or.inl rfl⟩)
 
+/-! ## 6. ★★★ `FourPointStd` 与库内 `FourPoint` 的关系（W12k；协调侧机器判定 + 本文件复核）
+
+机器判定（协调侧 `/Temp/w10/` 脚本 + 本仓 `scripts/msc/w12d_b2_b1_search.py`，精确穷举）：
+
+* **方向**：库内（笔误）形态 **严格强于** 标准形态 —— 「仅库内真」= `0`（`n = 3, 4` 网格、`n = 5` 随机 20000），
+  「仅标准真」= `6 / 65 / 25` ⇒ **`FourPoint ⟹ FourPointStd`**（*对称* `δ` 下可证，见下）；
+* **严重性**：真实**树度量几乎全都不满足库内形态** —— 随机树 + 随机正边权，`n = 4` 的 3000 个有效树度量
+  里只有 **1** 个满足，`n = 5/6/7` 为 **0/3000**；本文件用**显式见证**把它证成定理
+  （`cexTreeVal_not_fourPoint`：树度量 `δ_{0|123} + δ_{01|23}` 在 `(0,0,1,2)` 处库内第三式 `3 ≤ 2` ✗）。
+
+⇒ **后果**：`fourPointOfSplitMetricSum_gap`（B1）**是假命题**（前提真、结论假，见 `§7`）；
+凡以库内 `FourPoint` 为**前提**的定理，其前提把真实树度量排除在外 ⇒ 必须在 `FourPointStd` 上重述
+（`§6.2` 给出 `⟸` 半的逐字搬运版）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **库内 `FourPoint` ⟹ 标准 `FourPointStd`**（W12k 最有用的那条桥）。
+
+证明只用一次对称性与 `add_comm`：把库内条件的**第二**合取项用在**前两个参数对调**后的元组
+`(a',a,b,b')` 上 —— 那里的「平行和」`δ a' b + δ a b'` 恰是标准第三式左端、
+「两内和」`δ a' a + δ b b'` 与「交叉和」`δ a' b' + δ a b` 恰是标准第三式的两个 `max` 参数。
+
+⚠️ 需要 `δ` **对称**（库内条件对非对称 `δ` 也定义，但标准形态是给对称函数用的）。 -/
+theorem fourPointStd_of_fourPoint {δ : X → X → ℝ} (hsym : ∀ x y, δ x y = δ y x)
+    (h : FourPoint δ) : FourPointStd δ := by
+  intro a a' b b'
+  refine ⟨(h a a' b b').1, (h a a' b b').2.1, ?_⟩
+  have h0 := (h a' a b b').2.1
+  rw [hsym a' a] at h0
+  calc δ a b' + δ a' b = δ a' b + δ a b' := by ring
+    _ ≤ max (δ a a' + δ b b') (δ a' b' + δ a b) := h0
+    _ = max (δ a a' + δ b b') (δ a b + δ a' b') := by rw [add_comm (δ a' b') (δ a b)]
+
+/-! ### 6.1 反向**不成立**：真实树度量满足标准形态、违反库内形态 -/
+
+/-- 见证用 split：`{0}|{1,2,3}`。 -/
+def cexS0 : Split (Fin 4) := Split.ofSideA {0} (by decide) (by decide)
+
+/-- 见证用 split：`{0,1}|{2,3}`。 -/
+def cexS01 : Split (Fin 4) := Split.ofSideA ({0, 1} : Finset (Fin 4)) (by decide) (by decide)
+
+/-- 见证族 `F := { {0}|{1,2,3}, {0,1}|{2,3} }`（**两两相容** ✓）。 -/
+def cexF2 : Finset (Split (Fin 4)) := {cexS0, cexS01}
+
+/-- 见证权重 `w ≡ 1`。 -/
+noncomputable def cexW : Split (Fin 4) → ℝ := fun _ => 1
+
+/-- 见证 `δ := Σ_{S ∈ F} w_S · δ_S`（= 树（伪）度量）。 -/
+noncomputable def cexT : Fin 4 → Fin 4 → ℝ :=
+  fun x y => ∑ s ∈ cexF2, cexW s * SplitMetric s x y
+
+/-- `cexT` 的显式矩阵。 -/
+noncomputable def cexTreeVal : Fin 4 → Fin 4 → ℝ
+  | 0, 0 => 0
+  | 0, 1 => 1
+  | 0, 2 => 2
+  | 0, 3 => 2
+  | 1, 0 => 1
+  | 1, 1 => 0
+  | 1, 2 => 1
+  | 1, 3 => 1
+  | 2, 0 => 2
+  | 2, 1 => 1
+  | 2, 2 => 0
+  | 2, 3 => 0
+  | 3, 0 => 2
+  | 3, 1 => 1
+  | 3, 2 => 0
+  | 3, 3 => 0
+
+/-- `cexT` 就是该矩阵（16 个点逐对求值；先把 2 项和写成显式两项以绕开 `sum_boole`）。 -/
+theorem cexT_eq_cexTreeVal : cexT = cexTreeVal := by
+  funext x y
+  have hpair : cexT x y = SplitMetric cexS0 x y + SplitMetric cexS01 x y := by
+    simp only [cexT, cexW, cexF2, one_mul]
+    rw [Finset.sum_pair (by decide)]
+  rw [hpair]
+  fin_cases x <;> fin_cases y <;>
+    norm_num [cexTreeVal, cexS0, cexS01, SplitMetric, Split.ofSideA_sideA, Split.ofSideA_sideB]
+
+/-- ★★ **标准四点条件成立**（它是树（伪）度量；256 个四元组全过）。 -/
+theorem cexTreeVal_fourPointStd : FourPointStd cexTreeVal := by
+  intro a a' b b'
+  fin_cases a <;> fin_cases a' <;> fin_cases b <;> fin_cases b' <;>
+    norm_num [cexTreeVal, max_def]
+
+/-- ★★★ **库内 `FourPoint` 不成立**：见证四元组 `(a,a',b,b') = (0,0,1,2)`，
+库内第三式给出 `3 ≤ max (1) (2) = 2` ✗。 -/
+theorem cexTreeVal_not_fourPoint : ¬ FourPoint cexTreeVal := by
+  intro h
+  have h3 := (h 0 0 1 2).2.2
+  norm_num [cexTreeVal, max_def] at h3
+
+/-- `cexTreeVal` 对称（显式矩阵）。 -/
+theorem cexTreeVal_symm : ∀ x y, cexTreeVal x y = cexTreeVal y x := by
+  intro x y
+  fin_cases x <;> fin_cases y <;> norm_num [cexTreeVal]
+
+/-- ★★★ **「标准 ⟹ 库内」是假命题**（同一个树度量即反例）⇒ 库内形态**严格更强**。 -/
+theorem not_fourPointStd_imp_fourPoint :
+    ¬ (∀ (δ : Fin 4 → Fin 4 → ℝ), (∀ x y, δ x y = δ y x) → FourPointStd δ → FourPoint δ) := by
+  intro h
+  exact cexTreeVal_not_fourPoint (h cexTreeVal cexTreeVal_symm cexTreeVal_fourPointStd)
+
+/-! ### 6.2 `⟸` 半在 `FourPointStd` 上的重述（逐字搬运：证明只用第一合取项 + 对称性） -/
+
+/-- ★★★ **`FourPointStd` + 两个 d-split ⟹ 相容**（`§5` 定理的标准形态版；证明逐字相同）。 -/
+theorem compatible_of_fourPointStd_isDSplit {δ : X → X → ℝ} (hsym : ∀ x y, δ x y = δ y x)
+    (hfp : FourPointStd δ) {s t : Split X}
+    (hs : IsDSplit δ s.sideA s.sideB) (ht : IsDSplit δ t.sideA t.sideB) : s.Compatible t := by
+  by_contra h
+  obtain ⟨A, hAs, hAt⟩ : ∃ A : X, A ∈ s.sideA ∧ A ∈ t.sideA :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inl hd)
+  obtain ⟨C, hCs, hCt⟩ : ∃ C : X, C ∈ s.sideA ∧ C ∈ t.sideB :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inl hd))
+  obtain ⟨B, hBs, hBt⟩ : ∃ B : X, B ∈ s.sideB ∧ B ∈ t.sideA :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inr (Or.inl hd)))
+  obtain ⟨D, hDs, hDt⟩ : ∃ D : X, D ∈ s.sideB ∧ D ∈ t.sideB :=
+    Finset.not_disjoint_iff.mp fun hd => h (Or.inr (Or.inr (Or.inr hd)))
+  have hU : δ A D + δ B C ≤ max (δ A C + δ B D) (δ A B + δ C D) := by
+    have h0 := (hfp A D B C).1
+    rw [hsym D B, hsym D C, max_comm] at h0
+    exact h0
+  have hs' : δ A C + δ B D < max (δ A B + δ C D) (δ A D + δ B C) := by
+    have h0 := hs A hAs C hCs B hBs D hDs
+    rwa [hsym C B] at h0
+  have ht' : δ A B + δ C D < max (δ A C + δ B D) (δ A D + δ B C) :=
+    ht A hAt B hBt C hCt D hDt
+  exact not_two_pos_of_fourPoint hU hs' ht'
+
+/-- ★★★ **缺口 `⟸` 一半的 `FourPointStd` 版**（推荐使用的形态；库内形态版见 `§5`）。 -/
+theorem pairwiseCompatible_of_exists_symm_fourPointStd_isDSplit {F : Finset (Split X)}
+    (h : ∃ δ : X → X → ℝ, (∀ x y, δ x y = δ y x) ∧ FourPointStd δ ∧
+      ∀ s : Split X, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s) :
+    ∀ s ∈ F, ∀ t ∈ F, s.Compatible t := by
+  obtain ⟨δ, hsym, hfp, hδ⟩ := h
+  intro s hs t ht
+  exact compatible_of_fourPointStd_isDSplit hsym hfp
+    ((hδ s).mpr ⟨s, hs, Or.inl rfl⟩) ((hδ t).mpr ⟨t, ht, Or.inl rfl⟩)
+
+/-! ## 7. ★B 瓶颈 (B1) **证伪**：`fourPointOfSplitMetricSum_gap` 是假命题
+
+取 `F := cexF2 = { {0}|{1,2,3}, {0,1}|{2,3} }`（**两两相容** ✓）、`w ≡ 1` ⇒ `δ̂ = cexT`（树度量）⇒
+由 `§6.1` 的 `cexTreeVal_not_fourPoint` 得 `¬ FourPoint δ̂` ⇒ **前提真、结论假** ✗。 -/
+
+/-- 见证族**两两相容**（用库内 `Compatible` 构造件，避免 `Disjoint` 的可判定性）。 -/
+theorem cexF2_compat : ∀ s ∈ cexF2, ∀ t ∈ cexF2, s.Compatible t := by
+  intro s hs t ht
+  simp only [cexF2, Finset.mem_insert, Finset.mem_singleton] at hs ht
+  rcases hs with rfl | rfl <;> rcases ht with rfl | rfl
+  · exact compatible_self cexS0
+  · exact compatible_of_subset_left (by
+      intro x hx
+      fin_cases x <;> simp_all [cexS0, cexS01, Split.ofSideA_sideA])
+  · exact compatible_of_subset_right (by
+      intro x hx
+      fin_cases x <;> simp_all [cexS0, cexS01, Split.ofSideA_sideA])
+  · exact compatible_self cexS01
+
+/-- ★B ★★★ **瓶颈 (B1) 是假命题**（`def` 原文未改）。 -/
+theorem not_fourPointOfSplitMetricSum : ¬ fourPointOfSplitMetricSum_gap.{0} := by
+  intro h
+  have hfp : FourPoint (fun x y : Fin 4 => ∑ s ∈ cexF2, cexW s * SplitMetric s x y) :=
+    h (α := Fin 4) cexF2 cexW cexF2_compat (by intro s _; norm_num [cexW])
+  rw [show (fun x y : Fin 4 => ∑ s ∈ cexF2, cexW s * SplitMetric s x y) = cexT from rfl,
+    cexT_eq_cexTreeVal] at hfp
+  exact cexTreeVal_not_fourPoint hfp
+
+/-- ⬜ **瓶颈 (B1) 的正确形态（W12k 登记；未证）**：结论换成**标准**四点条件 `FourPointStd`。
+
+这才是这条缺口的真正数学内容：两两相容族 + 正权重之和是**树度量**，而树度量满足标准四点条件
+（`§6.1` 已对最小见证验证标准形态 ✓；库内形态则**被树度量排除** ✗）。 -/
+def fourPointOfSplitMetricSum_gap_correct_shape : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
+      FourPointStd (fun x y => ∑ s ∈ F, w s * SplitMetric s x y)
+
+/-! ## 8. ★D `SplitPrime` 是**不可满足**的 ⇒ `canonicalSplitDecomposition_gap` **平凡为假**
+
+协调侧怀疑「库内 `SplitPrime`（= 处处 `¬ IsDSplit`，`max` 形式）**严格强于**文献形态
+（= 处处 `¬ IsDSplitStrong`）」；本文件核出的结论**更强**：
+
+> 库内 `SplitPrime δ := ∀ A B : Finset α, ¬ IsDSplit δ A B` **对任何 `δ` 都不成立** ✗ ——
+> 取 `A = ∅`：`IsDSplit δ ∅ B` 是**空真**（`∀ a ∈ ∅, …`）⇒ `¬ IsDSplit δ ∅ B` 为假。
+
+⇒ **`canonicalSplitDecomposition_gap` 平凡为假**（它的结论要求 `∃ δ₀, SplitPrime δ₀`，
+而这样的 `δ₀` 不存在）：见 `not_canonicalSplitDecomposition_gap` ✓。
+根因：BdD 的「(partial) split」两侧**非空**，库内 `def SplitPrime` 漏了这个侧条件
+（文献形态应写 `A.Nonempty → B.Nonempty → ¬ …`）。
+
+⇒ 忠实形态登记为 `SplitPrimeStd`（非空侧 + 强形式）+ `canonicalSplitDecomposition_gap_correct_shape`；
+原 `def` **逐字未改** ✓。 -/
+
+/-- ★★★ **库内 `SplitPrime` 不可满足**（空集使其空真反驳）。 -/
+theorem not_splitPrime {α : Type*} (δ : α → α → ℝ) : ¬ SplitPrime δ := by
+  intro h
+  exact h ∅ ∅ (by intro a ha; exact absurd ha (Finset.notMem_empty a))
+
+/-- **忠实形态的 split-prime**（BdD：split 两侧非空；「不是（强）d-split」= 隔离指数 `≤ 0`）。 -/
+def SplitPrimeStd {α : Type*} (δ : α → α → ℝ) : Prop :=
+  ∀ A B : Finset α, A.Nonempty → B.Nonempty → ¬ IsDSplitStrong δ A B
+
+/-- 库内形态（**加上非空侧条件**后）⟹ 忠实形态：`¬Max ⟹ ¬Strong`（逐四元组的 `Strong ⟹ Max`）。 -/
+theorem splitPrimeStd_of_splitPrimeNE {α : Type*} {δ : α → α → ℝ}
+    (h : ∀ A B : Finset α, A.Nonempty → B.Nonempty → ¬ IsDSplit δ A B) : SplitPrimeStd δ := by
+  intro A B hA hB hS
+  exact h A B hA hB fun a ha a' ha' b hb b' hb' =>
+    lt_of_lt_of_le (hS a ha a' ha' b hb b' hb').1 (le_max_left _ _)
+
+/-- ★★★ **`canonicalSplitDecomposition_gap` 是假命题**（`.{0}` 实例；原 `def` 未改）：
+其结论要求 `SplitPrime δ₀`，而该谓词**不可满足**。 -/
+theorem not_canonicalSplitDecomposition_gap : ¬ canonicalSplitDecomposition_gap.{0} := by
+  intro h
+  obtain ⟨_F, _c, δ₀, _hpos, hprime, _hdec⟩ :=
+    h (α := Fin 4) (fun _ _ => 0) (fun _ _ => rfl)
+  exact not_splitPrime δ₀ hprime
+
+/-- ⬜ **`canonicalSplitDecomposition_gap` 的正确形态（W12k 登记；未证）**：
+残差改为**忠实形态** `SplitPrimeStd`（非空侧 + 强形式）。 -/
+def canonicalSplitDecomposition_gap_correct_shape : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
+    ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeStd δ₀ ∧
+        ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
+
 end Split
