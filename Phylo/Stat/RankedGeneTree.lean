@@ -570,7 +570,22 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
   **一般 `f`** 形式（纯内核 `decide`；原文件只有逐个拓扑的 `card_rankings_01_2`）；
 * 上面那条数值核对脚本。
 
-**★ W12f 第四轮新增：计数那一半 (i) 的两块器材已落地**（`Phylo/Stat/HookLength.lean`）
+**★ W12f 第五轮新增：线性扩展数 `LE` 已自造并给出定义方程**（`Phylo/Stat/HookLength.lean` §8）
+
+* ★★ **`LE T C hC`** —— 线性扩展数，**递归定义**
+  `LE T C = multinomial(hook 们) · ∏_{B ∈ children T C} LE T B`（`2 ≤ |C|`），否则 `1`
+  （well-founded 递归，`termination_by hook T C`；终止性由新增的
+  `hook_lt_of_mem_children` 给出）；
+* ★★ **`LE_eq`** —— 上述定义方程；`LE_eq_one_of_card_le_one` —— 单点簇为 `1`；
+* ⚠️ **三次 grep 确认 Mathlib 无线性扩展计数**（`Order/Extension/Linear.lean` 只给
+  `LinearExtension` 类型别名 + `extend_partialOrder`；`linearExtension` / `topological` /
+  `Nat.card ∘ LinearExtension` 的计数式引理 **0 命中**）⇒ `LE` 是**自造**的；
+* ⬜ **仍缺**：由 §5（分母递推）+ §6（计数恒等式）+ `LE_eq` **归纳**出闭形式
+  `LE T C · ∏_{D ⊆ C} hook T D = (hook T C)!` —— 需要一条**自造的归纳原理**
+  （把 `LE` 的 well-founded 递归暴露成 `induction`）＋ `Finset.prod_attach` 对齐；
+  这是 Lean 基础设施问题，**不是**数学难点。**未用** `sorry` 绕过。
+
+**★ W12f 第四轮：计数那一半 (i) 的两块器材已落地**（`Phylo/Stat/HookLength.lean`）
 
 * §5 ★★ **`prod_hook_eq_hook_mul_prod_children`**（hook 积的**乘法**递推）：
   `∏_{D ∈ internalBelow T C} hook T D = hook T C · ∏_{B ∈ children T C} ∏_{D ∈ internalBelow T B} hook T D`
@@ -614,8 +629,9 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
    第四轮又把**计数那一半 (i) 的两块**做出来：
    * §5 `prod_hook_eq_hook_mul_prod_children`（hook 积的乘法递推 = 分母递推）；
    * §6 `multinomial_mul_prod_factorial` / `multinomial_children_factorial`（计数恒等式）。
-   ⬜ **仍缺**：线性扩展数 `LE` 的递推 `LE(T) = multinomial(N-1; …) · ∏_B LE(T_B)`
-   （需先定义 `LE` 并证「根必在第一位 + 各孩子子树块间插空」），
+   * 第五轮又**自造了 `LE`（线性扩展数）并给出其递推定义方程**（§8 `LE` / `LE_eq`）。
+   ⬜ **仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
+   （需自造 `LE` 的归纳原理 + `Finset.prod_attach` 对齐 —— Lean 基础设施问题），
    以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
    —— (ii) 是本缺口的**组合实体**，第 (i) 条的计数公式替代不了它。
    数值核对：`scripts/msc/w12f_hook_count_check.py`（`N ≤ 17` 的全部 `(N_B)` 向量
