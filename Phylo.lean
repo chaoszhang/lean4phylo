@@ -3,6 +3,7 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
+import Phylo.AdamsConsensus
 import Phylo.Aho
 import Phylo.Algorithm.BinaryCount
 import Phylo.Algorithm.Cherry
