@@ -958,4 +958,37 @@ def two_parent_trees_classification : Prop :=
       s ∈ famP1 ∨ s ∈ famP2 ∨
         (∃ x : Fin 6, s.sideA = {x}) ∨ (∃ x : Fin 6, s.sideA = {x}ᶜ)
 
+/-! ### 8.3 (W12a10) `σ` 在两个 parent 族上的作用 —— **闭式** `Finset` 等式
+
+缺口第 3 条（`σ` 互换两棵树）在 split 系统层就是 `famP2 = famP1.image (Split.relabel sig)`。
+本节把它连同「6 条显式 split 上的**求值**」与「`relabel` 沿**对合**的双向性」一并证掉：
+四条都是**闭式**（无自由尾随 `∀ s`）陈述，故 `decide` 直接可判 ✓
+（这正是 W12a8 起就点名的捷径）。 -/
+
+/-- `sig = (1 5)(2 4)` 是对合。 -/
+theorem sig_involutive : Function.Involutive (⇑sig) := by
+  intro x
+  fin_cases x <;> decide
+
+/-- `σ` 把 `P₁` 的三条 split 分别送到 `P₂` 的三条上（**求值**）。 -/
+theorem relabel_sig_sP1a : Split.relabel sig sP1a = sP2c := by decide
+
+theorem relabel_sig_sP1b : Split.relabel sig sP1b = sP2b := by decide
+
+theorem relabel_sig_sP1c : Split.relabel sig sP1c = sP2a := by decide
+
+/-- ★★★ **闭式族等式（第 3 条的 split 系统层内容）**：`σ(P₁) = P₂`。 -/
+theorem famP2_eq_famP1_image_relabel : famP2 = famP1.image (Split.relabel sig) := by decide
+
+/-- `relabel` 沿**对合**的双向性（通用形式，供把 `∈ famP1` 与 `∈ famP2` 来回搬运）。 -/
+theorem relabel_relabel {α : Type*} [Fintype α] [DecidableEq α] (e : Equiv.Perm α)
+    (he : Function.Involutive (⇑e)) (s : Split α) :
+    Split.relabel e (Split.relabel e s) = s := by
+  apply Split.ext_sideA
+  rw [Split.relabel_sideA, Split.relabel_sideA, Finset.image_image]
+  rw [show (⇑(Equiv.toEmbedding e) ∘ ⇑(Equiv.toEmbedding e)) = id by
+    rw [Equiv.coe_toEmbedding]
+    exact funext fun x => he x]
+  simp
+
 end SBD
