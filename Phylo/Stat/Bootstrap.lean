@@ -506,6 +506,156 @@ theorem minimal_example_treeSupport_lt_half (Tree : (Fin 3 → ℕ) → Cladogra
 
 /-! ## §6 显式缺口（`def … : Prop`，**不是** `axiom`，也**不是** `sorry`） -/
 
+/-! ### §6.0 ★★★ **缺口 M 的核心零件**（W12a3 已证）—— 纤维计数与置换
+
+这一节把「给定纤维大小的函数计数」拆成**可证的组合零件**（本文件内已证，零 `sorry`）：
+
+1. `fiberOf` / `mem_fiberOf` —— 纤维（值 `b` 的原像）与它的成员判定；
+2. `fiberEquiv` —— **纤维分解** `α ≃ Σ b, ↥(fiberOf σ b)`（`a ↦ ⟨σ a, a⟩`）；
+3. `card_fiberOf_comp` —— 前复合置换**保持纤维基数**（群作用的**轨道方向** `⊆`）；
+4. `exists_perm_comp_eq_of_card_fiberOf_eq` —— **核心组合内容**（轨道方向 `⊇`）：
+   纤维**基数**相同 ⟹ 两函数只差一个**定义域置换**；
+5. `stableSet_eq_orbitSet` —— 由 3+4 立得：**「同纤维计数的函数集 = 一条轨道」**（集合等式）；
+6. `stabToFiberPerm` / `ofFiberPerms` / `comp_ofFiberPerms` —— 稳定化子与「逐纤维置换之积」
+   之间的两个方向（后者经 `fiberEquiv` 的典范路线构造，**无需手工求逆**）；
+7. `stabToFiberPerm_injective` —— 稳定化子**单射地**嵌入「逐纤维置换之积」
+   （这是 `#stab ≤ ∏_b (#fiberOf σ b)!` 的数学内容）。
+
+⚠️ **仍未证**（下一轮的精确剩余，按难度排序）：
+* `#stab ≤ ∏_b (#fiberOf σ b)!`（**只剩类型类配置**）：数学证明已就位
+  （`Fintype.card_le_of_injective _ (stabToFiberPerm_injective σ)` ＋ `Fintype.card_pi` ＋
+  `Fintype.card_perm`），但 `Fintype {τ : Equiv.Perm α // σ ∘ τ = σ}` 在本版 Mathlib
+  **不被 instance 搜索综合**（`W12a3` 实测 `synthInstanceFailed`）；
+  绕过办法：改用 `Nat.card`（`Finite` 可用），或显式 `Fintype.ofFinite`。
+* **反向不等式 `≥`**：即 `ofFiberPerms` 的满射性 —— 需要
+  `(ψ b) x` 与 `(ψ (σ x.1)) ⟨x.1, ·⟩` 的**依赖指标换写**（两种写法类型不同、仅命题相等，
+  需要 `Eq.ndrec`/`subst` 层的处理；朴素 `rw`/`simp only`/`subst` 均实测失败）。
+* **轨道-稳定化子的计数式** `#(同纤维函数集) · #stab = #(Perm α)`：用
+  `Finset.card_eq_sum_card_fiberwise` 数 `τ ↦ σ ∘ τ` 的纤维（每条纤维 ≅ `stab`，由
+  「`σ ∘ τ = σ ∘ τ'` ⟹ `τ' ∘ τ⁻¹ ∈ stab`」给出）。
+* **可实现性**：`∑ w = n` 时 `∃ σ : Fin n → Fin n, weightOf σ = w`（本轮**未做**；
+  这是把上述「以固定 `σ` 为基准」的结论搬到任意 `w` 所必需的桥）。 -/
+
+open Classical
+
+section FiberCount
+
+variable {α β : Type*} [Fintype α] [DecidableEq β]
+
+/-- 值 `b` 的**纤维**（`σ` 在 `b` 处的原像）。 -/
+def fiberOf (σ : α → β) (b : β) : Finset α := Finset.univ.filter fun a => σ a = b
+
+/-- 纤维的成员判定。 -/
+theorem mem_fiberOf {σ : α → β} {a : α} {b : β} : a ∈ fiberOf σ b ↔ σ a = b := by
+  simp [fiberOf]
+
+/-- ★★ **纤维分解**：`α ≃ Σ b, ↥(fiberOf σ b)`（`a ↦ ⟨σ a, a⟩`）。 -/
+noncomputable def fiberEquiv (σ : α → β) : (Σ b : β, ↥(fiberOf σ b)) ≃ α where
+  toFun x := x.2.1
+  invFun a := ⟨σ a, ⟨a, mem_fiberOf.mpr rfl⟩⟩
+  left_inv := by
+    rintro ⟨b, x, hx⟩
+    have hxb : σ x = b := mem_fiberOf.mp hx
+    subst hxb
+    rfl
+  right_inv := fun a => rfl
+
+/-- 两个同值纤维之间的一个双射（基数相等时）。 -/
+noncomputable def fiberEquivOfCardEq {σ σ' : α → β} {b : β}
+    (h : (fiberOf σ' b).card = (fiberOf σ b).card) : ↥(fiberOf σ' b) ≃ ↥(fiberOf σ b) :=
+  Fintype.equivOfCardEq (by rw [Fintype.card_coe, Fintype.card_coe]; exact h)
+
+/-- ★ 前复合一个置换**保持纤维基数**。 -/
+theorem card_fiberOf_comp (τ : Equiv.Perm α) (σ : α → β) (b : β) :
+    (fiberOf (σ ∘ τ) b).card = (fiberOf σ b).card := by
+  classical
+  refine Finset.card_bij (fun a _ => τ a) ?_ ?_ ?_
+  · intro a ha
+    rw [mem_fiberOf] at ha ⊢
+    simpa [Function.comp] using ha
+  · intro a₁ _ a₂ _ h
+    exact τ.injective h
+  · intro a ha
+    rw [mem_fiberOf] at ha
+    exact ⟨τ.symm a, by rw [mem_fiberOf]; simpa [Function.comp] using ha,
+      τ.apply_symm_apply a⟩
+
+/-- ★★★ **核心组合内容**：纤维**基数**相同 ⟹ 两函数相差一个定义域置换。
+（`⇐` 是 `card_fiberOf_comp`；`⇒` 是「同纤维计数的函数集 = 一条轨道」的实质。） -/
+theorem exists_perm_comp_eq_of_card_fiberOf_eq [DecidableEq α] (σ σ' : α → β)
+    (h : ∀ b, (fiberOf σ' b).card = (fiberOf σ b).card) :
+    ∃ τ : Equiv.Perm α, σ' = σ ∘ τ := by
+  classical
+  refine ⟨((fiberEquiv σ').symm.trans
+    (Equiv.sigmaCongrRight fun b => fiberEquivOfCardEq (h b))).trans (fiberEquiv σ), ?_⟩
+  funext a
+  exact (mem_fiberOf.mp (fiberEquivOfCardEq (h (σ' a)) ⟨a, mem_fiberOf.mpr rfl⟩).2).symm
+
+/-- ★★★ **「同纤维计数的函数集 = 一条轨道」**（由 3 与 4 立得）：以 `σ` 为基准的
+纤维计数函数集，恰是 `σ` 在**前复合置换**下的轨道（作为 `Set`）。 -/
+theorem stableSet_eq_orbitSet [DecidableEq α] (σ : α → β) :
+    {σ' : α → β | ∀ b, (fiberOf σ' b).card = (fiberOf σ b).card}
+      = {σ' : α → β | ∃ τ : Equiv.Perm α, σ' = σ ∘ τ} := by
+  ext σ'
+  constructor
+  · intro h
+    exact exists_perm_comp_eq_of_card_fiberOf_eq σ σ' h
+  · rintro ⟨τ, rfl⟩ b
+    exact card_fiberOf_comp τ σ b
+
+section Stable
+
+variable [DecidableEq α]
+
+/-- ★ **稳定化子的一个元素**：逐纤维地限制一个保持 `σ` 的置换。 -/
+noncomputable def stabToFiberPerm {σ : α → β}
+    (τ : {τ : Equiv.Perm α // σ ∘ τ = σ}) (b : β) :
+    ↥(fiberOf σ b) ≃ ↥(fiberOf σ b) where
+  toFun x := ⟨τ.1 x.1, mem_fiberOf.mpr (by
+    have h : σ (τ.1 x.1) = σ x.1 := by
+      simpa only [Function.comp_apply] using congrFun τ.2 x.1
+    rw [h]; exact mem_fiberOf.mp x.2)⟩
+  invFun x := ⟨τ.1.symm x.1, mem_fiberOf.mpr (by
+    have h : σ (τ.1 (τ.1.symm x.1)) = σ (τ.1.symm x.1) := by
+      simpa only [Function.comp_apply] using congrFun τ.2 (τ.1.symm x.1)
+    rw [Equiv.apply_symm_apply] at h
+    rw [← h]; exact mem_fiberOf.mp x.2)⟩
+  left_inv x := Subtype.ext (by simp)
+  right_inv x := Subtype.ext (by simp)
+
+/-- ★ **由逐纤维的双射拼出一个置换**（经 `fiberEquiv` 的典范路线，无需手工求逆）。 -/
+noncomputable def ofFiberPerms {σ : α → β}
+    (φ : ∀ b : β, ↥(fiberOf σ b) ≃ ↥(fiberOf σ b)) : Equiv.Perm α :=
+  ((fiberEquiv σ).symm.trans (Equiv.sigmaCongrRight φ)).trans (fiberEquiv σ)
+
+omit [DecidableEq α] in
+/-- ★ 由逐纤维置换拼出的置换**保持 `σ`**。 -/
+theorem comp_ofFiberPerms {σ : α → β} (φ : ∀ b : β, ↥(fiberOf σ b) ≃ ↥(fiberOf σ b)) :
+    σ ∘ ofFiberPerms φ = σ := by
+  funext a
+  show σ (ofFiberPerms φ a) = σ a
+  exact mem_fiberOf.mp ((φ (σ a)) ⟨a, mem_fiberOf.mpr rfl⟩).2
+
+omit [DecidableEq α] in
+/-- ★ `stabToFiberPerm` **单射**（逐纤维处处相同 ⟹ 置换相同）。 -/
+theorem stabToFiberPerm_injective (σ : α → β) :
+    Function.Injective (fun τ : {τ : Equiv.Perm α // σ ∘ τ = σ} =>
+      fun b => stabToFiberPerm τ b) := by
+  intro τ₁ τ₂ h
+  have h1 : (fun b => stabToFiberPerm τ₁ b) = (fun b => stabToFiberPerm τ₂ b) := h
+  apply Subtype.ext
+  ext a
+  have h2 : stabToFiberPerm τ₁ (σ a) = stabToFiberPerm τ₂ (σ a) := congrFun h1 (σ a)
+  exact congrArg Subtype.val (DFunLike.congr_fun h2 ⟨a, mem_fiberOf.mpr rfl⟩)
+
+end Stable
+
+end FiberCount
+
+/-- ★ **桥**：`weightOf` 就是纤维基数（本文件 §3 的定义与 §6.0 的 `fiberOf` 逐字一致）。 -/
+theorem weightOf_eq_card_fiberOf {n : ℕ} (σ : Resample n) (i : Fin n) :
+    weightOf σ i = (fiberOf σ i).card := rfl
+
 /-- ❌ **缺口 M（多项式系数记账）**：和恰为 `n` 的权重向量 `w`，恰由 `n! / ∏ᵢ (wᵢ)!`
 个抽样映射 `σ` 实现 —— 即重抽样计数就是**多项式分布型计数**（L1288–1292 给出的五条
 20-字符权重串正是这种计数的实例）。写成无除法的形式：

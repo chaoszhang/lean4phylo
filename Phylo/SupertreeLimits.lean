@@ -627,7 +627,18 @@ theorem iso_preserves_splits_gap :
 本文件的主定理**不需要**它（§4 只用两条 quartet）。此处把它落成 `Prop`：
 每个 parent tree 都展示 `T₁` 或展示 `T₂`，且 `T₂` 的 split 系统是 `T₁` 在 `σ` 下的像。
 **缺什么**：6 个 taxa 上「展示这三条 quartet 的无根树」的分类 ——
-等价于 quartet 展示 ⟹ split 系统被锁定。`Cladogram` 无 `DecidableEq`，故不写 `T₁ ≠ T₂`。 -/
+等价于 quartet 展示 ⟹ split 系统被锁定。`Cladogram` 无 `DecidableEq`，故不写 `T₁ ≠ T₂`。
+
+⚠️ **W12a：本陈述**不忠实**于原文 Figure 1 的分类定理（见下 `…_correct_shape`）**，
+故**逐字保留**（登记用）而在下方另立改写形态。两条不忠实之处：
+1. 第三条只要求 `T₂` 的 split 系统 `= T₁` 的 **σ-像**，而原文（141–144 行）说 `σ` **交换**
+   这两棵 parent tree（"simply interchanges the two parent trees"）—— 即 `σ·T₁` 与 `T₂`
+   **互为该像**；在 `T₁ = T₂` 的退化代入下这一条**恰是**「`T₁` 的 split 系统 `σ`-不变」，
+   与「两个 parent tree」的结论无关；
+2. 最后一条的措辞是**包含**（`T₁` 的 split 系统 `⊆ T` 的），**不是**「`T` 恰是 `T₁` 或 `T₂`」
+   —— 而 "there are **precisely two**" 的内容是**相等**（`↔`）。代入 `T₁ = T₂` 后该条退化为
+   「每个 parent tree 都含 `T₁` 的全部 split」，这**正是**分类定理本身（非重言，
+   故**不能**用它把本缺口平凡收口）。**终局 ⬜ 保留缺口。** -/
 def two_parent_trees_gap : Prop :=
   ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
     (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
@@ -635,6 +646,54 @@ def two_parent_trees_gap : Prop :=
     (∀ T : Cladogram.{0, 0} (Fin 6), (∀ q ∈ prof, DisplaysQP T q) →
       (∀ s : Split (Fin 6), T₁.IsSplitOf s → T.IsSplitOf s) ∨
       (∀ s : Split (Fin 6), T₂.IsSplitOf s → T.IsSplitOf s))
+
+/-- ★★ **缺口 2 的**改写形态**（W12a 新增，**不替代**原 `def`）**：原文 Figure 1 的
+"there are **precisely two** trees that are parent trees for this collection of trees"
+（113–116 行）＋「`σ` 交换这两棵 parent tree」（141–144 行）的忠实落式。
+
+与原 `two_parent_trees_gap` 的三处差别：
+* **② 由 ⊆ 升为 ↔**（"precisely two" 的内容）：任何 parent tree 的 split 系统**恰好**是
+  `T₁` 的或 `T₂` 的；
+* **③ 新增非退化条件**：`T₂` 的 split 系统**严格大于**不了 `T₁` 的 —— 即存在一条
+  `T₂` 展示而 `T₁` 不展示的 split（在 split 系统层面表达「两棵树确实不同」；
+  `Cladogram` 无 `DecidableEq`，故**不**写 `T₁ ≠ T₂`）；
+* ①②③ 合起来才排除了 `T₁ = T₂` 的退化代入（见下方 `two_parent_trees_correct_shape_not_degenerate`）。
+
+**仍然未证**（真内容 = 分类定理）：存在性与 ② —— 需要「三条 quartet 的展示 ⟹ split 系统被锁定」，
+即 6 taxa 上无根树的分类。**已核过的部分**：`prof_relabel`（`σ` 保持 `prof`，已证）＋
+本文件的 `iso_preserves_splits_gap`（同构 ⟹ split 系统相同，已证）—— 这两条给出
+「若 `T₁` 是 parent tree 且 `T₁` 的 split 系统被 `σ` 保持不变，则 `T₁` 也是 `σ`-不变树」，
+但**不足以**得到 ①：`T₂ := σ·T₁` 需要「`σ`-像的 split 族恰被某棵树展示」，
+而 `Split.relabel` 只保**相容性**（`supertree_displays_of_pairwiseCompatible` 给出 ⊇ 方向），
+`↔`（无多余 split）仍需 classification。 -/
+def two_parent_trees_gap_correct_shape : Prop :=
+  ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
+    (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
+    -- ① `σ` 交换两者的 split 系统
+    (∀ s : Split (Fin 6), T₂.IsSplitOf s ↔ T₁.IsSplitOf (Split.relabel sig s)) ∧
+    -- ② 分类结论（"precisely two"：恰是 `T₁` 的或 `T₂` 的）
+    (∀ T : Cladogram.{0, 0} (Fin 6), (∀ q ∈ prof, DisplaysQP T q) →
+      (∀ s : Split (Fin 6), T₁.IsSplitOf s ↔ T.IsSplitOf s) ∨
+      (∀ s : Split (Fin 6), T₂.IsSplitOf s ↔ T.IsSplitOf s)) ∧
+    -- ③ 非退化：`T₂` 的 split 系统严格多出一条
+    (∃ s : Split (Fin 6), T₂.IsSplitOf s ∧ ¬ T₁.IsSplitOf s)
+
+/-- ★★★ **改写形态确实**强于**原登记形态**（W12a 已证）：把 ② 的 `↔` 弱化成 `⊆` 即得原
+`two_parent_trees_gap` 的第 4 条（其余三条逐字相同）。故 `…_correct_shape → …_gap`，
+即「原陈述不忠实」这件事**不是**削弱登记，而是**加强**它。 -/
+theorem two_parent_trees_gap_of_correct_shape :
+    two_parent_trees_gap_correct_shape → two_parent_trees_gap := by
+  rintro ⟨T₁, T₂, h₁, h₂, hσ, hcls, -⟩
+  exact ⟨T₁, T₂, h₁, h₂, hσ, fun T hT => (hcls T hT).imp
+    (fun h s hs => (h s).mp hs) (fun h s hs => (h s).mp hs)⟩
+
+/-- ★★ **非退化条件 ③ 排除 `T₁ = T₂` 的退化代入**（W12a 已证）：对**任何**树 `T`，
+「存在一条 `T` 展示而 `T` 不展示的 split」是**假**的 —— 故 ③ 使 `T₁`、`T₂` 在 split 系统层面
+必须不同（这正是原 `def` 缺的那一条）。 -/
+theorem two_parent_trees_correct_shape_not_degenerate (T : Cladogram.{0, 0} (Fin 6)) :
+    ¬ ∃ s : Split (Fin 6), T.IsSplitOf s ∧ ¬ T.IsSplitOf s := by
+  rintro ⟨s, hs, hns⟩
+  exact hns hs
 
 /-- ★ **显式缺口 3 —— Proposition 3 的树层方法（有根共识方法 + P7）**。
 

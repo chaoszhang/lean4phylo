@@ -254,7 +254,15 @@ def pairDeficit (δ : α → α → ℝ) (a a' b b' : α) : ℝ :=
 /-- ★ **`d`-split**（文献 438–456 行）：`A|B` 的隔离指数为正，即对**所有** `a,a' ∈ A`、
 `b,b' ∈ B` 都有 `d(a,a') + d(b,b') < max{d(a,b)+d(a',b'), d(a,b')+d(a',b)}`。
 
-（隔离指数取 `min`，故「`min > 0`」⟺「逐对全为正」。） -/
+（隔离指数取 `min`，故「`min > 0`」⟺「逐对全为正」。）
+
+⚠️ **W12j 更正**：上面括号里的等价**只对「两个配对都为正」的强形式成立**，对本 `def` 的
+`max` 形式**不成立** —— `IsDSplit` 只要求 `max` 为正（两配对**至少一个**为正），
+而 `bunemanIndex`（隔离指数 `α`）取 `min`（两配对**都**要在内）。形式化反例：
+`Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_isDSplit_implies_bunemanIndex_pos`
+（`δ : Dissimilarity (Fin 4)`，`{0,1}|{2,3}` 满足 `IsDSplit` 而 `α = -2/5`）。
+强形式（`min > 0`）登记为 `Split.IsDSplitStrong`（同文件），
+两者的等价**在四点条件 `FourPoint` 下成立**（`Split.isDSplit_iff_isDSplitStrong_of_fourPoint`）。 -/
 def IsDSplit (δ : α → α → ℝ) (A B : Finset α) : Prop :=
   ∀ a ∈ A, ∀ a' ∈ A, ∀ b ∈ B, ∀ b' ∈ B,
     δ a a' + δ b b' < max (δ a b + δ a' b') (δ a b' + δ a' b)
@@ -388,7 +396,22 @@ def FourPoint (δ : α → α → ℝ) : Prop :=
 `d`-split 全体（取 `δ := Σ_{S∈Σ} λ_S δ_S`，`λ_S > 0`，且隔离指数 `α_S = λ_S`）。
 
 本文件已证其**一半**（`weaklyCompatible_of_isDSplit` 的逆否：`Σ ⊆ Σ_δ`）；
-「`Σ_δ ⊆ Σ`」（非成员的隔离指数为 `0`）需要隔离指数的层析论证，未落。 -/
+「`Σ_δ ⊆ Σ`」（非成员的隔离指数为 `0`）需要隔离指数的层析论证，未落。
+
+⚠️ **W12j 忠实性更正（协调侧提出，已逐条核实；本 `def` 原文未改）**：
+
+1. 参数 `w` **只出现在假设里**，结论里**完全不出现** ⇒ 本 `Prop` 实质等价于「弱相容 `F` ⟹
+   存在实现它的对称 `δ`」，**拿不到** Theorem 3 的系数那一半（隔离指数 `α_S = w S`）；
+2. 结论里的 `IsDSplit` 是 **`max` 形式**（两个配对**至少一个**为正），而 BdD 的「d-split」
+   是隔离指数 `α > 0`（**两个配对都为正**）；两者对**任意对称** `δ` **不等价** ——
+   形式化反例：`Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_isDSplit_implies_bunemanIndex_pos`
+   （`δ : Dissimilarity (Fin 4)`，`{0,1}|{2,3}` 满足 `IsDSplit` 而 `bunemanIndex = -2/5 < 0`）；
+3. `δ` 是**裸对称函数**（无 `δ x x = 0`），而隔离指数的 `inf'` 会取到 `a = a'`、`b = b'` 的项
+   （BdD 的 setting 里 `d(x,x) = 0`）。
+
+⇒ **正确形态**已登记为 `Split.weakCompatibilityRealization_gap_correct_shape`
+（`Phylo/Stat/BunemanIndexBridge.lean` §4，用库内 `bunemanIndex` = 隔离指数 `α` 表达
+「`α_S = w S`（成员）」与「非成员 `α = 0`」）；本 `def` 保持原样，作为该形态的**弱化**登记。 -/
 def weakCompatibilityRealization_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
