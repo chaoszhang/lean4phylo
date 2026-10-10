@@ -991,4 +991,122 @@ theorem relabel_relabel {α : Type*} [Fintype α] [DecidableEq α] (e : Equiv.Pe
     exact funext fun x => he x]
   simp
 
+/-! ### 8.4 (W12a11) 缺口第 1–3 条**已证** ✓
+
+用 §8.3 的闭式族等式 ＋ §8.2 的 `↔` 刻画，把「`σ` 互换两棵树」与「两棵树都展示三条
+输入 quartet」一并证掉。此后 `two_parent_trees_gap` 只剩**第 4 条**
+（= 下方 `two_parent_trees_classification`，未证 ⬜）✓。 -/
+
+/-- ① `s ∈ famP2 ↔ relabel sig s ∈ famP1`（族等式 ＋ 对合）。 -/
+theorem mem_famP2_iff_relabel_mem_famP1 (s : Split (Fin 6)) :
+    s ∈ famP2 ↔ Split.relabel sig s ∈ famP1 := by
+  rw [famP2_eq_famP1_image_relabel, Finset.mem_image]
+  constructor
+  · rintro ⟨t, ht, rfl⟩
+    rw [relabel_relabel sig sig_involutive t]
+    exact ht
+  · intro h
+    exact ⟨Split.relabel sig s, h, relabel_relabel sig sig_involutive s⟩
+
+/-- ②（`sideA`）`relabel` 把单点侧映到单点侧。 -/
+theorem relabel_sideA_singleton_iff {α : Type*} [Fintype α] [DecidableEq α]
+    (e : Equiv.Perm α) (s : Split α) (x : α) :
+    (Split.relabel e s).sideA = {x} ↔ s.sideA = {e.symm x} := by
+  rw [Split.relabel_sideA]
+  constructor
+  · intro h
+    have h2 := congrArg (Finset.image (Equiv.toEmbedding e.symm)) h
+    rw [Finset.image_image, Finset.image_singleton] at h2
+    rw [show (⇑(Equiv.toEmbedding e.symm) ∘ ⇑(Equiv.toEmbedding e)) = id by
+      rw [Equiv.coe_toEmbedding, Equiv.coe_toEmbedding]
+      exact funext fun y => e.symm_apply_apply y] at h2
+    simpa using h2
+  · intro h
+    rw [h, Finset.image_singleton]
+    simp
+
+/-- ②（`sideB`）。 -/
+theorem relabel_sideB_singleton_iff {α : Type*} [Fintype α] [DecidableEq α]
+    (e : Equiv.Perm α) (s : Split α) (x : α) :
+    (Split.relabel e s).sideB = {x} ↔ s.sideB = {e.symm x} := by
+  rw [Split.relabel_sideB]
+  constructor
+  · intro h
+    have h2 := congrArg (Finset.image (Equiv.toEmbedding e.symm)) h
+    rw [Finset.image_image, Finset.image_singleton] at h2
+    rw [show (⇑(Equiv.toEmbedding e.symm) ∘ ⇑(Equiv.toEmbedding e)) = id by
+      rw [Equiv.coe_toEmbedding, Equiv.coe_toEmbedding]
+      exact funext fun y => e.symm_apply_apply y] at h2
+    simpa using h2
+  · intro h
+    rw [h, Finset.image_singleton]
+    simp
+
+/-- ②（补侧版，与 `sideAᶜ` 直接对话）。 -/
+theorem relabel_compl_singleton_iff {α : Type*} [Fintype α] [DecidableEq α]
+    (e : Equiv.Perm α) (s : Split α) (x : α) :
+    (Split.relabel e s).sideAᶜ = {x} ↔ s.sideAᶜ = {e.symm x} := by
+  rw [← Split.sideB_eq_compl (Split.relabel e s), ← Split.sideB_eq_compl s]
+  exact relabel_sideB_singleton_iff e s x
+
+/-- ②′ 「平凡」判定在 `relabel` 下不变（`{x}` 与 `{x}ᶜ` 两形态合并）。 -/
+theorem trivial_relabel_iff {α : Type*} [Fintype α] [DecidableEq α]
+    (e : Equiv.Perm α) (s : Split α) :
+    ((∃ x, s.sideA = {x}) ∨ (∃ x, s.sideA = {x}ᶜ)) ↔
+      ((∃ x, (Split.relabel e s).sideA = {x}) ∨
+        (∃ x, (Split.relabel e s).sideA = {x}ᶜ)) := by
+  have hA := relabel_sideA_singleton_iff e s
+  have hB := relabel_compl_singleton_iff e s
+  have key : ∀ t : Split α, ((∃ x, t.sideA = {x}) ∨ (∃ x, t.sideA = {x}ᶜ)) ↔
+      ((∃ x, t.sideA = {x}) ∨ (∃ x, t.sideAᶜ = {x})) := by
+    intro t
+    constructor
+    · rintro (h | ⟨x, hx⟩)
+      · exact Or.inl h
+      · exact Or.inr ⟨x, by rw [hx, compl_compl]⟩
+    · rintro (h | ⟨x, hx⟩)
+      · exact Or.inl h
+      · exact Or.inr ⟨x, by rw [← hx, compl_compl]⟩
+  rw [key s, key (Split.relabel e s)]
+  constructor
+  · rintro (⟨x, hx⟩ | ⟨x, hx⟩)
+    · exact Or.inl ⟨e x, (hA (e x)).mpr (by rw [Equiv.symm_apply_apply]; exact hx)⟩
+    · exact Or.inr ⟨e x, (hB (e x)).mpr (by rw [Equiv.symm_apply_apply]; exact hx)⟩
+  · rintro (⟨y, hy⟩ | ⟨y, hy⟩)
+    · exact Or.inl ⟨e.symm y, (hA y).mp hy⟩
+    · exact Or.inr ⟨e.symm y, (hB y).mp hy⟩
+
+/-- ★★★★ **缺口第 1–3 条已证**：存在两棵树 `T₁`、`T₂`，都展示三条输入 quartet，
+且 `T₂` 的 split 系统是 `T₁` 的在 `σ` 下的像（逐 split 的 `↔`）。
+
+（第 4 条 —— 「任何 parent tree 的 split 系统都在 `T₁`/`T₂` 的之内」—— 仍未证，
+见 `two_parent_trees_classification`。） -/
+theorem two_parent_trees_conjuncts_1_2_3 :
+    ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
+      (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
+      (∀ s : Split (Fin 6), T₂.IsSplitOf s ↔ T₁.IsSplitOf (Split.relabel sig s)) := by
+  obtain ⟨T₁, hT₁⟩ := exists_exact_tree_P1
+  obtain ⟨T₂, hT₂⟩ := exists_exact_tree_P2
+  have h1a : T₁.IsSplitOf sP1a := (hT₁ sP1a).mpr (Or.inl (by simp))
+  have h1b : T₁.IsSplitOf sP1b := (hT₁ sP1b).mpr (Or.inl (by simp))
+  have h1c : T₁.IsSplitOf sP1c := (hT₁ sP1c).mpr (Or.inl (by simp))
+  have h2a : T₂.IsSplitOf sP2a := (hT₂ sP2a).mpr (Or.inl (by simp))
+  have h2b : T₂.IsSplitOf sP2b := (hT₂ sP2b).mpr (Or.inl (by simp))
+  have h2c : T₂.IsSplitOf sP2c := (hT₂ sP2c).mpr (Or.inl (by simp))
+  refine ⟨T₁, T₂, ?_, ?_, fun s => ?_⟩
+  · intro q hq
+    simp only [prof, Finset.mem_insert, Finset.mem_singleton] at hq
+    rcases hq with rfl | rfl | rfl
+    · exact ⟨sP1a, h1a, ⟨{3, 4}, by decide, by decide⟩, ⟨{0, 1}, by decide, by decide⟩⟩
+    · exact ⟨sP1c, h1c, ⟨{2, 3}, by decide, by decide⟩, ⟨{0, 5}, by decide, by decide⟩⟩
+    · exact ⟨sP1b, h1b, ⟨{4, 5}, by decide, by decide⟩, ⟨{1, 2}, by decide, by decide⟩⟩
+  · intro q hq
+    simp only [prof, Finset.mem_insert, Finset.mem_singleton] at hq
+    rcases hq with rfl | rfl | rfl
+    · exact ⟨sP2a, h2a, ⟨{3, 4}, by decide, by decide⟩, ⟨{0, 1}, by decide, by decide⟩⟩
+    · exact ⟨sP2c, h2c, ⟨{2, 3}, by decide, by decide⟩, ⟨{0, 5}, by decide, by decide⟩⟩
+    · exact ⟨sP2b, h2b, ⟨{1, 2}, by decide, by decide⟩, ⟨{4, 5}, by decide, by decide⟩⟩
+  · rw [hT₂ s, hT₁ (Split.relabel sig s), mem_famP2_iff_relabel_mem_famP1 s]
+    exact or_congr Iff.rfl (trivial_relabel_iff sig s)
+
 end SBD
