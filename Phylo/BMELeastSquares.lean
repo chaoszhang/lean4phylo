@@ -488,6 +488,102 @@ theorem exists_equiv_fin_edgeSet (T : Phylogram X) :
   classical
   exact ⟨_, ⟨Fintype.equivFin _⟩⟩
 
+/-! ## 9. ★★★ 归约（W12e17）：缺口 ⟸「实现树 + Pauplin 归一化」
+
+`def bme_pauplin_identity_gap`（`:372`）的**结论**由两件假设推出：
+
+* ★★ `hreal : ∀ i j, T.dist (T.leaf i) (T.leaf j) = δ.val i j`（`T` 实现 `δ`）；
+* ★★★ `hnorm : BmePauplinNormalization T`（§7 的 Pauplin 归一化，式 (9)）。
+
+构造（**宇宙合规**：§8 探针已证 `E` 必须是 `Type 0`）：取 §8 的
+`idx : {e // e ∈ T.graph.edgeSet} ≃ Fin n` ⇒ **`E := Fin n`**（`Type 0` ✓），
+
+* `S i j k := [(idx.symm k).1 ∈ P_ij]`（0/1 关联）、`l k := T.wExt (idx.symm k).1`、`p i j := #(P_ij)`；
+
+再用 `Equiv.sum_comp` ＋ `Finset.sum_subtype` ＋ `Finset.sum_filter` 把 `Fin n` 上的和搬回
+「全 `Sym2 T.V` 上的和」（非边项由 `hp`/`he` 归零 ⇒ 无需 `wExt_eq_zero` 也成立 ✓）：
+
+* (1) 可加性：`Cladogram.dist_eq_sum_pathOf`（§15）＋ 逐项 `by_cases`；
+* (2) 指示和 = 路径边数：`hcard`（`List.toFinset_card_of_nodup` ＋ `Cladogram.pathOf_edges_nodup`）
+　＋ ℕ 版 `Finset.card_filter` ＋ `exact_mod_cast`；
+* (3) 归一化：直接由 `hnorm`。
+
+⇒ 缺口**归约**到 `BmePauplinNormalization T`（唯一剩下的组合内容 = (d)，见 §7）。
+⚠️ 本定理是**条件形态**（命名如实 ✓，不叫 `…_proof`）：它**没有**证明 (d)，也**不**声称缺口已证。 -/
+
+omit [DecidableEq X] in
+/-- ★★★ **归约**：`δ` 由 `T` 实现（`T.dist = δ.val`）且 `T` 满足 Pauplin 归一化
+⟹ `bme_pauplin_identity_gap δ`。取 `E := Fin n`（`n` = 边数，`Type 0` ✓，见 §8 宇宙事实）、
+`S i j k := [(idx.symm k).1 ∈ P_ij]`、`l k := T.wExt (idx.symm k).1`、`p i j := #(P_ij)`。 -/
+theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Phylogram X)
+    (hreal : ∀ i j : X, T.dist (T.leaf i) (T.leaf j) = δ.val i j)
+    (hnorm : BmePauplinNormalization T) :
+    bme_pauplin_identity_gap δ := by
+  classical
+  intro _hFP _hPD
+  obtain ⟨n, ⟨idx⟩⟩ := exists_equiv_fin_edgeSet T
+  refine ⟨Fin n, inferInstance,
+    (fun i j (k : Fin n) =>
+      if (idx.symm k).1 ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0),
+    (fun k : Fin n => T.wExt (idx.symm k).1),
+    (fun i j => (T.pathOf (T.leaf i) (T.leaf j)).edges.length), ?_, ?_, ?_⟩
+  · -- (1) 可加性
+    intro i j
+    rw [← hreal i j, Cladogram.dist_eq_sum_pathOf T (T.leaf i) (T.leaf j)]
+    rw [Equiv.sum_comp idx.symm
+      (fun s : {e : Sym2 T.V // e ∈ T.graph.edgeSet} =>
+        (if s.1 ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0) * T.wExt s.1)]
+    rw [← Finset.sum_subtype
+      (s := (Finset.univ.filter fun e : Sym2 T.V => e ∈ T.graph.edgeSet))
+      (p := fun e : Sym2 T.V => e ∈ T.graph.edgeSet) (h := fun e => by simp)
+      (f := fun s : Sym2 T.V =>
+        (if s ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0) * T.wExt s)]
+    rw [Finset.sum_filter]
+    refine Finset.sum_congr rfl fun e _ => ?_
+    by_cases he : e ∈ T.graph.edgeSet
+    · by_cases hp : e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges <;> simp [he, hp]
+    · have hp : e ∉ (T.pathOf (T.leaf i) (T.leaf j)).edges := fun h =>
+        he (SimpleGraph.Walk.edges_subset_edgeSet _ h)
+      simp [he, hp]
+  · -- (2) 指示和 = 路径边数
+    intro i j _
+    have hcard : (Finset.univ.filter
+          (fun e : Sym2 T.V => e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges)).card
+        = (T.pathOf (T.leaf i) (T.leaf j)).edges.length := by
+      rw [show (Finset.univ.filter
+            (fun e : Sym2 T.V => e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges))
+          = (T.pathOf (T.leaf i) (T.leaf j)).edges.toFinset from ?_]
+      · exact List.toFinset_card_of_nodup
+          (Cladogram.pathOf_edges_nodup T.toCladogram (T.leaf i) (T.leaf j))
+      · ext e
+        simp [List.mem_toFinset]
+    have hsumNat : (∑ e : Sym2 T.V,
+          (if e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℕ) else 0))
+        = (T.pathOf (T.leaf i) (T.leaf j)).edges.length := by
+      rw [← hcard, Finset.card_filter]
+    have hsumR : (∑ e : Sym2 T.V,
+          (if e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0))
+        = ((T.pathOf (T.leaf i) (T.leaf j)).edges.length : ℝ) := by
+      exact_mod_cast hsumNat
+    rw [Equiv.sum_comp idx.symm
+      (fun s : {e : Sym2 T.V // e ∈ T.graph.edgeSet} =>
+        if s.1 ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0)]
+    rw [← Finset.sum_subtype
+      (s := (Finset.univ.filter fun e : Sym2 T.V => e ∈ T.graph.edgeSet))
+      (p := fun e : Sym2 T.V => e ∈ T.graph.edgeSet) (h := fun e => by simp)
+      (f := fun s : Sym2 T.V =>
+        if s ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then (1 : ℝ) else 0)]
+    rw [Finset.sum_filter]
+    refine Eq.trans (Finset.sum_congr rfl fun e _ => ?_) hsumR
+    by_cases he : e ∈ T.graph.edgeSet
+    · by_cases hp : e ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges <;> simp [he, hp]
+    · have hp : e ∉ (T.pathOf (T.leaf i) (T.leaf j)).edges := fun h =>
+        he (SimpleGraph.Walk.edges_subset_edgeSet _ h)
+      simp [he, hp]
+  · -- (3) 归一化
+    intro k
+    exact hnorm (idx.symm k).1 (idx.symm k).2
+
 end Dissimilarity
 
 end NJ
