@@ -2917,6 +2917,55 @@ theorem nonneg_Mlm_d (n : ℕ) (δ : Pair n → ℝ) (a : Arc n) (hne : a.1.1.va
       simp only [quad]; ring] at *
   linarith
 
+/-! ### 11.12 第 5 步 ③（W12g-19）：收口 `def circularWeights_realization_gap`
+
+由对称零对角的 `d : Fin n → Fin n → ℝ` 造点对函数 `pairOfD n d := fun p => d p.1.1 p.1.2`，
+则 `pairVal (pairOfD n d) x y = d x y`（三条桥：对角用 `hdiag`，非对角用 `hsym`）⇒
+* 非负性：`weightOf_arcSplit` ＋ 三分派 `nonneg_Mlm_l/h/d`（`hsym` 用 `pairVal_comm` ✓）；
+* 恒等：`phyleticDist_arcFinset` ＋ 上面的桥 ✓；
+⇒ `def circularWeights_realization_gap` 的**证明形态** ✓（原 `def` **逐字保留** ✓）。 -/
+
+/-- 由 `d` 造点对函数（`p.1.1 < p.1.2` ⇒ 良定义，不需要 `hsym`）。 -/
+noncomputable def pairOfD (n : ℕ) (d : Fin n → Fin n → ℝ) : Pair n → ℝ := fun p => d p.1.1 p.1.2
+
+/-- ★ **桥**：`pairVal (pairOfD n d) x y = d x y`（对角用 `hdiag`，非对角用 `hsym`）。 -/
+theorem pairVal_pairOfD (n : ℕ) (d : Fin n → Fin n → ℝ) (hdiag : ∀ x, d x x = 0)
+    (hsym : ∀ x y, d x y = d y x) (x y : Fin n) :
+    pairVal (pairOfD n d) x y = d x y := by
+  unfold pairOfD pairVal
+  by_cases h : x < y
+  · rw [dite_eq_left h]
+  · by_cases h' : y < x
+    · rw [dite_eq_right h, dite_eq_left h']
+      exact hsym y x
+    · have hxy : x = y := le_antisymm (le_of_not_gt h') (le_of_not_gt h)
+      subst hxy
+      rw [dite_eq_right (lt_irrefl x), dite_eq_right (lt_irrefl x), hdiag x]
+
+/-- ★★★ **`def circularWeights_realization_gap` 的证明形态**（一般 `n`）：
+环形族 `arcFinset n` ＋ **显式非负**权重 `weightOf n (pairOfD n d)` 精确实现 `d`。 -/
+theorem circularWeights_realization_gap_proved (n : ℕ) : circularWeights_realization_gap n := by
+  intro d hdiag hsym hd
+  have hd' : IsCircularDist (Equiv.refl (Fin n)) (fun x y : Fin n => pairVal (pairOfD n d) x y) := by
+    have hfun : (fun x y : Fin n => pairVal (pairOfD n d) x y) = d := by
+      funext x y
+      exact pairVal_pairOfD n d hdiag hsym x y
+    rw [hfun]
+    exact hd
+  refine ⟨arcFinset n, weightOf n (pairOfD n d), arcFinset_circular n, ?_, ?_⟩
+  · intro s hs
+    obtain ⟨a, rfl⟩ := mem_arcFinset.mp hs
+    rw [weightOf_arcSplit]
+    by_cases hL : a.1.1.val = 0 ∧ a.1.2.val = 0
+    · exact nonneg_Mlm_l n (pairOfD n d) a hL (fun x => pairVal_self _ x) hd'
+    · by_cases hH : a.1.1.val = 0
+      · exact nonneg_Mlm_h n (pairOfD n d) a hH (fun h0 => hL ⟨hH, h0⟩)
+          (fun x y => pairVal_comm _ x y) hd'
+      · exact nonneg_Mlm_d n (pairOfD n d) a hH hd'
+  · intro x y _hxy
+    rw [phyleticDist_arcFinset]
+    exact pairVal_pairOfD n d hdiag hsym x y
+
 end FunctionalMaterial
 
 end WeightAlgebra
