@@ -1128,4 +1128,27 @@ theorem sideA_subset_cluster_meets (S u : Split X) (ρ : X)
   rw [← sideNotMem_eq_cluster] at h ⊢
   exact sideA_subset_sideNotMem_meets S u hA hA' h
 
+/-! ### 11.6 (★′) 极小性一步：登记（W19） -/
+
+/-- ⬜ **(★″) 极小 cluster 存在性（W19 登记；未证 ⇒ 不得当证明用）**：
+
+`F` 两两相容、`S ∉ F ± swap`、`ρ ∈ S.sideB`，且 `F` 中有 `u` 使 `u.cluster ρ ∩ S.sideA ≠ ∅`
+（即 `u*` 真的"咬到" `S.sideA`）时，**存在**这样的 `u₀`，其 `u₀.cluster ρ` 被**所有**这类 `u` 的
+`u.cluster ρ` 包含（即 `M := {u ∈ F : u.cluster ρ ∩ S.sideA ≠ ∅}` 的**极小元** ✓）。
+
+**证明路线（下一轮）**：`M` 有限非空 ⇒ 取基数最小者 ✓；层析性 `laminar_of_compatible_clusters`
+（`Phylo/Split.lean:910`，⚠️ **真实全名待 `#check laminar_of_compatible_clusters` 确认** —— 无 `Split.` 前缀 ✓）
+保证族内两成员"嵌套或相离"，而二者都与 `S.sideA` 相交 ⇒ 相离不可能 ⇒ 必嵌套 ⇒ 取包含关系极小者 ✓。
+
+⇒ 配合**已入库**的 (F1)（`Split.sideA_subset_cluster_meets` ✓：`u*` 吞掉 `S.sideA` 时必咬到 `S.sideB`）
+即可**一次**选定 `b, b'`（⚠️ **固定 `ρ`** 不换 ✓）⇒ `c_W = 0` 的四元组 ⇒ **(★′)** `noWRealizer_exists_gap` ✓
+⇒ 已入库 `notIsDSplit_of_splitMetricSum_gap_proof` ⇒ **(B2)** ✓。 -/
+def minimalCluster_exists_gap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (S : Split α) (ρ : α),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) →
+      (∀ t ∈ F, t ≠ S ∧ t.swap ≠ S) → ρ ∈ S.sideB →
+        (∃ u ∈ F, (u.cluster ρ ∩ S.sideA).Nonempty) →
+          ∃ u₀ ∈ F, (u₀.cluster ρ ∩ S.sideA).Nonempty ∧
+            ∀ u ∈ F, (u.cluster ρ ∩ S.sideA).Nonempty → u₀.cluster ρ ⊆ u.cluster ρ
+
 end Split
