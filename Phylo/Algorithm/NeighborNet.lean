@@ -2034,4 +2034,151 @@ theorem finrank_arc_eq_finrank_pair (n : ℕ) :
 
 end Dimension
 
+/-! ## 11. 一般 `n` 的恒等（W12g-6）：`Alm` / `Mlm` 的 `LinearMap` 层
+
+按 §10 的路线 (b)：
+
+* `Alm`（`phyleticDist` 的线性版）：`w ↦ (p ↦ ∑ a, w a * [弧 a 分离 p])`；
+* `Mlm`（§7 逆矩阵的三行泛函 L / H / D，带 `1/2`）：`δ ↦` 逐弧解出权重。
+
+⚠️ 两个实现要点：(i) `Mlm` 的分支用 **`dite`**（分支内需要 `i−1 < j`、`0 < j`、`j+1 < n` 等算术前提）；
+(ii) 每支的四（三）个位置先在函数体里 **`let` 绑定**，使三处实例化共享同一批项 ——
+否则 `by omega` 的证明项会各自生成，`ring` 无法把它们认作同一个原子。 -/
+
+section WeightAlgebra
+
+/-- ★ 弧 → split：取弧本身作 `sideA`（补侧非空由 `Arc` 的护栏 `j+1 < n` 保证）。 -/
+noncomputable def arcSplit {n : ℕ} (a : Arc n) : Split (Fin n) :=
+  ofSideA (cycArc (Equiv.refl (Fin n)) a.1.1 a.1.2)
+    (by
+      have h : a.1.1 ≤ a.1.2 := a.2.1
+      exact ⟨a.1.1, by simp [mem_cycArc, Finset.mem_Icc, h]⟩)
+    (by
+      refine ⟨⟨a.1.2.val + 1, a.2.2⟩, ?_⟩
+      have hne : ¬ (⟨a.1.2.val + 1, a.2.2⟩ : Fin n) ≤ a.1.2 := fun hle =>
+        Nat.not_succ_le_self a.1.2.val (Fin.le_iff_val_le_val.mp hle)
+      rw [Finset.mem_compl]
+      intro hcon
+      simp only [mem_cycArc, Finset.mem_Icc, Equiv.refl_apply] at hcon
+      exact hne hcon.2)
+
+@[simp] theorem arcSplit_sideA {n : ℕ} (a : Arc n) :
+    (arcSplit a).sideA = cycArc (Equiv.refl (Fin n)) a.1.1 a.1.2 := by
+  unfold arcSplit
+  exact Split.ofSideA_sideA _ _ _
+
+/-- ★ 位置 `x, y` 的点对值（按大小取；`x = y` 取 `0`）。 -/
+noncomputable def pairVal {n : ℕ} (δ : Pair n → ℝ) (x y : Fin n) : ℝ :=
+  if h : x < y then δ ⟨(x, y), h⟩ else if h' : y < x then δ ⟨(y, x), h'⟩ else 0
+
+theorem pairVal_add {n : ℕ} (δ δ' : Pair n → ℝ) (x y : Fin n) :
+    pairVal (δ + δ') x y = pairVal δ x y + pairVal δ' x y := by
+  unfold pairVal
+  by_cases h : x < y
+  · rw [dite_eq_left h, dite_eq_left h, dite_eq_left h]
+    simp only [Pi.add_apply]
+  · by_cases h' : y < x
+    · rw [dite_eq_right h, dite_eq_right h, dite_eq_right h,
+        dite_eq_left h', dite_eq_left h', dite_eq_left h']
+      simp only [Pi.add_apply]
+    · rw [dite_eq_right h, dite_eq_right h, dite_eq_right h,
+        dite_eq_right h', dite_eq_right h', dite_eq_right h']
+      norm_num
+
+theorem pairVal_smul {n : ℕ} (c : ℝ) (δ : Pair n → ℝ) (x y : Fin n) :
+    pairVal (c • δ) x y = c * pairVal δ x y := by
+  unfold pairVal
+  by_cases h : x < y
+  · rw [dite_eq_left h, dite_eq_left h]
+    simp only [Pi.smul_apply, smul_eq_mul]
+  · by_cases h' : y < x
+    · rw [dite_eq_right h, dite_eq_left h', dite_eq_right h, dite_eq_left h']
+      simp only [Pi.smul_apply, smul_eq_mul]
+    · rw [dite_eq_right h, dite_eq_right h', dite_eq_right h, dite_eq_right h']
+      ring
+
+/-- ★ `Alm` 的函数部分：弧权重 → 点对距离（`phyleticDist` 的线性版）。 -/
+noncomputable def AlmFun (n : ℕ) (w : Arc n → ℝ) : Pair n → ℝ :=
+  fun p => ∑ a : Arc n, w a * sepInd (arcSplit a) p.1.1 p.1.2
+
+theorem AlmFun_add (n : ℕ) (w w' : Arc n → ℝ) :
+    AlmFun n (w + w') = AlmFun n w + AlmFun n w' := by
+  funext p
+  simp only [AlmFun, Pi.add_apply]
+  rw [← Finset.sum_add_distrib]
+  exact Finset.sum_congr rfl fun a _ => by ring
+
+theorem AlmFun_smul (n : ℕ) (c : ℝ) (w : Arc n → ℝ) :
+    AlmFun n (c • w) = c • AlmFun n w := by
+  funext p
+  simp only [AlmFun, Pi.smul_apply, smul_eq_mul]
+  rw [Finset.mul_sum]
+  exact Finset.sum_congr rfl fun a _ => by ring
+
+/-- ★ **`Alm`**：弧权重 → 点对距离（线性映射）。 -/
+noncomputable def Alm (n : ℕ) : (Arc n → ℝ) →ₗ[ℝ] (Pair n → ℝ) where
+  toFun := AlmFun n
+  map_add' := AlmFun_add n
+  map_smul' := AlmFun_smul n
+
+/-- ★ `Mlm` 的函数部分：§7 逆矩阵的三行泛函（L / H / D），带 `1/2`。
+
+⚠️ 分支用 `dite`；三支的位置先 `let` 绑定（见本节开头说明）。 -/
+noncomputable def MlmFun (n : ℕ) (δ : Pair n → ℝ) : Arc n → ℝ := fun a =>
+  let i := a.1.1
+  let j := a.1.2
+  let z : Fin n := ⟨0, by have h := a.2.2; omega⟩
+  let o : Fin n := ⟨1, by have h := a.2.2; omega⟩
+  let L : Fin n := ⟨n - 1, by have h := a.2.2; omega⟩
+  let j1 : Fin n := ⟨j.val + 1, a.2.2⟩
+  let i0 : Fin n := ⟨i.val - 1, by have h := i.isLt; omega⟩
+  (1 / 2) * (if h0 : i.val = 0 ∧ j.val = 0 then
+      pairVal δ z o + pairVal δ z L - pairVal δ o L
+    else if h1 : i.val = 0 then
+      pairVal δ L j + pairVal δ z j1 - pairVal δ z j - pairVal δ L j1
+    else
+      pairVal δ i0 j + pairVal δ i j1 - pairVal δ i j - pairVal δ i0 j1)
+
+theorem MlmFun_add (n : ℕ) (δ δ' : Pair n → ℝ) :
+    MlmFun n (δ + δ') = MlmFun n δ + MlmFun n δ' := by
+  funext a
+  simp only [MlmFun, Pi.add_apply]
+  by_cases h0 : a.1.1.val = 0 ∧ a.1.2.val = 0
+  · rw [dite_eq_left h0, dite_eq_left h0, dite_eq_left h0]
+    simp only [pairVal_add]
+    ring
+  · rw [dite_eq_right h0, dite_eq_right h0, dite_eq_right h0]
+    by_cases h1 : a.1.1.val = 0
+    · rw [dite_eq_left h1, dite_eq_left h1, dite_eq_left h1]
+      simp only [pairVal_add]
+      ring
+    · rw [dite_eq_right h1, dite_eq_right h1, dite_eq_right h1]
+      simp only [pairVal_add]
+      ring
+
+theorem MlmFun_smul (n : ℕ) (c : ℝ) (δ : Pair n → ℝ) :
+    MlmFun n (c • δ) = c • MlmFun n δ := by
+  funext a
+  simp only [MlmFun, Pi.smul_apply, smul_eq_mul]
+  by_cases h0 : a.1.1.val = 0 ∧ a.1.2.val = 0
+  · rw [dite_eq_left h0, dite_eq_left h0]
+    simp only [pairVal_smul]
+    ring
+  · rw [dite_eq_right h0, dite_eq_right h0]
+    by_cases h1 : a.1.1.val = 0
+    · rw [dite_eq_left h1, dite_eq_left h1]
+      simp only [pairVal_smul]
+      ring
+    · rw [dite_eq_right h1, dite_eq_right h1]
+      simp only [pairVal_smul]
+      ring
+
+/-- ★ **`Mlm`**：点对函数 → 弧权重（§7 逆矩阵的三行泛函，线性映射）。 -/
+noncomputable def Mlm (n : ℕ) : (Pair n → ℝ) →ₗ[ℝ] (Arc n → ℝ) where
+  toFun := MlmFun n
+  map_add' := MlmFun_add n
+  map_smul' := MlmFun_smul n
+
+end WeightAlgebra
+
 end NeighborNet
