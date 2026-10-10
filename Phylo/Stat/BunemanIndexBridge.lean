@@ -1174,4 +1174,36 @@ def minimalCluster_exists_gap : Prop :=
 `a = a'` 于某一 `u.cluster ρ`、`b, b' ∈ S.sideB` 用 (F1) `sideA_subset_cluster_meets` 的补集形式 ✓ ——
 ⚠️ 此路线**尚未验证**，落地前必须先按 ★D 用见证校验 ✗。 -/
 
+/-! ### 11.8 (iii)：`c_W = 0` 的**充分条件**（逐 `u`、不依赖极小性/统一性 ✓） -/
+
+/-- ★★★ **(iii) 充分条件（已证）**：若 `a ∈ S.sideA`、`b ∈ S.sideB`，且**每个** `v ∈ F`
+都**不把 `a` 与 `b` 分开**，则对**任意** `a' ∈ S.sideA`、`b' ∈ S.sideB` 该四元组的 `c_W = 0` ✓。
+
+理由（**逐 `u`、无统一性** ✓）：`u` 实现 `W` 要求 `{a,a'}` 在一侧、`{b,b'}` 在另一侧
+⇒ `a` 与 `b` **必异侧** ⇒ 与假设矛盾 ✓。
+⚠️ **W22 发现**：我原先把 `a',b'` 的同侧条件也写进了假设，但**证明只用到了 `a,b` 那一半** ⇒
+`a',b'` 的条件是**多余的** ✓（陈述因此**更强** ✓）—— 与 W15 的 `hρ` 同理：**未使用的假设说明陈述可以更强** ✓。 -/
+theorem sum_bPairW_eq_zero_of_never_separated (F : Finset (Split X)) (w : Split X → ℝ)
+    (a a' b b' : X)
+    (h : ∀ v ∈ F, ¬ ((a ∈ v.sideA ∧ b ∈ v.sideB) ∨ (a ∈ v.sideB ∧ b ∈ v.sideA))) :
+    (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u) = 0 := by
+  have hne : ¬ (F.filter (fun u => bPairW u a a' b b' = true)).Nonempty := by
+    rintro ⟨v, hv⟩
+    obtain ⟨hvF, hbw⟩ := Finset.mem_filter.mp hv
+    have hPW : PairW v a a' b b' := (bPairW_eq_true_iff v a a' b b').mp hbw
+    rcases hPW with ⟨ha, ha', hb, hb'⟩ | ⟨ha, ha', hb, hb'⟩
+    · exact h v hvF (Or.inl ⟨ha, hb⟩)
+    · exact h v hvF (Or.inr ⟨ha, hb⟩)
+  rw [Finset.not_nonempty_iff_eq_empty.mp hne, Finset.sum_empty]
+
+/-- ★★★ **(iii) 与归约合体（已证）**：`a ∈ S.sideA`、`b ∈ S.sideB` 从不被 `F` 分开 ⇒
+`S` **不是** `δ̂ = Σ w·δ_u` 的 `d`-split ✓（`not_isDSplit_of_no_W_realizer` 的即用形态 ✓）。 -/
+theorem not_isDSplit_of_never_separated (F : Finset (Split X)) (w : Split X → ℝ)
+    (hw : ∀ s ∈ F, 0 < w s) (S : Split X) {a a' b b' : X}
+    (ha : a ∈ S.sideA) (ha' : a' ∈ S.sideA) (hb : b ∈ S.sideB) (hb' : b' ∈ S.sideB)
+    (h : ∀ v ∈ F, ¬ ((a ∈ v.sideA ∧ b ∈ v.sideB) ∨ (a ∈ v.sideB ∧ b ∈ v.sideA))) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) S.sideA S.sideB :=
+  not_isDSplit_of_no_W_realizer F w hw S ha ha' hb hb'
+    (sum_bPairW_eq_zero_of_never_separated F w a a' b b' h)
+
 end Split
