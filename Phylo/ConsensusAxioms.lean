@@ -512,7 +512,13 @@ def mnCorollary_gap : Prop :=
 已落地的**不可能性**是 §3 口径的 `no_weakmajority_threshold_isNTree`。
 
 （下式把「共识函数」写成 `(Fin k → S → S → Prop) → (S → S → Prop)`，三条公理分别是
-Pareto、IIA、非独裁；命题本身未证，仅命名缺口。） -/
+Pareto、IIA、非独裁；命题本身未证，仅命名缺口。）
+
+⚠️ **W12e 状态：本陈述为假**（见下方 ★★★ `arrowTreeQuasiOrder_gap_refuted`）。
+两处**不是** Arrow 定理的内容：① 值域 `S → S → Prop` **没有**要求传递/自反（原文的 `𝒯` 是
+**树拟序**，而 OCR 已损毁其定义）—— 于是「二票多数」这种非传递规则就满足三条公理；
+② `k` **没有下界**（`k = 0` 时 Pareto/IIA 空真、非独裁空真，恒真函数即是反例）。
+⇒ 忠实形态**须**补 (i) 值域限制为拟序（或由根树的祖先关系诱导），(ii) `3 ≤ k`。 -/
 def arrowTreeQuasiOrder_gap : Prop :=
   ∀ {S : Type*} [Fintype S] [DecidableEq S] (k : ℕ), 3 ≤ Fintype.card S →
     ¬ ∃ C : (Fin k → S → S → Prop) → (S → S → Prop),
@@ -520,5 +526,42 @@ def arrowTreeQuasiOrder_gap : Prop :=
           (∀ P P' (X : Finset S), (∀ i x y, x ∈ X → y ∈ X → (P i x y ↔ P' i x y)) →
             ∀ x y, x ∈ X → y ∈ X → (C P x y ↔ C P' x y)) ∧
           (∀ j : Fin k, ∃ (P : Fin k → S → S → Prop) (x y : S), P j x y ∧ ¬ C P x y)
+
+/-! ## 8. ★B 反例检查：缺口 2 的陈述**为假**（W12e） -/
+
+/-- ★★★ **反例检查：`arrowTreeQuasiOrder_gap` 为假**（故它**不应**被当作 Arrow 定理的陈述）。
+
+取 `S = Fin 3`、`k = 3`、共识函数 `C P x y := 「至少两个不同的投票者 `i ≠ j` 都判 `P i x y`
+且 `P j x y`」`（「二票多数」）。三条公理逐条成立：
+
+* **(P) Pareto**：全体 `P i x y` 时取 `i = 0, j = 1` 即可；
+* **(I) IIA**：`C P x y` 只依赖诸 `P i x y`（不依赖 `X` 之外的取值）；
+* **(D) 非独裁**：给定 `j`，取剖面 `P i a b := (i = j ∧ a = 0 ∧ b = 1)`：
+  `P j 0 1` 成立而 `¬ C P 0 1`（要 `i ≠ i'` 且两者都等于 `j`，矛盾）。
+
+`C P` 是**非传递**关系，而缺口的值域 `S → S → Prop` **没有**要求传递/自反 ——
+这正是原文 `𝒯`（**树拟序**，OCR 损毁）被丢掉的那一半内容。
+⇒ 忠实形态须补：(i) 值域限制为拟序/由根树的祖先关系诱导；(ii) 投票者数下界 `3 ≤ k`
+（`k ≤ 1` 时同样可造反例：`k = 0` 恒真函数满足三条公理）。
+
+本定理在**任意宇宙**成立（取 `ULift.{u} (Fin 3)`），即 `¬ arrowTreeQuasiOrder_gap.{u}`。 -/
+theorem arrowTreeQuasiOrder_gap_refuted : ¬ arrowTreeQuasiOrder_gap.{u} := by
+  intro h
+  have hbad := h (S := ULift.{u} (Fin 3)) 3 (by simp)
+  refine hbad ⟨fun P x y => ∃ i j : Fin 3, i ≠ j ∧ P i x y ∧ P j x y, ?_, ?_, ?_⟩
+  · intro P x y hP
+    exact ⟨0, 1, by decide, hP 0, hP 1⟩
+  · intro P P' X hX x y hx hy
+    constructor
+    · rintro ⟨i, j, hij, hi, hj⟩
+      exact ⟨i, j, hij, (hX i x y hx hy).mp hi, (hX j x y hx hy).mp hj⟩
+    · rintro ⟨i, j, hij, hi, hj⟩
+      exact ⟨i, j, hij, (hX i x y hx hy).mpr hi, (hX j x y hx hy).mpr hj⟩
+  · intro j
+    refine ⟨fun i a b => i = j ∧ a = ULift.up 0 ∧ b = ULift.up 1,
+      ULift.up 0, ULift.up 1, ⟨rfl, rfl, rfl⟩, ?_⟩
+    rintro ⟨i, i', hii, ⟨hi, -, -⟩, ⟨hi', -, -⟩⟩
+    exact hii (hi.trans hi'.symm)
+
 
 end NTreeConsensus

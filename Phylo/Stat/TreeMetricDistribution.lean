@@ -605,8 +605,15 @@ theorem card_fourSubsets_fin3 : (Fintype.card {A : Finset (Fin 3) // A.card = 4}
 /-- **缺口 1**（Steel & Penny 1993 **第 355–410 行** Theorem 1 与第 393–404 行 Corollary）：
 partition metric 的共享 split 数 `v_p` **渐近 Poisson**。
 
-本库**没有**测度层、没有 iid 空间 / `Measure.infinitePi`，也没有把「`n` 叶树空间上的
-均匀分布」抬成 `Measure`，故只把命题登记成 `Prop`：`P n k` 是「两棵 `n` 叶 binary 树
+本库**没有**把「`n` 叶树空间上的
+均匀分布」抬成 `Measure` 的层，故只把命题登记成 `Prop`：
+⚠️ **W12d 更正（教训 93：「Mathlib 没有 X」的旧判词不可信）**：本行原文还写「没有 iid 空间 /
+`Measure.infinitePi`」—— **该判词已失效**：本版 Mathlib **有** `Measure.infinitePi`
+（`Mathlib/Probability/HasLawExists.lean:37`、`Mathlib/Probability/Process/Kolmogorov.lean`）。
+缺的只是**本库自己**的树空间测度层，以及**整族分布**的 Poisson 极限定理（见 §6 的反例）。
+（W12d 且已证本 `Prop` 字面为**假**：`not_rfPoissonAsymptotic_gap`。）
+
+`P n k` 是「两棵 `n` 叶 binary 树
 共享 `k` 个 split」的概率，若 `v_p` 的均值有极限 `lam`，则概率比收敛到 Poisson 比
 `lam^k / k!`（用比值写以**避开** `exp`，从而不引入任何分析 import）。
 
@@ -687,6 +694,153 @@ def maxQuartetDistance_gap : Prop :=
 def quartetMinDistance_gap : Prop :=
   ∀ (X : Type) [Fintype X] [DecidableEq X] (r r' : QuartetRes X), r ≠ r' →
     2 * (Fintype.card X - 3) ≤ quartetDistFull r r'
+
+
+/-! ## §6 W12d：§5 缺口的**反例检查**（★B；教训 90：显式缺口记号常掩盖「命题本身为假」）
+
+⚠️ 下面两条缺口**在字面上是假命题**，故**不**升为同名 `theorem`（那会把假命题写成定理），
+而是保持 `def …_gap` 原文**逐字不动**，另证其**否定**，并登记应改写的（带假设的）形式。 -/
+
+/-- `Fin 4` 上唯一的 4-子集（`univ`）。 -/
+abbrev cexA : {A : Finset (Fin 4) // A.card = 4} := ⟨Finset.univ, by decide⟩
+
+/-- `Fin 4` 上 `0` 属于任何 4-元子集。 -/
+theorem cexH0 (A : {A : Finset (Fin 4) // A.card = 4}) : (0 : Fin 4) ∈ A.1 := by
+  rw [Finset.eq_univ_of_card A.1 (by simpa using A.2)]
+  simp
+
+/-- `Fin 4` 上 `1` 属于任何 4-元子集。 -/
+theorem cexH1 (A : {A : Finset (Fin 4) // A.card = 4}) : (1 : Fin 4) ∈ A.1 := by
+  rw [Finset.eq_univ_of_card A.1 (by simpa using A.2)]
+  simp
+
+/-- `Fin 4` 上 `2` 属于任何 4-元子集。 -/
+theorem cexH2 (A : {A : Finset (Fin 4) // A.card = 4}) : (2 : Fin 4) ∈ A.1 := by
+  rw [Finset.eq_univ_of_card A.1 (by simpa using A.2)]
+  simp
+
+/-- `Fin 4` 上「取 `{0,1}` 侧」的 resolution 表。 -/
+def cexResL : QuartetRes (Fin 4) := fun A =>
+  ⟨{⟨0, cexH0 A⟩, ⟨1, cexH1 A⟩}, by
+    have hne : (⟨0, cexH0 A⟩ : ↥A.1) ≠ ⟨1, cexH1 A⟩ := by
+      intro h
+      exact (by decide : (0 : Fin 4) ≠ 1) (congrArg Subtype.val h)
+    exact Finset.card_pair hne⟩
+
+/-- `Fin 4` 上「取 `{0,2}` 侧」的 resolution 表。 -/
+def cexResR : QuartetRes (Fin 4) := fun A =>
+  ⟨{⟨0, cexH0 A⟩, ⟨2, cexH2 A⟩}, by
+    have hne : (⟨0, cexH0 A⟩ : ↥A.1) ≠ ⟨2, cexH2 A⟩ := by
+      intro h
+      exact (by decide : (0 : Fin 4) ≠ 2) (congrArg Subtype.val h)
+    exact Finset.card_pair hne⟩
+
+/-- ★B **反例检查**：`maxQuartetDistance_gap` **是假命题**（其 `def` 原文**未改**）。
+
+`X = Fin 4`：唯一的 4-子集上取**不同**配对小侧 `{0,1}` 与 `{0,2}`，则
+`quartetDistFull = 2` 而 `C(4,4) = 1`：`15 · 2 = 30 > 28 · 1`。
+
+⇒ Alon–Naves–Sudakov 2016 第 137–141 行的 `(14/15)·C(n,4)` 是**叶标号树 / 可兼容 quartet
+系统**上的界，且**只对 `n ≥ 6`** 成立（原文第 137–141 行明写 `for n ≥ 6`；`n = 4` 时
+`C(4,4) = 1` 而两棵**真树** `{0,1}|{2,3}` 与 `{0,2}|{1,3}` 已是 `quartetDistFull = 2`，
+即 `d_q = 1 > 14/15`）。对**任意** `QuartetRes` 表，最大 quartet 距离是 `2·C(n,4)`。
+**应改写**为「**`n ≥ 6`** 且表**来自 `n` 叶 binary 树**：`quartetDistFull/2 ≤ (14/15)·C(n,4)`」
+（本库无 `n` 叶树枚举层 ⇒ 只能登记为需带假设的改写）。 -/
+theorem not_maxQuartetDistance_gap : ¬ maxQuartetDistance_gap := by
+  have hcard : Fintype.card {A : Finset (Fin 4) // A.card = 4} = 1 := by
+    rw [Fintype.card_finset_len]
+    decide
+  have hL1 : (⟨1, cexH1 cexA⟩ : ↥(cexA.1)) ∈ (cexResL cexA).1 := by
+    simp only [cexResL, Finset.mem_insert, Finset.mem_singleton]
+    trivial
+  have hL0 : (⟨0, cexH0 cexA⟩ : ↥(cexA.1)) ∈ (cexResL cexA).1 := by
+    simp only [cexResL, Finset.mem_insert, Finset.mem_singleton]
+    trivial
+  have hR0 : (⟨0, cexH0 cexA⟩ : ↥(cexA.1)) ∈ (cexResR cexA).1 := by
+    simp only [cexResR, Finset.mem_insert, Finset.mem_singleton]
+    trivial
+  have hR1 : (⟨1, cexH1 cexA⟩ : ↥(cexA.1)) ∉ (cexResR cexA).1 := by
+    simp only [cexResR, Finset.mem_insert, Finset.mem_singleton]
+    rintro (h | h)
+    · exact (by decide : (1 : Fin 4) ≠ 0) (congrArg Subtype.val h)
+    · exact (by decide : (1 : Fin 4) ≠ 2) (congrArg Subtype.val h)
+  have hRc0 : (⟨0, cexH0 cexA⟩ : ↥(cexA.1)) ∉ (cexResR cexA).1ᶜ :=
+    fun h' => (Finset.mem_compl.mp h') hR0
+  have hcond : ¬ ((cexResL cexA).1 = (cexResR cexA).1 ∨
+      (cexResL cexA).1 = (cexResR cexA).1ᶜ) := by
+    rintro (h' | h')
+    · exact hR1 (h' ▸ hL1)
+    · exact hRc0 (h' ▸ hL0)
+  have hqd : quartetDistFull cexResL cexResR = 2 := by
+    rw [quartetDistFull]
+    rw [Finset.sum_eq_single_of_mem cexA (Finset.mem_univ _)]
+    · simp [hcond]
+    · intro b _ hb
+      exact absurd (Subtype.ext (Finset.eq_univ_of_card b.1 (by simpa using b.2))) hb
+  intro h
+  have h15 := h (Fin 4) cexResL cexResR
+  rw [hqd, hcard] at h15
+  omega
+
+/-- ★B **反例用的两点分布族**（`{0 ↦ 1/2, 1 ↦ 1/2}`；`n = 0` 行单独取 `1` 使行和恒为 `1`）。 -/
+def rfPoissonCex (n k : ℕ) : ℚ :=
+  if k = 0 then (if n = 0 then 1 else 1 / 2) else if k = 1 then (if n = 0 then 0 else 1 / 2) else 0
+
+/-- 反例族在 `k ∉ {0,1}` 处取 `0`。 -/
+theorem rfPoissonCex_eq_zero {n k : ℕ} (h0 : k ≠ 0) (h1 : k ≠ 1) : rfPoissonCex n k = 0 := by
+  simp only [rfPoissonCex]
+  split_ifs
+  all_goals first | rfl | (exfalso; omega)
+
+/-- 反例族**行和恒为 `1`**。 -/
+theorem rfPoissonCex_sum (n : ℕ) : (∑ k ∈ Finset.range (n + 1), rfPoissonCex n k) = 1 := by
+  match n with
+  | 0 => simp [rfPoissonCex]
+  | (m + 1) =>
+    rw [Finset.sum_range_succ', Finset.sum_range_succ']
+    have hz : (∑ k ∈ Finset.range m, rfPoissonCex (m + 1) (k + 1 + 1)) = 0 :=
+      Finset.sum_eq_zero fun k _ => rfPoissonCex_eq_zero (by omega) (by omega)
+    rw [hz]
+    norm_num [rfPoissonCex]
+
+/-- 反例族**非负**。 -/
+theorem rfPoissonCex_nonneg (n k : ℕ) : 0 ≤ rfPoissonCex n k := by
+  simp only [rfPoissonCex]
+  split_ifs <;> norm_num
+
+/-- 反例族**均值恒为 `1/2`**（`n ≥ 1`），故均值有极限 `lam = 1/2`。 -/
+theorem rfPoissonCex_mean (n : ℕ) (hn : 0 < n) :
+    (∑ k ∈ Finset.range (n + 1), (k : ℚ) * rfPoissonCex n k) = 1 / 2 := by
+  obtain ⟨m, rfl⟩ := Nat.exists_eq_succ_of_ne_zero (by omega : n ≠ 0)
+  rw [Finset.sum_range_succ', Finset.sum_range_succ']
+  have hz : (∑ k ∈ Finset.range m,
+      ((k + 1 + 1 : ℕ) : ℚ) * rfPoissonCex (m + 1) (k + 1 + 1)) = 0 :=
+    Finset.sum_eq_zero fun k _ => by
+      rw [rfPoissonCex_eq_zero (by omega) (by omega), mul_zero]
+  rw [hz]
+  norm_num [rfPoissonCex]
+
+/-- ★B **反例检查**：`rfPoissonAsymptotic_gap` **是假命题**（其 `def` 原文**未改**）。
+
+反例 `P = rfPoissonCex`、`lam = 1/2`：行和为 `1`、非负、均值**恒为** `lam`（故收敛），
+但 `k = 1` 时 `P n 1 / P n 0 = 1` 而 `lam^1/1! = 1/2`，差 `1/2 ≮ ε = 1/4`。
+
+⇒ 「一阶矩收敛」**推不出**「逐点概率比收敛到 Poisson 比」：原文只登记了文献结论的**形状**，
+真正的 Theorem 1 需要**整族分布**的 Poisson 极限定理（含第 336–352 行的近邻对数标准差条件）
+作为**假设**。**应改写**为「若 `P n ·` 弱收敛到 `Poisson(lam)`（或直接假设比值收敛），则 …」。 -/
+theorem not_rfPoissonAsymptotic_gap : ¬ rfPoissonAsymptotic_gap := by
+  intro h
+  obtain ⟨N, hN⟩ := h rfPoissonCex (1 / 2) (by norm_num) rfPoissonCex_sum rfPoissonCex_nonneg
+    (fun eps heps => ⟨1, fun n hn => by
+      rw [rfPoissonCex_mean n (by omega)]
+      simpa using heps⟩)
+    (1 / 4) (by norm_num)
+  have hn0 : max N 1 ≠ 0 := by omega
+  have hkey := hN (max N 1) (le_max_left N 1) 1 (by omega)
+  have h1 : rfPoissonCex (max N 1) 1 = 1 / 2 := by simp [rfPoissonCex, hn0]
+  have h0 : rfPoissonCex (max N 1) 0 = 1 / 2 := by simp [rfPoissonCex, hn0]
+  rw [h1, h0] at hkey
+  norm_num at hkey
 
 end MetricDist
 

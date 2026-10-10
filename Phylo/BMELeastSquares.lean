@@ -392,6 +392,26 @@ def bme_statistical_consistency_gap (Δhat : ℕ → X → X → ℝ) (D : Dissi
   ∀ η : ℝ, 0 < η → ∃ N : ℕ, ∀ n ≥ N,
     (∑ x ∈ plane, |Δhat n x.1 x.2 - D.val x.1 x.2|) < η
 
+/-! ## 7. 反空真（W12e）：缺口 2 是「假设槽」而**非**待证命题 -/
+
+omit [DecidableEq X] in
+/-- ★C **反空真**：`bme_statistical_consistency_gap Δ̂ D` 的**前提可满足** ——
+取 `Δ̂ n ≡ D`（「估计量恰好等于真值」，相合性的退化情形），则对每个 `η > 0`
+和差之和是 `0 < η`。⇒ 该 `def` 是**假设槽**（把「估计量相合」登记为条件），
+不是一条可无条件证明的命题：换成发散序列 `Δ̂ n := D + 1` 时同一 `Prop` 为假。
+真正的数学内容仍是「序列数据 → 相合估计量」那一层（模型/大数律），不在 L2 距离层。 -/
+theorem bme_statistical_consistency_gap_satisfiable (D : Dissimilarity X) :
+    ∃ Δhat : ℕ → X → X → ℝ, bme_statistical_consistency_gap Δhat D := by
+  refine ⟨fun _ x y => D.val x y, ?_⟩
+  intro η hη
+  refine ⟨0, fun n _ => ?_⟩
+  have h0 : (∑ x ∈ plane, |D.val x.1 x.2 - D.val x.1 x.2|) = 0 := by
+    refine Finset.sum_eq_zero fun x _ => ?_
+    simp
+  rw [h0]
+  exact hη
+
+
 end Dissimilarity
 
 end NJ

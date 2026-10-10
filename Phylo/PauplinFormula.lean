@@ -378,6 +378,51 @@ theorem pauplinFormula_gap_of_edgeCoeff_gap (T : Phylogram X)
     (h : pauplinEdgeCoeff_gap T) : pauplinFormula_gap T :=
   fun hb => pauplinLength_eq_trueLength_of_edgeCoeff T (h hb)
 
+/-! ## 9. ★B 反例检查（W12e）：`pauplinEdgeCoeff_gap` 的量词**为假** -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★B **非边列的关联恒为 0**：`e` 不是图的边 ⟹ 不在任何路径的边表里 ⟹ 整列为 0。
+
+（用 `SimpleGraph.Walk.edges_subset_edgeSet`：walk 的每条边都是图的边。） -/
+theorem incidence_eq_zero_of_not_mem_edgeSet (T : Phylogram X) {e : Sym2 T.V}
+    (he : e ∉ T.graph.edgeSet) (x y : X) : incidence T x y e = 0 := by
+  rw [incidence]
+  by_cases h : e ∈ (pathWalk T x y).edges
+  · exact absurd (SimpleGraph.Walk.edges_subset_edgeSet (pathWalk T x y) h) he
+  · simp [h]
+
+omit [DecidableEq X] in
+/-- ★B 非边 `e` 上 Pauplin 归一化和是 `0`（列恒 0）。 -/
+theorem edgeCoeff_sum_eq_zero_of_not_mem_edgeSet (T : Phylogram X) {e : Sym2 T.V}
+    (he : e ∉ T.graph.edgeSet) :
+    ∑ p ∈ Dissimilarity.plane, bmeCoeff (topoDist T p.1 p.2) * incidence T p.1 p.2 e = 0 := by
+  refine Finset.sum_eq_zero fun p _ => ?_
+  rw [incidence_eq_zero_of_not_mem_edgeSet T he p.1 p.2, mul_zero]
+
+omit [DecidableEq X] in
+/-- ★★★ **反例检查：`∀ e : Sym2 T.V` 这个量词为假** ——
+`Sym2 T.V` 含**非边**顶点对（任何 `≥ 4` 叶的树都有），非边的归一化和是 `0 ≠ 2`。
+⇒ 缺口（及 `pauplinLength_eq_trueLength_of_edgeCoeff` 的假设）**必须**把量词限制到
+`e ∈ T.graph.edgeSet`（或 `Edge T.toCladogram`）；否则前提**不可满足**，
+「带假设的定理」成为空真。 -/
+theorem not_edgeCoeff_forall_eq_two (T : Phylogram X) {e : Sym2 T.V}
+    (he : e ∉ T.graph.edgeSet) :
+    ¬ (∀ e' : Sym2 T.V,
+      ∑ p ∈ Dissimilarity.plane,
+        bmeCoeff (topoDist T p.1 p.2) * incidence T p.1 p.2 e' = 2) := by
+  intro h
+  have h0 := edgeCoeff_sum_eq_zero_of_not_mem_edgeSet T he
+  rw [h e] at h0
+  norm_num at h0
+
+omit [DecidableEq X] in
+/-- ★★★ **`pauplinEdgeCoeff_gap` 可被证伪**：二叉树只要含非边顶点对即假。 -/
+theorem pauplinEdgeCoeff_gap_refuted (T : Phylogram X) (hbin : T.IsBinary) {e : Sym2 T.V}
+    (he : e ∉ T.graph.edgeSet) : ¬ pauplinEdgeCoeff_gap T := by
+  intro h
+  exact not_edgeCoeff_forall_eq_two T he (h hbin)
+
+
 end Pauplin
 
 end NJ
