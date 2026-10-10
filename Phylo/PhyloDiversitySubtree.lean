@@ -68,18 +68,35 @@ Steel 2005 式 (1)（PD 的加权交换性质）的选 `x` 论证需要「`W` �
   `greedy_gap_correct_shape_of_hangOff_disjoint`（**(C) ⇒ 修复形态**，与已入库的
   `greedy_gap_correct_shape_of_exchange` 合成；原 `def greedy_gap_correct_shape` **逐字保留** ✓）。
 
-## 唯一的剩余缺口 (C)（如实）
+## 第十二轮新增 ＋ ★ 一处**自我更正**
 
-**(C)**：`∀ W, ∀ z ∉ W, ∀ w₁ w₂ ∈ W, z ∈ HangOff(w₁) → z ∈ HangOff(w₂) → w₁ = w₂`
-（即「`z ∉ W` **至多挂在一条**悬挂路径上」）。它需要一条**树分量几何**：
-`region(w) := outer(最内侧外边)` 是 `T − f(w)` 的一个连通分量（含 `leaf w`，且 `region(w) ∩ W = {w}` ✓ 已可由
-`isSep_of_isPendantEdgeOf_of_ne` 得），而**树中两条边的割分量若相交必含一个另一个** ⇒ 若
-`z ∈ region(w₁) ∩ region(w₂)`（且 `z ∉ W`）则 `region(w₁) ⊆ region(w₂)` 或反之，
-于是 `w₁ ∈ region(w₂) ∩ W = {w₂}` ⇒ `w₁ = w₂` ✗ 矛盾 ✓。
+**已入库（第十一轮）**：`not_mem_hangOff_of_mem_of_ne`（`region(w) ∩ W = {w}` ✓）、
+`isCovered_edgeSet`（`IsCovered ⇒ e ∈ edgeSet` ✓）、
+`pendantEdge_unique`（**(C) 的 `e₁ = e₂` 情形**：一条外边唯一确定 `w`，需 `3 ≤ |W|` ✓）。
 
-⇒ **要证的就是「两条边的割分量相交 ⇒ 嵌套」这一条**（可用 `existsUnique_path`／`spanVerts` 的路径论证，
-或 `inSide_or_inSide` 的二分类性导出）。**本批未证**；`pdExchange_gap` 与 `greedy_gap_correct_shape`
-**仍是开放目标**（未被反驳 ✓；本模块**没有**、也不声称证出它们 ✓）。
+★ **更正（第十二轮）**：第十一轮 docstring 写的「**树中两条边的割分量相交 ⇒ 必含一个另一个**」
+作为**纯树命题是假的** ✗。**反例**：`T` 为 `a — p — b` 且 `z` 挂在 `p` 上（`p` 度 3 ✓ 合法 cladogram），
+取 `e₁ = (p,b)`、`e₂ = (a,p)`：则 `comp(e₁, a) = {a, p, z}`、`comp(e₂, b) = {b, p, z}` —— 二者相交
+（含 `p, z`）却**互不包含**（`a ∉ comp(e₂,b)`、`b ∉ comp(e₁,a)`）✗。
+⇒ **不能**把它当成一条纯图论引理来证；**(C) 必须带着 `HangOff` 的附加条件直接证**：
+`e ∈ P(w)` 给的是「**所有** `W∖{w}` 都在同侧」（`¬cov(W∖{w}, e)`）＋ `|W| ≥ 3`，
+这些条件排除了上面的反例（那里 `W∖{a}` 无法全在同一侧）。
+
+## 唯一的剩余缺口 (C)：现在只剩 **`e₁ ≠ e₂`** 情形（如实）
+
+**(C)**：`∀ W, ∀ z ∉ W, ∀ w₁ w₂ ∈ W, z ∈ HangOff(w₁) → z ∈ HangOff(w₂) → w₁ = w₂`。
+`e₁ = e₂` 已由 `pendantEdge_unique` 解决 ✓；剩 **`e₁ ≠ e₂`**。
+
+**已知关系的完整清单**（设 `a := leaf w₁`、`b := leaf w₂`、`c := leaf z`、`d := leaf w₃`，`w₃ ∈ W∖{w₁,w₂}` 由 `3 ≤ |W|` 取到）：
+由核心引理 `e_i ∈ P(w_i)` 给出 `¬inSide e₁ a b`、`¬inSide e₁ a d`、`¬inSide e₂ b a`、`¬inSide e₂ b d`；
+由假设给出 `¬inSide e₁ a c`、`¬inSide e₂ b c`；
+三顶点同侧律 `inSide_of_not_inSide_of_not_inSide` 再给出 `inSide e₁ b c`、`inSide e₁ d c`、`inSide e₁ b d`、
+`inSide e₂ a c`、`inSide e₂ d c`、`inSide e₂ a d` —— **这些彼此并不矛盾** ✓（第十二轮逐一核过），
+故 `e₁ ≠ e₂` 的矛盾必须**额外**用到「`e₁`、`e₂` 分别是 `w₁`、`w₂` 的**悬挂**外边」这一几何
+（例如二者必然分别落在三元组 `(z, w₁, w₂)` 的**两条不同的腿**上，且第三条腿含 `w₃`）。
+⇒ 需要 `existsUnique_path`／`pathOf` 的**中位数（tripod）结构**；**本批未证**。
+`pdExchange_gap` 与 `greedy_gap_correct_shape` **仍是开放目标**（未被反驳 ✓；本模块**没有**、
+也不声称证出它们 ✓；**没有**半成品或占位证明 ✓）。
 -/
 
 set_option linter.unusedSectionVars false
