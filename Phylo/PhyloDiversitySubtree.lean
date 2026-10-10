@@ -34,7 +34,12 @@ Steel 2005 式 (1)（PD 的加权交换性质）的选 `x` 论证需要「`W` �
 * `mem_hangOff_self_of_pendant`：`w ∈ HangOff T W w`（当 `P(w) ≠ ∅`）；
 * **两条「错形式」的机器证据**（见下 ★）：
   `forall_form_subset_singleton`（∀-形式塌缩到 `{w}`）、
-  `isSep_form_eq_compl_singleton`（**∃-形式取 `IsSep` 则等于 `{w}ᶜ`**）。
+  `isSep_form_eq_compl_singleton`（**∃-形式取 `IsSep` 则等于 `{w}ᶜ`**）；
+* **第七轮新增（(A) 的几何核）**：
+  `inSide_of_not_inSide_of_not_inSide`（**三顶点同侧律**：树删一条边恰有两个分量，
+  由 `inSide_or_inSide` 二分律证）、
+  `isPendantEdgeOf_subset_gain_of_adj`（在 (B) 计数前提下，`w` 的每条外边都落在 `Gain(w)` 里
+  —— 即 (A) 所需的 `¬cov(W',e) ∧ cov(W'∪{w},e)`）。
 
 ## ★ 三次量词/极性更正（W12h 第四–六轮，全部有机器证据）
 
@@ -55,7 +60,12 @@ Steel 2005 式 (1)（PD 的加权交换性质）的选 `x` 论证需要「`W` �
 
 ## 尚未完成（如实）
 
-1. **(A) 的 PD 求和形式化**（把上面的逐边论证写成 `Finset.sum` 不等式）**未做**；
+1. **(A) 的 PD 求和装配未完成**（第七轮试过，**如实记录卡点**）：需要
+   `PD(W) − PD(W∖{w}) = Σ_e [IsPendantEdgeOf] · w_e` 与并集版两个差分恒等式 ＋ 最终一次实数重排。
+   本文件里 **`ring` 不可用**（`unknown tactic`）✗、**`ite` 的两个旧引理名已弃用**（须用
+   `ite_eq_left`／`ite_eq_right`；用旧名会产生**告警** ⇒ 非 0 输出 ⇒ 验收失败）✗、`Edge` 拆成相邻对时
+   `SimpleGraph.mem_edgeSet` 名字解析失败 ✗ ⇒ 这三处需换写法（`split_ifs` ＋ `sub_add_cancel`/
+   `add_le_add_iff_right` 等显式引理 ＋ 正确 API 名）后再做一次；
 2. **`HangOff` 在互异 `w ∈ W` 上两两不交**（Steel (B) 的计数核）**未证** —— 需要两件几何：
    (i) `z ∉ W` 到 `spanVerts T W` 的**最近点唯一**（路径论证），
    (ii) 互异 `w` 的悬挂路径**互不相交**；
@@ -178,6 +188,59 @@ theorem isSep_form_eq_compl_singleton {T : Cladogram X} {W : Finset X} {w : X} {
     rw [T.mem_sideLeaves_iff_inSide] at hnotin
     rw [isSep_iff_not_inSide]
     exact hnotin
+
+/-- ★★★ **三顶点同侧律**（树删去一条边恰有两个连通分量）：若 `u` 与 `v`、`u` 与 `w`
+都**不同侧**（`¬inSide`），则 `v` 与 `w` **同侧**。用 `inSide_or_inSide`（二分律）证。 -/
+theorem inSide_of_not_inSide_of_not_inSide {T : Cladogram X} {a b : T.V}
+    (hab : T.graph.Adj a b) {u v w : T.V}
+    (huv : ¬ T.inSide s(a, b) u v) (huw : ¬ T.inSide s(a, b) u w) :
+    T.inSide s(a, b) v w := by
+  rcases T.inSide_or_inSide hab (x := u) with hu | hu
+  · have hv : T.inSide s(a, b) v b := by
+      rcases T.inSide_or_inSide hab (x := v) with hv | hv
+      · exact absurd (inSide_trans T _ hu ((inSide_comm T _ v a).mp hv)) huv
+      · exact hv
+    have hw : T.inSide s(a, b) w b := by
+      rcases T.inSide_or_inSide hab (x := w) with hw | hw
+      · exact absurd (inSide_trans T _ hu ((inSide_comm T _ w a).mp hw)) huw
+      · exact hw
+    exact inSide_trans T _ hv ((inSide_comm T _ w b).mp hw)
+  · have hv : T.inSide s(a, b) v a := by
+      rcases T.inSide_or_inSide hab (x := v) with hv | hv
+      · exact hv
+      · exact absurd (inSide_trans T _ hu ((inSide_comm T _ v b).mp hv)) huv
+    have hw : T.inSide s(a, b) w a := by
+      rcases T.inSide_or_inSide hab (x := w) with hw | hw
+      · exact hw
+      · exact absurd (inSide_trans T _ hu ((inSide_comm T _ w b).mp hw)) huw
+    exact inSide_trans T _ hv ((inSide_comm T _ w a).mp hw)
+
+/-- ★★★ **(A) 的几何核**：在「计数前提」(B) 下，`w` 的外边 `s(a,b)` **属于** `Gain(w)`，
+即 `¬cov(W',s(a,b)) ∧ cov(W'∪{w},s(a,b))`。
+
+`W'` 的每个元素都被 `s(a,b)` 与 `leaf w` 分离：若该元素在 `W` 内用核心引理
+（`isSep_of_isPendantEdgeOf_of_ne`），否则用 (B) 的「不在 `HangOff` 里」。
+于是 `W'` 整体落在另一侧 —— **这一步正是三顶点同侧律**（`W'` 的两个见证不可能被分开）。 -/
+theorem isPendantEdgeOf_subset_gain_of_adj {T : Cladogram X} {W W' : Finset X} {w : X}
+    {a b : T.V} (hab : T.graph.Adj a b) (hW' : W'.Nonempty) (hwW' : w ∉ W')
+    (hcount : ∀ z ∈ W' \ W, z ∉ HangOff T W w)
+    (he : IsPendantEdgeOf T W w s(a, b)) :
+    ¬ IsCovered T W' s(a, b) ∧ IsCovered T (W' ∪ {w}) s(a, b) := by
+  classical
+  have key : ∀ z ∈ W', T.IsSep s(a, b) (T.leaf w) (T.leaf z) := by
+    intro z hz
+    by_cases hzW : z ∈ W
+    · exact isSep_of_isPendantEdgeOf_of_ne he hzW (fun h => hwW' (h ▸ hz))
+    · by_contra hsep
+      exact hcount z (Finset.mem_sdiff.mpr ⟨hz, hzW⟩) ⟨s(a, b), he, hsep⟩
+  constructor
+  · rintro ⟨p, hp, q, hq, hpq⟩
+    have hin : T.inSide s(a, b) (T.leaf p) (T.leaf q) :=
+      inSide_of_not_inSide_of_not_inSide hab (key p hp) (key q hq)
+    exact hpq hin
+  · obtain ⟨z, hz⟩ := hW'
+    exact ⟨w, Finset.mem_union_right _ (Finset.mem_singleton_self w), z,
+      Finset.mem_union_left _ hz, key z hz⟩
 
 end Cladogram
 
