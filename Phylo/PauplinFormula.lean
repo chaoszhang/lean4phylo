@@ -423,6 +423,105 @@ theorem pauplinEdgeCoeff_gap_refuted (T : Phylogram X) (hbin : T.IsBinary) {e : 
   exact not_edgeCoeff_forall_eq_two T he (h hbin)
 
 
+/-! ## 10. ★★★ 修复形态（W12e2）：把 D2-A 的量词限制到**真边**，并给出**非空真**归约
+
+原 `def pauplinEdgeCoeff_gap`（§8）**逐字保留**，但它已由 ★★★ `pauplinEdgeCoeff_gap_refuted`
+证伪：`∀ e : Sym2 T.V` 含**非边**，而非边列恒 `0`（§9 `incidence_eq_zero_of_not_mem_edgeSet`）
+⇒ 前提不可满足 ⇒ 以它为假设的 `pauplinLength_eq_trueLength_of_edgeCoeff` 与
+`pauplinFormula_gap_of_edgeCoeff_gap` **都是空真**。
+
+本节给出**修复形态**（量词只到 `e ∈ T.graph.edgeSet`）与其**非空真**归约。 -/
+
+/-- ★★★ **修复形态（D2-A′）**：逐边 Pauplin 归一化只在**真边**上要求
+
+　　`Σ_{i,j} 2^{1−n_ij}·S_ij(e) = 2`（式 (9)，DesperGascuel2004 `:2027`；无序对即 `= 1`）。
+
+与 §8 的原缺口**只差量词范围**：`∀ e : Sym2 T.V` ↦ `∀ e ∈ T.graph.edgeSet`。
+★B 已核：4 叶二叉树上真边的系数确实是 `2`（★C `ex4S_normalization`；无序对写法的
+`ex4_pauplin_internal`/`ex4_pauplin_pendant` 给 `1`），故本形态**可满足、不空真**。 -/
+def pauplinEdgeCoeff_gap_correct_shape (T : Phylogram X) : Prop :=
+  T.IsBinary → ∀ e ∈ T.graph.edgeSet,
+    ∑ p ∈ Dissimilarity.plane, bmeCoeff (topoDist T p.1 p.2) * incidence T p.1 p.2 e = 2
+
+omit [DecidableEq X] in
+/-- ★ **原缺口 ⟹ 修复形态**（只是变弱，未偷换命题）：`∀ e` 推出 `∀ e ∈ edgeSet`。 -/
+theorem pauplinEdgeCoeff_gap_correct_shape_of_gap (T : Phylogram X)
+    (h : pauplinEdgeCoeff_gap T) : pauplinEdgeCoeff_gap_correct_shape T :=
+  fun hb e _ => h hb e
+
+omit [DecidableEq X] in
+/-- ★★★ **非空真归约（W12e2）**：修复形态（只在真边上归一化）⟹ `l̂(T) = l(T)`。
+
+证明与 ★★★ `pauplinLength_eq_trueLength_of_edgeCoeff` 同构，但归一化假设只在真边上用；
+非边的项由 ★B `edgeCoeff_sum_eq_zero_of_not_mem_edgeSet` 与 `wExt_eq_zero` 双双归零，
+故**前提可真**（对照：原归约的前提因非边列 `0 ≠ 2` 而不可满足 ⇒ 原归约空真）。 -/
+theorem pauplinLength_eq_trueLength_of_edgeCoeff_on_edges (T : Phylogram X)
+    (h : ∀ e ∈ T.graph.edgeSet,
+      ∑ p ∈ Dissimilarity.plane, bmeCoeff (topoDist T p.1 p.2) * incidence T p.1 p.2 e = 2) :
+    pauplinLength T = trueLength T := by
+  have hterm : ∀ e : Sym2 T.V,
+      (∑ x ∈ Dissimilarity.plane,
+          bmeCoeff (topoDist T x.1 x.2) * incidence T x.1 x.2 e) * T.wExt e
+        = 2 * T.wExt e := by
+    intro e
+    by_cases he : e ∈ T.graph.edgeSet
+    · rw [h e he]
+    · rw [edgeCoeff_sum_eq_zero_of_not_mem_edgeSet T he,
+        Phylo.TreeDist.wExt_eq_zero T he, zero_mul, mul_zero]
+  have hstep : (∑ x ∈ Dissimilarity.plane,
+        bmeCoeff (topoDist T x.1 x.2) * T.dist (T.leaf x.1) (T.leaf x.2))
+      = ∑ e : Sym2 T.V,
+          (∑ x ∈ Dissimilarity.plane,
+            bmeCoeff (topoDist T x.1 x.2) * incidence T x.1 x.2 e) * T.wExt e := by
+    have h1 : ∀ x ∈ Dissimilarity.plane,
+        bmeCoeff (topoDist T x.1 x.2) * T.dist (T.leaf x.1) (T.leaf x.2)
+          = ∑ e : Sym2 T.V,
+              T.wExt e * (bmeCoeff (topoDist T x.1 x.2) * incidence T x.1 x.2 e) := by
+      intro x _
+      rw [dist_eq_sum_incidence T x.1 x.2, Finset.mul_sum]
+      exact Finset.sum_congr rfl fun e _ => by ring
+    rw [Finset.sum_congr rfl h1, Dissimilarity.wls_fubini]
+    refine Finset.sum_congr rfl fun e _ => ?_
+    rw [← Finset.mul_sum]
+    ring
+  rw [pauplinLength, hstep, ← sum_wExt_eq_trueLength T,
+    Finset.sum_congr rfl fun e _ => hterm e, ← Finset.mul_sum]
+  ring
+
+omit [DecidableEq X] in
+/-- ★★★ **修复形态 ⟹ Pauplin 公式本体（D2-B）**：`T.IsBinary → l̂(T) = l(T)`。
+这是 `pauplinFormula_gap_of_edgeCoeff_gap` 的**非空真**替代。 -/
+theorem pauplinFormula_gap_of_correct_shape (T : Phylogram X)
+    (h : pauplinEdgeCoeff_gap_correct_shape T) : pauplinFormula_gap T :=
+  fun hb => pauplinLength_eq_trueLength_of_edgeCoeff_on_edges T (h hb)
+
+/-! ## 11. ★B ★C 可满足性见证（W12e2）：4 叶二叉树的**真路径关联数据** -/
+
+/-- ★C **4 叶二叉树 `((0,1),(2,3))` 的边集**：`0..3` = 四片挂边，`4` = 内部边。 -/
+abbrev ex4E := Fin 5
+
+/-- ★C **4 叶二叉树的路径关联** `S_ij(e)`：`e` 是否在叶 `i`–叶 `j` 的路径上
+（挂边：恰有一端是 `i`；内部边：两端分属 `{0,1}` 与 `{2,3}`）。 -/
+noncomputable def ex4S (i j : Fin 4) (e : ex4E) : ℝ :=
+  if e = 0 then (if (i = 0) ↔ (j = 0) then 0 else 1)
+  else if e = 1 then (if (i = 1) ↔ (j = 1) then 0 else 1)
+  else if e = 2 then (if (i = 2) ↔ (j = 2) then 0 else 1)
+  else if e = 3 then (if (i = 3) ↔ (j = 3) then 0 else 1)
+  else (if ((i = 0 ∨ i = 1) ↔ (j = 0 ∨ j = 1)) then 0 else 1)
+
+/-- ★B ★★★ **修复形态的逐边归一化在真 4 叶二叉树上成立**：
+`∀ e, Σ_{i,j ∈ plane} 2^{1−p_ij}·S_ij(e) = 2`（式 (9)，`:2027`；有序对写法，无序对即 `1`）。
+
+⇒ 把量词限制到**真边**之后，归一化条件**可满足**（本见证在**关联层**，正是 D2-A 所在的那一层；
+与 ★C `ex4_pauplin_internal`（内部边）/ `ex4_pauplin_pendant`（挂边）的 `= 1` 一致）。 -/
+theorem ex4S_normalization :
+    ∀ e : ex4E, ∑ x ∈ Dissimilarity.plane,
+      bmeCoeff (ex4p x.1 x.2) * ex4S x.1 x.2 e = 2 := by
+  intro e
+  rw [← Dissimilarity.sum_sum_eq_plane (fun i j => bmeCoeff (ex4p i j) * ex4S i j e)]
+  fin_cases e <;> (simp only [sum_univ_four_fin, bmeCoeff, ex4p]; norm_num [ex4S])
+
+
 end Pauplin
 
 end NJ

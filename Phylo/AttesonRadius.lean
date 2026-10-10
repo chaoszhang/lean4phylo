@@ -865,6 +865,83 @@ theorem atteson_reduction_gap_hypotheses_nonempty :
     exDiss.IsCherry 0 1 ∧ exDiss.FourPoint ∧ (0 : ℝ) ≤ 1 / 2 ∧ (1 : ℝ) / 2 ≤ 1 :=
   ⟨exDiss_isCherry_01, exDiss_fourPoint, by norm_num, by norm_num⟩
 
+/-! ## 9. ★★★ 归约步的 `FourPoint` 一半（W12e2）
+
+`atteson_reduction_gap`（§8）要求：把樱桃 `i,j` 按 `f x = θ·δ x i + (1−θ)·δ x j` 合并成新叶 `u`
+后，得到的 `δm` 仍满足四点条件。**这一半只用到 `IsCherry i j + FourPoint`**（不需要树层），
+本节把它证成定理；剩下的**类型迁移** `X ↝ (X∖{i,j})∪{u}`（连同 `Dissimilarity` 构造、
+`card Y + 1 = card X`）**仍是缺口**。
+
+★D 命题核查：先在 `scripts/msc/w12e2_merge_fourpoint_check.py` 上穷举核过
+（5 叶全部二叉拓扑 × 有理边权网格 × `θ ∈ {0,1/4,1/2,3/4,1}` ⇒ 1 187 500 次检查 0 反例；
+5 点整值度量 `{1,2,3}` 全枚举 59 049 个，其中 653 个满足 `FourPoint ∧ IsCherry`，
+**0 反例**）后才动手证明。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **樱桃的交叉相等**：`FourPoint` ＋ `IsCherry i j` ⟹ 对任意 `b,c ∉ {i,j}`，
+
+　　`δ i b + δ j c = δ i c + δ j b`
+
+（树层即「`i,j` 相邻」的交叉相等；证明用 `FourPoint (i,b,j,c)` 的两个析取支搭配
+`IsCherry` 的两条不等式，再对 `b,c` 互换一次得反向不等式）。 -/
+theorem IsCherry.cross_eq (δ : Dissimilarity X) (hfp : δ.FourPoint) {i j : X}
+    (hch : δ.IsCherry i j) {b c : X}
+    (hb : b ≠ i) (hb' : b ≠ j) (hc : c ≠ i) (hc' : c ≠ j) :
+    δ.val i b + δ.val j c = δ.val i c + δ.val j b := by
+  have h1 : δ.val i b + δ.val j c ≤ δ.val i c + δ.val j b := by
+    rcases hfp i b j c with h | h
+    · have h2 := (hch.2 b c hb hb' hc hc').2
+      linarith
+    · simpa [δ.symm b j] using h
+  have h2 : δ.val i c + δ.val j b ≤ δ.val i b + δ.val j c := by
+    rcases hfp i c j b with h | h
+    · have h3 := (hch.2 c b hc hc' hb hb').2
+      linarith
+    · simpa [δ.symm c j] using h
+  linarith
+
+omit [Fintype X] [DecidableEq X] in
+set_option linter.unusedVariables false in
+/-- ★★★ **凸合并的四点条件（W12e2）**：`δ` 满足四点条件、`i,j` 是樱桃、`θ ∈ [0,1]`、
+`a,b,c ∉ {i,j}`。则「把 `i,j` 合并成新叶 `u`（`d(u,x) = θ·δ x i + (1−θ)·δ x j`）」后，
+四元组 `(u,a,b,c)` 满足四点条件（库内 `FourPoint` 的析取形态；`δ.val i a` 即 `δ.val a i`）。
+
+证明：设 `A_i = δ i a + δ b c`、`P_i = δ i b + δ a c`、`Q_i = δ i c + δ a b`（`j` 同理），
+由 ★★ `IsCherry.cross_eq` 得 `P_i − Q_i = P_j − Q_j`；对 `FourPoint (i,a,b,c)` 与
+`FourPoint (j,a,b,c)` 的两个析取支做 4 组分类讨论，再用 `θ ≥ 0`、`1 − θ ≥ 0` 加权即得。
+
+⚠️ `a ≠ i`、`a ≠ j` 属「`a` 未被合并」这一类型迁移前提，在纯算术证明里不出现，
+故仅对本条声明关掉 `linter.unusedVariables`。 -/
+theorem fourPoint_merge (δ : Dissimilarity X) (hfp : δ.FourPoint) {i j : X}
+    (hch : δ.IsCherry i j) {θ : ℝ} (h0 : 0 ≤ θ) (h1 : θ ≤ 1) {a b c : X}
+    (ha : a ≠ i) (ha' : a ≠ j) (hb : b ≠ i) (hb' : b ≠ j) (hc : c ≠ i) (hc' : c ≠ j) :
+    θ * δ.val i a + (1 - θ) * δ.val j a + δ.val b c ≤
+        θ * δ.val i b + (1 - θ) * δ.val j b + δ.val a c ∨
+      θ * δ.val i a + (1 - θ) * δ.val j a + δ.val b c ≤
+        θ * δ.val i c + (1 - θ) * δ.val j c + δ.val a b := by
+  have hce := IsCherry.cross_eq δ hfp hch hb hb' hc hc'
+  have hDD : δ.val i b + δ.val a c - (δ.val i c + δ.val a b)
+      = δ.val j b + δ.val a c - (δ.val j c + δ.val a b) := by linarith
+  have hθ1 : (0 : ℝ) ≤ 1 - θ := by linarith
+  rcases hfp i a b c with hAi | hAi
+  · rcases hfp j a b c with hAj | hAj
+    · left; nlinarith [hAi, hAj, h0, hθ1]
+    · by_cases hcase : δ.val i b + δ.val a c ≤ δ.val i c + δ.val a b
+      · right; nlinarith [hAi, hcase, hAj, h0, hθ1]
+      · left
+        have hPj : δ.val j c + δ.val a b ≤ δ.val j b + δ.val a c := by
+          linarith [hDD, not_le.mp hcase]
+        nlinarith [hAi, hAj, hPj, h0, hθ1]
+  · rcases hfp j a b c with hAj | hAj
+    · by_cases hcase2 : δ.val j b + δ.val a c ≤ δ.val j c + δ.val a b
+      · right; nlinarith [hAi, hAj, hcase2, h0, hθ1]
+      · left
+        have hPi : δ.val i c + δ.val a b ≤ δ.val i b + δ.val a c := by
+          linarith [hDD, not_le.mp hcase2]
+        nlinarith [hAi, hPi, hAj, h0, hθ1]
+    · right; nlinarith [hAi, hAj, h0, hθ1]
+
+
 end Dissimilarity
 
 end NJ
