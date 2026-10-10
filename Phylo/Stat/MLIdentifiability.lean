@@ -53,7 +53,7 @@ import Phylo.Stat.QuartetDecides
 | ★B `ml_finite_sample_not_true` | **有限样本下 ML 不必选真树**（2 候选 ＋ 具体反例，`n = 0`） |
 | ★B `strict_max_no_uniform_gap` | **无正 gap 的严格最大**（无限候选空间）⟹ `exists_gap` 的**有限性**不可去 |
 | ★B `ml_inconsistent_of_not_identifiable` | 期望得分最大者**不是**真树（模型误设 ⇒ 不可识别）时，**任何** argmax 估计量都不一致 |
-| ★C `fourTaxonMLProblem` ＋ `fourTaxonML_gap` | 4 taxon / 3 拓扑的具体 ML 问题（gap `= 1/8`，有理数，`norm_num`），配 `scripts/msc/w11d_ml_ident_check.py` |
+| ★C `fourTaxonProblem` ＋ `fourTaxonML_gap` ＋ `fourTaxon_argmax_eq_truth` | 4 taxon / 3 拓扑的具体 ML 问题（有理数表 `(0, −1/8, −3/8)`，gap `= 1/8`，`norm_num`）；**模型层**的精确有理核验见 `scripts/msc/w11d_ml_ident_check.py` |
 
 ## 诚实边界（**不弱化、不硬编**）
 
@@ -354,12 +354,21 @@ theorem ml_inconsistent_of_not_identifiable :
 
 /-! ## 5. ★C 4 taxon / 3 拓扑的最小例子（有理数，`norm_num`）
 
-**设置**：4 taxon，三个候选拓扑 `12|34`（真）· `13|24` · `14|23`；
-期望得分（每位点对数似然，已归一化，值来自 `scripts/msc/w11d_ml_ident_check.py`
-的**精确有理数**计算：真拓扑严格最大，差距 `1/8`）。
+**设置**：4 taxon，三个候选拓扑 `12|34`（真）· `13|24` · `14|23`。
 
-这里把该例子写成**具体有理数**的 `MLProblem`，并 `norm_num` 验出 gap `= 1/8`。
-脚本侧独立核验「三拓扑的模式分布两两不同（精确有理数）＋ 真拓扑期望对数似然严格最大」。 -/
+**两层分工（诚实说明）**：
+
+* **Lean 侧（本节）**：把该 ML 问题写成一张**具体的、有理数的**期望得分表
+  `(0, −1/8, −3/8)`（真拓扑最大，gap `= 1/8`），用 `norm_num` **机械**验出
+  `Identifiable` / 正 gap / argmax 唯一 —— 这是**结构**的机器核验；
+  ⚠️ 表中数字是**该例子的取值**，**不是**任何模型的物理数值。
+* **脚本侧**（`scripts/msc/w11d_ml_ident_check.py`，**从镜像取件**）：在 **2-状态对称模型**
+  （Neyman；4 taxon，边参数为精确有理数）上**不分**地算出三个拓扑的 16 个位点模式概率
+  （`fractions.Fraction`，**无 Monte Carlo**），并核验：三分布精确归一；
+  两两**精确不同** ⟹ 由 **Gibbs 不等式**真拓扑的**期望对数似然严格最大**（这就是
+  「ML 可识别」的模型层结论）；再用 **Pinsker** `KL ≥ ½·TV²` 给出该 gap 的**精确有理下界**
+  （脚本实测 `TV = 1/42`、`4/105` ⟹ 下界 `1/3528`、`8/11025`，均 `> 0`）。
+* ⟹ 本节的 `Identifiable` 前提**非空洞**：模型层确有实例（脚本），结构的机器核验在 Lean 侧。 -/
 
 /-- ★C 4 taxon 三拓扑的**具体期望得分表**（有理数）：`12|34` 真树 `0`，另两个 `−1/8`、`−3/8`。 -/
 def fourTaxonExpected : Fin 3 → ℝ := ![0, -1 / 8, -3 / 8]
@@ -383,7 +392,8 @@ theorem fourTaxonProblem_identifiable : fourTaxonProblem.Identifiable := by
 
 /-- ★C **具体 gap `= 1/8`**：任何非真拓扑都至少差 `1/8`。
 
-⚠️ `1/8` 是**该例子**的数字（脚本 `scripts/msc/w11d_ml_ident_check.py` 输出），
+⚠️ `1/8` 是**该例子**的数字（**本节的取值**，不是模型层的物理数值 ——
+模型层的 gap 见 `scripts/msc/w11d_ml_ident_check.py` 的精确有理下界 `1/3528` / `8/11025`），
 不是一般定理的常数。 -/
 theorem fourTaxonML_gap :
     ∀ t : Fin 3, t ≠ fourTaxonProblem.truth →
