@@ -56,7 +56,7 @@ def splits_of(n):
     X = frozenset(range(1, n + 1))
     out, uniq = [], []
     for mask in range(1, 1 << n):
-        A = frozenset(i for i in range(n) if mask >> i & 1)
+        A = frozenset(i + 1 for i in range(n) if mask >> i & 1)
         B = X - A
         if len(A) >= 2 and len(B) >= 2:
             out.append(frozenset((A, B)))
@@ -64,6 +64,13 @@ def splits_of(n):
         if s not in uniq:
             uniq.append(s)
     return uniq
+
+
+def fmt_family(fam):
+    """Human-readable rendering of a family of splits."""
+    return "{" + ", ".join(
+        "|".join("".join(str(x) for x in sorted(b)) for b in sorted(tuple(s), key=sorted))
+        for s in fam) + "}"
 
 
 def compatible(s, t):
@@ -159,7 +166,8 @@ def part_one():
     print("=" * 74)
     print("Part I -- exhaustive: pairwise compatible  ==>  weakly compatible")
     print("=" * 74)
-    for n in (4, 5, 6):
+    # n = 4 and n = 5: EVERY split system (2^3 and 2^10 of them)
+    for n in (4, 5):
         S_all = splits_of(n)
         quadmasks = masks_of(n, S_all)
         compat = {}
@@ -190,7 +198,32 @@ def part_one():
         check("n=%d : weak is STRICTLY weaker (%d weak vs %d pairwise)" % (n, nweak, npair),
               npair < nweak and nweak > 0)
         print("      smallest weak-but-not-pairwise family: %s"
-              % sorted(sorted(tuple(sorted(b))) for b in S_all[i]) for i in smallest)
+              % fmt_family([S_all[i] for i in smallest]))
+
+    # n = 6: 25 nontrivial splits -> all systems of at most 3 splits (2^25 would be 33M)
+    n = 6
+    S_all = splits_of(n)
+    quadmasks = masks_of(n, S_all)
+    compat = {}
+    for i in range(len(S_all)):
+        for j in range(len(S_all)):
+            compat[(i, j)] = compatible(S_all[i], S_all[j])
+    bad = nweak = npair = total = 0
+    for r in range(4):
+        for fam in itertools.combinations(range(len(S_all)), r):
+            total += 1
+            m = 0
+            for i in fam:
+                m |= 1 << i
+            w = weak_mask(quadmasks, m)
+            p = pair_mask(compat, m)
+            nweak += w
+            npair += p
+            if p and not w:
+                bad += 1
+    check("n=6 (25 nontrivial splits): all %d systems of <= 3 splits -- pairwise "
+          "compatible => weakly compatible, and weak is strictly weaker" % total,
+          bad == 0 and npair < nweak)
 
 
 def part_two():
@@ -223,11 +256,11 @@ def part_two():
     check("Fin 5 witness: weakly compatible but NOT pairwise compatible",
           weakly_compatible(frozenset((f5[0], g5[0]))) and not compatible(f5[0], g5[0]))
 
-    S6 = splits_of(6)
-    quad6 = masks_of(6, S6)
-    nb = sum(1 for r in range(len(S6) + 1) for fam in itertools.combinations(range(len(S6)), r)
-             if not weak_mask(quad6, sum(1 << i for i in fam)))
-    check("anti-vacuity (n=6): non-weakly-compatible families DO exist (%d of 32768)" % nb,
+    S5 = splits_of(5)
+    quad5 = masks_of(5, S5)
+    nb = sum(1 for r in range(len(S5) + 1) for fam in itertools.combinations(range(len(S5)), r)
+             if not weak_mask(quad5, sum(1 << i for i in fam)))
+    check("anti-vacuity (n=5): non-weakly-compatible families DO exist (%d of 1024)" % nb,
           nb > 0)
 
 
@@ -287,7 +320,9 @@ def part_four():
 
     ok_weak = True
     for vals in itertools.product(range(0, 4), repeat=6):
-        d = {(1, 2): Fraction(vals[0]), (2, 1): Fraction(vals[0]),
+        d = {(1, 1): Fraction(0), (2, 2): Fraction(0), (3, 3): Fraction(0),
+             (4, 4): Fraction(0),
+             (1, 2): Fraction(vals[0]), (2, 1): Fraction(vals[0]),
              (1, 3): Fraction(vals[1]), (3, 1): Fraction(vals[1]),
              (1, 4): Fraction(vals[2]), (4, 1): Fraction(vals[2]),
              (2, 3): Fraction(vals[3]), (3, 2): Fraction(vals[3]),
