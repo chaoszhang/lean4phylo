@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Phylo.Quartet
 import Phylo.RootedTriplet
 import Phylo.Supertree
+import Phylo.ConsensusExtra
 
 /-!
 # `Phylo.SupertreeLimits` —— supertree / consensus 方法的**不可能性**（NEXT.md **C7**）
@@ -767,5 +768,194 @@ theorem rooted_tree_decidableEq_gap :
   cases h T T' with
   | isTrue hh => exact Or.inl hh
   | isFalse hh => exact Or.inr hh
+
+/-! ## 8. ★ (W12a9) 原文 Figure 1 两棵 parent tree 的**精确** split 系统 —— 库内零件实例化
+
+原文 113–116 行的 "precisely two trees" 需要「**精确** split 系统」的 cladogram。
+库内 `Phylo/ConsensusExtra.lean` 的 `isSplitOf_iff_mem_or_trivial` 恰好给出
+（W12a8 发现的 **`↔` 全刻画**，本文件因此**新增 1 行 import `Phylo.ConsensusExtra`**）：
+
+```text
+theorem isSplitOf_iff_mem_or_trivial (fam) (ρ) (hcomp) (hnt)
+    (hswap : ∀ s ∈ fam, s.swap ∈ fam) (h3) :
+  ∃ M, ∀ s, M.IsSplitOf s ↔ s ∈ fam ∨ (∃ x, s.sideA = {x}) ∨ (∃ x, s.sideA = {x}ᶜ)
+```
+
+本节把 `w12a_twoparent_check.py` 机器穷举出的两个 parent 族 `P₁`、`P₂`（split 用
+「不含 `0` 的一侧」编码，与该脚本的输出**逐字对应**）代入，得到两棵精确树的存在性 ✓。
+「分类定理」（每个 parent tree 的 split 系统都在 `P₁ ∪ P₂` 内）仍是唯一剩余，见下方
+`two_parent_trees_classification` ✓。 -/
+
+/-- 相容性的**集合形式**：`splitOf` 的相容 ⟺ 两侧集合的 4 个 `∩ = ∅` 之一（可 `decide`）。 -/
+theorem splitOf_compatible_iff {A B : Finset (Fin 6)} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty)
+    (hB : B.Nonempty) (hBc : Bᶜ.Nonempty) :
+    (Phylo.splitOf A hA hAc).Compatible (Phylo.splitOf B hB hBc) ↔
+      (A ∩ B = ∅ ∨ A ∩ Bᶜ = ∅ ∨ Aᶜ ∩ B = ∅ ∨ Aᶜ ∩ Bᶜ = ∅) := by
+  rw [Split.Compatible]
+  simp only [Phylo.splitOf_sideA, Phylo.splitOf_sideB, Finset.disjoint_iff_inter_eq_empty]
+
+/-- `splitOf` 两侧的基数（集合形式）。 -/
+theorem splitOf_card {A : Finset (Fin 6)} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    (Phylo.splitOf A hA hAc).sideA.card = A.card
+      ∧ (Phylo.splitOf A hA hAc).sideB.card = Aᶜ.card := by
+  rw [Phylo.splitOf_sideA, Phylo.splitOf_sideB]
+  exact ⟨rfl, rfl⟩
+
+/-- `swap` 不改相容性（右侧）。 -/
+theorem compatible_swap_iff {s t : Split (Fin 6)} : s.Compatible t ↔ s.Compatible t.swap := by
+  rw [Split.Compatible, Split.Compatible]
+  simp only [Finset.disjoint_iff_inter_eq_empty, Split.swap_sideA, Split.swap_sideB]
+  tauto
+
+/-- `swap` 不改相容性（左侧）。 -/
+theorem compatible_swap_left_iff {s t : Split (Fin 6)} :
+    s.Compatible t ↔ s.swap.Compatible t := by
+  rw [Split.Compatible, Split.Compatible]
+  simp only [Finset.disjoint_iff_inter_eq_empty, Split.swap_sideA, Split.swap_sideB]
+  tauto
+
+/-! ### 8.1 `P₁`（机器穷举的 `P1`：`{0,1}|rest`、`{0,1,2,3}|{4,5}`、`{0,1,4,5}|{2,3}`） -/
+
+noncomputable abbrev sP1a : Split (Fin 6) :=
+  Phylo.splitOf ({2, 3, 4, 5} : Finset (Fin 6)) (by decide) (by decide)
+noncomputable abbrev sP1b : Split (Fin 6) :=
+  Phylo.splitOf ({4, 5} : Finset (Fin 6)) (by decide) (by decide)
+noncomputable abbrev sP1c : Split (Fin 6) :=
+  Phylo.splitOf ({2, 3} : Finset (Fin 6)) (by decide) (by decide)
+
+noncomputable abbrev baseP1 : Finset (Split (Fin 6)) := {sP1a, sP1b, sP1c}
+
+/-- `P₁` 补上换向（`hswap` 前提）。 -/
+noncomputable abbrev famP1 : Finset (Split (Fin 6)) := baseP1 ∪ baseP1.image (fun s => s.swap)
+
+theorem baseP1_compatible : ∀ s ∈ baseP1, ∀ t ∈ baseP1, s.Compatible t := by
+  intro s hs t ht
+  simp only [baseP1, Finset.mem_insert, Finset.mem_singleton] at hs ht
+  rcases hs with rfl | rfl | rfl <;> rcases ht with rfl | rfl | rfl <;>
+    (rw [splitOf_compatible_iff]; decide)
+
+theorem baseP1_nontrivial : ∀ s ∈ baseP1, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  simp only [baseP1, Finset.mem_insert, Finset.mem_singleton] at hs
+  rcases hs with rfl | rfl | rfl <;>
+    (simp only [Phylo.splitOf_sideA, Phylo.splitOf_sideB]; decide)
+
+theorem famP1_swap_closed : ∀ s ∈ famP1, s.swap ∈ famP1 := by
+  intro s hs
+  rcases Finset.mem_union.mp hs with h | h
+  · exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨s, h, rfl⟩))
+  · obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp h
+    rw [Split.swap_swap]
+    exact Finset.mem_union.mpr (Or.inl ht)
+
+theorem famP1_compatible : ∀ s ∈ famP1, ∀ t ∈ famP1, s.Compatible t := by
+  intro s hs t ht
+  rcases Finset.mem_union.mp hs with h1 | h1 <;> rcases Finset.mem_union.mp ht with h2 | h2
+  · exact baseP1_compatible s h1 t h2
+  · obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp h2
+    exact compatible_swap_iff.mpr (baseP1_compatible s h1 t' ht')
+  · obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp h1
+    exact compatible_swap_left_iff.mpr (baseP1_compatible s' hs' t h2)
+  · obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp h1
+    obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp h2
+    exact compatible_swap_iff.mpr
+      (compatible_swap_left_iff.mpr (baseP1_compatible s' hs' t' ht'))
+
+theorem famP1_nontrivial : ∀ s ∈ famP1, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  rcases Finset.mem_union.mp hs with h | h
+  · exact baseP1_nontrivial s h
+  · obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp h
+    obtain ⟨h1, h2⟩ := baseP1_nontrivial t ht
+    rw [Split.swap_sideA, Split.swap_sideB]
+    exact ⟨h2, h1⟩
+
+/-- ★★★ **`P₁` 的精确树**：其 split 系统恰为 `famP1`（＋平凡 split）。 -/
+theorem exists_exact_tree_P1 :
+    ∃ M : Cladogram.{0, 0} (Fin 6), ∀ s : Split (Fin 6),
+      M.IsSplitOf s ↔
+        s ∈ famP1 ∨ (∃ x : Fin 6, s.sideA = {x}) ∨ (∃ x : Fin 6, s.sideA = {x}ᶜ) :=
+  isSplitOf_iff_mem_or_trivial famP1 0 famP1_compatible famP1_nontrivial famP1_swap_closed
+    (by decide)
+
+/-! ### 8.2 `P₂`（机器穷举的 `P2` = `σ(P₁)`：`{0,1,2,5}|{3,4}`、`{0,3,4,5}|{1,2}`、`{0,5}|rest`） -/
+
+noncomputable abbrev sP2a : Split (Fin 6) :=
+  Phylo.splitOf ({3, 4} : Finset (Fin 6)) (by decide) (by decide)
+noncomputable abbrev sP2b : Split (Fin 6) :=
+  Phylo.splitOf ({1, 2} : Finset (Fin 6)) (by decide) (by decide)
+noncomputable abbrev sP2c : Split (Fin 6) :=
+  Phylo.splitOf ({1, 2, 3, 4} : Finset (Fin 6)) (by decide) (by decide)
+
+noncomputable abbrev baseP2 : Finset (Split (Fin 6)) := {sP2a, sP2b, sP2c}
+
+/-- `P₂` 补上换向（`hswap` 前提）。 -/
+noncomputable abbrev famP2 : Finset (Split (Fin 6)) := baseP2 ∪ baseP2.image (fun s => s.swap)
+
+theorem baseP2_compatible : ∀ s ∈ baseP2, ∀ t ∈ baseP2, s.Compatible t := by
+  intro s hs t ht
+  simp only [baseP2, Finset.mem_insert, Finset.mem_singleton] at hs ht
+  rcases hs with rfl | rfl | rfl <;> rcases ht with rfl | rfl | rfl <;>
+    (rw [splitOf_compatible_iff]; decide)
+
+theorem baseP2_nontrivial : ∀ s ∈ baseP2, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  simp only [baseP2, Finset.mem_insert, Finset.mem_singleton] at hs
+  rcases hs with rfl | rfl | rfl <;>
+    (simp only [Phylo.splitOf_sideA, Phylo.splitOf_sideB]; decide)
+
+theorem famP2_swap_closed : ∀ s ∈ famP2, s.swap ∈ famP2 := by
+  intro s hs
+  rcases Finset.mem_union.mp hs with h | h
+  · exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨s, h, rfl⟩))
+  · obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp h
+    rw [Split.swap_swap]
+    exact Finset.mem_union.mpr (Or.inl ht)
+
+theorem famP2_compatible : ∀ s ∈ famP2, ∀ t ∈ famP2, s.Compatible t := by
+  intro s hs t ht
+  rcases Finset.mem_union.mp hs with h1 | h1 <;> rcases Finset.mem_union.mp ht with h2 | h2
+  · exact baseP2_compatible s h1 t h2
+  · obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp h2
+    exact compatible_swap_iff.mpr (baseP2_compatible s h1 t' ht')
+  · obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp h1
+    exact compatible_swap_left_iff.mpr (baseP2_compatible s' hs' t h2)
+  · obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp h1
+    obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp h2
+    exact compatible_swap_iff.mpr
+      (compatible_swap_left_iff.mpr (baseP2_compatible s' hs' t' ht'))
+
+theorem famP2_nontrivial : ∀ s ∈ famP2, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  rcases Finset.mem_union.mp hs with h | h
+  · exact baseP2_nontrivial s h
+  · obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp h
+    obtain ⟨h1, h2⟩ := baseP2_nontrivial t ht
+    rw [Split.swap_sideA, Split.swap_sideB]
+    exact ⟨h2, h1⟩
+
+/-- ★★★ **`P₂` 的精确树**：其 split 系统恰为 `famP2`（＋平凡 split）。 -/
+theorem exists_exact_tree_P2 :
+    ∃ M : Cladogram.{0, 0} (Fin 6), ∀ s : Split (Fin 6),
+      M.IsSplitOf s ↔
+        s ∈ famP2 ∨ (∃ x : Fin 6, s.sideA = {x}) ∨ (∃ x : Fin 6, s.sideA = {x}ᶜ) :=
+  isSplitOf_iff_mem_or_trivial famP2 0 famP2_compatible famP2_nontrivial famP2_swap_closed
+    (by decide)
+
+/-- ⬜ **余下的唯一缺口（显式登记为 `Prop`）—— 分类定理**：
+每个展示三条输入 quartet 的 `Cladogram (Fin 6)`，其每条 split 要么平凡，要么落在
+`P₁`/`P₂` 的 split 系统内（无序意义；`famP1`/`famP2` 已含两个方向）。
+
+机器见证：`scripts/msc/w12a_twoparent_check.py` 穷举 6 taxa 上**全部 236** 个两两相容族，
+展示 `prof` 的族**恰有两个** = `P₁`、`P₂` ✓（与原文 "precisely two" 一致），
+并对每条族做了**显式树构造**核验（`V=10, E=9`、内部点度 ≥ 3、叶度 1 ✓）。
+Lean 内据它即可立得第 4 条（每个 parent tree 含 `T₁` 或 `T₂` 的全部 split）；
+`Finset (Fin 6)` 直写的两条 `decide` 路线均已实测撞墙（缺可计算 `Fintype`/`Decidable`），
+需改走 `Fin 64` 位掩码或手写情形分析 ⇒ 单独立项 ✓。 -/
+def two_parent_trees_classification : Prop :=
+  ∀ T : Cladogram.{0, 0} (Fin 6), (∀ q ∈ prof, DisplaysQP T q) →
+    ∀ s : Split (Fin 6), T.IsSplitOf s →
+      s ∈ famP1 ∨ s ∈ famP2 ∨
+        (∃ x : Fin 6, s.sideA = {x}) ∨ (∃ x : Fin 6, s.sideA = {x}ᶜ)
 
 end SBD
