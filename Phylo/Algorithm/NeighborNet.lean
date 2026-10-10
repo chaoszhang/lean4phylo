@@ -2121,23 +2121,34 @@ noncomputable def Alm (n : ℕ) : (Arc n → ℝ) →ₗ[ℝ] (Pair n → ℝ) w
   map_add' := AlmFun_add n
   map_smul' := AlmFun_smul n
 
+/-- 弧 `a` 的前一位置 `i − 1`（由 `i.isLt` 无条件给出）。 -/
+def dPrev {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.1.val - 1, by have h := a.1.1.isLt; omega⟩
+
+/-- 弧 `a` 的后一位置 `j + 1`（就是护栏本身）。 -/
+def dNext {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.2.val + 1, a.2.2⟩
+
+/-- 末位 `n − 1`。 -/
+def hLast {n : ℕ} (a : Arc n) : Fin n := ⟨n - 1, by have h := a.2.2; omega⟩
+
+/-- 首位 `0`。 -/
+def hZero {n : ℕ} (a : Arc n) : Fin n := ⟨0, by have h := a.2.2; omega⟩
+
+/-- 第二位 `1`。 -/
+def hOne {n : ℕ} (a : Arc n) : Fin n := ⟨1, by have h := a.2.2; omega⟩
+
 /-- ★ `Mlm` 的函数部分：§7 逆矩阵的三行泛函（L / H / D），带 `1/2`。
 
-⚠️ 分支用 `dite`；三支的位置先 `let` 绑定（见本节开头说明）。 -/
+⚠️ 分支用 `dite`；三支的位置用**具名 def** `dPrev/dNext/hZero/hOne/hLast`（就定义在本节上方）—— 切勿写成内联的 `⟨i.val - 1, by …⟩`：那样只差**证明分量**，`ring` 认不出是同一原子。 -/
 noncomputable def MlmFun (n : ℕ) (δ : Pair n → ℝ) : Arc n → ℝ := fun a =>
-  let i := a.1.1
-  let j := a.1.2
-  let z : Fin n := ⟨0, by have h := a.2.2; omega⟩
-  let o : Fin n := ⟨1, by have h := a.2.2; omega⟩
-  let L : Fin n := ⟨n - 1, by have h := a.2.2; omega⟩
-  let j1 : Fin n := ⟨j.val + 1, a.2.2⟩
-  let i0 : Fin n := ⟨i.val - 1, by have h := i.isLt; omega⟩
-  (1 / 2) * (if h0 : i.val = 0 ∧ j.val = 0 then
-      pairVal δ z o + pairVal δ z L - pairVal δ o L
-    else if h1 : i.val = 0 then
-      pairVal δ L j + pairVal δ z j1 - pairVal δ z j - pairVal δ L j1
+  (1 / 2) * (if _h0 : a.1.1.val = 0 ∧ a.1.2.val = 0 then
+      pairVal δ (hZero a) (hOne a) + pairVal δ (hZero a) (hLast a)
+        - pairVal δ (hOne a) (hLast a)
+    else if _h1 : a.1.1.val = 0 then
+      pairVal δ (hLast a) a.1.2 + pairVal δ (hZero a) (dNext a) - pairVal δ (hZero a) a.1.2
+        - pairVal δ (hLast a) (dNext a)
     else
-      pairVal δ i0 j + pairVal δ i j1 - pairVal δ i j - pairVal δ i0 j1)
+      pairVal δ (dPrev a) a.1.2 + pairVal δ a.1.1 (dNext a) - pairVal δ a.1.1 a.1.2
+        - pairVal δ (dPrev a) (dNext a))
 
 theorem MlmFun_add (n : ℕ) (δ δ' : Pair n → ℝ) :
     MlmFun n (δ + δ') = MlmFun n δ + MlmFun n δ' := by
@@ -2254,21 +2265,6 @@ theorem arcSplit_isCyclicArc (n : ℕ) (a : Arc n) :
 * 坐标唯一性：D 支用 `Fin.ext`＋`Subtype.ext`；H/L 支的第二析取项被护栏**直接排除**（`j' = n−1` 不可能）。 -/
 
 section FunctionalMaterial
-
-/-- 弧 `a` 的前一位置 `i − 1`（由 `i.isLt` 无条件给出）。 -/
-def dPrev {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.1.val - 1, by have h := a.1.1.isLt; omega⟩
-
-/-- 弧 `a` 的后一位置 `j + 1`（就是护栏本身）。 -/
-def dNext {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.2.val + 1, a.2.2⟩
-
-/-- 末位 `n − 1`。 -/
-def hLast {n : ℕ} (a : Arc n) : Fin n := ⟨n - 1, by have h := a.2.2; omega⟩
-
-/-- 首位 `0`。 -/
-def hZero {n : ℕ} (a : Arc n) : Fin n := ⟨0, by have h := a.2.2; omega⟩
-
-/-- 第二位 `1`。 -/
-def hOne {n : ℕ} (a : Arc n) : Fin n := ⟨1, by have h := a.2.2; omega⟩
 
 @[simp] theorem dPrev_val {n : ℕ} (a : Arc n) : (dPrev a).val = a.1.1.val - 1 := rfl
 
