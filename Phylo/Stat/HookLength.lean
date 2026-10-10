@@ -71,6 +71,12 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 ⚠️ 但 **(i) 只是「计数」那一半**：`LE` 与 `rankedFiberCount` 的**显式双射**（(ii)）**仍未做** ——
 §10.1 只给出**具体拓扑上数值一致**（`LE = 1 / 2` 对上纤维 `1 / 2`），不是一般 `n` 的双射。
 
+**✅ 第九轮：本定理所需的 `LaminarFamily T` 在预期用例上已兑现** ——
+`RankedGeneTree.lean` 新增
+`laminarFamily_cladesOf : LaminarFamily (cladesOf n f)`（对**任意** `f`，不要求 `IsMergeHistory`），
+故 `LE_mul_prod_hook_eq_factorial` 可直接以 `T := cladesOf n f` 使用
+（此前 `LaminarFamily` 只是假设）。⬜ 剩余缺口仍是 (ii) 的**显式双射**（见 `RankedGeneTree.lean` 的登记）。
+
 **⬜ 仍未做**：
 
 1. ~~线性扩展数 `LE` 的递推~~ —— **第五轮已做**：`LE` 按「根在首位 + 孩子子树块间插空」
