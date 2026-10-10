@@ -2766,6 +2766,71 @@ theorem Mlm_comp_Alm_l (n : ℕ) (w : Arc n → ℝ) (idx : Arc n) (hn : 3 ≤ n
   rw [hcollapse]
   ring
 
+/-! ### 11.9 第 4 步（W12g-16）：`Mlm ∘ Alm = id` 的小情形与 `Alm ∘ Mlm = id`
+
+* `Mlm_comp_Alm_small`：`n ≤ 2` 的 L 支（`Arc 2` 一元、`Pair 2` 恰一点对 `(0,1)`，逐点直算）；
+* `Mlm_comp_Alm`：`∀ n` 版本（三分支 ＋ 小情形）；
+* **`Alm_comp_Mlm`**：`Alm n (Mlm n δ) = δ` —— 由 `Alm_surjective` 取 `w`（`Alm w = δ`）
+  再用 `Mlm_comp_Alm` 得 `Mlm δ = w` ⇒ `Alm (Mlm δ) = δ` ✓（**非负性的必需品** ✓，见 §11.5 的登记 ✓）。 -/
+
+/-- ★ `n ≤ 2` 的 L 支：`Mlm n (Alm n w) idx = w idx`。 -/
+theorem Mlm_comp_Alm_small {n : ℕ} (hn : n ≤ 2) (w : Arc n → ℝ) (idx : Arc n)
+    (hL : idx.1.1.val = 0 ∧ idx.1.2.val = 0) : Mlm n (Alm n w) idx = w idx := by
+  rcases Nat.lt_or_ge n 2 with hlt | hge
+  · exact absurd idx.2.2 (by omega)
+  · have hn2 : n = 2 := le_antisymm hn hge
+    subst hn2
+    have hshape : Mlm 2 (Alm 2 w) idx
+        = (1 / 2) * tri (fun x y => pairVal (AlmFun 2 w) x y) (hZero idx) (hOne idx) (hLast idx) := by
+      rw [show Mlm 2 (Alm 2 w) idx = MlmFun 2 (AlmFun 2 w) idx from rfl]
+      exact MlmFun_l 2 (AlmFun 2 w) idx hL
+    rw [hshape]
+    have hz : hZero idx = (0 : Fin 2) := Fin.ext rfl
+    have ho : hOne idx = (1 : Fin 2) := Fin.ext rfl
+    have hl : hLast idx = (1 : Fin 2) := by
+      apply Fin.ext
+      simp only [hLast_val]
+      omega
+    rw [hz, ho, hl]
+    rw [show tri (fun x y : Fin 2 => pairVal (AlmFun 2 w) x y) (0 : Fin 2) (1 : Fin 2) (1 : Fin 2)
+        = pairVal (AlmFun 2 w) (0 : Fin 2) (1 : Fin 2) + pairVal (AlmFun 2 w) (0 : Fin 2) (1 : Fin 2)
+          - pairVal (AlmFun 2 w) (1 : Fin 2) (1 : Fin 2) from rfl]
+    rw [pairVal_self (AlmFun 2 w) (1 : Fin 2)]
+    rw [show pairVal (AlmFun 2 w) (0 : Fin 2) (1 : Fin 2)
+        = ∑ a : Arc 2, w a * sepInd (arcSplit a) (0 : Fin 2) (1 : Fin 2) from
+      pairVal_alm 2 w (0 : Fin 2) (1 : Fin 2)]
+    have hsum : (∑ a : Arc 2, w a * sepInd (arcSplit a) (0 : Fin 2) (1 : Fin 2)) = w idx := by
+      rw [Finset.sum_eq_single idx]
+      · rw [sepInd_arcSplit_two idx, mul_one]
+      · intro a _ ha
+        exact absurd (arc_two_unique a idx) ha
+      · intro hmem
+        exact absurd (Finset.mem_univ idx) hmem
+    rw [hsum]
+    ring
+
+/-- ★★★ **`Mlm ∘ Alm = id`（任意 `n`）**：三分支（§11.8）＋ `n ≤ 2` 的 L 支（上面）。 -/
+theorem Mlm_comp_Alm (n : ℕ) (w : Arc n → ℝ) : Mlm n (Alm n w) = w := by
+  funext idx
+  by_cases hL : idx.1.1.val = 0 ∧ idx.1.2.val = 0
+  · rcases Nat.lt_or_ge n 3 with hlt | hge
+    · exact Mlm_comp_Alm_small (by omega) w idx hL
+    · exact Mlm_comp_Alm_l n w idx hge hL
+  · by_cases hH : idx.1.1.val = 0
+    · have hne : idx.1.2.val ≠ 0 := fun h0 => hL ⟨hH, h0⟩
+      exact Mlm_comp_Alm_h n w idx hH hne
+    · exact Mlm_comp_Alm_d n w idx hH
+
+/-- ★★★ **`Alm ∘ Mlm = id`**：任意点对函数都由**显式**权重 `Mlm n δ` 实现
+（由 `Alm_surjective` 取 `w`，再用 `Mlm_comp_Alm` 把 `Mlm δ` 认成 `w`）。 -/
+theorem Alm_comp_Mlm (n : ℕ) (δ : Pair n → ℝ) : Alm n (Mlm n δ) = δ := by
+  obtain ⟨w, hw⟩ := Alm_surjective n δ
+  have h1 : Mlm n δ = w := by
+    rw [← hw]
+    exact Mlm_comp_Alm n w
+  rw [h1]
+  exact hw
+
 end FunctionalMaterial
 
 end WeightAlgebra
