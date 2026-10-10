@@ -1220,4 +1220,29 @@ theorem two_parent_trees_classification_of_core (h : two_parent_trees_core) :
     · exact Or.inl h1
     · exact Or.inr (Or.inl h2)
 
+/-! ### 8.6 (W12a15) 核心的前提拆解件：展示 quartet 的 split 必非平凡
+
+`two_parent_trees_core` 的第一条前提（族成员**非平凡**）在树层是**免费**的：
+quartet 的每个配对都是 2 元集，故展示它的 split 两侧各 ≥2 叶。
+下面把这条从 §8.5 桥的 `hdisp` 里**抽成具名引理**（核心的证明要用它，
+且「每条 quartet 的配对都是 2 元集」这一计算也因此只写一次）。 -/
+
+/-- **展示 `prof` 中某条 quartet 的 split 必非平凡**（两侧各 ≥2 叶）。 -/
+theorem two_le_card_of_displaysQP {q : QTop (Fin 6)} (hq : q ∈ prof) {s : Split (Fin 6)}
+    (h : (∃ p ∈ q, p ⊆ s.sideA) ∧ (∃ p' ∈ q, p' ⊆ s.sideB)) :
+    2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  have hcard : ∀ p : Finset (Fin 6), p ∈ q → p.card = 2 := by
+    intro p hp
+    simp only [prof, Finset.mem_insert, Finset.mem_singleton] at hq
+    rcases hq with rfl | rfl | rfl <;>
+      (simp only [q1, q2, q3, Finset.mem_insert, Finset.mem_singleton] at hp
+       rcases hp with rfl | rfl <;> decide)
+  refine ⟨?_, ?_⟩
+  · obtain ⟨p, hp, hps⟩ := h.1
+    calc 2 = p.card := (hcard p hp).symm
+      _ ≤ s.sideA.card := Finset.card_le_card hps
+  · obtain ⟨p', hp', hps⟩ := h.2
+    calc 2 = p'.card := (hcard p' hp').symm
+      _ ≤ s.sideB.card := Finset.card_le_card hps
+
 end SBD
