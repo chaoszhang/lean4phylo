@@ -62,14 +62,21 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | §8 ★★ | `LE`（**自造**）＋ `LE_eq` ＋ `LE_eq_one_of_card_le_one` ＋ `hook_lt_of_mem_children` | 线性扩展数的**递推定义**与定义方程 |
 | §9 ★★ | `LE_induction`（**自造归纳原理**）＋ `attach_prod_LE`（`attach.prod` ↔ `Finset.prod` 桥接）＋ `two_le_card_of_child` | 闭形式归纳所需的**两件基础设施**（第七轮落地） |
 | §9.1/§9.2 ★B/★D | `Tcex` / `Thgood` + 4 条 `example` | 「孩子不一定 ≥2」「`hgood` 一般不成立」的**已核反例** |
+| **§10 ★★★** | **`LE_mul_prod_hook_eq_factorial`** ＋ `internalBelow_eq_empty_of_card_le_one` ＋ `laminarFamily_Tcat/_Tbal` | **hook-length 公式本体：`LE · ∏s = N!`**（第八轮落地，(i) **收口**） |
+| §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
-**⬜ 没做（hook-length 公式本体仍缺最后一环）**：
+**✅ (i) 已收口（第八轮）**：hook-length 公式本体
+`LE T C hC · ∏_{D ⊆ C} hook T D = (hook T C)!` 已证（§10，需 `LaminarFamily T`）。
+⚠️ 但 **(i) 只是「计数」那一半**：`LE` 与 `rankedFiberCount` 的**显式双射**（(ii)）**仍未做** ——
+§10.1 只给出**具体拓扑上数值一致**（`LE = 1 / 2` 对上纤维 `1 / 2`），不是一般 `n` 的双射。
+
+**⬜ 仍未做**：
 
 1. ~~线性扩展数 `LE` 的递推~~ —— **第五轮已做**：`LE` 按「根在首位 + 孩子子树块间插空」
    **递归定义**（§8），`LE_eq` 给出定义方程
    `LE T C = multinomial(hook 们) · ∏_B LE T B`。**但**：
-2. ⬜ **由 §5 + §6 归纳出闭形式** `LE T C · ∏_{D ⊆ C} hook T D = (hook T C)!`
+2. ✅ ~~由 §5 + §6 归纳出闭形式~~ —— **第八轮已证**（§10 `LE_mul_prod_hook_eq_factorial`）。原文：`LE T C · ∏_{D ⊆ C} hook T D = (hook T C)!`
    —— **仍未做**。卡点很具体：`LE` 的**递归调用点**是 `(children T C).attach.prod`，
    要对它做归纳需要一条**自造的归纳原理**（把 `LE` 的 well-founded 递归
    `termination_by hook T C` 暴露成 `induction`），并额外把
@@ -699,5 +706,162 @@ example : ¬ (∀ C ∈ Thgood, 2 ≤ C.card → ∀ B ∈ children Thgood C, 2 
     fin_cases hDT <;> simp_all
   have hb : ¬ (2 ≤ ({0} : Finset (Fin 2)).card) := by decide
   exact hb (h {0, 1} (by decide) hcard {0} hmem)
+
+/-! ## §10 ★★★ 闭形式（hook-length 公式本体）：`LE · ∏s = N!`
+
+**这是 (i) 的收口**：树偏序的线性扩展数经验公式
+
+```text
+LE T C hC  ·  ∏_{D ∈ internalBelow T C} hook T D   =   (hook T C)!
+```
+
+即 `#LinExt = N! / ∏_v s_v`（`N = 内部结点数 = hook T C`）。
+
+**证明**（`LE_induction` ＋ §5 ＋ §6，需 `LaminarFamily T`，因为 §5 的分母递推需要它）：
+
+1. `LE_eq` ＋ **`attach_prod_LE`**(b) 展开 `LE T C`；
+2. **`prod_hook_eq_hook_mul_prod_children`**(§5) 展开分母的 `∏s`；
+3. `Finset.prod_mul_distrib` ＋ `prod_congr` ＋ `dite_eq_left` 把
+   `∏_B [F B · ∏_{D⊆B} s_D]` 与归纳假设对齐 ⇒ `∏_B (hook T B)!`
+   （孩子 `2 ≤ B.card` **不**成立时，两边都为 `1` —— 用
+   `LE_eq_one_of_card_le_one` ＋ `hook_eq_zero_of_card_le_one` ＋
+   `internalBelow_eq_empty_of_card_le_one` 处理）；
+4. **`hook_eq_one_add_sum_children`**(§3) ⇒ `∑_B hook T B = hook T C - 1`；
+5. **`Nat.multinomial_spec`**(§6) ⇒ `mult · ∏_B (hook T B)! = (hook T C - 1)!`；
+6. `(hook T C - 1)! · hook T C = (hook T C)!`（`Nat.factorial_succ`）收口。
+
+⚠️ 第 3 步是本轮唯一的新技术点：**孩子可以 <2 元素**（§9.1 的反例），
+故不能直接把 `ih` 套上去，必须分情形；小孩子的两边都是 `1`，故公式仍然成立。 -/
+
+/-- 若 `C.card ≤ 1`，则 `C` 之下没有内部结点（`internalBelow T C = ∅`）。 -/
+theorem internalBelow_eq_empty_of_card_le_one {T : Finset (Finset α)} {C : Finset α}
+    (h : C.card ≤ 1) : internalBelow T C = ∅ := by
+  rw [← Finset.not_nonempty_iff_eq_empty]
+  rintro ⟨D, hD⟩
+  obtain ⟨-, hD2, hDsub⟩ := mem_internalBelow.mp hD
+  have := Finset.card_le_card hDsub
+  omega
+
+/-- ★★★ **hook-length 公式（闭形式）**：
+
+```text
+LE T C hC  ·  ∏_{D ∈ internalBelow T C} hook T D  =  (hook T C)!
+```
+
+等价地 `#LinExt = N! / ∏_v s_v`（`N = hook T C` 为内部结点数）。
+需 `LaminarFamily T`（§5 的分母递推所需）。 -/
+theorem LE_mul_prod_hook_eq_factorial {T : Finset (Finset α)} (hl : LaminarFamily T) :
+    ∀ C, C ∈ T → 2 ≤ C.card →
+      ∀ hC : C ∈ T, LE T C hC * ∏ D ∈ internalBelow T C, hook T D
+        = (hook T C).factorial := by
+  refine LE_induction (fun C => ∀ hC : C ∈ T,
+    LE T C hC * ∏ D ∈ internalBelow T C, hook T D = (hook T C).factorial) ?_
+  intro C hC h2 ih hCc
+  have hpos : 0 < hook T C := hook_pos hCc h2
+  have hsum : ∑ B ∈ children T C, hook T B = hook T C - 1 := by
+    have h1 := hook_eq_one_add_sum_children hl hCc h2
+    omega
+  have hms : Nat.multinomial (children T C) (fun B => hook T B)
+      * ∏ B ∈ children T C, (hook T B).factorial = (hook T C - 1).factorial := by
+    rw [mul_comm, Nat.multinomial_spec, hsum]
+  have hpair : (∏ B ∈ children T C,
+        (if h : B ∈ children T C then LE T B (children_mem h) else 1))
+      * (∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D)
+      = ∏ B ∈ children T C, (hook T B).factorial := by
+    rw [← Finset.prod_mul_distrib]
+    refine Finset.prod_congr rfl fun B hB => ?_
+    rw [dite_eq_left hB]
+    by_cases hB2 : 2 ≤ B.card
+    · exact ih B hB hB2 (children_mem hB)
+    · rw [LE_eq_one_of_card_le_one (children_mem hB) (by omega),
+        hook_eq_zero_of_card_le_one (T := T) (by omega),
+        internalBelow_eq_empty_of_card_le_one (T := T) (by omega)]
+      simp
+  calc LE T C hCc * ∏ D ∈ internalBelow T C, hook T D
+      = Nat.multinomial (children T C) (fun B => hook T B)
+        * (∏ B ∈ children T C,
+            (if h : B ∈ children T C then LE T B (children_mem h) else 1))
+        * (hook T C * ∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D) := by
+        rw [LE_eq T C hCc h2, attach_prod_LE, prod_hook_eq_hook_mul_prod_children hl hCc h2]
+    _ = Nat.multinomial (children T C) (fun B => hook T B) * (hook T C)
+        * ((∏ B ∈ children T C,
+              (if h : B ∈ children T C then LE T B (children_mem h) else 1))
+           * (∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D)) := by ring
+    _ = Nat.multinomial (children T C) (fun B => hook T B) * (hook T C)
+        * (∏ B ∈ children T C, (hook T B).factorial) := by rw [hpair]
+    _ = (hook T C).factorial := by
+        have hfac : (hook T C).factorial = hook T C * (hook T C - 1).factorial := by
+          conv_lhs => rw [show hook T C = (hook T C - 1) + 1 by omega]
+          rw [Nat.factorial_succ]
+          congr 1
+          omega
+        rw [show Nat.multinomial (children T C) (fun B => hook T B) * (hook T C)
+              * (∏ B ∈ children T C, (hook T B).factorial)
+            = (Nat.multinomial (children T C) (fun B => hook T B)
+              * ∏ B ∈ children T C, (hook T B).factorial) * (hook T C) by ring,
+          hms, mul_comm, ← hfac]
+
+/-! ### §10.1 ★B capstone：`LE` 与既有**纤维数**对上
+
+`RankedGeneTree.lean` 已证：caterpillar 的纤维 = `1`（`rankedFiberCount_012_3`）、
+balanced 的纤维 = `2`（`rankedFiberCount_01_23`）。由 §10 的闭形式可**反解** `LE`：
+
+* `Tcat`：`∏s = 6`、`N = hook = 3` ⇒ `LE · 6 = 3! = 6` ⇒ **`LE = 1`** ✓
+* `Tbal`：`∏s = 3`、`N = 3` ⇒ `LE · 3 = 6` ⇒ **`LE = 2`** ✓
+
+**两个数恰好等于既有纤维数** —— 说明 §8 用「多项式系数递推」定义的 `LE`
+与 `rankedFiberCount` 在具体拓扑上**对得上**（(ii) 的显式双射仍未做）。 -/
+
+open Phylo in
+/-- ★B：`Tcat` 是镶嵌族（`{0,1} ⊂ {0,1,2} ⊂ univ` 为链）。 -/
+theorem laminarFamily_Tcat : LaminarFamily Tcat := by
+  intro A hA B hB
+  fin_cases hA <;> fin_cases hB <;> decide
+
+open Phylo in
+/-- ★B：`Tbal` 是镶嵌族（`{0,1} ⟂ {2,3}`，且都 `⊆ univ`）。 -/
+theorem laminarFamily_Tbal : LaminarFamily Tbal := by
+  intro A hA B hB
+  fin_cases hA <;> fin_cases hB <;> decide
+
+/-- ★B capstone（caterpillar）：`LE · 6 = 3! = 6`。 -/
+example : LE Tcat Finset.univ (by decide) * 6 = 6 := by
+  have h := LE_mul_prod_hook_eq_factorial (T := Tcat) (C := Finset.univ)
+    laminarFamily_Tcat (by decide) (by decide) (by decide)
+  rw [show (∏ D ∈ internalBelow Tcat Finset.univ, hook Tcat D) = 6 from by decide,
+      show hook Tcat Finset.univ = 3 from by decide,
+      show Nat.factorial 3 = 6 from by decide] at h
+  exact h
+
+/-- ★B capstone（balanced）：`LE · 3 = 3! = 6`。 -/
+example : LE Tbal Finset.univ (by decide) * 3 = 6 := by
+  have h := LE_mul_prod_hook_eq_factorial (T := Tbal) (C := Finset.univ)
+    laminarFamily_Tbal (by decide) (by decide) (by decide)
+  rw [show (∏ D ∈ internalBelow Tbal Finset.univ, hook Tbal D) = 3 from by decide,
+      show hook Tbal Finset.univ = 3 from by decide,
+      show Nat.factorial 3 = 6 from by decide] at h
+  exact h
+
+/-- ★B capstone：caterpillar 的 `LE` **反解为 `1`**，与 `rankedFiberCount_012_3` 的纤维 `1` 一致。 -/
+example : LE Tcat Finset.univ (by decide) = 1 := by
+  have h : LE Tcat Finset.univ (by decide) * 6 = 1 * 6 := by
+    have h' := LE_mul_prod_hook_eq_factorial (T := Tcat) (C := Finset.univ)
+      laminarFamily_Tcat (by decide) (by decide) (by decide)
+    rw [show (∏ D ∈ internalBelow Tcat Finset.univ, hook Tcat D) = 6 from by decide,
+        show hook Tcat Finset.univ = 3 from by decide,
+        show Nat.factorial 3 = 6 from by decide] at h'
+    simpa using h'
+  exact Nat.mul_right_cancel (by norm_num : 0 < 6) h
+
+/-- ★B capstone：balanced 的 `LE` **反解为 `2`**，与 `rankedFiberCount_01_23` 的纤维 `2` 一致。 -/
+example : LE Tbal Finset.univ (by decide) = 2 := by
+  have h : LE Tbal Finset.univ (by decide) * 3 = 2 * 3 := by
+    have h' := LE_mul_prod_hook_eq_factorial (T := Tbal) (C := Finset.univ)
+      laminarFamily_Tbal (by decide) (by decide) (by decide)
+    rw [show (∏ D ∈ internalBelow Tbal Finset.univ, hook Tbal D) = 3 from by decide,
+        show hook Tbal Finset.univ = 3 from by decide,
+        show Nat.factorial 3 = 6 from by decide] at h'
+    simpa using h'
+  exact Nat.mul_right_cancel (by norm_num : 0 < 3) h
 
 end Phylo.Stat.HookLength
