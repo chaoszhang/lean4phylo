@@ -416,14 +416,21 @@ example (X : Type*) [Fintype X] [DecidableEq X] [Nonempty X] (T : Phylogram X) :
   任一元素 `x`（`next` 存在由 `exists_maximizer_card`）即得 `prev = {x} ⊆ next`；
 * ✅ **已证**：`greedy_gap_correct_shape_at_card_sub_one`（`k = |X| - 1`）—— 取
   `next := univ`（`(|X|-1)+1 = |X|` 元子集**唯一**）、`prev :=` 任一 `(|X|-1)`-极大集；
-* ⬜ **仍未证**：一般 `k`。**★D 证据**：数值脚本 `scripts/msc/w12h_greedy_gap_check.py`
-  在 `n = 2..6` 全部叶标号树 × **24587** 组权上核对该形态（脚本的 **P5**）—— **零反例**；
-  同时「下钻」猜想（每个 `(k+1)`-极大集**含**一个 `k`-极大集，脚本的 **P6**）也**零反例**。
-  ★ 若 P6 能在 Lean 中证出，则本 `def` 立刻可得（取 `next` 为任一 `(k+1)`-极大集，
-  P6 给出其内的 `k`-极大集作 `prev`）—— 这是本批留下的**具体后续路线**。
-  ⚠️ 零反例**不是**证明，故本 `def` 保持为**开放目标**；
-* ⬜ **未做**：Steel 式 (1) 的**加权**交换性质（树论：`e` 在 `u–v` 唯一路径上）——
-  本批**完全未**触碰。这是给出一般 `k` 的证明（或反例）的关键器材。 -/
+* ✅ **已证（W12h 第三轮，条件形态）**：一般 `k` 的**归约**已完成 ——
+  `exists_maximizer_subset_of_maximizer` 从 `pdExchange_gap T` 导出**下钻猜想 P6**
+  （每个 `(k+1)`-极大集含一个 `k`-极大集）；`greedy_gap_correct_shape_of_exchange`
+  再由 P6 导出**本 `def`**（`pdExchange_gap T → greedy_gap_correct_shape T`）。
+  ⇒ **唯一**剩下的缺口就是 **`pdExchange_gap`**（Steel 式 (1) 的加权交换性质，见其 docstring）。
+* ⬜ **`pdExchange_gap` 本批未证**：**★D 证据**：脚本 `scripts/msc/w12h_greedy_gap_check.py`
+  的 **P1**（交换性质本身）与 **P5**（本 `def`）、**P6**（下钻）在 `n = 2..6` 全部叶标号树 ×
+  **24587** 组权上**全部零反例**；且**逐边分析**表明 P1 **不需要树论**：
+  只需「`IsCoveredE T · e` 对第一自变量单调」＋「`w ≥ 0`」，把
+  `PD(W∖{x}) + PD(W'∪{x}) ≥ PD(W) + PD(W')` 化为「对每条边 `e`：
+  `cov(W,e) ∧ ¬cov(W',e)` 时 `cov(W∖{x},e) ∨ cov(W'∪{x},e)`」。
+  **卡在哪一步（如实）**：需要证明**存在** `x ∈ W∖W'` 对**所有**这样的 `e` 同时成立 ——
+  逐边看，「`x` 在 `e` 上失败」⟺ `W ∩ (W' 所在那一侧) = {x}`；把这些 `e` 拼起来需要
+  「子树／分划」层面的选择论证（`x` 的悬挂路径 vs `W'` 的位置），本批时间窗内未收敛。
+  ⚠️ 零反例**不是**证明，故本 `def` 保持为**开放目标**（未被反驳 ✓）。 -/
 
 /-- ★★★ **修复形态（前提 `k + 1 ≤ card X`）**：原 `greedy_gap` 因 `k = |X|` 为**假**
 （`not_greedy_gap` 已反驳）；把前提改成 `k + 1 ≤ card X` 后，本批**未能证出**，
@@ -523,6 +530,109 @@ theorem greedy_gap_correct_shape_at_one (T : Phylogram X) (hX : 2 ≤ Fintype.ca
       PD_of_card_le_one T (S := ({x} : Finset X)) (by simp)]
   · intro S hS
     exact hnext.2 S (by omega)
+
+/-- ⬜ ★★★ **显式缺口（W12h 第三轮）：Steel 式 (1) 的**加权**交换性质**。
+
+`2 ≤ |W'| < |W|` 时存在 `x ∈ W ∖ W'` 使 `PD(W∖{x}) + PD(W'∪{x}) ≥ PD(W) + PD(W')`
+（Steel 2005 第 262–275 行的式 (1)，本库此前**未**形式化）。
+
+**本批未证**。★ 但它是「下钻猜想 P6」的**唯一**缺口：
+`exists_maximizer_subset_of_maximizer` 只以本 `def` 为**前提**就推出 P6，进而
+`greedy_gap_correct_shape_of_exchange` 推出**修复形态**。
+
+数值核对（`scripts/msc/w12h_greedy_gap_check.py` 的 **P1**）在 `n = 2..6` 全部叶标号树 ×
+**24587** 组权上**零反例**；逐边分析表明它**不需树论**（只要 `IsCoveredE` 对第一自变量单调
+＋ `w ≥ 0`），但「选出那个 `x`」的组合论证本批未收敛。 -/
+def pdExchange_gap (T : Phylogram X) : Prop :=
+  ∀ W W' : Finset X, 2 ≤ W'.card → W'.card < W.card →
+    ∃ x ∈ W \ W', PD T (W.erase x) + PD T (W' ∪ {x}) ≥ PD T W + PD T W'
+
+/-- ★★★ **P6（「下钻」猜想）由交换性质导出**：若 `pdExchange_gap T`，则**每个** `(k+1)`-极大集
+（`k ≥ 1`）都**含**一个 `k`-极大集。
+
+**证明**：取 `prev` := `next` 的 `k`-子集中 `PD` 最大者。若存在 `S`（`|S| = k`）使
+`PD S > PD prev`，就对 `(W, W') = (next, S)` 用交换性质（此时 `2 ≤ |S| < |next|`），
+得 `x ∈ next ∖ S` 且
+`PD(next∖{x}) + PD(S∪{x}) ≥ PD(next) + PD(S)`。
+左边第一项 `≤ PD prev`（`prev` 在 `next` 的 `k`-子集中最大，而 `next∖{x}` 正是这样一个子集），
+第二项 `≤ PD next`（`next` 是 `(k+1)`-极大集，而 `|S∪{x}| = k+1`）⇒ `PD prev ≥ PD S`，与
+`PD S > PD prev` 矛盾。∎
+
+（`k = 1` 不需要交换性质：`pd_1 = 0` ⇒ `next` 的任一元素给出的单点就是 `1`-极大集。） -/
+theorem exists_maximizer_subset_of_maximizer (T : Phylogram X) (hgap : pdExchange_gap T)
+    {k : ℕ} (hk : 1 ≤ k) :
+    ∀ next : Finset X, IsMaxPD T (k + 1) next →
+      ∃ prev : Finset X, prev ⊆ next ∧ IsMaxPD T k prev := by
+  classical
+  intro next hnext
+  rcases lt_or_ge k 2 with hk1 | hk2
+  · have hk_eq : k = 1 := by omega
+    subst hk_eq
+    obtain ⟨x, hx⟩ : ∃ x : X, x ∈ next :=
+      Finset.card_pos.mp (by rw [hnext.1]; norm_num)
+    refine ⟨{x}, Finset.singleton_subset_iff.mpr hx, Finset.card_singleton x, ?_⟩
+    intro S hS
+    rw [PD_of_card_le_one T (S := S) (by omega),
+      PD_of_card_le_one T (S := ({x} : Finset X)) (by simp)]
+  · have hnextcard : next.card = k + 1 := hnext.1
+    have hne : (next.powersetCard k).Nonempty := by
+      rw [Finset.powersetCard_nonempty]
+      omega
+    obtain ⟨prev, hprevm, hprevmax⟩ :=
+      Finset.exists_max_image (next.powersetCard k) (fun S => PD T S) hne
+    have hprevsub : prev ⊆ next := (Finset.mem_powersetCard.mp hprevm).1
+    have hprevcard : prev.card = k := (Finset.mem_powersetCard.mp hprevm).2
+    refine ⟨prev, hprevsub, hprevcard, fun S hS => ?_⟩
+    by_contra hcon
+    have hlt : PD T prev < PD T S := not_le.mp hcon
+    have hS2 : 2 ≤ S.card := by omega
+    have hSlt : S.card < next.card := by omega
+    obtain ⟨x, hx, hxineq⟩ := hgap next S hS2 hSlt
+    have hxnext : x ∈ next := (Finset.mem_sdiff.mp hx).1
+    have hxS : x ∉ S := (Finset.mem_sdiff.mp hx).2
+    have herasecard : (next.erase x).card = k := by
+      rw [Finset.card_erase_of_mem hxnext, hnextcard]
+      omega
+    have hle1 : PD T (next.erase x) ≤ PD T prev :=
+      hprevmax (next.erase x)
+        (Finset.mem_powersetCard.mpr ⟨Finset.erase_subset _ _, herasecard⟩)
+    have hinscard : (S ∪ {x}).card = k + 1 := by
+      rw [Finset.card_union_of_disjoint (Finset.disjoint_singleton_right.mpr hxS), hS,
+        Finset.card_singleton]
+    have hle2 : PD T (S ∪ {x}) ≤ PD T next := hnext.2 (S ∪ {x}) hinscard
+    -- 不用 `linarith`（本文件未引入该 tactic）：显式用 `add_le_add` ＋ 消去公因子
+    have hsum : PD T (next.erase x) + PD T (S ∪ {x}) ≤ PD T prev + PD T next :=
+      add_le_add hle1 hle2
+    have h2 : PD T next + PD T S ≤ PD T prev + PD T next := le_trans hxineq hsum
+    have h3 : PD T S + PD T next ≤ PD T prev + PD T next := by
+      rw [add_comm (PD T S)]
+      exact h2
+    have h4 : PD T S ≤ PD T prev := (add_le_add_iff_right (PD T next)).mp h3
+    exact absurd h4 (not_le.mpr hlt)
+
+/-- ★★★ **修复形态由交换性质导出**（原 `def greedy_gap_correct_shape` **逐字保留**）：
+`pdExchange_gap T` ⇒ `greedy_gap_correct_shape T`。
+
+证明：对 `k`（`1 ≤ k`、`k+1 ≤ |X|`）取任一 `(k+1)`-极大集 `next`（`exists_maximizer_card`），
+`exists_maximizer_subset_of_maximizer` 给出 `prev ⊆ next` 且 `prev` 是 `k`-极大集。
+⚠️ **本条是条件形态**：`pdExchange_gap` 本批**未证**，故**不**声称修复形态已证。 -/
+theorem greedy_gap_correct_shape_of_exchange (T : Phylogram X) (hgap : pdExchange_gap T) :
+    greedy_gap_correct_shape T := by
+  intro k hk1 hkcard
+  obtain ⟨next, hnext⟩ := exists_maximizer_card T (k + 1) hkcard
+  obtain ⟨prev, hprevsub, hprevmax⟩ :=
+    exists_maximizer_subset_of_maximizer T hgap hk1 next hnext
+  exact ⟨prev, next, hprevsub, hprevmax.1, hnext.1, hprevmax.2, hnext.2⟩
+
+/-- ★B **反空真**：「下钻」结论在 `k = 1` 上**无需**交换性质即成立（`pd_1 = 0`，
+见 `greedy_gap_correct_shape_at_one`），故 P6／修复形态都**不是**空转命题；
+`k = |X| - 1` 亦然（`greedy_gap_correct_shape_at_card_sub_one`）。 -/
+example (T : Phylogram X) (hX : 2 ≤ Fintype.card X) :
+    ∃ prev next : Finset X,
+      prev ⊆ next ∧ prev.card = 1 ∧ next.card = 2 ∧
+        (∀ S : Finset X, S.card = 1 → PD T S ≤ PD T prev) ∧
+        (∀ S : Finset X, S.card = 2 → PD T S ≤ PD T next) :=
+  greedy_gap_correct_shape_at_one T hX
 
 /-- ★★★ **正确形态在 `k = |X| - 1` 成立**：取 `next := univ`
 （`(|X|-1)+1 = |X|` 元子集**唯一**）、`prev :=` 任一 `(|X|-1)`-极大集，则 `prev ⊆ univ`。 -/
