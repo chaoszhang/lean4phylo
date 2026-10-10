@@ -446,4 +446,846 @@ def neighborNetAgglomeration_gap : Prop :=
           Circular (↑F : Set (Split X)) ∧ ∀ x : X, ∃ s ∈ F, s.sideA = {x} ∨ s.sideB = {x}) ∧
           ∀ (d : X → X → ℝ), (∀ x y, d x y = d y x) → ∃ F, Step d F
 
+/-! ## 7. 缺口 2 **已证**（W12g）：环形族指示矩阵列满秩
+
+文献 805–812 行：「Neighbor-Net produces a circular collection of splits, so the corresponding
+matrix `A` has full rank (Bandelt and Dress 1992)」。本节给出该满秩性的**显式逆矩阵**：
+对每个环形 arc `[i,j]`，用一个四（或三）点组合从系统发生距离里**直接解出**该 split 的权重
+（`quad_sepInd_d` / `quad_sepInd_h` / `tri_sepInd_l`）。于是 `circularIndicatorFullRank_gap`
+不再是缺口（`circularIndicatorFullRank_gap_proved`）。
+
+数值核对（穷举 `n = 4,5,6` 的全部环形弧族与子族；含「不排除两侧互换则命题为假」的对照组）：
+`scripts/msc/w12g_circular_indicator_rank.py`。 -/
+
+section IndicatorFullRank
+
+/-! ### 7.1 位组合核（纯算术，与 `Split` 无关） -/
+
+/-- 区间 `[i',j']` 在位置 `t` 上的 `0/1` 指示（`ℝ` 值）。 -/
+def bitN (i' j' t : ℕ) : ℝ := if i' ≤ t ∧ t ≤ j' then 1 else 0
+
+theorem bitN_eq_one_iff (i' j' t : ℕ) : bitN i' j' t = 1 ↔ i' ≤ t ∧ t ≤ j' := by
+  unfold bitN
+  by_cases h : i' ≤ t ∧ t ≤ j' <;> simp [h]
+
+theorem bitN_eq_zero_iff (i' j' t : ℕ) : bitN i' j' t = 0 ↔ ¬(i' ≤ t ∧ t ≤ j') := by
+  unfold bitN
+  by_cases h : i' ≤ t ∧ t ≤ j' <;> simp [h]
+
+theorem bitN_zero_or_one (i' j' t : ℕ) : bitN i' j' t = 0 ∨ bitN i' j' t = 1 := by
+  unfold bitN; split <;> simp
+
+/-- ★ **代数核**：四个 `0/1` 位的四点组合 `= 2·(bu−bw)·(bz−bv)`。 -/
+theorem quad_bit_eq (bu bw bv bz : ℝ) (hu : bu = 0 ∨ bu = 1) (hw : bw = 0 ∨ bw = 1)
+    (hv : bv = 0 ∨ bv = 1) (hz : bz = 0 ∨ bz = 1) :
+    |bu - bv| - |bw - bv| - |bu - bz| + |bw - bz| = 2 * ((bu - bw) * (bz - bv)) := by
+  have h01 : ∀ x y : ℝ, (x = 0 ∨ x = 1) → (y = 0 ∨ y = 1) → |x - y| = x + y - 2 * x * y := by
+    rintro x y (rfl | rfl) <;> rintro (rfl | rfl) <;> norm_num
+  rw [h01 bu bv hu hv, h01 bw bv hw hv, h01 bu bz hu hz, h01 bw bz hw hz]
+  ring
+
+/-- ★ **D-核**（线性四点；`t2 = t1+1`、`t4 = t3+1`、`t2 ≤ t3`）：
+四点位组合恰在区间 `= [t2,t3]` 时等于 `2`。
+
+⚠️ 不需要 `i' ≤ j'`：区间为空时组合恒为 `0`，与结论一致。 -/
+theorem dcore (i' j' t1 t2 t3 t4 : ℕ) (h12 : t2 = t1 + 1) (h23 : t2 ≤ t3)
+    (h34 : t4 = t3 + 1) :
+    |bitN i' j' t1 - bitN i' j' t3| - |bitN i' j' t2 - bitN i' j' t3|
+      - |bitN i' j' t1 - bitN i' j' t4| + |bitN i' j' t2 - bitN i' j' t4|
+      = if (i' = t2 ∧ j' = t3) then 2 else 0 := by
+  have hprod : (bitN i' j' t1 - bitN i' j' t2) * (bitN i' j' t4 - bitN i' j' t3)
+      = if (i' = t2 ∧ j' = t3) then 1 else 0 := by
+    by_cases hP : i' = t2 ∧ j' = t3
+    · rw [ite_eq_left hP]
+      obtain ⟨e1, e2⟩ := hP
+      have b1 : bitN i' j' t1 = 0 := by rw [bitN_eq_zero_iff]; omega
+      have b2 : bitN i' j' t2 = 1 := by rw [bitN_eq_one_iff]; omega
+      have b3 : bitN i' j' t3 = 1 := by rw [bitN_eq_one_iff]; omega
+      have b4 : bitN i' j' t4 = 0 := by rw [bitN_eq_zero_iff]; omega
+      rw [b1, b2, b3, b4]; norm_num
+    · rw [ite_eq_right hP]
+      rcases bitN_zero_or_one i' j' t1 with b1 | b1 <;> rcases bitN_zero_or_one i' j' t2 with b2 | b2
+      · rw [b1, b2]; ring
+      · have hi : i' = t2 := by
+          rw [bitN_eq_zero_iff] at b1; rw [bitN_eq_one_iff] at b2; omega
+        have h43 : bitN i' j' t4 = bitN i' j' t3 := by
+          by_cases hle : t3 ≤ j'
+          · have e3 : bitN i' j' t3 = 1 := by rw [bitN_eq_one_iff]; omega
+            have e4 : bitN i' j' t4 = 1 := by rw [bitN_eq_one_iff]; omega
+            rw [e3, e4]
+          · have e3 : bitN i' j' t3 = 0 := by rw [bitN_eq_zero_iff]; omega
+            have e4 : bitN i' j' t4 = 0 := by rw [bitN_eq_zero_iff]; omega
+            rw [e3, e4]
+        rw [h43]; ring
+      · have hj : j' < t2 := by
+          rw [bitN_eq_one_iff] at b1; rw [bitN_eq_zero_iff] at b2; omega
+        have e3 : bitN i' j' t3 = 0 := by rw [bitN_eq_zero_iff]; omega
+        have e4 : bitN i' j' t4 = 0 := by rw [bitN_eq_zero_iff]; omega
+        rw [e3, e4]; ring
+      · rw [b1, b2]; ring
+  rw [quad_bit_eq (bitN i' j' t1) (bitN i' j' t2) (bitN i' j' t3) (bitN i' j' t4)
+    (bitN_zero_or_one ..) (bitN_zero_or_one ..) (bitN_zero_or_one ..) (bitN_zero_or_one ..)]
+  rw [hprod]
+  split <;> ring
+
+/-- ★ **H-核**（环形四点 `(nn−1, 0, j, j+1)`）：四点位组合恰在区间是前缀 `[0,j]`
+或其补 `[j+1,nn−1]` 时等于 `2`。 -/
+theorem hcore (i' j' nn j : ℕ) (hij : i' ≤ j') (hj1 : 1 ≤ j) (hjn : j + 1 < nn)
+    (hj'n : j' < nn) :
+    |bitN i' j' (nn - 1) - bitN i' j' j| - |bitN i' j' 0 - bitN i' j' j|
+      - |bitN i' j' (nn - 1) - bitN i' j' (j + 1)| + |bitN i' j' 0 - bitN i' j' (j + 1)|
+      = if ((i' = 0 ∧ j' = j) ∨ (i' = j + 1 ∧ j' = nn - 1)) then 2 else 0 := by
+  have hprod : (bitN i' j' (nn - 1) - bitN i' j' 0) * (bitN i' j' (j + 1) - bitN i' j' j)
+      = if ((i' = 0 ∧ j' = j) ∨ (i' = j + 1 ∧ j' = nn - 1)) then 1 else 0 := by
+    by_cases hP : (i' = 0 ∧ j' = j) ∨ (i' = j + 1 ∧ j' = nn - 1)
+    · rw [ite_eq_left hP]
+      rcases hP with ⟨e1, e2⟩ | ⟨e1, e2⟩
+      · have b0 : bitN i' j' 0 = 1 := by rw [bitN_eq_one_iff]; omega
+        have bj : bitN i' j' j = 1 := by rw [bitN_eq_one_iff]; omega
+        have bj1 : bitN i' j' (j + 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+        have bn : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+        rw [bn, b0, bj1, bj]; norm_num
+      · have b0 : bitN i' j' 0 = 0 := by rw [bitN_eq_zero_iff]; omega
+        have bj : bitN i' j' j = 0 := by rw [bitN_eq_zero_iff]; omega
+        have bj1 : bitN i' j' (j + 1) = 1 := by rw [bitN_eq_one_iff]; omega
+        have bn : bitN i' j' (nn - 1) = 1 := by rw [bitN_eq_one_iff]; omega
+        rw [bn, b0, bj1, bj]; norm_num
+    · rw [ite_eq_right hP]
+      suffices h : (bitN i' j' (nn - 1) - bitN i' j' 0) * (bitN i' j' (j + 1) - bitN i' j' j) = 0
+        by rw [h]
+      rcases bitN_zero_or_one i' j' j with bj | bj <;>
+        rcases bitN_zero_or_one i' j' (j + 1) with bj1 | bj1
+      · rw [bj, bj1]; ring
+      · have hi : i' = j + 1 := by
+          rw [bitN_eq_zero_iff] at bj; rw [bitN_eq_one_iff] at bj1; omega
+        have hj' : j' ≠ nn - 1 := fun h => hP (Or.inr ⟨hi, h⟩)
+        have b0 : bitN i' j' 0 = 0 := by rw [bitN_eq_zero_iff]; omega
+        have bn : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+        rw [b0, bn]; ring
+      · have hj' : j' = j := by
+          rw [bitN_eq_one_iff] at bj; rw [bitN_eq_zero_iff] at bj1; omega
+        have h0 : i' ≠ 0 := fun h => hP (Or.inl ⟨h, hj'⟩)
+        have b0 : bitN i' j' 0 = 0 := by rw [bitN_eq_zero_iff]; omega
+        have bn : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+        rw [b0, bn]; ring
+      · rw [bj, bj1]; ring
+  rw [quad_bit_eq (bitN i' j' (nn - 1)) (bitN i' j' 0) (bitN i' j' j) (bitN i' j' (j + 1))
+    (bitN_zero_or_one ..) (bitN_zero_or_one ..) (bitN_zero_or_one ..) (bitN_zero_or_one ..)]
+  rw [hprod]
+  split <;> ring
+
+/-- ★ **L-核**（三点 `(0, 1, nn−1)`，`nn ≥ 3`）：三点位组合恰在区间是 `{p₀}`（`[0,0]`）
+或其补 `[1,nn−1]` 时等于 `2`。 -/
+theorem lcore (i' j' nn : ℕ) (hij : i' ≤ j') (hj'n : j' < nn) (hnn : 3 ≤ nn) :
+    |bitN i' j' 0 - bitN i' j' 1| + |bitN i' j' 0 - bitN i' j' (nn - 1)|
+      - |bitN i' j' 1 - bitN i' j' (nn - 1)|
+      = if ((i' = 0 ∧ j' = 0) ∨ (i' = 1 ∧ j' = nn - 1)) then 2 else 0 := by
+  by_cases hP : (i' = 0 ∧ j' = 0) ∨ (i' = 1 ∧ j' = nn - 1)
+  · rw [ite_eq_left hP]
+    rcases hP with ⟨e1, e2⟩ | ⟨e1, e2⟩
+    · have b0 : bitN i' j' 0 = 1 := by rw [bitN_eq_one_iff]; omega
+      have b1 : bitN i' j' 1 = 0 := by rw [bitN_eq_zero_iff]; omega
+      have bl : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+      rw [b0, b1, bl]; norm_num
+    · have b0 : bitN i' j' 0 = 0 := by rw [bitN_eq_zero_iff]; omega
+      have b1 : bitN i' j' 1 = 1 := by rw [bitN_eq_one_iff]; omega
+      have bl : bitN i' j' (nn - 1) = 1 := by rw [bitN_eq_one_iff]; omega
+      rw [b0, b1, bl]; norm_num
+  · rw [ite_eq_right hP]
+    rcases Nat.eq_zero_or_pos i' with hi0 | hi0
+    · have b0 : bitN i' j' 0 = 1 := by rw [bitN_eq_one_iff]; omega
+      have b1 : bitN i' j' 1 = 1 := by rw [bitN_eq_one_iff]; omega
+      rw [b0, b1, sub_self, abs_zero]; ring
+    · have b0 : bitN i' j' 0 = 0 := by rw [bitN_eq_zero_iff]; omega
+      by_cases hi1 : i' = 1
+      · have hj' : j' < nn - 1 := by
+          by_contra h
+          exact hP (Or.inr ⟨hi1, by omega⟩)
+        have b1 : bitN i' j' 1 = 1 := by rw [bitN_eq_one_iff]; omega
+        have bl : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+        rw [b0, b1, bl]; norm_num
+      · have b1 : bitN i' j' 1 = 0 := by rw [bitN_eq_zero_iff]; omega
+        by_cases hj' : j' = nn - 1
+        · have bl : bitN i' j' (nn - 1) = 1 := by rw [bitN_eq_one_iff]; omega
+          rw [b0, b1, bl]; norm_num
+        · have bl : bitN i' j' (nn - 1) = 0 := by rw [bitN_eq_zero_iff]; omega
+          rw [b0, b1, bl]; norm_num
+
+end IndicatorFullRank
+
+/-! ## 7.2 从位组合到 split 族：显式逆矩阵与主定理 -/
+
+section IndicatorApplication
+
+variable {X : Type*} [Fintype X] [DecidableEq X] {ι : Type*} [Fintype ι]
+
+/-- **分离指示**（`0/1`，`ℝ` 值）：`s` 是否把 `u, v` 分在两侧。
+
+（与 `circularIndicatorFullRank_gap` 里的 `if` 逐字相同，只是起了名字。） -/
+def sepInd (s : Split X) (u v : X) : ℝ :=
+  if (u ∈ s.sideA ∧ v ∈ s.sideB) ∨ (u ∈ s.sideB ∧ v ∈ s.sideA) then 1 else 0
+
+/-- 单点 `0/1` 指示。 -/
+def arcBit (A : Finset X) (u : X) : ℝ := if u ∈ A then 1 else 0
+
+/-- 四点泛函 `φ u v − φ w v − φ u z + φ w z`。 -/
+def quad (φ : X → X → ℝ) (u w v z : X) : ℝ := φ u v - φ w v - φ u z + φ w z
+
+/-- 三点泛函 `φ u v + φ u w − φ v w`。 -/
+def tri (φ : X → X → ℝ) (u v w : X) : ℝ := φ u v + φ u w - φ v w
+
+omit [DecidableEq X] in
+/-- `f.symm a` 落在环形弧 `[i,j]` 中 ⟺ 其下标落在区间内。 -/
+theorem symm_mem_cycArc {n : ℕ} (f : X ≃ Fin n) (i j a : Fin n) :
+    f.symm a ∈ cycArc f i j ↔ i.val ≤ a.val ∧ a.val ≤ j.val := by
+  rw [mem_cycArc, Equiv.apply_symm_apply, Finset.mem_Icc]
+  constructor <;> intro h <;> exact ⟨by omega, by omega⟩
+
+theorem arcBit_cycArc_eq_bitN {n : ℕ} (f : X ≃ Fin n) (i j a : Fin n) :
+    arcBit (cycArc f i j) (f.symm a) = bitN i.val j.val a.val := by
+  unfold arcBit bitN
+  by_cases h : f.symm a ∈ cycArc f i j
+  · rw [ite_eq_left h, ite_eq_left ((symm_mem_cycArc f i j a).mp h)]
+  · rw [ite_eq_right h, ite_eq_right (fun hh => h ((symm_mem_cycArc f i j a).mpr hh))]
+
+/-- 若 `s` 的一侧是 `J` 或 `Jᶜ`，则分离指示是 `J` 的位差的绝对值。 -/
+theorem sepInd_eq_abs_arcBit {s : Split X} {J : Finset X}
+    (h : s.sideA = J ∨ s.sideA = Jᶜ) (u v : X) :
+    sepInd s u v = |arcBit J u - arcBit J v| := by
+  have hB : (s.sideA = J → s.sideB = Jᶜ) ∧ (s.sideA = Jᶜ → s.sideB = J) :=
+    ⟨fun hh => by rw [sideB_eq_compl, hh], fun hh => by rw [sideB_eq_compl, hh, compl_compl]⟩
+  rcases h with h | h
+  · rw [sepInd, h, hB.1 h]
+    unfold arcBit
+    by_cases hu : u ∈ J <;> by_cases hv : v ∈ J <;> simp [hu, hv, Finset.mem_compl]
+  · rw [sepInd, h, hB.2 h]
+    unfold arcBit
+    by_cases hu : u ∈ J <;> by_cases hv : v ∈ J <;> simp [hu, hv, Finset.mem_compl]
+
+/-- ★ **D 情形**：`quad` 在四点 `(a, b, c, d)`（`b = a+1`、`c = d−1` 处的 `c`、`d = c+1`）
+上恰在区间 `= [b, c]` 时等于 `2`。 -/
+theorem quad_sepInd_d {n : ℕ} (f : X ≃ Fin n) {s : Split X} {i' j' : Fin n}
+    (hs : s.sideA = cycArc f i' j' ∨ s.sideA = (cycArc f i' j')ᶜ)
+    (a b c d : Fin n) (h1 : b.val = a.val + 1) (h2 : b.val ≤ c.val) (h3 : d.val = c.val + 1) :
+    quad (sepInd s) (f.symm a) (f.symm b) (f.symm c) (f.symm d)
+      = 2 * (if (i'.val = b.val ∧ j'.val = c.val) then (1 : ℝ) else 0) := by
+  have hq : quad (sepInd s) (f.symm a) (f.symm b) (f.symm c) (f.symm d)
+      = |bitN i'.val j'.val a.val - bitN i'.val j'.val c.val|
+        - |bitN i'.val j'.val b.val - bitN i'.val j'.val c.val|
+        - |bitN i'.val j'.val a.val - bitN i'.val j'.val d.val|
+        + |bitN i'.val j'.val b.val - bitN i'.val j'.val d.val| := by
+    unfold quad
+    rw [sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs,
+      sepInd_eq_abs_arcBit hs, arcBit_cycArc_eq_bitN f i' j' a, arcBit_cycArc_eq_bitN f i' j' b,
+      arcBit_cycArc_eq_bitN f i' j' c, arcBit_cycArc_eq_bitN f i' j' d]
+  rw [hq, dcore i'.val j'.val a.val b.val c.val d.val h1 h2 h3]
+  split <;> ring
+
+/-- ★ **H 情形（前缀/后缀）**：`quad` 在四点 `(last, 0, j, j+1)`（`nn` 个位置）上恰在
+区间是前缀 `[0,j]` 或其补 `[j+1,nn−1]` 时等于 `2`。 -/
+theorem quad_sepInd_h {n : ℕ} (f : X ≃ Fin n) {s : Split X} {i' j' : Fin n} (hij : i' ≤ j')
+    (hs : s.sideA = cycArc f i' j' ∨ s.sideA = (cycArc f i' j')ᶜ)
+    (q0 qj qj1 ql : Fin n) (h0 : q0.val = 0) (hj1 : 1 ≤ qj.val) (hjl : qj1.val = qj.val + 1)
+    (hl : ql.val = n - 1) :
+    quad (sepInd s) (f.symm ql) (f.symm q0) (f.symm qj) (f.symm qj1)
+      = 2 * (if ((i'.val = 0 ∧ j'.val = qj.val) ∨ (i'.val = qj.val + 1 ∧ j'.val = n - 1))
+        then (1 : ℝ) else 0) := by
+  have hq : quad (sepInd s) (f.symm ql) (f.symm q0) (f.symm qj) (f.symm qj1)
+      = |bitN i'.val j'.val (n - 1) - bitN i'.val j'.val qj.val|
+        - |bitN i'.val j'.val 0 - bitN i'.val j'.val qj.val|
+        - |bitN i'.val j'.val (n - 1) - bitN i'.val j'.val (qj.val + 1)|
+        + |bitN i'.val j'.val 0 - bitN i'.val j'.val (qj.val + 1)| := by
+    unfold quad
+    rw [sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs,
+      sepInd_eq_abs_arcBit hs, arcBit_cycArc_eq_bitN f i' j' ql, arcBit_cycArc_eq_bitN f i' j' q0,
+      arcBit_cycArc_eq_bitN f i' j' qj, arcBit_cycArc_eq_bitN f i' j' qj1, hl, h0, hjl]
+  rw [hq, hcore i'.val j'.val n qj.val hij (by omega) (by omega) (by omega)]
+  split <;> ring
+
+/-- ★ **L 情形（单元素前缀）**：`tri` 在三点 `(0, 1, last)`（`n ≥ 3`）上恰在区间是
+`{p₀}`（`[0,0]`）或其补 `[1,n−1]` 时等于 `2`。 -/
+theorem tri_sepInd_l {n : ℕ} (f : X ≃ Fin n) {s : Split X} {i' j' : Fin n} (hij : i' ≤ j')
+    (hs : s.sideA = cycArc f i' j' ∨ s.sideA = (cycArc f i' j')ᶜ) (hn : 3 ≤ n)
+    (q0 q1 ql : Fin n) (h0 : q0.val = 0) (h1 : q1.val = 1) (hl : ql.val = n - 1) :
+    tri (sepInd s) (f.symm q0) (f.symm q1) (f.symm ql)
+      = 2 * (if ((i'.val = 0 ∧ j'.val = 0) ∨ (i'.val = 1 ∧ j'.val = n - 1))
+        then (1 : ℝ) else 0) := by
+  have hq : tri (sepInd s) (f.symm q0) (f.symm q1) (f.symm ql)
+      = |bitN i'.val j'.val 0 - bitN i'.val j'.val 1|
+        + |bitN i'.val j'.val 0 - bitN i'.val j'.val (n - 1)|
+        - |bitN i'.val j'.val 1 - bitN i'.val j'.val (n - 1)| := by
+    unfold tri
+    rw [sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs, sepInd_eq_abs_arcBit hs,
+      arcBit_cycArc_eq_bitN f i' j' q0, arcBit_cycArc_eq_bitN f i' j' q1,
+      arcBit_cycArc_eq_bitN f i' j' ql, h0, h1, hl]
+  rw [hq, lcore i'.val j'.val n hij (by omega) hn]
+  split <;> ring
+
+omit [Fintype X] [DecidableEq X] in
+/-- `quad` 对权重求和线性。 -/
+theorem quad_sum (b : ι → ℝ) (g : ι → X → X → ℝ) (u w v z : X) :
+    quad (fun p q => ∑ i, b i * g i p q) u w v z = ∑ i, b i * quad (g i) u w v z := by
+  have h1 : quad (fun p q => ∑ i, b i * g i p q) u w v z
+      = (∑ i, b i * g i u v) - (∑ i, b i * g i w v) - (∑ i, b i * g i u z)
+        + (∑ i, b i * g i w z) := by
+    simp only [quad]
+  have h2 : (∑ i, b i * quad (g i) u w v z)
+      = (∑ i, b i * g i u v) - (∑ i, b i * g i w v) - (∑ i, b i * g i u z)
+        + (∑ i, b i * g i w z) := by
+    rw [show (∑ i, b i * quad (g i) u w v z)
+        = ∑ i, (b i * g i u v - b i * g i w v - b i * g i u z + b i * g i w z) from
+      Finset.sum_congr rfl fun i _ => by simp only [quad]; ring]
+    rw [Finset.sum_add_distrib, Finset.sum_sub_distrib, Finset.sum_sub_distrib]
+  rw [h1, h2]
+
+omit [Fintype X] [DecidableEq X] in
+/-- `tri` 对权重求和线性。 -/
+theorem tri_sum (b : ι → ℝ) (g : ι → X → X → ℝ) (u v w : X) :
+    tri (fun p q => ∑ i, b i * g i p q) u v w = ∑ i, b i * tri (g i) u v w := by
+  have h1 : tri (fun p q => ∑ i, b i * g i p q) u v w
+      = (∑ i, b i * g i u v) + (∑ i, b i * g i u w) - (∑ i, b i * g i v w) := by
+    simp only [tri]
+  have h2 : (∑ i, b i * tri (g i) u v w)
+      = (∑ i, b i * g i u v) + (∑ i, b i * g i u w) - (∑ i, b i * g i v w) := by
+    rw [show (∑ i, b i * tri (g i) u v w)
+        = ∑ i, (b i * g i u v + b i * g i u w - b i * g i v w) from
+      Finset.sum_congr rfl fun i _ => by simp only [tri]; ring]
+    rw [Finset.sum_sub_distrib, Finset.sum_add_distrib]
+  rw [h1, h2]
+
+/-- **相等 ⟺ 两侧都相等**（`Split` 只由 `sideA`/`sideB` 决定）。 -/
+theorem eq_iff_sides (s t : Split X) : s = t ↔ s.sideA = t.sideA ∧ s.sideB = t.sideB := by
+  constructor
+  · intro h; exact ⟨by rw [h], by rw [h]⟩
+  · rintro ⟨h1, h2⟩
+    refine (KPartition.eq_iff_parts _ _).mpr (funext fun i => ?_)
+    fin_cases i
+    · exact h1
+    · exact h2
+
+/-- 两条 split 的同一侧都等于 `J` 或 `Jᶜ` ⇒ 相等或互为 `swap`。 -/
+theorem eq_or_swap_of_sides {s t : Split X} {J : Finset X}
+    (hs : s.sideA = J ∨ s.sideA = Jᶜ) (ht : t.sideA = J ∨ t.sideA = Jᶜ) :
+    s = t ∨ s = t.swap := by
+  have hsB : (s.sideA = J → s.sideB = Jᶜ) ∧ (s.sideA = Jᶜ → s.sideB = J) :=
+    ⟨fun h => by rw [sideB_eq_compl, h], fun h => by rw [sideB_eq_compl, h, compl_compl]⟩
+  have htB : (t.sideA = J → t.sideB = Jᶜ) ∧ (t.sideA = Jᶜ → t.sideB = J) :=
+    ⟨fun h => by rw [sideB_eq_compl, h], fun h => by rw [sideB_eq_compl, h, compl_compl]⟩
+  rcases hs with hs | hs <;> rcases ht with ht | ht
+  · left; exact (eq_iff_sides s t).mpr ⟨by rw [hs, ht], by rw [hsB.1 hs, htB.1 ht]⟩
+  · right
+    exact (eq_iff_sides s t.swap).mpr
+      ⟨by rw [swap_sideA, htB.2 ht, hs], by rw [swap_sideB, ht, hsB.1 hs]⟩
+  · right
+    exact (eq_iff_sides s t.swap).mpr
+      ⟨by rw [swap_sideA, htB.1 ht, hs], by rw [swap_sideB, ht, hsB.2 hs]⟩
+  · left; exact (eq_iff_sides s t).mpr ⟨by rw [hs, ht], by rw [hsB.2 hs, htB.2 ht]⟩
+
+/-- **`card X ≤ 2` 时两侧都是单点**。 -/
+theorem side_card_eq_one_of_card_le_two (hX : Fintype.card X ≤ 2) (s : Split X) :
+    s.sideA.card = 1 ∧ s.sideB.card = 1 := by
+  have h1 : s.sideA.card + s.sideB.card = Fintype.card X := by
+    rw [← Finset.card_union_of_disjoint s.disjoint_sides, s.union_sides]
+    simp
+  have h2 : 1 ≤ s.sideA.card := Finset.card_pos.mpr (s.nonempty 0)
+  have h3 : 1 ≤ s.sideB.card := Finset.card_pos.mpr (s.nonempty 1)
+  omega
+
+/-- **`card X ≤ 2` 时任意两条 split 相等或互为 `swap`**（只有一条 partition）。 -/
+theorem eq_or_swap_of_card_le_two (hX : Fintype.card X ≤ 2) (s t : Split X) :
+    s = t ∨ s = t.swap := by
+  obtain ⟨x, hx⟩ := Finset.card_eq_one.mp (side_card_eq_one_of_card_le_two hX s).1
+  obtain ⟨x', hx'⟩ := Finset.card_eq_one.mp (side_card_eq_one_of_card_le_two hX t).1
+  by_cases hxx : x = x'
+  · left
+    refine (eq_iff_sides s t).mpr ⟨by rw [hx, hx', hxx], ?_⟩
+    rw [sideB_eq_compl, sideB_eq_compl, hx, hx', hxx]
+  · right
+    have huniv : (Finset.univ : Finset X) = {x, x'} := by
+      refine (Finset.eq_of_subset_of_card_le (Finset.subset_univ ({x, x'} : Finset X)) ?_).symm
+      rw [Finset.card_pair hxx]
+      exact hX
+    have hxc : ({x} : Finset X)ᶜ = {x'} := by
+      ext z
+      rw [Finset.mem_compl, Finset.mem_singleton, Finset.mem_singleton]
+      constructor
+      · intro hz
+        have hzu : z ∈ ({x, x'} : Finset X) := huniv ▸ Finset.mem_univ z
+        rcases Finset.mem_insert.mp hzu with h | h
+        · exact absurd h hz
+        · exact Finset.mem_singleton.mp h
+      · rintro rfl
+        exact fun h => hxx h.symm
+    refine (eq_iff_sides s t.swap).mpr ⟨?_, ?_⟩
+    · rw [swap_sideA, sideB_eq_compl, hx', hx, ← hxc, compl_compl]
+    · rw [swap_sideB, hx', sideB_eq_compl, hx, hxc]
+
+/-- ★ **收口引理**：把「泛函线性 + 逐 split 取值 + 唯一性」化成 `b₁ idx = b₂ idx`。 -/
+theorem weights_eq_of_functional (S : ι → Split X) (b₁ b₂ : ι → ℝ) (idx : ι)
+    (F : (X → X → ℝ) → ℝ) (Φ : ι → Prop) [DecidablePred Φ]
+    (hlin : F (fun p q => ∑ i, (b₁ i - b₂ i) * sepInd (S i) p q)
+      = ∑ i, (b₁ i - b₂ i) * F (sepInd (S i)))
+    (hz : F (fun p q => ∑ i, (b₁ i - b₂ i) * sepInd (S i) p q) = 0)
+    (hper : ∀ i, F (sepInd (S i)) = 2 * (if Φ i then (1 : ℝ) else 0))
+    (huniq : ∀ i, Φ i → i = idx) (hidx : Φ idx) : b₁ idx = b₂ idx := by
+  have hsingle : (∑ i, (b₁ i - b₂ i) * (2 * (if Φ i then (1 : ℝ) else 0)))
+      = 2 * (b₁ idx - b₂ idx) := by
+    rw [Finset.sum_eq_single idx]
+    · rw [ite_eq_left hidx]; ring
+    · intro i _ hi; rw [ite_eq_right (fun h => hi (huniq i h))]; ring
+    · intro h; exact absurd (Finset.mem_univ idx) h
+  have hsum0 : (∑ i, (b₁ i - b₂ i) * (2 * (if Φ i then (1 : ℝ) else 0))) = 0 := by
+    have h1 : (∑ i, (b₁ i - b₂ i) * (2 * (if Φ i then (1 : ℝ) else 0)))
+        = ∑ i, (b₁ i - b₂ i) * F (sepInd (S i)) :=
+      Finset.sum_congr rfl fun i _ => by rw [hper i]
+    rw [h1, ← hlin, hz]
+  rw [hsingle] at hsum0
+  linarith
+
+/-- 后缀弧 `[j+1, n−1]` 是前缀弧 `[0, j]` 的补。 -/
+theorem suffix_eq_compl_of_prefix {n : ℕ} (f : X ≃ Fin n) (q0 qj qj1 ql : Fin n)
+    (h0 : q0.val = 0) (hjl : qj1.val = qj.val + 1) (hl : ql.val = n - 1) :
+    cycArc f qj1 ql = (cycArc f q0 qj)ᶜ := by
+  ext x
+  rw [mem_cycArc, Finset.mem_compl, mem_cycArc, Finset.mem_Icc, Finset.mem_Icc]
+  have hx := (f x).isLt
+  constructor
+  · rintro ⟨h1, h2⟩ ⟨h3, h4⟩
+    omega
+  · intro h
+    exact ⟨by omega, by omega⟩
+
+omit [DecidableEq X] in
+/-- 位置 `[0, n−1]` 全取到时 `cycArc` 是全集。 -/
+theorem cycArc_univ_of_bounds {n : ℕ} (f : X ≃ Fin n) {i j : Fin n} (hi : i.val = 0)
+    (hj : j.val = n - 1) : cycArc f i j = Finset.univ := by
+  have hi' : i = ⟨0, by omega⟩ := Fin.ext hi
+  have hj' : j = ⟨n - 1, by omega⟩ := Fin.ext hj
+  ext x
+  rw [hi', hj', mem_cycArc, Finset.mem_Icc]
+  exact ⟨fun _ => Finset.mem_univ x, fun _ => ⟨by omega, by omega⟩⟩
+
+/-- ★★★ **主定理（缺口 2 已证）**：环形 split 族（去重、排除两侧互换重复）的指示矩阵
+**列满秩**，即权重向量 `b` 由系统发生距离唯一确定。
+
+证明用**显式逆矩阵**：每个环形 arc `[i,j]` 的权重由四点（或三点）组合直接解出
+（`quad_sepInd_d` / `quad_sepInd_h` / `tri_sepInd_l`），三类泛函覆盖全部弧。 -/
+theorem circularIndicator_injective {X : Type*} [Fintype X] [DecidableEq X] {ι : Type*}
+    [Fintype ι] (S : ι → Split X) (hS : Function.Injective S)
+    (hswap : ∀ i j : ι, S i = (S j).swap → i = j)
+    (harc : ∃ n : ℕ, ∃ f : X ≃ Fin n,
+      ∀ i : ι, IsCyclicArc f (S i).sideA ∨ IsCyclicArc f (S i).sideB) :
+    Function.Injective (fun b : ι → ℝ => fun p : X × X =>
+      ∑ i, b i * (if (p.1 ∈ (S i).sideA ∧ p.2 ∈ (S i).sideB) ∨
+        (p.1 ∈ (S i).sideB ∧ p.2 ∈ (S i).sideA) then 1 else 0)) := by
+  classical
+  obtain ⟨n, f, hf⟩ := harc
+  intro b₁ b₂ hEq
+  have hpoint : ∀ p q : X,
+      (∑ i, b₁ i * sepInd (S i) p q) = ∑ i, b₂ i * sepInd (S i) p q := by
+    intro p q
+    have h := congrFun hEq (p, q)
+    simpa only [sepInd] using h
+  by_cases hsmall : Fintype.card X ≤ 2
+  · -- |X| ≤ 2：每个 split 的一侧是单点 ⇒ 至多一个 swap 类 ⇒ ι 至多一个元素
+    have hsub : Subsingleton ι := ⟨fun x y => by
+      rcases eq_or_swap_of_card_le_two hsmall (S x) (S y) with h | h
+      · exact hS h
+      · exact hswap x y h⟩
+    by_cases hne : Nonempty ι
+    · obtain ⟨y⟩ := hne
+      have hx : ∀ x : ι, x = y := fun x => hsub.elim x y
+      obtain ⟨p, hp⟩ := (S y).nonempty 0
+      obtain ⟨q, hq⟩ := (S y).nonempty 1
+      have hind : sepInd (S y) p q = 1 := by
+        rw [sepInd, ite_eq_left]
+        exact Or.inl ⟨hp, hq⟩
+      have hy : b₁ y = b₂ y := by
+        have h := hpoint p q
+        have h1 : (∑ i, b₁ i * sepInd (S i) p q) = b₁ y * sepInd (S y) p q := by
+          refine Finset.sum_eq_single y ?_ ?_
+          · intro i _ hi; exact absurd (hx i) hi
+          · intro hh; exact absurd (Finset.mem_univ y) hh
+        have h2 : (∑ i, b₂ i * sepInd (S i) p q) = b₂ y * sepInd (S y) p q := by
+          refine Finset.sum_eq_single y ?_ ?_
+          · intro i _ hi; exact absurd (hx i) hi
+          · intro hh; exact absurd (Finset.mem_univ y) hh
+        rw [h1, h2, hind, mul_one, mul_one] at h
+        exact h
+      funext x
+      rw [hx x]
+      exact hy
+    · exact funext fun x => absurd ⟨x⟩ hne
+  · -- |X| ≥ 3：显式逆矩阵
+    have hn : 3 ≤ n := by
+      have hc : Fintype.card X = n := by
+        rw [← Fintype.card_fin n]
+        exact Fintype.card_congr f
+      omega
+    have hex : ∀ x : ι, ∃ p : Fin n × Fin n, p.1 ≤ p.2 ∧
+        ((S x).sideA = cycArc f p.1 p.2 ∨ (S x).sideA = (cycArc f p.1 p.2)ᶜ) := by
+      intro x
+      rcases hf x with h | h
+      · obtain ⟨i, j, hij, h'⟩ := h
+        exact ⟨(i, j), hij, h'⟩
+      · obtain ⟨i, j, hij, h'⟩ := h
+        refine ⟨(i, j), hij, ?_⟩
+        rcases h' with h' | h'
+        · right
+          have hb : (S x).sideAᶜ = cycArc f i j := by rw [← sideB_eq_compl (S x), h']
+          rw [← hb, compl_compl]
+        · left
+          have hb : (S x).sideAᶜ = (cycArc f i j)ᶜ := by rw [← sideB_eq_compl (S x), h']
+          exact compl_inj_iff.mp hb
+    let W : ι → Fin n × Fin n := fun x => Classical.choose (hex x)
+    have hWle : ∀ x, (W x).1 ≤ (W x).2 := fun x => (Classical.choose_spec (hex x)).1
+    have hWside : ∀ x, (S x).sideA = cycArc f (W x).1 (W x).2 ∨
+        (S x).sideA = (cycArc f (W x).1 (W x).2)ᶜ := fun x => (Classical.choose_spec (hex x)).2
+    have hc0 : ∀ p q : X, (∑ i, (b₁ i - b₂ i) * sepInd (S i) p q) = 0 := by
+      intro p q
+      have hstep : (∑ i, (b₁ i - b₂ i) * sepInd (S i) p q)
+          = (∑ i, b₁ i * sepInd (S i) p q) - (∑ i, b₂ i * sepInd (S i) p q) := by
+        rw [← Finset.sum_sub_distrib]
+        exact Finset.sum_congr rfl fun i _ => by ring
+      rw [hstep, hpoint p q, sub_self]
+    funext idx
+    have key_eq : ∀ x : ι, cycArc f (W x).1 (W x).2 = cycArc f (W idx).1 (W idx).2 → x = idx :=
+      fun x hJ => by
+        have hx : (S x).sideA = cycArc f (W idx).1 (W idx).2 ∨
+            (S x).sideA = (cycArc f (W idx).1 (W idx).2)ᶜ := by
+          rcases hWside x with h | h
+          · exact Or.inl (by rw [h, hJ])
+          · exact Or.inr (by rw [h, hJ])
+        rcases eq_or_swap_of_sides hx (hWside idx) with h | h
+        · exact hS h
+        · exact hswap x idx h
+    have key_compl : ∀ x : ι,
+        cycArc f (W x).1 (W x).2 = (cycArc f (W idx).1 (W idx).2)ᶜ → x = idx :=
+      fun x hJ => by
+        have hx : (S x).sideA = cycArc f (W idx).1 (W idx).2 ∨
+            (S x).sideA = (cycArc f (W idx).1 (W idx).2)ᶜ := by
+          rcases hWside x with h | h
+          · exact Or.inr (by rw [h, hJ])
+          · exact Or.inl (by rw [h, hJ, compl_compl])
+        rcases eq_or_swap_of_sides hx (hWside idx) with h | h
+        · exact hS h
+        · exact hswap x idx h
+    have hnotlast : ¬((W idx).1.val = 0 ∧ (W idx).2.val = n - 1) := by
+      rintro ⟨ha, hb⟩
+      have huniv := cycArc_univ_of_bounds f ha hb
+      rcases hWside idx with h | h
+      · rw [huniv] at h
+        have hB : (S idx).sideB = ∅ := by rw [sideB_eq_compl, h, Finset.compl_univ]
+        exact absurd (hB ▸ (show (S idx).sideB.Nonempty from (S idx).nonempty 1)) (by simp)
+      · rw [huniv, Finset.compl_univ] at h
+        exact absurd (h ▸ (show (S idx).sideA.Nonempty from (S idx).nonempty 0)) (by simp)
+    rcases Nat.eq_zero_or_pos (W idx).1.val with ha | ha
+    · rcases Nat.eq_zero_or_pos (W idx).2.val with hb | hb
+      · -- (0, 0)：单元素前缀 split（L 泛函）
+        have h0n : 0 < n := by omega
+        have h1n : 1 < n := by omega
+        have hlast : n - 1 < n := by omega
+        set q0 : Fin n := ⟨0, h0n⟩ with hq0
+        set q1 : Fin n := ⟨1, h1n⟩ with hq1
+        set ql : Fin n := ⟨n - 1, hlast⟩ with hql
+        have hq0v : q0.val = 0 := rfl
+        have hq1v : q1.val = 1 := rfl
+        have hqlv : ql.val = n - 1 := rfl
+        have hsuf : cycArc f q1 ql = (cycArc f q0 q0)ᶜ :=
+          suffix_eq_compl_of_prefix f q0 q0 q1 ql hq0v (by omega) hqlv
+        have hJ0 : cycArc f (W idx).1 (W idx).2 = cycArc f q0 q0 := by
+          have e1 : (W idx).1 = q0 := Fin.ext (by omega)
+          have e2 : (W idx).2 = q0 := Fin.ext (by omega)
+          rw [e1, e2]
+        refine weights_eq_of_functional S b₁ b₂ idx
+          (fun φ => tri φ (f.symm q0) (f.symm q1) (f.symm ql))
+          (fun i => ((W i).1.val = 0 ∧ (W i).2.val = 0) ∨
+            ((W i).1.val = 1 ∧ (W i).2.val = n - 1)) ?_ ?_ ?_ ?_ ?_
+        · exact tri_sum (fun i => b₁ i - b₂ i) (fun i p q => sepInd (S i) p q) _ _ _
+        · simp only [tri]; rw [hc0, hc0, hc0]; ring
+        · intro i
+          exact tri_sepInd_l f (hWle i) (hWside i) hn q0 q1 ql hq0v hq1v hqlv
+        · intro i hi
+          rcases hi with ⟨e1, e2⟩ | ⟨e1, e2⟩
+          · refine key_eq i ?_
+            have h1 : (W i).1 = q0 := Fin.ext (by omega)
+            have h2 : (W i).2 = q0 := Fin.ext (by omega)
+            rw [h1, h2, hJ0]
+          · refine key_compl i ?_
+            have h1 : (W i).1 = q1 := Fin.ext (by omega)
+            have h2 : (W i).2 = ql := Fin.ext (by omega)
+            rw [h1, h2, hsuf, hJ0]
+        · exact Or.inl ⟨ha, hb⟩
+      · -- (0, b)（b ≥ 1）：前缀 `[0,b]`（H 泛函）
+        have hbn : (W idx).2.val + 1 < n := by
+          have hnot := hnotlast
+          omega
+        have h0n : 0 < n := by omega
+        have hlast : n - 1 < n := by omega
+        set q0 : Fin n := ⟨0, h0n⟩ with hq0
+        set qj : Fin n := ⟨(W idx).2.val, (W idx).2.isLt⟩ with hqj
+        set qj1 : Fin n := ⟨(W idx).2.val + 1, hbn⟩ with hqj1
+        set ql : Fin n := ⟨n - 1, hlast⟩ with hql
+        have hq0v : q0.val = 0 := rfl
+        have hqjv : qj.val = (W idx).2.val := rfl
+        have hqj1v : qj1.val = (W idx).2.val + 1 := rfl
+        have hqlv : ql.val = n - 1 := rfl
+        have hP : cycArc f (W idx).1 (W idx).2 = cycArc f q0 qj := by
+          have e1 : (W idx).1 = q0 := Fin.ext (by omega)
+          have e2 : (W idx).2 = qj := Fin.ext (by omega)
+          rw [e1, e2]
+        refine weights_eq_of_functional S b₁ b₂ idx
+          (fun φ => quad φ (f.symm ql) (f.symm q0) (f.symm qj) (f.symm qj1))
+          (fun i => ((W i).1.val = 0 ∧ (W i).2.val = qj.val) ∨
+            ((W i).1.val = qj.val + 1 ∧ (W i).2.val = n - 1)) ?_ ?_ ?_ ?_ ?_
+        · exact quad_sum (fun i => b₁ i - b₂ i) (fun i p q => sepInd (S i) p q) _ _ _ _
+        · simp only [quad]; rw [hc0, hc0, hc0, hc0]; ring
+        · intro i
+          exact quad_sepInd_h f (hWle i) (hWside i) q0 qj qj1 ql hq0v (by omega) (by omega) hqlv
+        · intro i hi
+          rcases hi with ⟨e1, e2⟩ | ⟨e1, e2⟩
+          · refine key_eq i ?_
+            have h1 : (W i).1 = q0 := Fin.ext (by omega)
+            have h2 : (W i).2 = qj := Fin.ext (by omega)
+            rw [h1, h2, hP]
+          · refine key_compl i ?_
+            have h1 : (W i).1 = qj1 := Fin.ext (by omega)
+            have h2 : (W i).2 = ql := Fin.ext (by omega)
+            have hsuf : cycArc f qj1 ql = (cycArc f q0 qj)ᶜ :=
+              suffix_eq_compl_of_prefix f q0 qj qj1 ql hq0v (by omega) hqlv
+            rw [h1, h2, hsuf, hP]
+        · exact Or.inl ⟨ha, by omega⟩
+    · by_cases hb : (W idx).2.val = n - 1
+      · by_cases ha1 : (W idx).1.val = 1
+        · -- (1, n−1)：`{p₀}|rest` 的另一表示（L 泛函）
+          have h0n : 0 < n := by omega
+          have h1n : 1 < n := by omega
+          have hlast : n - 1 < n := by omega
+          set q0 : Fin n := ⟨0, h0n⟩ with hq0
+          set q1 : Fin n := ⟨1, h1n⟩ with hq1
+          set ql : Fin n := ⟨n - 1, hlast⟩ with hql
+          have hq0v : q0.val = 0 := rfl
+          have hq1v : q1.val = 1 := rfl
+          have hqlv : ql.val = n - 1 := rfl
+          have hsuf : cycArc f q1 ql = (cycArc f q0 q0)ᶜ :=
+            suffix_eq_compl_of_prefix f q0 q0 q1 ql hq0v (by omega) hqlv
+          have hJ0 : cycArc f (W idx).1 (W idx).2 = cycArc f q1 ql := by
+            have e1 : (W idx).1 = q1 := Fin.ext (by omega)
+            have e2 : (W idx).2 = ql := Fin.ext (by omega)
+            rw [e1, e2]
+          refine weights_eq_of_functional S b₁ b₂ idx
+            (fun φ => tri φ (f.symm q0) (f.symm q1) (f.symm ql))
+            (fun i => ((W i).1.val = 0 ∧ (W i).2.val = 0) ∨
+              ((W i).1.val = 1 ∧ (W i).2.val = n - 1)) ?_ ?_ ?_ ?_ ?_
+          · exact tri_sum (fun i => b₁ i - b₂ i) (fun i p q => sepInd (S i) p q) _ _ _
+          · simp only [tri]; rw [hc0, hc0, hc0]; ring
+          · intro i
+            exact tri_sepInd_l f (hWle i) (hWside i) hn q0 q1 ql hq0v hq1v hqlv
+          · intro i hi
+            rcases hi with ⟨e1, e2⟩ | ⟨e1, e2⟩
+            · refine key_compl i ?_
+              have h1 : (W i).1 = q0 := Fin.ext (by omega)
+              have h2 : (W i).2 = q0 := Fin.ext (by omega)
+              rw [h1, h2, hJ0, hsuf, compl_compl]
+            · refine key_eq i ?_
+              have h1 : (W i).1 = q1 := Fin.ext (by omega)
+              have h2 : (W i).2 = ql := Fin.ext (by omega)
+              rw [h1, h2, hJ0]
+          · exact Or.inr ⟨ha1, hb⟩
+        · -- (a, n−1)（a ≥ 2）：前缀 `[0,a−1]`（H 泛函）
+          have hjn : (W idx).1.val - 1 < n := by omega
+          have h0n : 0 < n := by omega
+          have hlast : n - 1 < n := by omega
+          set q0 : Fin n := ⟨0, h0n⟩ with hq0
+          set qj : Fin n := ⟨(W idx).1.val - 1, hjn⟩ with hqj
+          set qj1 : Fin n := ⟨(W idx).1.val, (W idx).1.isLt⟩ with hqj1
+          set ql : Fin n := ⟨n - 1, hlast⟩ with hql
+          have hq0v : q0.val = 0 := rfl
+          have hqjv : qj.val = (W idx).1.val - 1 := rfl
+          have hqj1v : qj1.val = (W idx).1.val := rfl
+          have hqlv : ql.val = n - 1 := rfl
+          have hP : cycArc f q0 qj = (cycArc f (W idx).1 (W idx).2)ᶜ := by
+            have hsuf : cycArc f qj1 ql = (cycArc f q0 qj)ᶜ :=
+              suffix_eq_compl_of_prefix f q0 qj qj1 ql hq0v (by omega) hqlv
+            have e1 : qj1 = (W idx).1 := Fin.ext (by omega)
+            have e2 : ql = (W idx).2 := Fin.ext (by omega)
+            rw [e1, e2] at hsuf
+            rw [hsuf, compl_compl]
+          refine weights_eq_of_functional S b₁ b₂ idx
+            (fun φ => quad φ (f.symm ql) (f.symm q0) (f.symm qj) (f.symm qj1))
+            (fun i => ((W i).1.val = 0 ∧ (W i).2.val = qj.val) ∨
+              ((W i).1.val = qj.val + 1 ∧ (W i).2.val = n - 1)) ?_ ?_ ?_ ?_ ?_
+          · exact quad_sum (fun i => b₁ i - b₂ i) (fun i p q => sepInd (S i) p q) _ _ _ _
+          · simp only [quad]; rw [hc0, hc0, hc0, hc0]; ring
+          · intro i
+            exact quad_sepInd_h f (hWle i) (hWside i) q0 qj qj1 ql hq0v (by omega) (by omega) hqlv
+          · intro i hi
+            rcases hi with ⟨e1, e2⟩ | ⟨e1, e2⟩
+            · refine key_compl i ?_
+              have h1 : (W i).1 = q0 := Fin.ext (by omega)
+              have h2 : (W i).2 = qj := Fin.ext (by omega)
+              rw [h1, h2, hP]
+            · refine key_eq i ?_
+              have h1 : (W i).1 = qj1 := Fin.ext (by omega)
+              have h2 : (W i).2 = ql := Fin.ext (by omega)
+              have hsuf : cycArc f qj1 ql = (cycArc f q0 qj)ᶜ :=
+                suffix_eq_compl_of_prefix f q0 qj qj1 ql hq0v (by omega) hqlv
+              rw [h1, h2, hsuf, hP, compl_compl]
+          · exact Or.inr ⟨by omega, hb⟩
+      · -- (a, b)（a ≥ 1、b ≤ n−2）：D 泛函
+        have hbn : (W idx).2.val + 1 < n := by omega
+        have han : (W idx).1.val - 1 < n := by omega
+        set a' : Fin n := ⟨(W idx).1.val - 1, han⟩ with ha'
+        have h1' : (W idx).1.val = a'.val + 1 := by
+          have h : a'.val = (W idx).1.val - 1 := by rw [ha']
+          omega
+        have h3' : (⟨(W idx).2.val + 1, hbn⟩ : Fin n).val = (W idx).2.val + 1 := rfl
+        refine weights_eq_of_functional S b₁ b₂ idx
+          (fun φ => quad φ (f.symm a') (f.symm (W idx).1) (f.symm (W idx).2)
+            (f.symm ⟨(W idx).2.val + 1, hbn⟩))
+          (fun i => ((W i).1.val = (W idx).1.val ∧ (W i).2.val = (W idx).2.val)) ?_ ?_ ?_ ?_ ?_
+        · exact quad_sum (fun i => b₁ i - b₂ i) (fun i p q => sepInd (S i) p q) _ _ _ _
+        · simp only [quad]; rw [hc0, hc0, hc0, hc0]; ring
+        · intro i
+          exact quad_sepInd_d f (hWside i) a' (W idx).1 (W idx).2 ⟨(W idx).2.val + 1, hbn⟩
+            h1' (Fin.le_iff_val_le_val.mp (hWle idx)) h3'
+        · intro i hi
+          have h1 : (W i).1 = (W idx).1 := Fin.ext hi.1
+          have h2 : (W i).2 = (W idx).2 := Fin.ext hi.2
+          exact key_eq i (by rw [h1, h2])
+        · exact ⟨rfl, rfl⟩
+
+/-- ★★★ **缺口 2 收口**：`circularIndicatorFullRank_gap`（陈述逐字不变）**已证**。 -/
+theorem circularIndicatorFullRank_gap_proved : circularIndicatorFullRank_gap :=
+  fun S hS hswap harc => circularIndicator_injective S hS hswap harc
+
+end IndicatorApplication
+
+/-! ## 8. 缺口 1 / 3 的处置（W12g）
+
+### 8.1 缺口 3（`neighborNetAgglomeration_gap`）：★E **空账目** ⇒ **保留缺口**
+
+派单要求先核对退化见证。取 `Step d F := (F = trivialSplitSet X)`（全部「有一侧是单点」的
+split）：注册 `Prop` 的两个合取项**都成立**（下一条 `example`）—— 故该 `Prop` 可被
+**退化见证**平凡满足，**是空账目**。
+
+⚠️ 按 ★E，本文件**不**把该 `Prop` 登记为已证：`neighborNetAgglomeration_gap` 保持 `def` 原样、
+**没有**对应定理。真正的目标（文献 288–328、469–565 行）是定义**真实的** agglomeration `Step`
+（聚类对 `Cᵢ`、选择式 (1)(2)(3) 的 `Q` 极小化、约化式 (4)(5) 的「三节点 → 两节点」、反演展开），
+并证明「存在由极小化 + 约化驱动的运行，其展开产出环形 split 族」（文献 321–324 行称可用归纳法证明）。
+**缺的器材**：聚类对 / 约化的归纳定义 + 反演展开的组合引理 —— 本库完全没有。
+
+### 8.2 缺口 1（`circularDistanceRealization_gap`）：⚠️ **按形式陈述为假** ⇒ 保留缺口
+
+`IsCircularDist` 只约束**上三角**（`i ≤ j ≤ k ≤ l` 的四元组），既不要求 `d` 对称、也不要求零对角；
+而 `phyleticDist` **恒对称**、且对角为 `0`。于是取「`d 1 0 = 1`、其余全 `0`」即得反例
+（`circularDistanceRealization_gap_false`）。修复形态（对称 + 零对角）另立 `def` 并给出非空见证；
+一般 `n` 仍需 Bandelt–Dress 的**孤立指数 / 分裂分解**（本库无；`Phylo/SplitWeak.lean` 只到
+「d-split 全体弱相容」），故**如实保留缺口**。 -/
+
+/-- 退化见证用的 `F`：全部「有一侧是单点」的 split（含全部平凡 split）。 -/
+noncomputable def trivialSplitSet (X : Type*) [Fintype X] [DecidableEq X] : Finset (Split X) :=
+  Finset.univ.filter fun s => (∃ x : X, s.sideA = {x}) ∨ (∃ x : X, s.sideB = {x})
+
+/-- ★E **退化见证（空账目）**：`Step d F := (F = trivialSplitSet X)` 使注册 `Prop` 的
+**两个合取项都成立**。⚠️ 它与 Neighbor-Net 的 agglomeration 毫无关系 ⇒ **不**作为缺口的证明。 -/
+example (X : Type*) [Fintype X] [DecidableEq X] (hX : 1 < Fintype.card X) :
+    (∀ (_d : X → X → ℝ) (F : Finset (Split X)), F = trivialSplitSet X →
+        Circular (↑F : Set (Split X)) ∧ ∀ x : X, ∃ s ∈ F, s.sideA = {x} ∨ s.sideB = {x}) ∧
+      (∀ (_d : X → X → ℝ), (∀ x y, _d x y = _d y x) →
+        ∃ F : Finset (Split X), F = trivialSplitSet X) := by
+  constructor
+  · rintro _d F rfl
+    constructor
+    · refine circular_of_trivial _ ?_
+      intro s hs
+      have hs' : s ∈ trivialSplitSet X := hs
+      simp only [trivialSplitSet, Finset.mem_filter, Finset.mem_univ, true_and] at hs'
+      exact hs'
+    · intro x
+      have hcomp : ({x} : Finset X)ᶜ.Nonempty := by
+        refine Finset.card_pos.mp ?_
+        rw [Finset.card_compl, Finset.card_singleton]
+        omega
+      refine ⟨ofSideA {x} (Finset.singleton_nonempty x) hcomp, ?_, Or.inl (ofSideA_sideA _ _ _)⟩
+      simp only [trivialSplitSet, Finset.mem_filter, Finset.mem_univ, true_and]
+      exact Or.inl ⟨x, ofSideA_sideA _ _ _⟩
+  · intro _d _
+    exact ⟨trivialSplitSet X, rfl⟩
+
+/-- ★D 反例用的 `d`：`d 1 0 = 1`，其余全 `0`（**不对称**，对角为 `0`）。 -/
+def dtest3 : Fin 3 → Fin 3 → ℝ := fun x y => if x = 1 ∧ y = 0 then 1 else 0
+
+theorem dtest3_zero_of_le {a b : Fin 3} (hab : a ≤ b) : dtest3 a b = 0 := by
+  simp only [dtest3]
+  rw [ite_eq_right]
+  rintro ⟨h1, h2⟩
+  rw [h1, h2] at hab
+  exact absurd hab (by decide)
+
+/-- ★D：`dtest3` **是环形（Kalmanson）距离** —— `IsCircularDist` 只约束上三角，全为 `0`。 -/
+theorem dtest3_isCircularDist : IsCircularDist (Equiv.refl (Fin 3)) dtest3 := by
+  intro i j k l hij hjk hkl
+  simp only [Equiv.refl_symm, Equiv.refl_apply]
+  rw [dtest3_zero_of_le hij, dtest3_zero_of_le hkl, dtest3_zero_of_le (hij.trans hjk),
+    dtest3_zero_of_le (hjk.trans hkl), dtest3_zero_of_le (hij.trans (hjk.trans hkl)),
+    dtest3_zero_of_le hjk]
+  norm_num
+
+/-- `phyleticDist` 对称（指示函数的对称性）。 -/
+theorem phyleticDist_comm {X : Type*} [Fintype X] [DecidableEq X]
+    (F : Finset (Split X)) (w : Split X → ℝ) (x y : X) :
+    phyleticDist F w x y = phyleticDist F w y x := by
+  refine Finset.sum_congr rfl fun s _ => ?_
+  congr 1
+  by_cases h : (x ∈ s.sideA ∧ y ∈ s.sideB) ∨ (x ∈ s.sideB ∧ y ∈ s.sideA)
+  · rw [ite_eq_left h, ite_eq_left]
+    rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · exact Or.inr ⟨h2, h1⟩
+    · exact Or.inl ⟨h2, h1⟩
+  · rw [ite_eq_right h, ite_eq_right]
+    intro hh
+    exact h (by
+      rcases hh with ⟨h1, h2⟩ | ⟨h1, h2⟩
+      · exact Or.inr ⟨h2, h1⟩
+      · exact Or.inl ⟨h2, h1⟩)
+
+/-- ★D **缺口 1 按形式陈述为假（实例级反驳）**：注册 `Prop` 在 `X = Fin 3`、
+`d = dtest3` 处的实例**不成立** —— 若成立，则 `dtest3 1 0 = 1` 与 `phyleticDist` 的**对称性**
+（`dtest3 0 1 = 0`）矛盾。这正是「`IsCircularDist` 不要求 `d` 对称」的后果。 -/
+theorem circularDistanceRealization_gap_false_at_fin3 :
+    ¬ ((∃ n : ℕ, ∃ f : Fin 3 ≃ Fin n, IsCircularDist f dtest3) →
+        ∃ (F : Finset (Split (Fin 3))) (w : Split (Fin 3) → ℝ),
+          Circular (↑F : Set (Split (Fin 3))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+            ∀ x y : Fin 3, x ≠ y → phyleticDist F w x y = dtest3 x y) := by
+  intro h3
+  obtain ⟨F, w, _hcirc, _hnn, hdw⟩ :=
+    h3 ⟨3, ⟨Equiv.refl (Fin 3), dtest3_isCircularDist⟩⟩
+  have h01 : phyleticDist F w 0 1 = 0 := hdw 0 1 (by decide)
+  have h10 : phyleticDist F w 1 0 = 1 := hdw 1 0 (by decide)
+  rw [phyleticDist_comm F w 1 0, h01] at h10
+  norm_num at h10
+
+/-- ⬜ **修复形态（W12g）**：环形距离的实现 —— 加**对称 + 零对角**（否则见
+`circularDistanceRealization_gap_false`）。一般 `n` 仍缺 Bandelt–Dress 分裂分解。 -/
+def circularDistanceRealization_gap_corrected : Prop :=
+  ∀ {X : Type*} [Fintype X] [DecidableEq X] (d : X → X → ℝ),
+    (∀ x : X, d x x = 0) → (∀ x y : X, d x y = d y x) →
+      (∃ n : ℕ, ∃ f : X ≃ Fin n, IsCircularDist f d) →
+        ∃ (F : Finset (Split X)) (w : Split X → ℝ),
+          Circular (↑F : Set (Split X)) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+            ∀ x y : X, x ≠ y → phyleticDist F w x y = d x y
+
+/-- ★B **修复形态的非空见证**：常零距离由**空族 + 零权重**实现
+（`Circular ∅`、非负性、逐点等式都真的被验证，不是空转）。 -/
+theorem zeroDist_realized (X : Type*) [Fintype X] [DecidableEq X] :
+    ∃ (F : Finset (Split X)) (w : Split X → ℝ),
+      Circular (↑F : Set (Split X)) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+        ∀ x y : X, x ≠ y → phyleticDist F w x y = 0 := by
+  classical
+  refine ⟨∅, fun _ => 0, ⟨Fintype.card X, Fintype.equivFin X, fun s hs => absurd hs (by simp)⟩,
+    fun s hs => absurd hs (by simp), ?_⟩
+  intro x y _
+  simp [phyleticDist]
+
 end NeighborNet

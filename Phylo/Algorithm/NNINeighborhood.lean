@@ -43,7 +43,11 @@ import Phylo.Algorithm.RF
   已在 `n=4` 的一次 NNI 上给出 `Fin 4` 显式反例（`nniDistanceCandidate_wrong`）。
 * ★C **最小具体例子**（`Fin 4`，三叶集无关）：`{0,1}|{2,3}` 的三个分解、
   两个显式 NNI 移动、RF 变化 = 2。
-* ⬜ **缺口** `nniDistance_exact_gap`：NNI 图的**连通性**＋**精确闭式**。
+* ⬜ **缺口处置（W12g）** `nniDistance_exact_gap`：**第一项**（NNI 图连通）**保留缺口**并另立
+  `nniConnectivity_gap`；**第二项**（最小步数存在唯一）已在**给定存在性**时证成
+  （`nniDist_existsUnique_min`，一般引理）。⚠️ 注册的 `def` 对**一般 `S S'`** 为**假**
+  （步数保持基数 ⇒ 反例 `nniDistance_exact_gap_false`，见 §7.0）。
+* ★C **`n = 4` 的连通性实例**（§7.1）：三棵二叉树的 split 系统两两 1 步可达。
 
 ## 2. ⚠️ 诚实的边界（必读）
 
@@ -461,5 +465,206 @@ variable {α : Type*} [Fintype α] [DecidableEq α]
 def nniDistance_exact_gap (n : ℕ) (S S' : Finset (Split (Fin n))) : Prop :=
   (∃ k : ℕ, NNIDist S S' k) ∧
     ∃! k : ℕ, NNIDist S S' k ∧ ∀ j : ℕ, NNIDist S S' j → k ≤ j
+
+/-! ## 7. 缺口推进（W12g）：第二项已证 · 第一项另立缺口 · `n = 4` 连通实例
+
+### 7.0 ★D **命题核对：注册的 `nniDistance_exact_gap` 对一般 `S S'` 为假**
+
+`nniDistance_exact_gap n S S'` 对**任意** `S S'` 量化，但它等价于
+「`NNIDist S S' ·` 非空 **且** 最小步数唯一」。而 `NNIDist` 的每一步都是 `NNIMove`：
+**删掉一条 split、加进一条 split** ⇒ 步数**保持基数**（`nniDist_card_eq`）。
+于是 `S.card ≠ S'.card` 时第一项**不成立**（反例 `nniDistance_exact_gap_false`）。
+⇒ 本文件**不**声称证下该 `def`；只**保留**它（逐字不动）并把可证部分与新缺口分开登记。 -/
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-- ★★★ **（一般引理）最小元的存在唯一性**：只要 `R` 非空，就存在唯一的**最小** `k` 满足 `R`。
+
+⚠️ 本引理**只需要**「存在性」这一个前提：`NNIDist` 的递归「`+1` 步」结构在此**不起作用**
+（不存在「必须额外假设才能推出唯一性」的隐含前提 —— 已核实）。 -/
+theorem existsUnique_min_of_exists (R : ℕ → Prop) (h : ∃ k, R k) :
+    ∃! k : ℕ, R k ∧ ∀ j : ℕ, R j → k ≤ j := by
+  classical
+  refine ⟨Nat.find h, ⟨Nat.find_spec h, fun j hj => Nat.find_min' h hj⟩, ?_⟩
+  rintro k' ⟨hk', hmin⟩
+  exact le_antisymm (hmin _ (Nat.find_spec h)) (Nat.find_min' h hk')
+
+/-- ★★★ **`nniDistance_exact_gap` 的**第二项**在给定存在性后**已证**（本批核心推进）。
+
+即 `(∃ k, NNIDist S S' k) → ∃! k, NNIDist S S' k ∧ ∀ j, NNIDist S S' j → k ≤ j`。
+
+⚠️ 它**不**给出第一项（NNI 图连通）—— 后者见新登记的 `nniConnectivity_gap`。 -/
+theorem nniDist_existsUnique_min {S S' : Finset (Split α)} (h : ∃ k : ℕ, NNIDist S S' k) :
+    ∃! k : ℕ, NNIDist S S' k ∧ ∀ j : ℕ, NNIDist S S' j → k ≤ j :=
+  existsUnique_min_of_exists _ h
+
+/-- ★★ **步数保持基数**：每次 NNI 移动「删一条、加一条」⇒ `S.card = S'.card`。 -/
+theorem nniDist_card_eq : ∀ {S S' : Finset (Split α)} {k : ℕ}, NNIDist S S' k → S.card = S'.card
+  | S, S', 0, h => by rw [nniDist_zero_iff] at h; rw [h]
+  | S, S', k + 1, h => by
+    obtain ⟨R, hSR, hrest⟩ := h
+    obtain ⟨s, A₁, B₁, hA₁, hA₂, hA₁sub, hB₁sub, hB₁, hB₂, hs, hs', hSR'⟩ := hSR
+    have hcard : R.card = S.card := by
+      rw [hSR', Finset.card_insert_of_notMem (fun hmem => hs' (Finset.mem_of_mem_erase hmem)),
+        Finset.card_erase_add_one hs]
+    rw [← hcard]
+    exact nniDist_card_eq hrest
+
+/-- ★B **非空真**：`NNIDist S S 0` 确实成立（定义里 `0` 步分支就是 `S = S'`）。 -/
+theorem nniDist_self (S : Finset (Split α)) : NNIDist S S 0 := rfl
+
+/-- ★D **注册缺口的第一项对一般 `S S'` 为假（反例）**：取 `S = ∅`、`S' = {exS₀}`。
+两步的基数不同（`0 ≠ 1`），而 `nniDist_card_eq` 说明 `NNIDist` 不可能改变基数
+⇒ 不存在任何 `k` 使 `NNIDist S S' k`。 -/
+theorem nniDistance_exact_gap_false :
+    ¬ nniDistance_exact_gap 4 (∅ : Finset (Split (Fin 4))) {exS₀} := by
+  rintro ⟨⟨k, hk⟩, _⟩
+  have hcard := nniDist_card_eq hk
+  simp at hcard
+
+/-- ★D 同一反例的**否证形式**：注册的 `nniDistance_exact_gap` **不能**作为全称命题成立。 -/
+theorem nniDistance_exact_gap_not_universal :
+    ¬ (∀ (n : ℕ) (S S' : Finset (Split (Fin n))), nniDistance_exact_gap n S S') :=
+  fun h => nniDistance_exact_gap_false (h 4 ∅ {exS₀})
+
+/-- ⬜ **新登记缺口（W12g）**：NNI 图（组合 split 层）的**连通性** ——
+即 `nniDistance_exact_gap` 的**第一项**，单独登记以便追踪。
+
+（正确的目标陈述需要 `S, S'` 是**同一二叉树的 split 系统**；但 `NNIMove` 在本库是
+**纯组合**移动，语义桥仍缺 ⇒ 见文件头「诚实的边界」。） -/
+def nniConnectivity_gap (n : ℕ) (S S' : Finset (Split (Fin n))) : Prop :=
+  ∃ k : ℕ, NNIDist S S' k
+
+/-- ★B **`nniConnectivity_gap` 非空真**：`{exS₀} → {exS₁}` 是 1 步可达。 -/
+theorem nniConnectivity_gap_nonempty :
+    nniConnectivity_gap 4 ({exS₀} : Finset (Split (Fin 4))) {exS₁} :=
+  ⟨1, nniDist_one_of_move ex_nniMove⟩
+
+/-- ⬜ **修复形态（W12g）**：把「可达性」放成**前提**（正是 `nniDist_existsUnique_min` 的假设）——
+即 `(∃ k, NNIDist S S' k) → 最小步数存在且唯一`。与注册的 `nniDistance_exact_gap` 不同，
+本 `Prop` **是真的且已证**（`nniDistance_min_gap_proved`）。 -/
+def nniDistance_min_gap (n : ℕ) (S S' : Finset (Split (Fin n))) : Prop :=
+  (∃ k : ℕ, NNIDist S S' k) → ∃! k : ℕ, NNIDist S S' k ∧ ∀ j : ℕ, NNIDist S S' j → k ≤ j
+
+/-- ★★★ **修复形态已证**：带上可达性前提后，精确 NNI 距离（最小步数）存在且唯一。 -/
+theorem nniDistance_min_gap_proved (n : ℕ) (S S' : Finset (Split (Fin n))) :
+    nniDistance_min_gap n S S' :=
+  fun h => nniDist_existsUnique_min h
+
+/-- ★B **修复形态非空真**：单元素系统到自身的 0 步行走给出非平凡见证。 -/
+theorem nniDistance_min_gap_nonempty :
+    nniDistance_min_gap 4 ({exS₀} : Finset (Split (Fin 4))) {exS₀} :=
+  nniDistance_min_gap_proved 4 _ _
+
+/-! ### 7.1 ★C `n = 4` 的连通性实例（三棵二叉树的 split 系统） -/
+
+/-- ★C 平凡 split `{0} | {1,2,3}`。 -/
+def tv₀ : Split (Fin 4) where
+  parts i := if i = 0 then {0} else {1, 2, 3}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- ★C 平凡 split `{1} | {0,2,3}`。 -/
+def tv₁ : Split (Fin 4) where
+  parts i := if i = 0 then {1} else {0, 2, 3}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- ★C 平凡 split `{2} | {0,1,3}`。 -/
+def tv₂ : Split (Fin 4) where
+  parts i := if i = 0 then {2} else {0, 1, 3}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- ★C 平凡 split `{3} | {0,1,2}`。 -/
+def tv₃ : Split (Fin 4) where
+  parts i := if i = 0 then {3} else {0, 1, 2}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+@[simp] theorem tv₀_sideA : tv₀.sideA = ({0} : Finset (Fin 4)) := rfl
+@[simp] theorem tv₁_sideA : tv₁.sideA = ({1} : Finset (Fin 4)) := rfl
+@[simp] theorem tv₂_sideA : tv₂.sideA = ({2} : Finset (Fin 4)) := rfl
+@[simp] theorem tv₃_sideA : tv₃.sideA = ({3} : Finset (Fin 4)) := rfl
+
+/-- ★C `Fin 4` 的四条平凡 split 族（`2·4 − 3 = 5` 条 split 中的四条）。 -/
+def triv₄ : Finset (Split (Fin 4)) := {tv₀, tv₁, tv₂, tv₃}
+
+/-- ★C 二叉树 `01|23` 的**split 系统**（4 条平凡 + 1 条内部）。 -/
+def tree₀ : Finset (Split (Fin 4)) := {tv₀, tv₁, tv₂, tv₃, exS₀}
+
+/-- ★C 二叉树 `02|13` 的 split 系统。 -/
+def tree₁ : Finset (Split (Fin 4)) := {tv₀, tv₁, tv₂, tv₃, exS₁}
+
+/-- ★C 二叉树 `03|12` 的 split 系统。 -/
+def tree₂ : Finset (Split (Fin 4)) := {tv₀, tv₁, tv₂, tv₃, exS₂}
+
+/-- ★C `tree₀ → tree₁` 是**一次** NNI 移动。 -/
+theorem tree_nniMove₀₁ : NNIMove tree₀ tree₁ := by
+  refine ⟨exS₀, {0}, {2}, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide, by decide, ?_⟩
+  rw [ex_nniResolvent_eq_S₁]
+  decide
+
+/-- ★C `tree₀ → tree₂` 是**一次** NNI 移动。 -/
+theorem tree_nniMove₀₂ : NNIMove tree₀ tree₂ := by
+  refine ⟨exS₀, {0}, {3}, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide, by decide, ?_⟩
+  rw [ex_nniResolvent_eq_S₂]
+  decide
+
+/-- ★C `exS₁` 按四块 `({0}, {3})` 的 NNI 分解给出 `exS₂`（`{0,2}|{1,3} → {0,3}|{1,2}`）。 -/
+theorem ex_nniResolvent_S₁₁₃ :
+    exS₁.nniResolvent ({0} : Finset (Fin 4)) ({3} : Finset (Fin 4))
+      (by decide) (by decide) (by decide) (by decide) = exS₂ := by
+  refine (KPartition.eq_iff_parts _ _).mpr ?_
+  funext i
+  by_cases hi : i = 0
+  · subst hi
+    show ({0} : Finset (Fin 4)) ∪ {3} = {0, 3}
+    decide
+  · have hi1 : i = 1 := by fin_cases i <;> simp_all
+    subst hi1
+    show (({0, 2} : Finset (Fin 4)) \ {0}) ∪ (({1, 3} : Finset (Fin 4)) \ {3}) = {1, 2}
+    decide
+
+/-- ★C `tree₁ → tree₂` 也是**一次** NNI 移动（同一 quartet 的另外两种拓扑）。 -/
+theorem tree_nniMove₁₂ : NNIMove tree₁ tree₂ := by
+  refine ⟨exS₁, {0}, {3}, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide, by decide, ?_⟩
+  rw [ex_nniResolvent_S₁₁₃]
+  decide
+
+/-- ★C 一次移动 ⟹ RF 距离恰为 2（`n = 4` 的显式验证）。 -/
+theorem tree_rfDistance₀₁ : rfDistance tree₀ tree₁ = 2 := nniMove_rfDistance tree_nniMove₀₁
+
+/-- ★C `tree₀ → tree₁` 是 1 步可达。 -/
+theorem tree_nniDist₀₁ : NNIDist tree₀ tree₁ 1 := nniDist_one_of_move tree_nniMove₀₁
+
+/-- ★C `tree₀ → tree₂` 是 1 步可达。 -/
+theorem tree_nniDist₀₂ : NNIDist tree₀ tree₂ 1 := nniDist_one_of_move tree_nniMove₀₂
+
+/-- ★C `tree₁ → tree₂` 是 1 步可达。 -/
+theorem tree_nniDist₁₂ : NNIDist tree₁ tree₂ 1 := nniDist_one_of_move tree_nniMove₁₂
+
+/-- ★★★ **`n = 4` 连通性实例**：三个二叉树 split 系统**两两 1 步可达**
+（同一 quartet 的三种拓扑）。 -/
+theorem tree_connectivity_fin4 :
+    nniConnectivity_gap 4 tree₀ tree₁ ∧ nniConnectivity_gap 4 tree₀ tree₂ ∧
+      nniConnectivity_gap 4 tree₁ tree₂ :=
+  ⟨⟨1, tree_nniDist₀₁⟩, ⟨1, tree_nniDist₀₂⟩, ⟨1, tree_nniDist₁₂⟩⟩
+
+/-- ★★★ **`n = 4` 的精确 NNI 距离 = 1**：`tree₁ ≠ tree₂`（0 步不可达），
+而 1 步可达 ⇒ 最小步数恰为 `1`（最小性由 `nniDist_existsUnique_min` 给出）。 -/
+theorem tree_nniDist₁₂_eq_one :
+    ∃! k : ℕ, NNIDist tree₁ tree₂ k ∧ ∀ j : ℕ, NNIDist tree₁ tree₂ j → k ≤ j :=
+  nniDist_existsUnique_min ⟨1, tree_nniDist₁₂⟩
+
+/-- ★C `tree₁ ≠ tree₂`（两者的内部 quartet 不同；`n = 4` 上由 `decide` 判定）。 -/
+theorem tree_ne : tree₁ ≠ tree₂ := by decide
 
 end Split
