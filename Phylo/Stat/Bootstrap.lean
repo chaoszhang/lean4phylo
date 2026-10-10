@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.ConsensusExtra
 import Mathlib.Data.Fintype.Perm
+import Mathlib.Data.Fintype.Fin
 
 /-!
 # `Phylo.Stat.Bootstrap` —— bootstrap 支持度（Felsenstein 1985）
@@ -807,7 +808,54 @@ end OrbitStab
 theorem weightOf_eq_card_fiberOf {n : ℕ} (σ : Resample n) (i : Fin n) :
     weightOf σ i = (fiberOf σ i).card := rfl
 
-/-- ❌ **缺口 M（多项式系数记账）**：和恰为 `n` 的权重向量 `w`，恰由 `n! / ∏ᵢ (wᵢ)!`
+/-! ### §6.1 ★★★★ **缺口 M 闭合**（W12a6）：可实现性 ＋ 收尾
+
+`exists_weightOf_eq` 就是最后一块器材（④）：把 `Fin n` 按 `w` 切成连续块、取 `σ := 块表.get`。
+计数用 Mathlib 现成的 `Fin.card_filter_univ_eq_vector_get_eq_count`
+（`Mathlib/Data/Fintype/Fin.lean`，故本文件**新增 import** `Mathlib.Data.Fintype.Fin`）。 -/
+
+/-- 列表和 ↔ `Finset` 和（沿 `List.finRange`）。 -/
+theorem list_sum_finRange {n : ℕ} (f : Fin n → ℕ) :
+    ((List.finRange n).map f).sum = ∑ j, f j := by
+  rw [Finset.sum_eq_multiset_sum, Finset.val_univ_fin]
+  simp
+
+/-- ★★★★ **④ 可实现性**：和恰为 `n` 的权重向量 `w` **总能**被某次重抽样实现。
+
+构造：块表 `L = [replicate (w i) i | i : Fin n]`（第 `i` 块是 `w i` 个 `i`），
+摊平得 `l`（`l.length = ∑ w = n`，`l.count i = w i`），再取 `σ := (l 视为长度 `n` 的向量).get`。
+于是 `weightOf σ i = #{j | σ j = i} = l.count i = w i` ✓。
+
+⚠️ 这条同时说明 `IsBootstrapWeight` 的定义**不是空转**：和恰为 `n` 的向量**都存在**实现
+（这也解释了为什么 `multinomial_weight_count_gap` 的两端恒正）。 -/
+theorem exists_weightOf_eq (n : ℕ) (w : Fin n → ℕ) (hw : ∑ i, w i = n) :
+    ∃ σ : Resample n, weightOf σ = w := by
+  classical
+  let L : List (List (Fin n)) := (List.finRange n).map (fun i => List.replicate (w i) i)
+  let l : List (Fin n) := L.flatten
+  have hlen : l.length = n := by
+    simp only [l, L, List.length_flatten, List.map_map]
+    rw [list_sum_finRange]
+    simp only [Function.comp_apply, List.length_replicate]
+    exact hw
+  have hcount : ∀ i : Fin n, l.count i = w i := by
+    intro i
+    simp only [l, L, List.count_flatten, List.map_map]
+    rw [list_sum_finRange]
+    rw [Finset.sum_eq_single i]
+    · simp
+    · intro j _ hj
+      simp [List.count_replicate, beq_iff_eq, hj]
+    · intro hi
+      exact absurd (Finset.mem_univ i) hi
+  refine ⟨List.Vector.get (⟨l, hlen⟩ : List.Vector (Fin n) n), ?_⟩
+  funext i
+  show (Finset.univ.filter fun j : Fin n =>
+    List.Vector.get (⟨l, hlen⟩ : List.Vector (Fin n) n) j = i).card = w i
+  rw [Fin.card_filter_univ_eq_vector_get_eq_count i (⟨l, hlen⟩ : List.Vector (Fin n) n)]
+  exact hcount i
+
+/-- ❌→✅ **缺口 M（多项式系数记账）**：和恰为 `n` 的权重向量 `w`，恰由 `n! / ∏ᵢ (wᵢ)!`
 个抽样映射 `σ` 实现 —— 即重抽样计数就是**多项式分布型计数**（L1288–1292 给出的五条
 20-字符权重串正是这种计数的实例）。写成无除法的形式：
 
@@ -815,11 +863,11 @@ theorem weightOf_eq_card_fiberOf {n : ℕ} (σ : Resample n) (i : Fin n) :
 #{σ : Resample n | weightOf σ = w} · ∏ᵢ (wᵢ)!  =  n!
 ```
 
-**未证**：缺的是「多重集排列数」的记账（`Finset` 的重排与多项式系数之间的双射）。
-本文件只证了**不依赖它**的那部分（`sum_weightOf`、`sum_weightOf_over_resamples`、
-以及 `n = 3` 直接枚举的 `minimal_example_count`）。**本文件不在任何证明中使用它。**
+**W12a6：✅ 已证（本文件内）** —— 见下方 `multinomial_weight_count_gap_proof`
+（`def` 保留为接口/登记，**陈述逐字未改**，与 `card_trivial_splits_gap` 同体例）。
+不再表示缺口；下面的「§6.0 零件 ＋ 器材盘点」保留为**证明路线的记录**。
 
-### W12a 现状（命题已复核为**真**；**仍缺口** ⬜）—— ★D 器材盘点
+### W12a 器材盘点与路线记录（**历史：曾是缺口 ⬜，W12a6 已闭合 ✅**）
 
 * **真值复核**：`scripts/msc/w12a_gap_check.py` Part II 对 `n ≤ 6` **全函数枚举**
   （精确整数）逐权重向量验证 `cnt · ∏ wᵢ! = n!`，无例外。
@@ -860,6 +908,46 @@ def multinomial_weight_count_gap : Prop :=
   ∀ (n : ℕ) (w : Fin n → ℕ), IsBootstrapWeight w →
     (Finset.univ.filter fun σ : Resample n => weightOf σ = w).card
       * (∏ i, Nat.factorial (w i)) = Nat.factorial n
+
+/-- ★★★★ **缺口 M 闭合（W12a6）**：登记 `Prop` `multinomial_weight_count_gap` 成立。
+
+**证明链**（全部件均在本文件内已证，零 `sorry`）：
+1. **④ 可实现性**（`exists_weightOf_eq`）：取 `σ₀` 使 `weightOf σ₀ = w`；
+2. **计数 = 「同纤维计数」函数集**（`Finset` 等式，用 `weightOf_eq_card_fiberOf`）；
+3. **稳定化子的基数 = `∏ w!`**（`card_stab_eq_prod_factorial`，= ①的上界 ＋ ②的下界）；
+4. **轨道-稳定化子计数式**（`card_stableSet_mul_card_stab`）：同纤维函数集的大小 × 稳定化子大小
+   `= #(Perm (Fin n)) = n!`（`Fintype.card_perm`）。
+⚠️ 第 4 步的库定理用**子类型基数**陈述，其 `DecidablePred` **实例项**与本文语境下的不同
+（`Nat.decidableForallFin` vs `Fintype.decidableForallFintype`）；这里用
+`simpa only [Fintype.card_subtype]` 把它**在同一语境下**改写成 `Finset.filter` 基数形式，
+再把本文的计数**也**写成 `Finset` 等式（`hcount`），两边实例即一致。 -/
+theorem multinomial_weight_count_gap_proof : multinomial_weight_count_gap := by
+  intro n w hw
+  obtain ⟨σ₀, hσ₀⟩ := exists_weightOf_eq n w hw
+  have hcount : (Finset.univ.filter fun σ : Resample n => weightOf σ = w)
+      = (Finset.univ.filter fun σ' : Resample n =>
+          ∀ b, (fiberOf σ' b).card = (fiberOf σ₀ b).card) := by
+    ext σ'
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    constructor
+    · intro h b
+      rw [← weightOf_eq_card_fiberOf σ' b, h, ← hσ₀, weightOf_eq_card_fiberOf σ₀ b]
+    · intro h
+      funext b
+      rw [weightOf_eq_card_fiberOf σ' b, h b, ← weightOf_eq_card_fiberOf σ₀ b, hσ₀]
+  have hstab : Fintype.card {τ : Equiv.Perm (Fin n) // σ₀ ∘ τ = σ₀}
+      = (∏ i, Nat.factorial (w i)) := by
+    rw [card_stab_eq_prod_factorial σ₀]
+    refine Finset.prod_congr rfl (fun i _ => ?_)
+    rw [← weightOf_eq_card_fiberOf σ₀ i, hσ₀]
+  have horb : (Finset.univ.filter fun σ' : Resample n =>
+        ∀ b, (fiberOf σ' b).card = (fiberOf σ₀ b).card).card
+      * Fintype.card {τ : Equiv.Perm (Fin n) // σ₀ ∘ τ = σ₀}
+      = Fintype.card (Equiv.Perm (Fin n)) := by
+    simpa only [Fintype.card_subtype] using card_stableSet_mul_card_stab σ₀
+  rw [hstab, Fintype.card_perm, Fintype.card_fin] at horb
+  rw [hcount]
+  exact horb
 
 /-! ### ★C 最小例子（**Lean 内**机器验证）：目标等式在具体权重向量上的实例
 
