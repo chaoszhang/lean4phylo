@@ -117,6 +117,19 @@ def distances(adj, n):
     return p
 
 
+def dists_from(adj, s):
+    """从顶点 s 到各顶点的距离（BFS，边权 1）——「子树倍增和」接口用。"""
+    dist = {s: 0}
+    stack = [s]
+    while stack:
+        x = stack.pop()
+        for y in adj[x]:
+            if y not in dist:
+                dist[y] = dist[x] + 1
+                stack.append(y)
+    return dist
+
+
 def main():
     nmax = 6
     trees = gen_trees(nmax)
@@ -148,6 +161,15 @@ def main():
                                 unordered += 2 * Fraction(1, 2) ** p[i][j]
                 if ordered != 2 or unordered != 1:
                     print(f"BAD n={n} edge={e} ordered={ordered} unordered={unordered}")
+                    bad += 1
+                # (d) 的**子树倍增和**形式：每一侧 Σ_{x ∈ 该侧叶} 2^{−d(端点, x)} = 1
+                # （等价于上式：交叉对的和 = 2 · D_A · D_B，而 D_A = D_B = 1。）
+                dA = dists_from(adj, e[0])
+                dB = dists_from(adj, e[1])
+                DA = sum(Fraction(1, 2) ** dA[x] for x in A)
+                DB = sum(Fraction(1, 2) ** dB[x] for x in B)
+                if DA != 1 or DB != 1:
+                    print(f"BAD doubling n={n} edge={e} DA={DA} DB={DB}")
                     bad += 1
                 # 命题 (2)：Σ_e S i j e = p i j，且 S i i e = 0
                 for i in range(n):
