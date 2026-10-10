@@ -735,4 +735,179 @@ theorem splitMetric_diff_P (u : Split X) (a a' b b' : X) :
     simp only [SplitMetric, bPairP, bPairX, bSep, mem_sideB_iff, ha, ha', hb, hb'] <;>
     norm_num
 
+/-! ### 10.3 拆和：`X − W = 2c_W − 2c_X`、`X − P = 2c_P − 2c_X`（施工图第 2 步） -/
+
+/-- 指标和：`∑ w u · (if p u then c else 0) = c · ∑_{u ∈ F.filter p} w u`。 -/
+theorem sum_mul_ite_eq {ι : Type*} (F : Finset ι) (w : ι → ℝ) (p : ι → Prop) [DecidablePred p]
+    (c : ℝ) : (∑ u ∈ F, w u * (if p u then c else 0)) = c * ∑ u ∈ F.filter p, w u := by
+  rw [Finset.mul_sum, Finset.sum_filter]
+  exact Finset.sum_congr rfl fun u _ => by by_cases h : p u <;> simp [h, mul_comm]
+
+/-- ★★★ **拆和（W 分量）**：`X − W = 2c_W − 2c_X`。 -/
+theorem splitMetricSum_diff_W (F : Finset (Split X)) (w : Split X → ℝ) (a a' b b' : X) :
+    (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+        - ((∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b'))
+      = 2 * (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u)
+        - 2 * (∑ u ∈ F.filter (fun u => bPairX u a a' b b' = true), w u) := by
+  have h1 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      = ∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b) :=
+    Finset.sum_add_distrib.symm
+  have h2 : (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+      = ∑ u ∈ F, (w u * SplitMetric u a a' + w u * SplitMetric u b b') :=
+    Finset.sum_add_distrib.symm
+  rw [h1, h2, ← Finset.sum_sub_distrib]
+  rw [show (∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b
+        - (w u * SplitMetric u a a' + w u * SplitMetric u b b')))
+      = ∑ u ∈ F, w u * ((if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+          - (if bPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by
+      rw [show w u * SplitMetric u a b' + w u * SplitMetric u a' b
+            - (w u * SplitMetric u a a' + w u * SplitMetric u b b')
+          = w u * ((SplitMetric u a b' + SplitMetric u a' b)
+            - (SplitMetric u a a' + SplitMetric u b b')) from by ring,
+        splitMetric_diff_W u a a' b b']]
+  rw [show (∑ u ∈ F, w u * ((if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairX u a a' b b' = true then (2 : ℝ) else 0)))
+      = ∑ u ∈ F, (w u * (if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - w u * (if bPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by ring]
+  rw [Finset.sum_sub_distrib,
+    sum_mul_ite_eq F w (fun u => bPairW u a a' b b' = true) 2,
+    sum_mul_ite_eq F w (fun u => bPairX u a a' b b' = true) 2]
+
+/-- ★★★ **拆和（P 分量）**：`X − P = 2c_P − 2c_X`。 -/
+theorem splitMetricSum_diff_P (F : Finset (Split X)) (w : Split X → ℝ) (a a' b b' : X) :
+    (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+        - ((∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b'))
+      = 2 * (∑ u ∈ F.filter (fun u => bPairP u a a' b b' = true), w u)
+        - 2 * (∑ u ∈ F.filter (fun u => bPairX u a a' b b' = true), w u) := by
+  have h1 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      = ∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b) :=
+    Finset.sum_add_distrib.symm
+  have h2 : (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+      = ∑ u ∈ F, (w u * SplitMetric u a b + w u * SplitMetric u a' b') :=
+    Finset.sum_add_distrib.symm
+  rw [h1, h2, ← Finset.sum_sub_distrib]
+  rw [show (∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b
+        - (w u * SplitMetric u a b + w u * SplitMetric u a' b')))
+      = ∑ u ∈ F, w u * ((if bPairP u a a' b b' = true then (2 : ℝ) else 0)
+          - (if bPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by
+      rw [show w u * SplitMetric u a b' + w u * SplitMetric u a' b
+            - (w u * SplitMetric u a b + w u * SplitMetric u a' b')
+          = w u * ((SplitMetric u a b' + SplitMetric u a' b)
+            - (SplitMetric u a b + SplitMetric u a' b')) from by ring,
+        splitMetric_diff_P u a a' b b']]
+  rw [show (∑ u ∈ F, w u * ((if bPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairX u a a' b b' = true then (2 : ℝ) else 0)))
+      = ∑ u ∈ F, (w u * (if bPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - w u * (if bPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by ring]
+  rw [Finset.sum_sub_distrib,
+    sum_mul_ite_eq F w (fun u => bPairP u a a' b b' = true) 2,
+    sum_mul_ite_eq F w (fun u => bPairX u a a' b b' = true) 2]
+
+/-! ### 10.4 主不等式与收口（施工图第 3–4 步） -/
+
+/-- `SplitMetric` 对两个自变量对称。 -/
+theorem splitMetric_comm (u : Split X) (x y : X) : SplitMetric u x y = SplitMetric u y x := by
+  by_cases hx : x ∈ u.sideA <;> by_cases hy : y ∈ u.sideA <;>
+    simp only [SplitMetric, mem_sideB_iff, hx, hy] <;> norm_num
+
+/-- 加权和也对称。 -/
+theorem splitMetricSum_comm (F : Finset (Split X)) (w : Split X → ℝ) (x y : X) :
+    (∑ u ∈ F, w u * SplitMetric u x y) = ∑ u ∈ F, w u * SplitMetric u y x :=
+  Finset.sum_congr rfl fun u _ => by rw [splitMetric_comm u x y]
+
+/-- ★★★ **主不等式**：`X ≤ max W P`。四情形都归结为「三种配对至多一种被实现」。 -/
+theorem splitMetricSum_X_le_max (F : Finset (Split X)) (w : Split X → ℝ)
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t) (hw : ∀ s ∈ F, 0 < w s) (a a' b b' : X) :
+    (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      ≤ max ((∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b'))
+            ((∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')) := by
+  classical
+  have hXW := splitMetricSum_diff_W F w a a' b b'
+  have hXP := splitMetricSum_diff_P F w a a' b b'
+  by_cases hXn : (F.filter (fun u => bPairX u a a' b b' = true)).Nonempty
+  · obtain ⟨u, hu⟩ := hXn
+    obtain ⟨huF, huX⟩ := Finset.mem_filter.mp hu
+    have hPairX : PairX u a a' b b' := (bPairX_eq_true_iff u a a' b b').mp huX
+    have hWne : ¬ (F.filter (fun v => bPairW v a a' b b' = true)).Nonempty := fun h => by
+      obtain ⟨v, hv⟩ := h
+      obtain ⟨hvF, hvW⟩ := Finset.mem_filter.mp hv
+      exact (not_PairW_and_PairX hF) ⟨⟨v, hvF, (bPairW_eq_true_iff v a a' b b').mp hvW⟩,
+        ⟨u, huF, hPairX⟩⟩
+    have hPne : ¬ (F.filter (fun v => bPairP v a a' b b' = true)).Nonempty := fun h => by
+      obtain ⟨v, hv⟩ := h
+      obtain ⟨hvF, hvP⟩ := Finset.mem_filter.mp hv
+      exact (not_PairP_and_PairX hF) ⟨⟨v, hvF, (bPairP_eq_true_iff v a a' b b').mp hvP⟩,
+        ⟨u, huF, hPairX⟩⟩
+    rw [Finset.not_nonempty_iff_eq_empty] at hWne hPne
+    rw [hWne, Finset.sum_empty] at hXW
+    rw [hPne, Finset.sum_empty] at hXP
+    have hXnn : 0 ≤ ∑ v ∈ F.filter (fun v => bPairX v a a' b b' = true), w v :=
+      Finset.sum_nonneg fun v hv => le_of_lt (hw v (Finset.mem_filter.mp hv).1)
+    have h1 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+        ≤ (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b') := by
+      linarith
+    exact le_trans h1 (le_max_left _ _)
+  · have hXe : F.filter (fun v => bPairX v a a' b b' = true) = ∅ :=
+      Finset.not_nonempty_iff_eq_empty.mp hXn
+    have hX0 : (∑ v ∈ F.filter (fun v => bPairX v a a' b b' = true), w v) = 0 := by
+      rw [hXe, Finset.sum_empty]
+    rw [hX0] at hXW hXP
+    by_cases hWn : (F.filter (fun u => bPairW u a a' b b' = true)).Nonempty
+    · obtain ⟨u, hu⟩ := hWn
+      obtain ⟨huF, huW⟩ := Finset.mem_filter.mp hu
+      have hPairW : PairW u a a' b b' := (bPairW_eq_true_iff u a a' b b').mp huW
+      have hPne : ¬ (F.filter (fun v => bPairP v a a' b b' = true)).Nonempty := fun h => by
+        obtain ⟨v, hv⟩ := h
+        obtain ⟨hvF, hvP⟩ := Finset.mem_filter.mp hv
+        exact (not_PairW_and_PairP hF) ⟨⟨u, huF, hPairW⟩,
+          ⟨v, hvF, (bPairP_eq_true_iff v a a' b b').mp hvP⟩⟩
+      rw [Finset.not_nonempty_iff_eq_empty] at hPne
+      rw [hPne, Finset.sum_empty] at hXP
+      have h2 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+          = (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b') := by
+        linarith
+      exact le_trans (le_of_eq h2) (le_max_right _ _)
+    · have hWe : F.filter (fun v => bPairW v a a' b b' = true) = ∅ :=
+        Finset.not_nonempty_iff_eq_empty.mp hWn
+      have hW0 : (∑ v ∈ F.filter (fun v => bPairW v a a' b b' = true), w v) = 0 := by
+        rw [hWe, Finset.sum_empty]
+      rw [hW0] at hXW
+      have h3 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+          = (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b') := by
+        linarith
+      exact le_trans (le_of_eq h3) (le_max_left _ _)
+
+/-- ★★★ **收口**：修复形态（结论用 `FourPointStd`）**已成定理**（原 `def` 逐字保留）。
+三个合取项由主不等式 `splitMetricSum_X_le_max` 在三个**重标号**下给出（`max` 次序用 `max_comm` 对齐，
+`D x y = D y x` 用 `splitMetricSum_comm` 对齐）：
+
+* `(a, b, b', a')` ⇒ `W ≤ max P X`；
+* `(a, b', a', b)` ⇒ `P ≤ max X W`（再用 `max_comm`）；
+* `(a, a', b, b')` ⇒ `X ≤ max W P`。 -/
+theorem fourPointOfSplitMetricSum_gap_correct_shape_proof :
+    fourPointOfSplitMetricSum_gap_correct_shape := by
+  intro α _ _ F w hF hw a a' b b'
+  refine ⟨?_, ?_, ?_⟩
+  · have h := splitMetricSum_X_le_max F w hF hw a b b' a'
+    rw [splitMetricSum_comm F w b' a', splitMetricSum_comm F w b a'] at h
+    exact h
+  · rw [max_comm]
+    have h := splitMetricSum_X_le_max F w hF hw a b' a' b
+    rw [splitMetricSum_comm F w b' a', splitMetricSum_comm F w b' b] at h
+    exact h
+  · have h := splitMetricSum_X_le_max F w hF hw a a' b b'
+    exact h
+
+/-! ### 10.5 ★B 对照见证 -/
+
+/-- ★B **对照见证**：在 §7 中**注册形态被反驳**的那个 `F := cexF2`（两两相容、`w ≡ 1`）上，
+**修复形态成立** ⇒ 一真一假并列可见 ✓。 -/
+example : FourPointStd (fun x y : Fin 4 => ∑ s ∈ cexF2, (1 : ℝ) * SplitMetric s x y) :=
+  fourPointOfSplitMetricSum_gap_correct_shape_proof cexF2 (fun _ => (1 : ℝ)) cexF2_compat
+    (by intro s _; norm_num)
+
 end Split
