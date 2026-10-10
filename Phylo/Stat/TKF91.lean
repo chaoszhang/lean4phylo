@@ -392,64 +392,88 @@ theorem gauge_one_sub_ratio_at_zero (lam : ℝ) : 1 - tkfRatioGauge lam lam 1 = 
 theorem tkfBeta_self_eq_zero (lam t : ℝ) : tkfBeta lam lam t = 0 := by
   simp [tkfBeta, tkfBetaGauge]
 
-/-! ## 13. ★C 最小例子（`n ≤ 3`，精确有理数） -/
+/-! ## 13. ★C 最小例子（`n ≤ 3`，精确有理数，**参数完全自洽**）
 
-/-- ★C：规范变量 `u = 1/2`，`λ = 1`、`μ = 3` ⇒ `β = 1/5`。 -/
-example : tkfBetaGauge 1 3 (1 / 2) = 1 / 5 := by norm_num [tkfBetaGauge]
+取 `λ = 1`、`μ = 3`、规范变量 `u = e^{(λ-μ)t} = 1/4`（即 `t = log 2`）。则
 
-/-- ★C：几何比 `λβ = 1/5`。 -/
-example : tkfRatioGauge 1 3 (1 / 2) = 1 / 5 := by norm_num [tkfRatioGauge, tkfBetaGauge]
+* `β = (1 - 1/4)/(3 - 1/4) = 3/11`，几何比 `r = λβ = 3/11`，`α = μβ = 9/11`；
+* 原 normal link 的存活概率 `s = e^{-μt} = u^{μ/(μ-λ)} = (1/4)^{3/2} = 1/8`；
+* 自洽性 `1 - s - α = 1 - 1/8 - 9/11 = 5/88 ≥ 0` ✓。
 
-/-- ★C：灭绝质量 `μβ = 3/5`。 -/
-example : tkfExtinctGauge 1 3 (1 / 2) = 3 / 5 := by norm_num [tkfExtinctGauge, tkfBetaGauge]
+于是三条族与行和全部是**精确有理数**，且 `Σ_n p_n = 1/8`、`Σ_n p'_n = 7/8`、
+`Σ_n p''_n = 1`、`Σ_n (p_n + p'_n) = 1`。 -/
 
-/-- ★C：抽象一致三元组 `(s, α, r) = (1/2, 1/5, 1/5)`（满足 `1 - s - α = 3/10 ≥ 0`），`n ≤ 3` 全算：
-`p_1 = s(1-r) = 2/5`，`p_2 = 2/25`，`p_3 = 2/125`。 -/
-example : pNorm (1 / 2) (1 / 5) 1 = 2 / 5 := by norm_num [pNorm, tkfGeom]
-example : pNorm (1 / 2) (1 / 5) 2 = 2 / 25 := by norm_num [pNorm, tkfGeom]
-example : pNorm (1 / 2) (1 / 5) 3 = 2 / 125 := by norm_num [pNorm, tkfGeom]
+/-- ★C：`u = 1/4`、`λ = 1`、`μ = 3` ⇒ `β = 3/11`。 -/
+example : tkfBetaGauge 1 3 (1 / 4) = 3 / 11 := by norm_num [tkfBetaGauge]
 
-/-- ★C：`p'_0 = α = 1/5`（原 link 已死且无后代）。 -/
-example : pDead (1 / 5) (1 / 2) (1 / 5) 0 = 1 / 5 := by norm_num [pDead]
+/-- ★C：几何比 `λβ = 3/11`。 -/
+example : tkfRatioGauge 1 3 (1 / 4) = 3 / 11 := by norm_num [tkfRatioGauge, tkfBetaGauge]
 
-/-- ★C：`p'_1 = (1-s-α)(1-r) = (3/10)(4/5) = 6/25`，`p'_2 = (3/10)(4/25) = 6/125`。 -/
-example : pDead (1 / 5) (1 / 2) (1 / 5) 1 = 6 / 25 := by norm_num [pDead, tkfGeom]
-example : pDead (1 / 5) (1 / 2) (1 / 5) 2 = 6 / 125 := by norm_num [pDead, tkfGeom]
+/-- ★C：灭绝质量 `μβ = 9/11`。 -/
+example : tkfExtinctGauge 1 3 (1 / 4) = 9 / 11 := by norm_num [tkfExtinctGauge, tkfBetaGauge]
 
-/-- ★C：`p''_1 = 1-r = 4/5`，`p''_2 = 4/25`，`p''_3 = 4/125`。 -/
-example : pImm (1 / 5) 1 = 4 / 5 := by norm_num [pImm, tkfGeom]
-example : pImm (1 / 5) 2 = 4 / 25 := by norm_num [pImm, tkfGeom]
-example : pImm (1 / 5) 3 = 4 / 125 := by norm_num [pImm, tkfGeom]
+/-- ★C + ★B 对照：`μβ = 9/11 ≠ 8/11 = 1 - λβ`（脚本的 `p'_0 = 1-r` 在自洽参数上被数值推翻）。 -/
+example : tkfExtinctGauge 1 3 (1 / 4) ≠ 1 - tkfRatioGauge 1 3 (1 / 4) := by
+  norm_num [tkfExtinctGauge, tkfRatioGauge, tkfBetaGauge]
 
-/-- ★C：`p''_0 = 0`（文献 447 行）与 `p_0 = 0`。 -/
-example : pImm (1 / 5) 0 = 0 := rfl
-example : pNorm (1 / 2) (1 / 5) 0 = 0 := rfl
+/-- ★C：自洽性 `1 - s - α = 5/88 ≥ 0`（`s = 1/8`、`α = 9/11`），故 `p'_n ≥ 0`。 -/
+example : (0 : ℝ) ≤ 1 - 1 / 8 - 9 / 11 := by norm_num
 
-/-- ★C 端到端：`r = 1/5` 时三条族的行和由定理直接给出（无手算）。 -/
-example : ∑' n : ℕ, pImm (1 / 5) n = 1 := by
-  have h : ‖(1 : ℝ) / 5‖ < 1 := by norm_num
-  exact tsum_pImm (1 / 5) h
+/-- ★C：`p_1 = s(1-r) = 1/11`，`p_2 = 3/121`，`p_3 = 9/1331`。 -/
+example : pNorm (1 / 8) (3 / 11) 1 = 1 / 11 := by norm_num [pNorm, tkfGeom]
+example : pNorm (1 / 8) (3 / 11) 2 = 3 / 121 := by norm_num [pNorm, tkfGeom]
+example : pNorm (1 / 8) (3 / 11) 3 = 9 / 1331 := by norm_num [pNorm, tkfGeom]
 
-/-- ★C 端到端：`(α,s,r) = (1/5, 1/2, 1/5)` 时 `Σ p'_n = 1/2`。 -/
-example : ∑' n : ℕ, pDead (1 / 5) (1 / 2) (1 / 5) n = 1 / 2 := by
-  have h : ‖(1 : ℝ) / 5‖ < 1 := by norm_num
-  rw [tsum_pDead (1 / 5) (1 / 2) (1 / 5) h]
+/-- ★C：`p'_0 = α = 9/11`（原 link 已死且无后代）。 -/
+example : pDead (9 / 11) (1 / 8) (3 / 11) 0 = 9 / 11 := by norm_num [pDead]
+
+/-- ★C：`p'_1 = (1-s-α)(1-r) = (5/88)(8/11) = 5/121`，`p'_2 = 15/1331`。 -/
+example : pDead (9 / 11) (1 / 8) (3 / 11) 1 = 5 / 121 := by norm_num [pDead, tkfGeom]
+example : pDead (9 / 11) (1 / 8) (3 / 11) 2 = 15 / 1331 := by norm_num [pDead, tkfGeom]
+
+/-- ★C：`p''_1 = 1-r = 8/11`，`p''_2 = 24/121`，`p''_3 = 72/1331`。 -/
+example : pImm (3 / 11) 1 = 8 / 11 := by norm_num [pImm, tkfGeom]
+example : pImm (3 / 11) 2 = 24 / 121 := by norm_num [pImm, tkfGeom]
+example : pImm (3 / 11) 3 = 72 / 1331 := by norm_num [pImm, tkfGeom]
+
+/-- ★C：`p''_0 = 0`（文献 447 行）与 `p_0 = 0`（故计数从 `n = 1` 起）。 -/
+example : pImm (3 / 11) 0 = 0 := rfl
+example : pNorm (1 / 8) (3 / 11) 0 = 0 := rfl
+
+/-- ★C：前 3 项部分和已经贴近但**严格小于** `Σ_n p_n = s = 1/8`。 -/
+example : pNorm (1 / 8) (3 / 11) 1 + pNorm (1 / 8) (3 / 11) 2 + pNorm (1 / 8) (3 / 11) 3
+    < 1 / 8 := by norm_num [pNorm, tkfGeom]
+
+/-- ★C 端到端（由定理，无手算）：`Σ_n p''_n = 1`，`r = 3/11`。 -/
+example : ∑' n : ℕ, pImm (3 / 11) n = 1 := by
+  have h : ‖(3 : ℝ) / 11‖ < 1 := by norm_num
+  exact tsum_pImm (3 / 11) h
+
+/-- ★C 端到端：`(α,s,r) = (9/11, 1/8, 3/11)` ⇒ `Σ_n p'_n = 7/8 = 1 - s`。 -/
+example : ∑' n : ℕ, pDead (9 / 11) (1 / 8) (3 / 11) n = 7 / 8 := by
+  have h : ‖(3 : ℝ) / 11‖ < 1 := by norm_num
+  rw [tsum_pDead (9 / 11) (1 / 8) (3 / 11) h]
   norm_num
 
-/-- ★C 端到端：稳态长度分布 `q = 1/5` 归一，均值 `1/4`，方差 `5/16`。 -/
-example : ∑' n : ℕ, tkfEquilLength (1 / 5) n = 1 := by
-  have h : ‖(1 : ℝ) / 5‖ < 1 := by norm_num
-  exact tsum_tkfEquilLength (1 / 5) h
+/-- ★C 端到端（★B-1 的数值见证）：`Σ_n p_n = s = 1/8 ≠ 1`，`p` 族**不归一**。 -/
+example : ∑' n : ℕ, pNorm (1 / 8) (3 / 11) n = 1 / 8 := by
+  have h : ‖(3 : ℝ) / 11‖ < 1 := by norm_num
+  exact tsum_pNorm (1 / 8) (3 / 11) h
 
-example : ∑' n : ℕ, (n : ℝ) * tkfEquilLength (1 / 5) n = 1 / 4 := by
-  have h : ‖(1 : ℝ) / 5‖ < 1 := by norm_num
-  rw [tsum_tkfEquilLength_mul (1 / 5) h]
+/-- ★C 端到端：`λ = 1`、`μ = 3` ⇒ `q = 1/3`，稳态长度分布归一。 -/
+example : ∑' n : ℕ, tkfEquilLength (1 / 3) n = 1 := by
+  have h : ‖(1 : ℝ) / 3‖ < 1 := by norm_num
+  exact tsum_tkfEquilLength (1 / 3) h
+
+/-- ★C 端到端（**直接调用文献定理**）：`λ = 1`、`μ = 3` ⇒ 均值 `= λ/(μ-λ) = 1/2`。 -/
+example : ∑' n : ℕ, (n : ℝ) * tkfEquilLength (1 / 3) n = 1 / 2 := by
+  rw [tsum_tkfEquilLength_mean_eq (lam := 1) (mu := 3) (by norm_num) (by norm_num)]
   norm_num
 
-example : (∑' n : ℕ, (n : ℝ) ^ 2 * tkfEquilLength (1 / 5) n)
-    - (∑' n : ℕ, (n : ℝ) * tkfEquilLength (1 / 5) n) ^ 2 = 5 / 16 := by
-  have h : ‖(1 : ℝ) / 5‖ < 1 := by norm_num
-  rw [tsum_tkfEquilLength_var (1 / 5) h]
+/-- ★C 端到端（**直接调用文献定理**）：`λ = 1`、`μ = 3` ⇒ 方差 `= λμ/(μ-λ)² = 3/4`。 -/
+example : (∑' n : ℕ, (n : ℝ) ^ 2 * tkfEquilLength (1 / 3) n)
+    - (∑' n : ℕ, (n : ℝ) * tkfEquilLength (1 / 3) n) ^ 2 = 3 / 4 := by
+  rw [tsum_tkfEquilLength_var_eq (lam := 1) (mu := 3) (by norm_num) (by norm_num)]
   norm_num
 
 /-! ## 14. 反空真 -/
