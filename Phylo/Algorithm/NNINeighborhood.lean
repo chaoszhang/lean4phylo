@@ -667,4 +667,107 @@ theorem tree_nniDist₁₂_eq_one :
 /-- ★C `tree₁ ≠ tree₂`（两者的内部 quartet 不同；`n = 4` 上由 `decide` 判定）。 -/
 theorem tree_ne : tree₁ ≠ tree₂ := by decide
 
+/-! ## 8. `n = 5` 的 NNI 连通性实例（W12g-5）
+
+体例同 §7.1 的 `Fin 4` 实例：**显式**给出两个二叉树的 split 系统与一次 `NNIMove` 见证。
+`T = {5 条平凡} ∪ {uA, uB}`、`T' = {5 条平凡} ∪ {uA', uB}`；`uA → uA'` 由四块
+`(A₁, B₁) = ({0}, {2,3})` 的 NNI 分解给出（`A₂ = {1}`、`B₂ = {4}`）。
+⇒ `NNIDist T T' 1`、`nniConnectivity_gap 5 T T'`、`rfDistance = 2`。
+
+boilerplate 由 `scripts/msc/w12g_fin5_nni_gen.py` 生成。 -/
+
+/-- 平凡 split `{0} | {1,2,3,4}`。 -/
+def u₀ : Split (Fin 5) where
+  parts i := if i = 0 then {0} else {1, 2, 3, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 平凡 split `{1} | {0,2,3,4}`。 -/
+def u₁ : Split (Fin 5) where
+  parts i := if i = 0 then {1} else {0, 2, 3, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 平凡 split `{2} | {0,1,3,4}`。 -/
+def u₂ : Split (Fin 5) where
+  parts i := if i = 0 then {2} else {0, 1, 3, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 平凡 split `{3} | {0,1,2,4}`。 -/
+def u₃ : Split (Fin 5) where
+  parts i := if i = 0 then {3} else {0, 1, 2, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 平凡 split `{4} | {0,1,2,3}`。 -/
+def u₄ : Split (Fin 5) where
+  parts i := if i = 0 then {4} else {0, 1, 2, 3}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 内部 split `{0,1} | {2,3,4}`（树 `T` 的内部边）。 -/
+def uA : Split (Fin 5) where
+  parts i := if i = 0 then {0, 1} else {2, 3, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- 内部 split `{2,3} | {0,1,4}`（树 `T` 的另一条内部边）。 -/
+def uB : Split (Fin 5) where
+  parts i := if i = 0 then {2, 3} else {0, 1, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- NNI 分解 `{0,2,3} | {1,4}`（同一条内部边的另一个分解）。 -/
+def uA' : Split (Fin 5) where
+  parts i := if i = 0 then {0, 2, 3} else {1, 4}
+  pairwise_disjoint := by decide
+  union_eq_univ := by decide
+  nonempty := by decide
+
+/-- ★C 二叉树 `T` 的 split 系统（5 条平凡 + 2 条内部）。 -/
+def tree5 : Finset (Split (Fin 5)) := {u₀, u₁, u₂, u₃, u₄, uA, uB}
+
+/-- ★C 二叉树 `T'` 的 split 系统（把 `uA` 换成它的 NNI 分解 `uA'`）。 -/
+def tree5' : Finset (Split (Fin 5)) := {u₀, u₁, u₂, u₃, u₄, uA', uB}
+
+/-- ★C **拆分数据自洽**：`uA` 按四块 `({0}, {2,3})` 的 NNI 分解给出 `uA'`。 -/
+theorem uA_nniResolvent :
+    uA.nniResolvent ({0} : Finset (Fin 5)) ({2, 3} : Finset (Fin 5))
+      (by decide) (by decide) (by decide) (by decide) = uA' := by
+  refine (KPartition.eq_iff_parts _ _).mpr ?_
+  funext i
+  by_cases hi : i = 0
+  · subst hi
+    show ({0} : Finset (Fin 5)) ∪ {2, 3} = {0, 2, 3}
+    decide
+  · have hi1 : i = 1 := by fin_cases i <;> simp_all
+    subst hi1
+    show (({0, 1} : Finset (Fin 5)) \ {0}) ∪ (({2, 3, 4} : Finset (Fin 5)) \ {2, 3}) = {1, 4}
+    decide
+
+/-- ★★★ **`n = 5` 的一次 NNI 移动**：`T → T'`（同一条内部边的另一个分解）。 -/
+theorem tree5_nniMove : NNIMove tree5 tree5' := by
+  refine ⟨uA, {0}, {2, 3}, by decide, by decide, by decide, by decide, by decide, by decide,
+    by decide, by decide, ?_⟩
+  rw [uA_nniResolvent]
+  decide
+
+/-- ★★ 一次移动 ⟹ RF 距离恰为 2。 -/
+theorem tree5_rfDistance : rfDistance tree5 tree5' = 2 := nniMove_rfDistance tree5_nniMove
+
+/-- ★★★ **`n = 5` 连通性实例**：`T` 与 `T'` 1 步可达。 -/
+theorem tree5_connectivity : nniConnectivity_gap 5 tree5 tree5' :=
+  ⟨1, nniDist_one_of_move tree5_nniMove⟩
+
+/-- ★ `T ≠ T'`（一次 NNI 真的改动了系统）。 -/
+theorem tree5_ne : tree5 ≠ tree5' := (nniMove_ne tree5_nniMove).symm
+
 end Split

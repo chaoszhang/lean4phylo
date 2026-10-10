@@ -1628,7 +1628,18 @@ theorem circularRealization_fin4 (d : Fin 4 → Fin 4 → ℝ) (hdiag : ∀ x, d
 其正路是**线性代数**：把 §7 的逆矩阵 `M`（三行泛函）与 `A`（弧 ↔ 点对指示）都写成线性映射，
 `M ∘ A = id` 由 §7 的隔离引理给出，而「弧族权空间」与「对称零对角点对函数空间」维数都是
 `binom n 2` ⇒ `A ∘ M = id` ⇒ 恒等。本库尚缺的是这两空间的**维数簿记**（`finrank`）。
-（BdD 1992 的孤立指数 `α_S ≥ 0` 与本库的 `w ≥ 0` 等价，⚠️ 该文**未入库** ⇒ 只作待核实归属。） -/
+（BdD 1992 的孤立指数 `α_S ≥ 0` 与本库的 `w ≥ 0` 等价，⚠️ 该文**未入库** ⇒ 只作待核实归属。）
+
+**W12g-5 现状**：§10 已落**维数那一半**（`Arc n` / `Pair n`、`arcPairEquiv`、
+`card_arc_eq_card_pair`、`finrank_arc_eq_finrank_pair`；⚠️ `Arc` 的护栏必须是 `j+1 < n`
+而不是 `j ≤ n−2`，否则 `n = 1` 时双射为假 —— `Arc 1 = {(0,0)}` 而 `Pair 1 = ∅`）。
+**剩余三步**：(1) `Alm : (Arc n → ℝ) →ₗ (Pair n → ℝ)`（`phyleticDist` 的线性版）与
+`Mlm : (Pair n → ℝ) →ₗ (Arc n → ℝ)`（§7 三行泛函；因要在分支里拿到算术前提，
+定义需用 `dite` 而非 `ite`）；(2) `Mlm ∘ Alm = id`（§7 隔离引理 `quad_sepInd_d/h`、
+`tri_sepInd_l` 逐弧 + `Finset.sum_ite_eq'` 塌缩）⇒ `Alm` 单射 ⇒ 用 `finrank` 相等 +
+`LinearMap.injective_iff_surjective_of_finrank_eq_finrank` 得**满射** ⇒ `Alm ∘ Mlm = id`；
+(3) 把 `Arc` 权重打包成 `Finset (Split (Fin n))`（`arcSplit` + `Finset.image` + 逆像求和）
+并用 §9 的 `kalmanson_*` 给非负性。 -/
 def circularWeights_realization_gap (n : ℕ) : Prop :=
   ∀ (d : Fin n → Fin n → ℝ), (∀ x, d x x = 0) → (∀ x y, d x y = d y x) →
     IsCircularDist (Equiv.refl (Fin n)) d →
@@ -1963,5 +1974,64 @@ theorem circularWeights_realization_gap_fin_le_five :
   ⟨circularRealization_fin3, circularRealization_fin4, circularRealization_fin5⟩
 
 end CircularRealization
+
+/-! ## 10. 一般 `n` 的恒等（W12g-5）：线性代数路线 (b) 的**维数那一半**
+
+路线 (b)（派单给定的骨架）：`Arc n` = 代表弧族 `{ (i,j) | i ≤ j ≤ n−2 }`（`binom n 2` 个，
+每个环形 split 恰一个代表）；`Pair n` = 无序点对 `{ x < y }`（也 `binom n 2` 个）。
+`Alm w p := ∑ a, w a * [弧 a 分离 p]`（`phyleticDist` 的线性版）、`Mlm` = §7 逆矩阵的三行泛函
+⇒ `Mlm ∘ Alm = id`（§7 隔离引理 + 求和塌缩）⇒ `Alm` 单射；再用**维数相等** +
+`LinearMap.injective_iff_surjective_of_finrank_eq_finrank` 得满射 ⇒ 恒等。
+
+本节先落**维数那一半**（`arcPairEquiv` + 两个 `Fintype.card`/`finrank` 推论）；
+`Alm`/`Mlm` 的定义与 `Mlm ∘ Alm = id` 见 `circularWeights_realization_gap` 的说明。 -/
+
+section Dimension
+
+/-- 代表弧 `[i,j]`：`i ≤ j` 且**补侧非空**（`j+1 < n` ⟺ `j ≤ n−2`，`n ≥ 2` 时）。
+⚠️ 用 `j+1 < n` 而不是 `j ≤ n−2`：后者在 `n = 1` 时会漏进退化的「整圆弧」。 -/
+abbrev Arc (n : ℕ) : Type := {p : Fin n × Fin n // p.1 ≤ p.2 ∧ p.2.val + 1 < n}
+
+/-- 无序点对（`x < y`）。 -/
+abbrev Pair (n : ℕ) : Type := {p : Fin n × Fin n // p.1 < p.2}
+
+/-- ★ **代表弧 ↔ 无序点对**：`[i,j] ↦ (i, j+1)`（逆：`(a,b) ↦ (a, b−1)`）。 -/
+noncomputable def arcPairEquiv (n : ℕ) : Arc n ≃ Pair n where
+  toFun a :=
+    ⟨(a.1.1, ⟨a.1.2.val + 1, a.2.2⟩),
+      by
+        have h1 : a.1.1.val ≤ a.1.2.val := Fin.le_iff_val_le_val.mp a.2.1
+        exact Fin.lt_def.mpr (Nat.lt_succ_of_le h1)⟩
+  invFun p :=
+    ⟨(p.1.1, ⟨p.1.2.val - 1, by
+        have h : p.1.1.val < p.1.2.val := p.2
+        have h2 : p.1.2.val < n := p.1.2.isLt
+        omega⟩),
+      by
+        have h : p.1.1.val < p.1.2.val := p.2
+        refine ⟨Fin.le_iff_val_le_val.mpr (Nat.le_pred_of_lt h), ?_⟩
+        show p.1.2.val - 1 + 1 < n
+        omega⟩
+  left_inv a := by
+    refine Subtype.ext (Prod.ext rfl ?_)
+    exact Fin.ext (show a.1.2.val + 1 - 1 = a.1.2.val from by omega)
+  right_inv p := by
+    refine Subtype.ext (Prod.ext rfl ?_)
+    exact Fin.ext (show p.1.2.val - 1 + 1 = p.1.2.val from by
+      have h : p.1.1.val < p.1.2.val := p.2
+      omega)
+
+/-- ★ **维数相等**：`|Arc n| = |Pair n| = binom n 2`（两者基数相等，这是 (b) 的关键一步）。 -/
+theorem card_arc_eq_card_pair (n : ℕ) : Fintype.card (Arc n) = Fintype.card (Pair n) :=
+  Fintype.card_congr (arcPairEquiv n)
+
+/-- ★ **`ℝ`-维数相等**：`dim (Arc n → ℝ) = dim (Pair n → ℝ)`（用 Mathlib 的
+`Module.finrank_fintype_fun_eq_card`）。 -/
+theorem finrank_arc_eq_finrank_pair (n : ℕ) :
+    Module.finrank ℝ (Arc n → ℝ) = Module.finrank ℝ (Pair n → ℝ) := by
+  rw [Module.finrank_fintype_fun_eq_card, Module.finrank_fintype_fun_eq_card,
+    card_arc_eq_card_pair]
+
+end Dimension
 
 end NeighborNet
