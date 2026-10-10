@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Laminar
 import Phylo.Stat.RankedGeneTree
+import Mathlib.Data.Nat.Choose.Multinomial
 
 /-!
 # `Phylo.Stat.HookLength` —— 树偏序的**钩长**（hook length）器材层
@@ -47,6 +48,31 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 
 ⚠️ 「`(n−1)!/∏ hook` = 纤维大小」（hook-length 公式本身）**本模块没有证** ——
 那正是缺口本体的组合内容。本模块交付：**钩长器材 + 与 `|C| − 1` 的一致性 + 具体数值**。
+
+## 本模块**做到了**什么 / **没做到**什么（不夸大）
+
+**已证（本模块，零 `sorry`）**：
+
+| 块 | 声明 | 内容 |
+|---|---|---|
+| §1–§2 | `internalBelow` / `children` / `hook` + 成员刻画、`hook_pos`、`hook_eq_zero_of_card_le_one`、`hook_congr_of_eq_below` | 钩长器材 |
+| §3 ★★ | `hook_eq_one_add_sum_children` | 钩长的**加法**递推 `s_v = 1 + Σ_{孩子} s_child` |
+| §5 ★★ | `prod_hook_eq_hook_mul_prod_children` | 钩长积的**乘法**递推（hook-length 公式**分母**的递推） |
+| §6 ★★ | `multinomial_mul_prod_factorial` / `multinomial_children_factorial` | 计数恒等式 `multinomial(N-1; N_B)·∏N_B! = (N-1)!` |
+| §4/§7 ★B | 22 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推与计数恒等式的具体数值 |
+
+**⬜ 没做（hook-length 公式本体仍缺最后一环）**：
+
+1. **线性扩展数 `LE` 的递推**
+   `LE(T) = multinomial(N-1; N_1..N_k) · ∏_B LE(T_B)`
+   —— 需要先定义 `LE`（`Mathlib/Order/Extension/Linear.lean` 只给 `LinearExtension` 类型别名，
+   没有线性扩展**计数**），并证「根必在第一位 + 各孩子子树的块间插空」这一步组合双射；
+2. 由 §5 + §6 + 上述递推**归纳**出 `LE(T) = N!/∏_v s_v`；
+3. 第 (ii) 条（**不在本模块范围**）：`cladesOf` 的 clade 包含偏序的**线性扩展 ⟺ 合并史的 ranking**
+   的显式双射 —— 这是 `rankedFiberCount_gap` 的**组合实体**。
+
+⇒ 本模块交付的是**计数归纳的两块器材**（§5 分母递推 + §6 计数恒等式），**不是**缺口本体。
+数值核对：`scripts/msc/w12f_hook_count_check.py`（`ALL_OK`）。
 
 **注册行（由协调侧加入 `Phylo.lean`，紧跟 `import Phylo.Stat.RankedGeneTree` 之后）**：
 
@@ -289,5 +315,163 @@ example : hook Tcat Finset.univ = 1 + ∑ B ∈ children Tcat Finset.univ, hook 
 其钩长为 `1`，故 `(3−1)!/1 = 2` —— 与 `cladesOf` 口径下的纤维计算一致（见 `RankedGeneTree.lean`）。 -/
 example : hook ({(Finset.univ : Finset (Fin 3))} : Finset (Finset (Fin 3))) Finset.univ = 1 := by
   decide
+
+/-! ## §5 hook 积的递归（hook-length 公式分母的**乘法**递推）
+
+`hook_eq_one_add_sum_children` 是钩长的**加法**递推；hook-length 公式真正需要的是
+`∏ s_v` 的**乘法**递推：
+
+```text
+∏_{D ∈ T, 2 ≤ |D|, D ⊆ C} hook T D  =  hook T C · ∏_{B ∈ children T C} (∏_{D ⊆ B} hook T D)
+```
+
+（左边是 `C` 子树内所有内部结点的钩长积，右边把 `s_C` 提出来、再乘各孩子子树的钩长积。）
+这条 + 下一批的「线性扩展数递推」+ 库内 `Nat.multinomial_spec` 一起给出
+`LE(T) = N!/∏ s_v` 的计数归纳（见 §6 的说明与 `scripts/msc/w12f_hook_count_check.py`）。 -/
+
+/-- **钩长积在 `internalBelow` 上的下钻**：对每个孩子求和等于对全体孩子并集求和。 -/
+theorem prod_internalBelow_biUnion {T : Finset (Finset α)} {C : Finset α}
+    (hl : LaminarFamily T) :
+    ∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D
+      = ∏ D ∈ (children T C).biUnion (fun B => internalBelow T B), hook T D := by
+  classical
+  rw [Finset.prod_biUnion]
+  exact fun B hB B' hB' hne' => internalBelow_pairwiseDisjoint hl hB hB' hne'
+
+/-- ★★ **钩长积的乘法递推**（`C` 非单点）：
+
+```text
+∏_{D ∈ internalBelow T C} hook T D  =  hook T C · ∏_{B ∈ children T C} ∏_{D ∈ internalBelow T B} hook T D
+```
+
+即 hook-length 公式分母的递推。证：把 §3 的集合恒等式
+`internalBelow T C = {C} ⊎ ⋃_B internalBelow T B` 取 `Finset.prod`，
+并用 `hook_eq_one_add_sum_children` 把 `Σ_B (internalBelow T B).card` 认成 `hook T C - 1`。 -/
+theorem prod_hook_eq_hook_mul_prod_children {T : Finset (Finset α)} {C : Finset α}
+    (hl : LaminarFamily T) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
+    ∏ D ∈ internalBelow T C, hook T D
+      = hook T C * ∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D := by
+  classical
+  -- (1) 集合恒等式（与 §3 同）
+  have hset : (T.filter fun D => 2 ≤ D.card ∧ D ⊆ C)
+      = insert C ((children T C).biUnion fun B => internalBelow T B) := by
+    ext D
+    simp only [Finset.mem_filter, Finset.mem_insert, Finset.mem_biUnion]
+    constructor
+    · rintro ⟨hDT, hD2, hDC⟩
+      rcases eq_or_mem_children hDT hD2 hDC with h | ⟨B, hB, hDB⟩
+      · exact Or.inl h
+      · exact Or.inr ⟨B, hB, mem_internalBelow.mpr ⟨hDT, hD2, hDB⟩⟩
+    · rintro (hEq | ⟨B, hB, hDB⟩)
+      · exact ⟨hEq ▸ hC, hEq ▸ h2, hEq ▸ Finset.Subset.refl D⟩
+      · obtain ⟨hDT, hD2, hDsubB⟩ := mem_internalBelow.mp hDB
+        exact ⟨hDT, hD2, hDsubB.trans (children_ssubset hB).1⟩
+  have hnotmem : C ∉ (children T C).biUnion fun B => internalBelow T B := by
+    rw [Finset.mem_biUnion]
+    rintro ⟨B, hB, hCB⟩
+    exact (children_ssubset hB).2 (mem_internalBelow.mp hCB).2.2
+  -- (2) 并集的乘积 = 各孩子乘积之积
+  have hbU : ∏ D ∈ (children T C).biUnion (fun B => internalBelow T B), hook T D
+      = ∏ B ∈ children T C, ∏ D ∈ internalBelow T B, hook T D :=
+    (prod_internalBelow_biUnion (T := T) (C := C) hl).symm
+  -- (3) `Σ_B (internalBelow T B).card = hook T C - 1`
+  have hcard : ∑ B ∈ children T C, (internalBelow T B).card = hook T C - 1 := by
+    have h1 : (internalBelow T C).card
+        = (insert C ((children T C).biUnion fun B => internalBelow T B)).card := by
+      show (T.filter fun D => 2 ≤ D.card ∧ D ⊆ C).card = _
+      rw [hset]
+    have h2' : (internalBelow T C).card
+        = 1 + ∑ B ∈ children T C, (internalBelow T B).card := by
+      rw [h1, Finset.card_insert_of_notMem hnotmem,
+        Finset.card_biUnion
+          (fun B hB B' hB' hne' => internalBelow_pairwiseDisjoint hl hB hB' hne')]
+      omega
+    have h3 : hook T C = (internalBelow T C).card := rfl
+    omega
+  -- (4) 合并
+  have hprod : ∏ D ∈ internalBelow T C, hook T D
+      = hook T C * ∏ D ∈ (children T C).biUnion (fun B => internalBelow T B), hook T D := by
+    have h2' : ∏ D ∈ insert C ((children T C).biUnion fun B => internalBelow T B), hook T D
+        = hook T C * ∏ D ∈ (children T C).biUnion (fun B => internalBelow T B), hook T D :=
+      Finset.prod_insert hnotmem
+    rw [show (∏ D ∈ internalBelow T C, hook T D)
+        = ∏ D ∈ insert C ((children T C).biUnion fun B => internalBelow T B), hook T D from by
+      show (∏ D ∈ T.filter (fun D => 2 ≤ D.card ∧ D ⊆ C), hook T D) = _
+      rw [hset]]
+    exact h2'
+  rw [hprod, hbU]
+
+/-! ## §6 计数恒等式（hook-length 公式计数归纳里唯一的算术一步）
+
+hook-length 公式 `LE(T) = N!/∏_v s_v` 的**计数归纳**骨架（本批给出前两块器材）：
+
+1. **§5** `prod_hook_eq_hook_mul_prod_children` —— 分母 `∏ s_v` 的乘法递推；
+2. **本节的** `multinomial_mul_prod_factorial` —— `multinomial(N-1; N_B) · ∏_B N_B! = (N-1)!`；
+3. ⬜ **仍未做**：线性扩展数 `LE` 的递推
+   `LE(T) = multinomial(N-1; N_1..N_k) · ∏_B LE(T_B)`
+   以及由 1+2 归纳出 `LE(T) = N!/∏ s_v`（见 §7 的诚实边界）。
+
+本节只落**第 2 块**（纯算术，库内 `Nat.multinomial_spec` 的直接搬运）：
+
+* `Nat.multinomial_spec : ∏ i ∈ s, (f i)! * multinomial s f = (∑ i ∈ s, f i)!`（`ℕ` 形式）；
+* 本节的 `multinomial_mul_prod_factorial` 是它在 `ℤ` 上的等价形式（顺序不同、便于后续相除）。 -/
+
+/-- **计数恒等式**：`multinomial(s, f) · ∏_{i ∈ s} (f i)! = (∑_{i ∈ s} f i)!`（`ℤ` 形式）。
+
+即库内 `Nat.multinomial_spec` 的等价改写（把 `∏(f i)!` 移到右边、系数放左边）。 -/
+theorem multinomial_mul_prod_factorial (s : Finset ℕ) (f : ℕ → ℕ) :
+    ((Nat.multinomial s f : ℕ) : ℤ) * ∏ i ∈ s, ((f i).factorial : ℤ)
+      = (((∑ i ∈ s, f i).factorial : ℕ) : ℤ) := by
+  rw [← Nat.cast_prod, ← Nat.cast_mul, mul_comm, Nat.multinomial_spec]
+
+/-- 树形版本的计数恒等式：`N = 1 + Σ_B N_B` 时
+`multinomial(N-1; N_B) · ∏_B N_B! = (N-1)!`。 -/
+theorem multinomial_children_factorial (Ns : Finset ℕ) (N : ℕ)
+    (hN : N = 1 + ∑ n ∈ Ns, n) :
+    ((Nat.multinomial Ns (fun n => n) : ℕ) : ℤ) * ∏ n ∈ Ns, ((n.factorial : ℕ) : ℤ)
+      = (((N - 1).factorial : ℕ) : ℤ) := by
+  subst hN
+  rw [multinomial_mul_prod_factorial]
+  norm_num
+
+/-! ## §7 ★B 具体数值（乘法递推 + 计数恒等式，`n = 4`）
+
+下面把 §5 的乘法递推与 §6 的计数恒等式在**具体拓扑**上复算（`n = 4`）：
+
+* caterpillar `Tcat = {{0,1},{0,1,2},univ}`：钩长 `1, 2, 3`，`∏ hook = 6`；
+* balanced `Tbal = {{0,1},{2,3},univ}`：钩长 `1, 1, 3`，`∏ hook = 3`；
+* 计数恒等式在 `Tcat` 上：`multinomial {2} id · 2! = 2!`（`N-1 = 2`）。 -/
+
+-- 钩长积（`Tcat`：1·2·3 = 6；`Tbal`：1·1·3 = 3）
+example : ∏ D ∈ internalBelow Tcat Finset.univ, hook Tcat D = 6 := by decide
+example : ∏ D ∈ internalBelow Tbal Finset.univ, hook Tbal D = 3 := by decide
+
+-- 乘法递推的两个 instance
+example :
+    ∏ D ∈ internalBelow Tcat Finset.univ, hook Tcat D
+      = hook Tcat Finset.univ
+        * ∏ B ∈ children Tcat Finset.univ, ∏ D ∈ internalBelow Tcat B, hook Tcat D := by
+  decide
+example :
+    ∏ D ∈ internalBelow Tbal Finset.univ, hook Tbal D
+      = hook Tbal Finset.univ
+        * ∏ B ∈ children Tbal Finset.univ, ∏ D ∈ internalBelow Tbal B, hook Tbal D := by
+  decide
+
+-- 计数恒等式在具体 `N_B` 上的实例
+-- `Ns` 是 `Finset`（无重集），故用 `{1, 2}` / `{1, 3}` 这类取值
+example : ((Nat.multinomial {1, 2} (fun n => n) : ℕ) : ℤ)
+    * ∏ n ∈ ({1, 2} : Finset ℕ), ((n.factorial : ℕ) : ℤ)
+      = (((3 : ℕ).factorial : ℕ) : ℤ) := by
+  decide
+example : ((Nat.multinomial {1, 1} (fun _ => 1) : ℕ) : ℤ)
+    * ∏ _n ∈ ({1} : Finset ℕ), ((1 : ℕ).factorial : ℤ)
+      = (((1 : ℕ).factorial : ℕ) : ℤ) := by
+  decide
+-- §6 的树形版本在 caterpillar（`N_B = 2`、`N = 3`）上的 instance
+example : ((Nat.multinomial ({2} : Finset ℕ) (fun n => n) : ℕ) : ℤ)
+    * ∏ n ∈ ({2} : Finset ℕ), ((n.factorial : ℕ) : ℤ)
+      = ((((3 : ℕ) - 1).factorial : ℕ) : ℤ) :=
+  multinomial_children_factorial ({2} : Finset ℕ) 3 (by decide)
 
 end Phylo.Stat.HookLength

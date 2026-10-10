@@ -570,7 +570,23 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
   **一般 `f`** 形式（纯内核 `decide`；原文件只有逐个拓扑的 `card_rankings_01_2`）；
 * 上面那条数值核对脚本。
 
-**★ W12f 第三轮新增：钩长器材层已落地**（`Phylo/Stat/HookLength.lean`，新模块）
+**★ W12f 第四轮新增：计数那一半 (i) 的两块器材已落地**（`Phylo/Stat/HookLength.lean`）
+
+* §5 ★★ **`prod_hook_eq_hook_mul_prod_children`**（hook 积的**乘法**递推）：
+  `∏_{D ∈ internalBelow T C} hook T D = hook T C · ∏_{B ∈ children T C} ∏_{D ∈ internalBelow T B} hook T D`
+  —— 即 hook-length 公式**分母**的递推（由 §3 的集合划分 + `Finset.prod_insert` / `Finset.prod_biUnion`）；
+* §6 ★★ **`multinomial_mul_prod_factorial`**：
+  `multinomial(s, f) · ∏_{i∈s} (f i)! = (∑_{i∈s} f i)!`（库内 `Nat.multinomial_spec` 的 `ℤ` 形式）；
+* §6 ★★ **`multinomial_children_factorial`**：`N = 1 + Σ_B N_B` 时
+  `multinomial(Ns, id) · ∏_B N_B! = (N-1)!`；
+* §7 ★B 具体数值（`example` + `decide`）：`Tcat` 的 `∏ hook = 6`、`Tbal` 的 `∏ hook = 3`，
+  两条乘法递推的 instance，以及计数恒等式在 `{1,2}` / `{2}` 上的 instance。
+
+⇒ 归口：§5 + §6 拼起来 + 归纳假设即得 `LE(T) = N!/∏ s_v`；
+⬜ **仍缺的最后一环**：线性扩展数 `LE` 本身的递推
+`LE(T) = multinomial(N-1; N_1..N_k) · ∏_B LE(T_B)`（需要先定义 `LE` 并证「根必在第一位 + 块间插空」）。
+
+**★ W12f 第三轮：钩长器材层已落地**（`Phylo/Stat/HookLength.lean`，新模块）
 
 * `hook T C` —— 簇 `C` 在嵌套族 `T` 中的**钩长** = `|{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|`
   （= `C` 子树内的内部结点数，正是 hook-length 公式里的 `s_v`）；
@@ -594,11 +610,16 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
      hook-length 公式（`grep -rn 'hook_length\|hookLength'` 全库 **0 命中**），
      `linearExtension` 侧只有 `Mathlib/Order/Extension/Linear.lean` 的基础设施（无计数公式）；
    * **摘樱桃路线**：`f(T) = Σ_{cherries {a,b}} f(T_{ab})` —— 同样要先有「树对象」。
-3. 第三轮**已把第 2 点的器材层做出来**（`HookLength.lean`：钩长 + 递推 + 具体数值），
-   **但**「线性扩展数 = `N!/∏ s_v`」（hook-length 公式本体）**仍未证明** ——
-   它需要用 `Mathlib/Order/Extension/Linear.lean` 自己搭计数归纳，
-   并额外证明「`cladesOf` 的 clade 包含偏序 ⟹ 该偏序的线性扩展 ⟺ 合并史的 ranking」
-   这一步**显式双射**（这是本缺口的组合实体，不是计数公式能替代的）。
+3. 第三轮已把**钩长器材层**做出来（`hook` + `hook_eq_one_add_sum_children` + 具体数值）；
+   第四轮又把**计数那一半 (i) 的两块**做出来：
+   * §5 `prod_hook_eq_hook_mul_prod_children`（hook 积的乘法递推 = 分母递推）；
+   * §6 `multinomial_mul_prod_factorial` / `multinomial_children_factorial`（计数恒等式）。
+   ⬜ **仍缺**：线性扩展数 `LE` 的递推 `LE(T) = multinomial(N-1; …) · ∏_B LE(T_B)`
+   （需先定义 `LE` 并证「根必在第一位 + 各孩子子树块间插空」），
+   以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
+   —— (ii) 是本缺口的**组合实体**，第 (i) 条的计数公式替代不了它。
+   数值核对：`scripts/msc/w12f_hook_count_check.py`（`N ≤ 17` 的全部 `(N_B)` 向量
+   `multinomial(N-1; N_B)·∏N_B!·N = N!`，`exit 0`，`ALL_OK`）。
 
 ⇒ 一般 `n` **如实保留缺口**；本轮的增量是**器材层**（可复用的钩长定义与递推），
 不是缺口本体。 -/
