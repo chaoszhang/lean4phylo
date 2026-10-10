@@ -55,7 +55,11 @@ import Phylo.Aho
 * **不重复**无根结论；新增的实质内容是**有根三元组语言层 + BUILD 递归**。
 * 之所以不能把 `compatible_exists_rootedTree` 直接用在三元组上：**有根三元组的相容性
   不能两两判定** —— 例如 `{ab|c, ac|d, ad|b}`（四个叶 `a,b,c,d`）两两相容而整体不相容
-  （Bryant–Steel 1995 Theorem 2 中 `[R,L]` 连通即反例；本文件未形式化该反例）。
+  （Bryant–Steel 1995 Theorem 2 中 `[R,L]` 连通即反例）。
+  **W11a/F7 已把该反例形式化**：见 **§5**（有根团的**镶嵌性** `isRootedClade_laminar`）
+  与 **§6**（`fourLeafCounterexample` · `pairwiseCompatible_not_sufficient` ·
+  `not_displayedByTree_fourLeafCounterexample`）；并给出**显式缺口**
+  `rootedTriplet_aho_disconnect_gap` / `rootedTriplet_aho_converse_gap`。
 -/
 
 open Phylo
@@ -606,5 +610,580 @@ theorem exists_rootedTree_of_ahoOK (h2 : 2 ≤ Fintype.card X)
     rw [t.card_pair] at this
     exact this
   exact ⟨C, mem_normFinset.mpr (Or.inr ⟨hC, hCcard⟩), hpair, hout⟩
+
+/-! ## 5. 有根团的**镶嵌性**（laminarity）—— ★B 反例的地基
+
+**文献**
+
+* Bryant & Steel 1995（`references/md/BryantSteel1995_ExtensionOperationsLeafLabelledTrees.md`）：
+  * 有根三元组 `ab|c` 的定义：**227–229 行**（“The rooted triple with a pair of leaves
+    `{a, b}` connected to the third leaf `c` via the root is denoted `ablc`”）；
+  * 边标号图 `[R,S]`：**743–747 行**；
+  * **Theorem 2**：`R` 相容 **⟺** 每个 `|S| ≥ 3` 的 `S` 上 `[R,S]` **不连通**（**766–769 行**）；
+    其 (⟹) 的证明（**777–785 行**）用「`T|s` 的最大元素 `M` 的直接后代**划分** `S`，
+    跨块之间没有 `[R,S]` 的边」—— 这正是本节的**镶嵌性**（`[R,S]` 的块 = 远离根的团）；
+  * ONETREE（本库 `AhoOK` 的原型）：**365–388 行**；
+    “The algorithm returns a tree if and only if the input set of rooted triples is
+    consistent”：**759–760 行**。
+* Aho, Sagiv, Szymanski & Ullman 1981：划分 `π_C` 的三条规则：**375–380 行**；
+  **Theorem 1**（BUILD 返回非空 ⟹ 满足全部约束）：**400–402 行**。
+
+**为什么需要本节**：`Phylo/Split.lean` 的 `sidesCompatible_sideLeaves` 只给出 split 层的
+相容性 `SidesCompatible A B = A ⊆ B ∨ B ⊆ A ∨ Disjoint A B ∨ A ∪ B = univ`，
+**第四个析取项 `A ∪ B = univ` 是真的会发生**（例：根的两个孩子各带两支的 `A = {a,b}`、
+`B = {c,d}`），因此 split 层的相容性**推不出**镶嵌性。
+加上「**远离根**」（`¬ inSide e u root`）这一条件后才有镶嵌性 —— 本节证明之。 -/
+
+open SimpleGraph
+
+namespace RootedTree
+
+omit [Fintype X] [DecidableEq X] in
+/-- `v` 与 `u` 在删去边 `e` 后**同侧**（`Phylo.Split` 的 `Cladogram.inSide` 的 `RootedTree` 版）。 -/
+def inSide (T : RootedTree X) (e : Sym2 T.V) (u v : T.V) : Prop :=
+  (T.graph.deleteEdges {e}).Reachable u v
+
+omit [DecidableEq X] in
+/-- 边 `e` 的 `u` **侧顶点集**：`T - e` 中含 `u` 的连通分量（`Cladogram.sideVertices` 的对应物）。 -/
+noncomputable def cladeVertices (T : RootedTree X) (e : Sym2 T.V) (u : T.V) : Finset T.V := by
+  classical
+  exact Finset.univ.filter fun w => T.inSide e u w
+
+omit [Fintype X] [DecidableEq X] in
+theorem mem_cladeVertices (T : RootedTree X) {e : Sym2 T.V} {u w : T.V} :
+    w ∈ T.cladeVertices e u ↔ T.inSide e u w := by
+  classical
+  simp [cladeVertices]
+
+omit [Fintype X] [DecidableEq X] in
+theorem self_mem_cladeVertices (T : RootedTree X) (e : Sym2 T.V) (u : T.V) :
+    u ∈ T.cladeVertices e u := by
+  classical
+  rw [mem_cladeVertices]
+  exact Reachable.refl u
+
+omit [DecidableEq X] in
+/-- `sideLeaves` 与 `inSide` 的一致性（`Cladogram.mem_sideLeaves_iff_inSide` 的对应物）。 -/
+theorem mem_sideLeaves_iff_inSide (T : RootedTree X) {e : Sym2 T.V} {u : T.V} {x : X} :
+    x ∈ T.sideLeaves e u ↔ T.inSide e u (T.leaf x) := by
+  classical
+  rw [RootedTree.sideLeaves]
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, inSide]
+  exact reachable_comm
+
+omit [Fintype X] [DecidableEq X] in
+theorem inSide_self (T : RootedTree X) (e : Sym2 T.V) (u : T.V) : T.inSide e u u :=
+  Reachable.refl u
+
+omit [Fintype X] [DecidableEq X] in
+theorem inSide_comm (T : RootedTree X) (e : Sym2 T.V) (u v : T.V) :
+    T.inSide e u v ↔ T.inSide e v u := reachable_comm
+
+omit [Fintype X] [DecidableEq X] in
+theorem inSide_trans (T : RootedTree X) (e : Sym2 T.V) {u v w : T.V}
+    (huv : T.inSide e u v) (hvw : T.inSide e v w) : T.inSide e u w := huv.trans hvw
+
+omit [Fintype X] [DecidableEq X] in
+/-- **树中每条边都是桥**（`Cladogram.not_reachable_deleteEdges_of_adj` 的对应物）。 -/
+theorem not_reachable_deleteEdges_of_adj (T : RootedTree X) {u v : T.V}
+    (h : T.graph.Adj u v) : ¬ (T.graph.deleteEdges {s(u, v)}).Reachable u v :=
+  isBridge_iff.mp ((isAcyclic_iff_forall_adj_isBridge.mp T.isTree.isAcyclic) h)
+
+omit [Fintype X] [DecidableEq X] in
+/-- **跨越一个侧分量的边只有它本身**。 -/
+theorem eq_edge_of_adj_of_mem_cladeVertices_of_notMem (T : RootedTree X) {e : Sym2 T.V}
+    {u w z : T.V} (hadj : T.graph.Adj w z) (hw : w ∈ T.cladeVertices e u)
+    (hz : z ∉ T.cladeVertices e u) : s(w, z) = e := by
+  classical
+  by_contra hne
+  refine hz ?_
+  rw [mem_cladeVertices] at hw ⊢
+  have hadj' : (T.graph.deleteEdges {e}).Adj w z := deleteEdges_adj.mpr ⟨hadj, hne⟩
+  exact hw.trans hadj'.reachable
+
+omit [Fintype X] [DecidableEq X] in
+/-- **相邻两点在删边后同侧**（除非该边就是被删的边）。 -/
+theorem inSide_congr_of_adj (T : RootedTree X) {e₁ : Sym2 T.V} {u₁ c d : T.V}
+    (hcd : T.graph.Adj c d) (hne : s(c, d) ≠ e₁) :
+    T.inSide e₁ u₁ c ↔ T.inSide e₁ u₁ d := by
+  constructor
+  · intro hc
+    by_contra hd
+    exact hne (T.eq_edge_of_adj_of_mem_cladeVertices_of_notMem hcd
+      ((mem_cladeVertices (T := T)).mpr hc) (fun h => hd ((mem_cladeVertices (T := T)).mp h)))
+  · intro hd
+    by_contra hc
+    have h := T.eq_edge_of_adj_of_mem_cladeVertices_of_notMem hcd.symm
+      ((mem_cladeVertices (T := T)).mpr hd) (fun h => hc ((mem_cladeVertices (T := T)).mp h))
+    rw [Sym2.eq_swap] at h
+    exact hne h
+
+omit [Fintype X] [DecidableEq X] in
+/-- **旁侧连通性**：若 `p,q` 在 `e₁` 同侧，且该侧不含 `e₂ = ⟦c,d⟧` 的端点，
+则在 `T - e₂` 中 `p,q` 仍可达（`Cladogram.inSide_deleteEdges_of_inSide` 的对应物）。 -/
+theorem inSide_deleteEdges_of_inSide (T : RootedTree X)
+    {e₁ e₂ : Sym2 T.V} {c d p q : T.V} (he₂ : e₂ = s(c, d))
+    (hside : T.inSide e₁ p q) (hc : ¬ T.inSide e₁ p c) (hd : ¬ T.inSide e₁ p d) :
+    T.inSide e₂ p q := by
+  obtain ⟨p'⟩ := hside
+  refine reachable_deleteEdges_of_support_notMem (p'.mapLe (deleteEdges_le {e₁})) ?_
+  rw [SimpleGraph.Walk.support_mapLe_eq_support]
+  intro w hw
+  have hwX : T.inSide e₁ p w := reachable_of_mem_support p' hw
+  rw [he₂, Sym2.mem_iff]
+  rintro (rfl | rfl)
+  · exact hc hwX
+  · exact hd hwX
+
+omit [Fintype X] [DecidableEq X] in
+/-- **删边后每点与端点之一同侧**（`Cladogram.inSide_or_inSide` 的对应物）。 -/
+theorem inSide_or_inSide (T : RootedTree X) {a b x : T.V} (hab : T.graph.Adj a b) :
+    T.inSide s(a, b) x a ∨ T.inSide s(a, b) x b := by
+  obtain ⟨p⟩ := T.isTree.connected x a
+  refine SimpleGraph.Walk.recOn (motive := fun u v _ =>
+    v = a → T.inSide s(a, b) u a ∨ T.inSide s(a, b) u b) p ?_ ?_ rfl
+  · intro u hu
+    subst hu
+    exact Or.inl (Reachable.refl _)
+  · intro u v w hadj q ih hw
+    by_cases h : s(u, v) = s(a, b)
+    · rcases Sym2.eq_iff.mp h with ⟨rfl, _⟩ | ⟨rfl, _⟩
+      · exact Or.inl (Reachable.refl _)
+      · exact Or.inr (Reachable.refl _)
+    · have hadj' : (T.graph.deleteEdges {s(a, b)}).Adj u v :=
+        deleteEdges_adj.mpr ⟨hadj, by simpa using h⟩
+      rcases ih hw with ih | ih
+      · exact Or.inl (hadj'.reachable.trans ih)
+      · exact Or.inr (hadj'.reachable.trans ih)
+
+omit [Fintype X] [DecidableEq X] in
+/-- **`e` 的两端点分居两侧**。 -/
+theorem not_inSide_both (T : RootedTree X) {a b y : T.V} (hab : T.graph.Adj a b) :
+    ¬ (T.inSide s(a, b) a y ∧ T.inSide s(a, b) b y) := by
+  rintro ⟨h1, h2⟩
+  exact T.not_reachable_deleteEdges_of_adj hab (h1.trans h2.symm)
+
+omit [DecidableEq X] in
+/-- **同侧基准可换**。 -/
+theorem sideLeaves_eq_of_inSide (T : RootedTree X) {e : Sym2 T.V} {u a : T.V}
+    (h : T.inSide e u a) : T.sideLeaves e u = T.sideLeaves e a := by
+  classical
+  ext x
+  rw [mem_sideLeaves_iff_inSide, mem_sideLeaves_iff_inSide]
+  exact ⟨fun hu => h.symm.trans hu, fun ha => h.trans ha⟩
+
+/-- **情形 1**：若 `e₂` 的端点 `c,d` 都在 `e₁` 的 `u₁` 侧**之外**，且两侧有公共叶，
+则 `u₁` 侧叶集整个含于 `u₂` 侧叶集。
+
+（这是 `Cladogram.sidesCompatible_sideLeaves_of_not_inSide` 对应证明的「存在公共点」分支，
+在那里被 split 层的四析取形式掩盖；这里提炼成**子集**结论。） -/
+theorem sideLeaves_subset_of_not_inSide (T : RootedTree X) {e₁ e₂ : Sym2 T.V}
+    {u₁ u₂ c d : T.V} (he₂ : e₂ = s(c, d)) (hc : ¬ T.inSide e₁ u₁ c)
+    (hd : ¬ T.inSide e₁ u₁ d)
+    (hne : (T.sideLeaves e₁ u₁ ∩ T.sideLeaves e₂ u₂).Nonempty) :
+    T.sideLeaves e₁ u₁ ⊆ T.sideLeaves e₂ u₂ := by
+  classical
+  obtain ⟨y, hy⟩ := hne
+  rw [Finset.mem_inter, mem_sideLeaves_iff_inSide, mem_sideLeaves_iff_inSide] at hy
+  intro x hx
+  rw [mem_sideLeaves_iff_inSide] at hx ⊢
+  have hc' : ¬ T.inSide e₁ (T.leaf x) c := fun h => hc (hx.trans h)
+  have hd' : ¬ T.inSide e₁ (T.leaf x) d := fun h => hd (hx.trans h)
+  have hside : T.inSide e₁ (T.leaf x) (T.leaf y) := hx.symm.trans hy.1
+  exact hy.2.trans ((T.inSide_deleteEdges_of_inSide he₂ hside hc' hd').symm)
+
+/-- ★★ **有根团的镶嵌性**（`RootedTree` 版）：设 `⟦a,b⟧`、`⟦c,d⟧` 是树的两条边，
+`u₁`（resp. `u₂`）位于 `⟦a,b⟧`（resp. `⟦c,d⟧`）**远离根**的一侧，则两侧叶集要么**嵌套**、
+要么**相离**；若两侧有公共叶，则必为**嵌套**。
+
+⚠️ 「远离根」是**实质条件**：没有它，`A = {a,b}` 与 `B = {c,d}`（根的两个孩子的两支）
+给出 `A ∪ B = univ` 且 `A ∩ B = ∅`，`A = {a,b}` 与 `B = {b,c}` 给出既非嵌套又非相离。 -/
+theorem sideLeaves_nested_of_adj (T : RootedTree X) {a b c d : T.V}
+    (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {u₁ u₂ : T.V}
+    (h₁ : ¬ T.inSide s(a, b) u₁ T.root) (h₂ : ¬ T.inSide s(c, d) u₂ T.root)
+    (hne : (T.sideLeaves s(a, b) u₁ ∩ T.sideLeaves s(c, d) u₂).Nonempty) :
+    T.sideLeaves s(a, b) u₁ ⊆ T.sideLeaves s(c, d) u₂ ∨
+      T.sideLeaves s(c, d) u₂ ⊆ T.sideLeaves s(a, b) u₁ := by
+  classical
+  by_cases heq : s(c, d) = s(a, b)
+  · -- 同一条边：`u₁`、`u₂` 都在远离根的那一侧，故同侧
+    rw [heq] at h₂
+    have h12 : T.inSide s(a, b) u₁ u₂ := by
+      rcases T.inSide_or_inSide hab (x := u₁) with h1 | h1 <;>
+        rcases T.inSide_or_inSide hab (x := u₂) with h2 | h2
+      · exact h1.trans h2.symm
+      · rcases T.inSide_or_inSide hab (x := T.root) with hr | hr
+        · exact absurd (h1.trans hr.symm) h₁
+        · exact absurd (h2.trans hr.symm) h₂
+      · rcases T.inSide_or_inSide hab (x := T.root) with hr | hr
+        · exact absurd (h2.trans hr.symm) h₂
+        · exact absurd (h1.trans hr.symm) h₁
+      · exact h1.trans h2.symm
+    exact Or.inl (by rw [heq, T.sideLeaves_eq_of_inSide h12])
+  · by_cases hc : T.inSide s(a, b) u₁ c
+    · -- `c,d` 都在 `u₁` 侧 ⟹ `u₂` 侧含于 `u₁` 侧
+      have hd : T.inSide s(a, b) u₁ d := (T.inSide_congr_of_adj hcd heq).mp hc
+      have hcR : ¬ T.inSide s(a, b) T.root c := fun h => h₁ (hc.trans h.symm)
+      have hdR : ¬ T.inSide s(a, b) T.root d := fun h => h₁ (hd.trans h.symm)
+      have hdisj : ∀ w, T.inSide s(a, b) T.root w → ¬ T.inSide s(c, d) u₂ w := by
+        intro w hw hwB
+        have hgo : T.inSide s(c, d) T.root w :=
+          T.inSide_deleteEdges_of_inSide (e₁ := s(a, b)) (e₂ := s(c, d))
+            (c := c) (d := d) rfl hw hcR hdR
+        exact h₂ (hwB.trans hgo.symm)
+      refine Or.inr fun y hy => ?_
+      rw [mem_sideLeaves_iff_inSide] at hy ⊢
+      rcases T.inSide_or_inSide hab (x := u₁) with h1 | h1 <;>
+        rcases T.inSide_or_inSide hab (x := T.leaf y) with h2 | h2
+      · exact h1.trans h2.symm
+      · rcases T.inSide_or_inSide hab (x := T.root) with hr | hr
+        · exact absurd (h1.trans hr.symm) h₁
+        · exact absurd hy (hdisj (T.leaf y) (hr.trans h2.symm))
+      · rcases T.inSide_or_inSide hab (x := T.root) with hr | hr
+        · exact absurd hy (hdisj (T.leaf y) (hr.trans h2.symm))
+        · exact absurd (h1.trans hr.symm) h₁
+      · exact h1.trans h2.symm
+    · -- `c,d` 都在 `u₁` 侧之外：情形 1
+      exact Or.inl (T.sideLeaves_subset_of_not_inSide (e₁ := s(a, b)) (e₂ := s(c, d))
+        (u₁ := u₁) (u₂ := u₂) rfl hc ((T.inSide_congr_of_adj hcd heq).not.mp hc) hne)
+
+/-- ★★ **有根团镶嵌**（`IsRootedClade` 版）：同一棵有根树的两个**有根团**若相交则必嵌套。
+（这是 `Cladogram` 层没有的一般事实 —— 有根树的团族是**镶嵌族** `LaminarFamily`。） -/
+theorem isRootedClade_laminar (T : RootedTree X) {C D : Finset X}
+    (hC : T.IsRootedClade C) (hD : T.IsRootedClade D) (hne : (C ∩ D).Nonempty) :
+    C ⊆ D ∨ D ⊆ C := by
+  obtain ⟨p₁, q₁, hpq₁, hr₁, rfl⟩ := hC
+  obtain ⟨p₂, q₂, hpq₂, hr₂, rfl⟩ := hD
+  exact T.sideLeaves_nested_of_adj hpq₁ hpq₂
+    (fun h => hr₁ ((T.inSide_comm (s(p₁, q₁)) p₁ T.root).mp h))
+    (fun h => hr₂ ((T.inSide_comm (s(p₂, q₂)) p₂ T.root).mp h)) hne
+
+end RootedTree
+
+/-! ## 6. 相容性（语义）· ★B 反例 · 有根 Aho 的正确判据
+
+**任务书原文要求的「两两相容 ⟺ 存在树」在有根三元组上是`假`的** —— 本节给出**具体反例**。
+
+* **★B 反例检查（先造反例）**：`{ab|c, ac|b, bc|a}` 呢？ —— `ab|c` 与 `ac|b` **不相容**
+  （`not_compatible_mk'_conflict`），故它**不是**两两相容。这确认 `Compatible` 的定义
+  **不过弱**：若这里能证出「相容」，定义就是错的。
+* **真反例（4 叶）**：`{ab|c, ac|d, ad|b}` —— 三个近对 `{a,b},{a,c},{a,d}` **两两只交于 `a`**，
+  故两两相容（`compatible_mk'_chain` + `((a,b),c)d` 形的显式树）；但**没有**任何有根树同时
+  展示三者（`not_displayedByTree_fourLeafCounterexample`）——
+  三个展示团都含 `a`，由 `isRootedClade_laminar` 两两嵌套，取最大者即矛盾。
+  这也正是 Bryant–Steel 1995 **Theorem 2**（766–769 行）在 `S = {a,b,c,d}` 上的
+  `[R,S]` **连通**反例（边 `{a,b}, {a,c}, {a,d}` 构成星形）。
+* **正确的判据**是 Aho 的**递归** `AhoOK`（§3）：`exists_rootedTree_of_ahoOK`（§4）已证
+  「`AhoOK` ⟹ 存在展示树」；反方向仍是显式缺口（见本节末）。 -/
+
+namespace RootedTriplet
+
+omit [Fintype X] in
+/-- **两个有根三元组相容**（语义定义）：存在一棵有根树同时展示两者。 -/
+def Compatible (t t' : RootedTriplet X) : Prop :=
+  ∃ T : RootedTree.{u, u} X, T.DisplaysTriplet t ∧ T.DisplaysTriplet t'
+
+omit [Fintype X] in
+/-- 三元组族**两两相容**。 -/
+def PairwiseCompatible (R : Finset (RootedTriplet X)) : Prop :=
+  ∀ t ∈ R, ∀ t' ∈ R, Compatible t t'
+
+omit [Fintype X] in
+/-- 三元组族**被某一棵有根树展示**（「整体相容」的语义版）。 -/
+def DisplayedByTree (R : Finset (RootedTriplet X)) : Prop :=
+  ∃ T : RootedTree.{u, u} X, ∀ t ∈ R, T.DisplaysTriplet t
+
+omit [DecidableEq X] in
+theorem compatible_comm {t t' : RootedTriplet X} (h : Compatible t t') : Compatible t' t := by
+  obtain ⟨T, h1, h2⟩ := h
+  exact ⟨T, h2, h1⟩
+
+omit [DecidableEq X] in
+/-- ★ **「展示 ⟹ 两两相容」**（Aho 有根版的两个方向里容易的那个；**不是**重言式：
+它断言同一个 `T` 同时见证 `R` 的任意两元，而 `DisplayedByTree` 的存在量词在合取之前）。 -/
+theorem pairwiseCompatible_of_displaysByTree {R : Finset (RootedTriplet X)}
+    (h : DisplayedByTree R) : PairwiseCompatible R := by
+  intro t ht t' ht'
+  obtain ⟨T, hT⟩ := h
+  exact ⟨T, hT t ht, hT t' ht'⟩
+
+/-- **存在性引擎的具体形态**：任意单个三元组都被某棵有根树展示（`|X| ≥ 2`）。
+（用镶嵌族 `{univ, t.pair}` 走 `exists_rootedTree_of_laminar`。） -/
+theorem exists_rootedTree_displays_of_singleton (h2 : 2 ≤ Fintype.card X)
+    (t : RootedTriplet X) : ∃ T : RootedTree.{u, u} X, T.DisplaysTriplet t := by
+  classical
+  set F : Finset (Finset X) := ({Finset.univ, t.pair} : Finset (Finset X)) with hF
+  have huniv : (Finset.univ : Finset X) ∈ F := by
+    rw [hF]; exact Finset.mem_insert_self _ _
+  have hl : LaminarFamily F := by
+    intro A hA B hB
+    rw [hF] at hA hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB
+    rcases hA with rfl | rfl <;> rcases hB with rfl | rfl
+    · exact Or.inl (Finset.Subset.refl _)
+    · exact Or.inr (Or.inl (Finset.subset_univ _))
+    · exact Or.inl (Finset.subset_univ _)
+    · exact Or.inl (Finset.Subset.refl _)
+  have hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card := by
+    intro B hB
+    rw [hF] at hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hB
+    rcases hB with rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr (by rw [RootedTriplet.card_pair])
+  have hdisp : ∀ t' ∈ ({t} : Finset (RootedTriplet X)),
+      ∃ C ∈ F, t'.pair ⊆ C ∧ t'.out ∉ C := by
+    intro t' ht'
+    rw [Finset.mem_singleton] at ht'
+    exact ⟨t'.pair, by rw [hF, ht']; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _),
+      Finset.Subset.refl _, t'.out_notMem⟩
+  obtain ⟨T, hT⟩ := exists_rootedTree_of_laminar (h2 := h2) hl huniv hcard
+    ({t} : Finset (RootedTriplet X)) hdisp
+  exact ⟨T, hT t (Finset.mem_singleton_self t)⟩
+
+theorem compatible_self (h2 : 2 ≤ Fintype.card X) (t : RootedTriplet X) : Compatible t t := by
+  obtain ⟨T, hT⟩ := exists_rootedTree_displays_of_singleton h2 t
+  exact ⟨T, hT, hT⟩
+
+/-- ★ **相容的充分条件**（构造性）：`xy|z` 与 `xz|w`（`x,y,z,w` 两两不同）被树
+`(((x,y),z),w)` 同时展示（团 `{x,y}` 与 `{x,y,z}`）。 -/
+theorem compatible_mk'_chain {x y z w : X} (hxy : x ≠ y) (hxz : x ≠ z) (hyz : y ≠ z)
+    (hxw : x ≠ w) (hyw : y ≠ w) (hzw : z ≠ w) (h2 : 2 ≤ Fintype.card X) :
+    Compatible (mk' x y z hxy hxz hyz) (mk' x z w hxz hxw hzw) := by
+  classical
+  set F : Finset (Finset X) :=
+    ({Finset.univ, ({x, y} : Finset X), ({x, y, z} : Finset X)} : Finset (Finset X)) with hF
+  have hcard2 : ({x, y} : Finset X).card = 2 := Finset.card_pair_eq_two_iff.mpr hxy
+  have hcard3 : ({x, y, z} : Finset X).card = 3 := by
+    rw [Finset.card_insert_of_notMem (by simp [hxy, hxz]),
+      Finset.card_insert_of_notMem (by simp [hyz]), Finset.card_singleton]
+  have hPQ : ({x, y} : Finset X) ⊆ ({x, y, z} : Finset X) := by
+    intro a ha
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ha ⊢
+    tauto
+  have hl : LaminarFamily F := by
+    intro A hA B hB
+    rw [hF] at hA hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB
+    rcases hA with rfl | rfl | rfl <;> rcases hB with rfl | rfl | rfl
+    · exact Or.inl (Finset.Subset.refl _)
+    · exact Or.inr (Or.inl (Finset.subset_univ _))
+    · exact Or.inr (Or.inl (Finset.subset_univ _))
+    · exact Or.inl (Finset.subset_univ _)
+    · exact Or.inl (Finset.Subset.refl _)
+    · exact Or.inl hPQ
+    · exact Or.inl (Finset.subset_univ _)
+    · exact Or.inr (Or.inl hPQ)
+    · exact Or.inl (Finset.Subset.refl _)
+  have hcard : ∀ B ∈ F, B = Finset.univ ∨ 2 ≤ B.card := by
+    intro B hB
+    rw [hF] at hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hB
+    rcases hB with rfl | rfl | rfl
+    · exact Or.inl rfl
+    · exact Or.inr (by rw [hcard2])
+    · exact Or.inr (by rw [hcard3]; omega)
+  have hdisp : ∀ t' ∈ ({mk' x y z hxy hxz hyz, mk' x z w hxz hxw hzw}
+      : Finset (RootedTriplet X)), ∃ C ∈ F, t'.pair ⊆ C ∧ t'.out ∉ C := by
+    intro t' ht'
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ht'
+    rcases ht' with rfl | rfl
+    · refine ⟨({x, y} : Finset X), ?_, Finset.Subset.refl _, ?_⟩
+      · rw [hF]
+        exact Finset.mem_insert_of_mem (Finset.mem_insert_self _ _)
+      · rw [RootedTriplet.out_mk']
+        simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+        exact ⟨fun h => hxz h.symm, fun h => hyz h.symm⟩
+    · refine ⟨({x, y, z} : Finset X), ?_, ?_, ?_⟩
+      · rw [hF]
+        exact Finset.mem_insert_of_mem
+          (Finset.mem_insert_of_mem (Finset.mem_singleton_self _))
+      · intro a ha
+        simp only [RootedTriplet.pair_mk', Finset.mem_insert, Finset.mem_singleton] at ha ⊢
+        tauto
+      · rw [RootedTriplet.out_mk']
+        simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+        exact ⟨fun h => hxw h.symm, fun h => hyw h.symm, fun h => hzw h.symm⟩
+  obtain ⟨T, hT⟩ := exists_rootedTree_of_laminar (h2 := h2) hl
+    (by rw [hF]; exact Finset.mem_insert_self _ _) hcard
+    ({mk' x y z hxy hxz hyz, mk' x z w hxz hxw hzw} : Finset (RootedTriplet X)) hdisp
+  exact ⟨T, hT _ (Finset.mem_insert_self _ _),
+    hT _ (Finset.mem_insert_of_mem (Finset.mem_singleton_self _))⟩
+
+/-- ★B —— **反例检查 1**：`ab|c` 与 `ac|b`（同一三叶集、不同拓扑）**不相容**。
+若这里能证出「相容」，就说明 `Compatible` 的定义被写**弱**了、必须修定义。 -/
+theorem not_compatible_mk'_conflict {a b c : X} (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
+    ¬ Compatible (mk' a b c hab hac hbc) (mk' a c b hac hab (fun h => hbc h.symm)) := by
+  rintro ⟨T, h1, h2⟩
+  obtain ⟨C₁, hC₁, hp₁, ho₁⟩ := (T.displaysTriplet_iff_isRootedClade _).mp h1
+  obtain ⟨C₂, hC₂, hp₂, ho₂⟩ := (T.displaysTriplet_iff_isRootedClade _).mp h2
+  have ha₁ : a ∈ C₁ := hp₁ (by simp)
+  have ha₂ : a ∈ C₂ := hp₂ (by simp)
+  have hb₁ : b ∈ C₁ := hp₁ (by simp)
+  have hc₂ : c ∈ C₂ := hp₂ (by simp)
+  rcases T.isRootedClade_laminar hC₁ hC₂ ⟨a, Finset.mem_inter.mpr ⟨ha₁, ha₂⟩⟩ with hsub | hsub
+  · exact ho₂ (hsub hb₁)
+  · exact ho₁ (hsub hc₂)
+
+/-- ★B —— **反例检查 2**（派单原问「`ab|c`, `ac|b`, `bc|a` 两两相容吗？」）：
+**不**两两相容 —— `ab|c` 与 `ac|b` 已经冲突。这是「相容定义不过弱」的直接证据。 -/
+theorem not_pairwiseCompatible_threeConflicting {a b c : X}
+    (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) :
+    ¬ PairwiseCompatible
+      ({mk' a b c hab hac hbc, mk' a c b hac hab (fun h => hbc h.symm),
+        mk' b c a hbc (fun h => hab h.symm) (fun h => hac h.symm)}
+        : Finset (RootedTriplet X)) := by
+  intro h
+  exact not_compatible_mk'_conflict hab hac hbc
+    (h _ (Finset.mem_insert_self _ _) _
+      (Finset.mem_insert_of_mem (Finset.mem_insert_self _ _)))
+
+/-! ### 6.1 ★★★ 真反例：`{ab|c, ac|d, ad|b}`（`a=0, b=1, c=2, d=3`） -/
+
+/-- `ab|c`（`a=0, b=1, c=2`）。 -/
+abbrev ex_ab_c : RootedTriplet (Fin 4) := mk' 0 1 2 (by decide) (by decide) (by decide)
+
+/-- `ac|d`（`a=0, c=2, d=3`）。 -/
+abbrev ex_ac_d : RootedTriplet (Fin 4) := mk' 0 2 3 (by decide) (by decide) (by decide)
+
+/-- `ad|b`（`a=0, d=3, b=1`）。 -/
+abbrev ex_ad_b : RootedTriplet (Fin 4) := mk' 0 3 1 (by decide) (by decide) (by decide)
+
+/-- ★★ **反例族** `{ab|c, ac|d, ad|b}`（三个近对两两只交于 `a`）。 -/
+def fourLeafCounterexample : Finset (RootedTriplet (Fin 4)) := {ex_ab_c, ex_ac_d, ex_ad_b}
+
+/-- ★★ **反例族两两相容**（每一对都由 `compatible_mk'_chain` 给出的显式树见证）。 -/
+theorem pairwiseCompatible_fourLeafCounterexample :
+    PairwiseCompatible fourLeafCounterexample := by
+  intro t ht t' ht'
+  simp only [fourLeafCounterexample, Finset.mem_insert, Finset.mem_singleton] at ht ht'
+  rcases ht with rfl | rfl | rfl <;> rcases ht' with rfl | rfl | rfl
+  · exact compatible_self (by decide) _
+  · exact compatible_mk'_chain (x := 0) (y := 1) (z := 2) (w := 3)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  · exact compatible_comm (compatible_mk'_chain (x := 0) (y := 3) (z := 1) (w := 2)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+  · exact compatible_comm (compatible_mk'_chain (x := 0) (y := 1) (z := 2) (w := 3)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+  · exact compatible_self (by decide) _
+  · exact compatible_mk'_chain (x := 0) (y := 2) (z := 3) (w := 1)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  · exact compatible_mk'_chain (x := 0) (y := 3) (z := 1) (w := 2)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  · exact compatible_comm (compatible_mk'_chain (x := 0) (y := 2) (z := 3) (w := 1)
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+  · exact compatible_self (by decide) _
+
+/-- ★★★ **反例族没有共同展示树**。
+
+证明：三个展示团 `C₁ ∋ 0,1`、`C₂ ∋ 0,2`、`C₃ ∋ 0,3` 都含叶 `0`，由
+`isRootedClade_laminar` 两两嵌套；分情形取「最大者」，分别用
+`2 ∉ C₁`、`3 ∉ C₂`、`1 ∉ C₃` 导出矛盾。 -/
+theorem not_displayedByTree_fourLeafCounterexample :
+    ¬ DisplayedByTree fourLeafCounterexample := by
+  rintro ⟨T, hT⟩
+  have h1 : T.DisplaysTriplet ex_ab_c := hT ex_ab_c (Finset.mem_insert_self _ _)
+  have h2 : T.DisplaysTriplet ex_ac_d :=
+    hT ex_ac_d (Finset.mem_insert_of_mem (Finset.mem_insert_self _ _))
+  have h3 : T.DisplaysTriplet ex_ad_b :=
+    hT ex_ad_b (Finset.mem_insert_of_mem (Finset.mem_insert_of_mem
+      (Finset.mem_singleton_self _)))
+  obtain ⟨C₁, hC₁, hp₁, ho₁⟩ := (T.displaysTriplet_iff_isRootedClade _).mp h1
+  obtain ⟨C₂, hC₂, hp₂, ho₂⟩ := (T.displaysTriplet_iff_isRootedClade _).mp h2
+  obtain ⟨C₃, hC₃, hp₃, ho₃⟩ := (T.displaysTriplet_iff_isRootedClade _).mp h3
+  have h0₁ : (0 : Fin 4) ∈ C₁ := hp₁ (by decide)
+  have h1₁ : (1 : Fin 4) ∈ C₁ := hp₁ (by decide)
+  have hc₁ : (2 : Fin 4) ∉ C₁ := ho₁
+  have h0₂ : (0 : Fin 4) ∈ C₂ := hp₂ (by decide)
+  have h2₂ : (2 : Fin 4) ∈ C₂ := hp₂ (by decide)
+  have hc₂ : (3 : Fin 4) ∉ C₂ := ho₂
+  have h0₃ : (0 : Fin 4) ∈ C₃ := hp₃ (by decide)
+  have h3₃ : (3 : Fin 4) ∈ C₃ := hp₃ (by decide)
+  have hc₃ : (1 : Fin 4) ∉ C₃ := ho₃
+  have h12 := T.isRootedClade_laminar hC₁ hC₂ ⟨0, Finset.mem_inter.mpr ⟨h0₁, h0₂⟩⟩
+  have h23 := T.isRootedClade_laminar hC₂ hC₃ ⟨0, Finset.mem_inter.mpr ⟨h0₂, h0₃⟩⟩
+  by_cases hAB : C₁ ⊆ C₂
+  · by_cases hBC : C₂ ⊆ C₃
+    · exact hc₃ (hBC (hAB h1₁))
+    · exact hc₂ ((h23.resolve_left hBC) h3₃)
+  · exact hc₁ ((h12.resolve_left hAB) h2₂)
+
+/-- ★★★ **「两两相容 ⟹ 存在展示树」在有根三元组上为假**（与无根 split 的
+`Phylo.Aho.compatible_exists_rootedTree` 形成鲜明对比：无根 split 层成立，有根三元组层不成立）。 -/
+theorem pairwiseCompatible_not_sufficient :
+    ∃ R : Finset (RootedTriplet (Fin 4)), PairwiseCompatible R ∧ ¬ DisplayedByTree R :=
+  ⟨fourLeafCounterexample, pairwiseCompatible_fourLeafCounterexample,
+    not_displayedByTree_fourLeafCounterexample⟩
+
+/-- **被证伪的「两两相容版有根 Aho」陈述**（派单建议名 `rootedTriplets_compatible_iff_displayed`
+的「⟸」方向在两两相容口径下的形式）；`…_false` 证明它**不成立**。 -/
+def rootedTriplets_pairwiseCompatible_implies_displayed : Prop :=
+  ∀ R : Finset (RootedTriplet (Fin 4)), PairwiseCompatible R → DisplayedByTree R
+
+theorem rootedTriplets_pairwiseCompatible_implies_displayed_false :
+    ¬ rootedTriplets_pairwiseCompatible_implies_displayed := by
+  intro h
+  obtain ⟨R, hpc, hnd⟩ := pairwiseCompatible_not_sufficient
+  exact hnd (h R hpc)
+
+/-! ### 6.2 反空真（`example`） -/
+
+/-- 反空真 A：`Compatible` 有真居民（`Fin 4` 的 `01|2` 与 `02|3`，树 `(((0,1),2),3)`）。 -/
+example : Compatible ex_ab_c ex_ac_d :=
+  compatible_mk'_chain (x := 0) (y := 1) (z := 2) (w := 3)
+    (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+
+/-- 反空真 B：`{ab|c, ac|b, bc|a}`（`Fin 3`）**不**两两相容（★B 检查的具体实例）。 -/
+example : ¬ PairwiseCompatible
+    ({mk' (0 : Fin 3) 1 2 (by decide) (by decide) (by decide),
+      mk' (0 : Fin 3) 2 1 (by decide) (by decide) (by decide),
+      mk' (1 : Fin 3) 2 0 (by decide) (by decide) (by decide)}
+        : Finset (RootedTriplet (Fin 3))) :=
+  not_pairwiseCompatible_threeConflicting (by decide) (by decide) (by decide)
+
+/-- 反空真 C：**建树引擎**在具体非空实例上可居留（`Fin 3`，单个三元组 `01|2`）。 -/
+example : ∃ T : RootedTree.{0, 0} (Fin 3),
+    T.DisplaysTriplet (mk' (0 : Fin 3) 1 2 (by decide) (by decide) (by decide)) :=
+  exists_rootedTree_displays_of_singleton (by decide) _
+
+/-- 反空真 D：反例族**非空**且三个成员互异（故 `pairwiseCompatible_not_sufficient`
+不是靠空族取巧）。 -/
+example : fourLeafCounterexample.card = 3 := by decide
+
+/-! ### 6.3 仍是**显式缺口**的部分（文献陈述，本节未证） -/
+
+omit [Fintype X] in
+/-- 三元组族 `R` 的**叶集**（`R` 中所有支撑集的并）。 -/
+def systemLeaves (R : Finset (RootedTriplet X)) : Finset X :=
+  R.biUnion fun t => t.leaves
+
+/-- ★ **显式缺口 1 —— Bryant–Steel Theorem 2 的 (⟹)**：若 `T` 展示 `R` 的每个三元组，
+则对每个 `S ⊇ leaves(R)`（`|S| ≥ 3`），图 `[R,S]` **不连通**。
+
+文献：Bryant & Steel 1995，定理陈述 **766–769 行**，证明 **777–785 行**。
+**缺什么**：证明要用**限制树** `T|S`（“考虑子树 `T|s`，它有最大元素 `M`；`M` 的每个直接后代
+给出一个块”）—— 库内 `Phylo/Split.lean` 的 `Split.restrict` 只覆盖 **split 层**，
+`RootedTree` 层的 `T|S`（抑制非 `S` 叶、抑制度 2 顶点）尚未建立。
+**为什么不硬编**：不用额外假设「假装」证出来；此处只把文献陈述落成 `Prop`。 -/
+def rootedTriplet_aho_disconnect_gap : Prop :=
+  ∀ (R : Finset (RootedTriplet X)) (T : RootedTree.{u, u} X),
+    (∀ t ∈ R, T.DisplaysTriplet t) →
+    ∀ S : Finset X, (∀ t ∈ R, t.leaves ⊆ S) → 3 ≤ S.card →
+      ¬ (tripletGraph S R).Preconnected
+
+omit [Fintype X] in
+/-- ★ **显式缺口 2 —— Aho/ONETREE 的完备性（BUILD 反方向）**：若某棵有根树展示 `R` 的全部
+三元组，则递归判据 `AhoOK`（在叶集 `systemLeaves R` 上）**成功**。
+
+这是本文件 ★★★ `exists_rootedTree_of_ahoOK` 的**逆**，二者合起来才是完整的有根版 Aho 定理。
+文献：Bryant & Steel 1995 **759–760 行**（“The algorithm returns a tree if and only if the input
+set of rooted triples is consistent”）；Aho et al. 1981 Theorem 1 的反方向。
+**缺什么**：同缺口 1（需要限制树 /「块 = 远离根的团」的对应）。
+**注**：`S = univ` 的版本**不可直接**陈述 —— `R = ∅` 时 `AhoOK univ ∅` 为真但
+`∃ T` 的存在性对**非空** `R` 才实质；故这里取 `S = systemLeaves R`（Aho 算法真正的工作集）。 -/
+def rootedTriplet_aho_converse_gap : Prop :=
+  ∀ R : Finset (RootedTriplet X), DisplayedByTree R → AhoOK (systemLeaves R) R
+
+end RootedTriplet
 
 end Phylo
