@@ -1296,3 +1296,139 @@ example (T : Cladogram X) {x : X} {b : T.V} (h : T.graph.Adj (T.leaf x) b) :
 
 end Cladogram
 
+
+/-! ## 13. ★★★ 等价桥：`e ∈ P_ij` ⟺ `i,j` 分属 `e` 两侧（W12e6）
+
+Atteson Lemma 10（`:1774–1804`）把「路径经过 `e`」与「一侧叶数」互换使用，
+本节把这个互换**证出来** —— 于是 §12 的 `sideLeafCount` 能真正接上权重 `w_e`。
+
+器材（全部是库内/Mathlib 既有，★A 扫过）：
+`Cladogram.inSide`（`Phylo/Split.lean:633`，就是 `T - e` 上的可达性）、
+`Cladogram.mem_sideLeaves_iff_inSide`（`:648`）、
+`SimpleGraph.Walk.toDeleteEdge`（`Walk/Maps.lean:275`）、
+`SimpleGraph.Walk.transfer` / `edges_transfer`（`Maps.lean:183`）、
+`SimpleGraph.Walk.bypass` / `bypass_isPath` / `darts_bypass_sublist_darts`（`CherryQuartet.lean:108` 已在用）、
+`SimpleGraph.edgeSet_deleteEdges`（`DeleteEdges.lean:94`）、`Cladogram.existsUnique_path`（`Core.lean:83`）。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- **唯一路径**（`existsUnique_path` 的见证；`Cladogram` 版，`Phylogram` 版见 `Phylo.PauplinFormula`）。 -/
+noncomputable def pathOf (T : Cladogram X) (u v : T.V) : T.graph.Walk u v :=
+  (T.existsUnique_path u v).choose
+
+omit [Fintype X] [DecidableEq X] in
+/-- 唯一路径确实是**路径**。 -/
+theorem pathOf_isPath (T : Cladogram X) (u v : T.V) : (T.pathOf u v).IsPath :=
+  (T.existsUnique_path u v).choose_spec.1
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **避开 `e` 的走法 ⟹ 同侧**（`Walk.toDeleteEdge` 把走法落到 `T - e` 里）。 -/
+theorem inSide_of_walk_notMem (T : Cladogram X) {e : Sym2 T.V} {u v : T.V}
+    (p : T.graph.Walk u v) (h : e ∉ p.edges) : T.inSide e u v :=
+  (p.toDeleteEdge e h).reachable
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **异侧 ⟹ 每条走法都走过 `e`**（上一条的逆否；这就是 `e ∈ P_ij` 的「切割」含义）。 -/
+theorem forall_mem_edges_of_not_inSide (T : Cladogram X) {e : Sym2 T.V} {u v : T.V}
+    (h : ¬ T.inSide e u v) (p : T.graph.Walk u v) : e ∈ p.edges := by
+  by_contra hne
+  exact h (T.inSide_of_walk_notMem p hne)
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **同侧 ⟹ 存在避开 `e` 的走法**（把 `T - e` 里的走法沿 `transfer` **抬回** `T`，边表不变）。 -/
+theorem exists_walk_notMem_of_inSide (T : Cladogram X) {e : Sym2 T.V} {u v : T.V}
+    (h : T.inSide e u v) : ∃ p : T.graph.Walk u v, e ∉ p.edges := by
+  obtain ⟨q⟩ := h
+  have hq : e ∉ q.edges := by
+    intro hmem
+    have hset : e ∈ (T.graph.deleteEdges {e}).edgeSet :=
+      SimpleGraph.Walk.edges_subset_edgeSet q hmem
+    rw [SimpleGraph.edgeSet_deleteEdges] at hset
+    exact hset.2 rfl
+  exact ⟨q.transfer T.graph (fun f hf => by
+      have h1 : f ∈ (T.graph.deleteEdges {e}).edgeSet :=
+        SimpleGraph.Walk.edges_subset_edgeSet q hf
+      rw [SimpleGraph.edgeSet_deleteEdges] at h1
+      exact h1.1),
+    by rw [SimpleGraph.Walk.edges_transfer]; exact hq⟩
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **桥（走法版）**：「每条 `u → v` 走法都走过 `e`」⟺「`u,v` 分属 `e` 两侧」。 -/
+theorem forall_mem_edges_iff_not_inSide (T : Cladogram X) {e : Sym2 T.V} {u v : T.V} :
+    (∀ p : T.graph.Walk u v, e ∈ p.edges) ↔ ¬ T.inSide e u v := by
+  constructor
+  · intro h hin
+    obtain ⟨p, hp⟩ := T.exists_walk_notMem_of_inSide hin
+    exact hp (h p)
+  · intro h p
+    exact T.forall_mem_edges_of_not_inSide h p
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **等价桥（唯一路径版）**：`e ∈ P_uv` ⟺ `u,v` 分属 `e` 两侧。
+
+证明：`⟸` 用 ★★★ `forall_mem_edges_of_not_inSide`；`⟹` 反设同侧，则存在避开 `e` 的走法，
+其 `bypass` 是**路径**且边表是子表（故仍避开 `e`），由 `existsUnique_path` 的**唯一性**它必是
+`pathOf u v` —— 与 `e ∈ P_uv` 矛盾。
+
+（对**任意** `e : Sym2 T.V` 成立：`e` 不是树边时两边都是 `False`；树边 `e = s(a,b)` 是有意义的情形。） -/
+theorem mem_pathOf_edges_iff_not_inSide (T : Cladogram X) (e : Sym2 T.V) (u v : T.V) :
+    e ∈ (T.pathOf u v).edges ↔ ¬ T.inSide e u v := by
+  constructor
+  · intro hmem hin
+    obtain ⟨p, hp⟩ := T.exists_walk_notMem_of_inSide hin
+    have hsub : List.Sublist p.bypass.edges p.edges := by
+      rw [SimpleGraph.Walk.edges_eq_map_darts, SimpleGraph.Walk.edges_eq_map_darts]
+      exact (SimpleGraph.Walk.darts_bypass_sublist_darts p).map SimpleGraph.Dart.edge
+    have hp' : e ∉ p.bypass.edges := fun hc => hp (hsub.subset hc)
+    have hpath : p.bypass.IsPath := SimpleGraph.Walk.bypass_isPath p
+    have huniq : p.bypass = T.pathOf u v :=
+      (T.existsUnique_path u v).choose_spec.2 p.bypass hpath
+    exact hp' (huniq ▸ hmem)
+  · intro h
+    exact T.forall_mem_edges_of_not_inSide h (T.pathOf u v)
+
+/-- ★★★ **`sideLeaves` 形式**：`y ∉ L_x(e)` ⟺ 唯一路径 `P_{xy}` 走过 `e`
+（Atteson 把 `e ∈ P_ij` 与一侧叶集互换使用的正式依据）。 -/
+theorem mem_pathOf_edges_iff_notMem_sideLeaves (T : Cladogram X) (e : Sym2 T.V) (x y : X) :
+    e ∈ (T.pathOf (T.leaf x) (T.leaf y)).edges ↔ y ∉ T.sideLeaves e (T.leaf x) := by
+  rw [T.mem_pathOf_edges_iff_not_inSide]
+  constructor
+  · intro h hmem
+    exact h ((T.mem_sideLeaves_iff_inSide).mp hmem)
+  · intro h hcon
+    exact h ((T.mem_sideLeaves_iff_inSide).mpr hcon)
+
+/-- ★★ **两侧叶数互补**：`|L_b(e)| = |X| − |L_a(e)|`（`sideLeafCount_add_of_adj` 的直接推论）。 -/
+theorem sideLeafCount_compl (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b) :
+    T.sideLeafCount s(a, b) b = Fintype.card X - T.sideLeafCount s(a, b) a := by
+  have h := T.sideLeafCount_add_of_adj hab
+  omega
+
+/-- ★★★ **Atteson Lemma 10 的权重 `w_e(i,j)`**（`:1774–1804`）：
+　　路径经过 `e` 时 `−2`，否则 `−2·(|X| − |L_i(e)|)`（`|L_i(e)|` 见 §12 的 `sideLeafCount`）。 -/
+noncomputable def attesonW (T : Cladogram X) (i j : T.V) (e : Sym2 T.V) : ℤ :=
+  if e ∈ (T.pathOf i j).edges then -2
+  else -2 * ((Fintype.card X : ℤ) - (T.sideLeafCount e i : ℤ))
+
+omit [DecidableEq X] in
+/-- ★★★ **权重第一支**：异侧（路径走过 `e`）⟹ `w_e = −2`。 -/
+theorem attesonW_eq_neg_two_of_not_inSide (T : Cladogram X) {i j : T.V} {e : Sym2 T.V}
+    (h : ¬ T.inSide e i j) : T.attesonW i j e = -2 := by
+  rw [attesonW, ite_eq_left (T.forall_mem_edges_of_not_inSide h (T.pathOf i j))]
+
+omit [DecidableEq X] in
+/-- ★★★ **权重第二支**：同侧 ⟹ `w_e = −2·(|X| − |L_i(e)|)`
+（由 `sideLeafCount_compl`，这就是 `−2·|L_j(e)|`，Atteson 的「否则」分支）。 -/
+theorem attesonW_eq_sideCount_of_inSide (T : Cladogram X) {i j : T.V} {e : Sym2 T.V}
+    (h : T.inSide e i j) :
+    T.attesonW i j e = -2 * ((Fintype.card X : ℤ) - (T.sideLeafCount e i : ℤ)) := by
+  rw [attesonW, ite_eq_right]
+  intro hmem
+  exact (T.mem_pathOf_edges_iff_not_inSide e i j).mp hmem h
+
+end Cladogram
+
