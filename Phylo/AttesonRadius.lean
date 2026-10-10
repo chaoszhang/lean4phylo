@@ -7,6 +7,8 @@ import Phylo.Algorithm.NJ
 import Phylo.Buneman
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
+import Phylo.Split
+import Phylo.InternalEdge
 
 /-!
 # `Phylo.AttesonRadius` —— Atteson 安全半径 `1/2`（W11g · D1）
@@ -1195,3 +1197,102 @@ theorem atteson_reduction_gap_correct_shape_proved :
 end Dissimilarity
 
 end NJ
+
+/-! ## 12. ★★★ `sideLeafCount`：删边后一侧子树的**叶数**（W12e5）
+
+Atteson Lemma 10（`:1774–1804`）的权重
+`w_e(i,j) = −2`（`e ∈ P_ij`）、`= −2|L − L_i(e)|`（否则）
+里出现的 `|L_i(e)|` 就是**删去边 `e` 后与顶点 `i` 同侧的叶数**。
+库内已有 `Cladogram.sideLeaves`（`Phylo/Split.lean:529`，用 `T - e` 上的 `Reachable` 实现）
+—— 但**只有叶集、没有计数 API**，本节把计数补上并给出基本性质。
+
+⚠️ **本节不做**（仍是 `def atteson_lemma11_gap` 的缺口，§8/:831 逐字未动）：
+① `w_e` 的**权重公式**本身（含 Lemma 10 的逐边比较与「路径旁子树叶数单调性」）；
+② `Dissimilarity ↔ ExistsRealizingPhylogram`（`Phylo/Buneman.lean:589`）的桥（`δmin > 0` 来源）。 -/
+
+namespace Cladogram
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **一侧叶数** `|L_u(e)|`：删去边 `e` 后与顶点 `u` **同侧**（在 `T - e` 中可达）的
+叶标签个数 —— Atteson Lemma 10 的 `|L_i(e)|`。 -/
+noncomputable def sideLeafCount (T : Cladogram X) (e : Sym2 T.V) (u : T.V) : ℕ :=
+  (T.sideLeaves e u).card
+
+omit [DecidableEq X] in
+/-- 定义式展开（便于把 `sideLeafCount` 归到已有的 `sideLeaves` 引理上）。 -/
+theorem sideLeafCount_eq_card_sideLeaves (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
+    T.sideLeafCount e u = (T.sideLeaves e u).card := rfl
+
+/-- ★★★ **两侧叶数之和 = 总叶数**（`sideLeaves_compl_adj` 的直接推论）：
+
+　　`|L_a(e)| + |L_b(e)| = |X|`（`e = ⟦a,b⟧` 是树边）。
+
+这就是 Atteson 权重里 `|L − L_i(e)|` 能写成「另一侧的叶数」的原因。 -/
+theorem sideLeafCount_add_of_adj (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b) :
+    T.sideLeafCount s(a, b) a + T.sideLeafCount s(a, b) b = Fintype.card X := by
+  have hle : (T.sideLeaves s(a, b) a).card ≤ Fintype.card X := by
+    simpa [Finset.card_univ] using Finset.card_le_univ (T.sideLeaves s(a, b) a)
+  rw [sideLeafCount, sideLeafCount, T.sideLeaves_compl_adj hab, Finset.card_compl]
+  omega
+
+/-- ★★ **侧不变性**：删边后与 `u` 同侧的顶点给出**同一个**叶集，故同一个计数。
+（`sideLeaves` 只依赖 `u` 所在的一侧。） -/
+theorem sideLeafCount_eq_of_inSide (T : Cladogram X) {e : Sym2 T.V} {u a : T.V}
+    (h : T.inSide e u a) : T.sideLeafCount e u = T.sideLeafCount e a := by
+  rw [sideLeafCount, sideLeafCount, T.sideLeaves_eq_of_inSide h]
+
+/-- ★★ **叶边的一侧恰含 1 片叶**（`sideLeaves_leaf_edge` 的计数形式）——
+
+　　`|L_x(⟦x,b⟧)| = 1`（`x` 是叶）。这是本节的**显式数值见证**。 -/
+theorem sideLeafCount_leaf_edge (T : Cladogram X) {x : X} {b : T.V}
+    (h : T.graph.Adj (T.leaf x) b) : T.sideLeafCount s(T.leaf x, b) (T.leaf x) = 1 := by
+  rw [sideLeafCount, T.sideLeaves_leaf_edge h, Finset.card_singleton]
+
+/-- ★★ **含自己那片叶的一侧非空**（`x` 总在自己那一侧）。 -/
+theorem sideLeafCount_pos_self (T : Cladogram X) (e : Sym2 T.V) (x : X) :
+    0 < T.sideLeafCount e (T.leaf x) :=
+  Finset.card_pos.mpr ⟨x, T.mem_sideLeaves_self e x⟩
+
+omit [DecidableEq X] in
+/-- ★ **上界**：任一侧的叶数 ≤ 总叶数。 -/
+theorem sideLeafCount_le_card (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
+    T.sideLeafCount e u ≤ Fintype.card X := by
+  rw [sideLeafCount]
+  exact Finset.card_le_univ (T.sideLeaves e u)
+
+/-- ★★ **真边两侧都含叶**（`sideLeaves_nonempty_of_adj'` 的计数形式）⇒ 任一侧的计数 ≥ 1。 -/
+theorem sideLeafCount_pos_of_adj (T : Cladogram X) {a b u : T.V} (hab : T.graph.Adj a b) :
+    0 < T.sideLeafCount s(a, b) u :=
+  Finset.card_pos.mpr (T.sideLeaves_nonempty_of_adj' hab)
+
+/-- ★★ **任一侧都不是全叶集**（另一侧非空）⇒ 计数 < 总叶数。 -/
+theorem sideLeafCount_lt_card_of_adj (T : Cladogram X) {a b u : T.V} (hab : T.graph.Adj a b) :
+    T.sideLeafCount s(a, b) u < Fintype.card X := by
+  rw [sideLeafCount]
+  exact Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr
+    ⟨Finset.subset_univ _, T.sideLeaves_ne_univ_of_adj (u := u) hab⟩)
+
+/-- ★★★ **端点非叶时一侧含 ≥ 2 片叶**（`two_le_card_sideLeaves` 的计数形式）——
+这正是「路径旁子树叶数」单调性论证的**起飞点**。 -/
+theorem two_le_sideLeafCount (T : Cladogram X) {u v : T.V} (huv : T.graph.Adj u v)
+    (hnd : T.graph.degree u ≠ 1) : 2 ≤ T.sideLeafCount s(u, v) u :=
+  T.two_le_card_sideLeaves huv hnd
+
+/-! ### ★B 显式数值见证 -/
+
+/-- ★B **叶边的两侧叶数**：一边 `1`、另一边 `|X| − 1`（`sideLeafCount_leaf_edge` ＋
+`sideLeafCount_add_of_adj`；与 `sideLeaves_leaf_edge` 的既有结论（`= {x}`）对照一致）。 -/
+example (T : Cladogram X) {x : X} {b : T.V} (h : T.graph.Adj (T.leaf x) b) :
+    T.sideLeafCount s(T.leaf x, b) (T.leaf x) = 1 ∧
+      T.sideLeafCount s(T.leaf x, b) (T.leaf x)
+        + T.sideLeafCount s(T.leaf x, b) b = Fintype.card X :=
+  ⟨T.sideLeafCount_leaf_edge h, T.sideLeafCount_add_of_adj h⟩
+
+/-- ★B **反空真**：上面的两条性质在「至少 2 片叶」的树上互不空真。 -/
+example (T : Cladogram X) {x : X} {b : T.V} (h : T.graph.Adj (T.leaf x) b) :
+    0 < T.sideLeafCount s(T.leaf x, b) b :=
+  T.sideLeafCount_pos_of_adj h
+
+end Cladogram
+
