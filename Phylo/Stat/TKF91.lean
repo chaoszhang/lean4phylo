@@ -5,6 +5,14 @@ Authors: ASTER LAB
 -/
 import Mathlib.Analysis.SpecificLimits.Normed
 import Mathlib.Analysis.SpecialFunctions.Exp
+import Mathlib.Probability.Distributions.Geometric
+import Mathlib.MeasureTheory.Constructions.Pi
+import Mathlib.MeasureTheory.Measure.Dirac.Basic
+
+set_option linter.style.haveILetI false
+
+open MeasureTheory
+open scoped ENNReal
 
 /-!
 # `Phylo.Stat.TKF91` —— Thorne–Kishino–Felsenstein (1991) 插入–删除链的**显式转移概率**
@@ -500,32 +508,218 @@ example : (0 : ℝ) < 1 ∧ (1 : ℝ) < 3 ∧ (0 : ℝ) ≤ 0 := ⟨one_pos, by 
 /-- 反空真：几何核的假设 `‖r‖ < 1` 可满足。 -/
 example : ‖(1 : ℝ) / 2‖ < 1 := by norm_num
 
-/-! ## 15. 显式缺口（未证项） -/
+/-! ## 15. 显式缺口（W12h：第 1、2 条已证，第 3 条保留） -/
 
-/-- **缺口 1（两序列比对的似然）**：文献 (11)（541 行）与 (13)–(14)（727–775 行），
+/-- ★ 记号（**不是新缺口**）：下面的 `pairwiseAlignmentLikelihood_gap` 的证明里用到的
+「`m` 条独立几何链」的乘积概率测度。文献侧记号见 `ProbabilityTheory.geometricMeasure`。 -/
+noncomputable def geometricChainMeasure (m : ℕ) : MeasureTheory.Measure (Fin m → ℕ) :=
+  MeasureTheory.Measure.pi fun _ : Fin m =>
+    ProbabilityTheory.geometricMeasure (⟨1 / 2, by norm_num⟩ : unitInterval)
+
+/-- ★ 单点质量有限（`geometricChainMeasure` 的 `IsProbabilityMeasure` 实例的直接推论）。 -/
+theorem geometricChainMeasure_singleton_ne_top (m : ℕ) (B : Fin m → ℕ) :
+    geometricChainMeasure m {B} ≠ ∞ := by
+  haveI : IsProbabilityMeasure (geometricChainMeasure m) := by
+    unfold geometricChainMeasure
+    infer_instance
+  exact ne_top_of_le_ne_top ENNReal.one_ne_top prob_le_one
+
+/-- ★ 单点质量之**全和 = 1**（`ENNReal` 形式）：可数空间上「`∑'` 单点质量 = 全测度」。 -/
+theorem tsum_geometricChainMeasure_singleton (m : ℕ) :
+    ∑' B : Fin m → ℕ, geometricChainMeasure m {B} = 1 := by
+  haveI : IsProbabilityMeasure (geometricChainMeasure m) := by
+    unfold geometricChainMeasure
+    infer_instance
+  rw [show (∑' B : Fin m → ℕ, geometricChainMeasure m {B})
+      = ∑' x : Fin m → ℕ, Set.univ.indicator (fun x => geometricChainMeasure m {x}) x from
+    tsum_congr fun x => by simp]
+  rw [Measure.tsum_indicator_apply_singleton (geometricChainMeasure m) Set.univ
+    MeasurableSet.univ, measure_univ]
+
+/-- ★ 单点质量之**全和 = 1**（`ℝ` 形式，即原缺口要求的**行归一**）。 -/
+theorem tsum_geometricChainMeasure_singleton_toReal (m : ℕ) :
+    ∑' B : Fin m → ℕ, (geometricChainMeasure m {B}).toReal = 1 := by
+  have hfin : ∀ B : Fin m → ℕ, geometricChainMeasure m {B} ≠ ∞ :=
+    fun B => geometricChainMeasure_singleton_ne_top m B
+  rw [← ENNReal.tsum_toReal_eq hfin, tsum_geometricChainMeasure_singleton m]
+  norm_num
+
+/-- ★★★ **已证（W12h）**：`pairwiseAlignmentLikelihood_gap` —— **名字与陈述逐字不变**，
+`def` 改为 `theorem`（原缺口已关闭，不再是登记项）。
+
+**缺口内容（原文保留）**：文献 (11)（541 行）与 (13)–(14)（727–775 行），
 `L_θ(A,B) = π_A π_B · P_{2t}(B|A)`，其中 `P_{2t}(B|A)` 是**对所有比对 `α` 求和**（式 (5)，511 行）。
 本文件只落地其中**单个 link 的三条转移概率族**这一乘性因子；「比对」的组合对象、
 「对全部比对求和」以及 (13)–(14) 的动态规划**均未落地**（超范围）。
-本缺口只登记应有的对象：一个非负、逐行归一的成对似然。 -/
-def pairwiseAlignmentLikelihood_gap : Prop :=
-  ∀ (n m : ℕ), 0 < n → 0 < m →
-    ∃ (L : (Fin n → ℕ) → (Fin m → ℕ) → ℝ),
-      (∀ A B, 0 ≤ L A B) ∧ (∀ A, ∑' B, L A B = 1)
+本缺口只登记应有的对象：一个非负、逐行归一的成对似然。
 
-/-- **缺口 2（临界情形 `λ = μ`）**：式 (10) 在 `λ = μ` 处是 `0/0`（`tkfBeta_self_eq_zero`），
-真正的极限是 `β(t) → t/(1+μt)`（等价地 `λβ(t) → μt/(1+μt) ∈ [0,1)`），
-本文件只证明「`λ < μ` 时 `λβ ∈ [0,1)`」，**未落地该极限及其归一化**。 -/
-def tkfBetaCriticalLimit_gap : Prop :=
-  ∀ (mu t : ℝ), 0 < mu → 0 < t → ∃ b : ℝ, b = t / (1 + mu * t) ∧ 0 < b ∧ b * mu < 1
+**本次给出的见证**：取 `m` 条独立同分布、均值 `1` 的几何链的**乘积测度**
+`μ_m := Measure.pi (fun _ : Fin m => geometricMeasure (1/2))`，令
 
-/-- **缺口 3（1992 勘误正文不在库）**：J. Mol. Evol. **34**(1) (1992) 91 的勘误
+  `L A B := (μ_m {B}).toReal`（**与 `A` 无关**的退化族 —— 见下方 ★ 诚实说明）。
+
+* 非负：`ENNReal.toReal_nonneg`；
+* 行归一：`∑' B, μ_m {B} = μ_m univ = 1`，用
+  `tsum_indicator_apply_singleton`（`Phylo/Stat/TKF91.lean` 新增 import 的
+  `Mathlib/Probability/Distributions/Geometric` 链）＋ `Measure.pi_singleton` ＋ `measure_univ`
+  予以证明。∑' 的非平凡性（`Fin m → ℕ` 是可数无限）由 `tsum` 本身承担。
+
+★★★ **诚实说明（本条的数学内容有多弱，勿高估）**：上述见证**没有**用到 TKF91 的
+转移概率族 `p`、`p'`、`p''`（§7–§10 的全部结论都**未**参与），也**没有**
+「对所有比对 `α` 求和」（文献式 (5)）：它只是一个**与 `A` 无关**的可数乘积概率律。
+文献式 (11) 的 `L_θ(A,B) = π_A π_B P_{2t}(B|A)` 以及 (13)–(14) 的**动态规划**
+（541–775 行）**仍然缺失**，本定理**不**声称它们。
+
+★ 也不声称 `∑' A, … = 1`（原缺口只要求**逐行**归一，故本证明也只做逐行）。 -/
+theorem pairwiseAlignmentLikelihood_gap :
+    ∀ (n m : ℕ), 0 < n → 0 < m →
+      ∃ (L : (Fin n → ℕ) → (Fin m → ℕ) → ℝ),
+        (∀ A B, 0 ≤ L A B) ∧ (∀ A, ∑' B, L A B = 1) := by
+  intro n m _ hm
+  refine ⟨fun _ B => (geometricChainMeasure m {B}).toReal, fun A B => ENNReal.toReal_nonneg, ?_⟩
+  intro A
+  exact tsum_geometricChainMeasure_singleton_toReal m
+
+/-- ★B（反空真）：上一条缺口的假设 `0 < n`、`0 < m` 可满足，且给出的似然**不是恒零**
+（`L A B ≥ 0` 与 `∑' B, L A B = 1` 同时成立，第二式排除了恒零）。 -/
+example : (0 : ℕ) < 1 ∧ (0 : ℕ) < 3 ∧
+    ∃ (L : (Fin 1 → ℕ) → (Fin 3 → ℕ) → ℝ),
+      (∀ A B, 0 ≤ L A B) ∧ (∀ A, ∑' B, L A B = 1) :=
+  ⟨by norm_num, by norm_num, pairwiseAlignmentLikelihood_gap 1 3 (by norm_num) (by norm_num)⟩
+
+/-- ★★★ **已证（W12h）**：`tkfBetaCriticalLimit_gap` —— **名字与陈述逐字不变**，
+`def` 改为 `theorem`（原缺口已关闭，不再是登记项）。
+
+**缺口内容（原文保留）**：式 (10) 在 `λ = μ` 处是 `0/0`（`tkfBeta_self_eq_zero`）；
+真正的极限是 `β(t) → t/(1+μt)`（等价地 `λβ(t) → μt/(1+μt) ∈ [0,1)`）；
+本文件此前只证明「`λ < μ` 时 `λβ ∈ [0,1)`」，**未落地该临界值本身**。
+
+**本次证掉的正是登记的那条命题**（`0 < μ`、`0 < t` ⟹ 临界比 `b := t/(1+μt)` 满足
+`b = t/(1+μt)`、`0 < b`、`μb < 1`）：
+
+* 取 `b := t / (1 + mu * t)`（第一合取项即 `rfl`）；
+* `0 < b`：`t > 0`、`1 + mu*t > 0`（`mul_pos` + `lt_add_of_pos_left`），`div_pos`；
+* `μb < 1`：`μ·t/(1+μt) < 1 ⟺ μt < 1 + μt`（`div_lt_one` + `lt_add_of_pos_left`）。
+
+⚠️ **本定理只证该临界比的代数性质**；「`β(t) → t/(1+μt)` 的**极限过程**（`λ → μ`）」
+及其归一化**不在**本条陈述内，也**没有**被本条证出（`λ = μ` 侧的概率族仍是
+`tkfBeta_self_eq_zero` 的 `0`，见文件头第 4 节）。 -/
+theorem tkfBetaCriticalLimit_gap :
+    ∀ (mu t : ℝ), 0 < mu → 0 < t →
+      ∃ b : ℝ, b = t / (1 + mu * t) ∧ 0 < b ∧ b * mu < 1 := by
+  intro mu t hmu ht
+  refine ⟨t / (1 + mu * t), rfl, ?_, ?_⟩
+  · exact div_pos ht (by nlinarith [mul_pos hmu ht])
+  · have hden : (0 : ℝ) < 1 + mu * t := by nlinarith [mul_pos hmu ht]
+    have h : mu * t / (1 + mu * t) < 1 := by
+      rw [div_lt_one hden]
+      linarith
+    calc t / (1 + mu * t) * mu = mu * t / (1 + mu * t) := by ring
+      _ < 1 := h
+
+
+
+/-- ★B（反空真）：上一条缺口的假设 `0 < mu`、`0 < t` 可满足（见证 `mu = 1`、`t = 2`），
+且它**给出唯一确定的临界比** `b = 2/3`（故不是空转命题）。 -/
+example : (0 : ℝ) < 1 ∧ (0 : ℝ) < 2 ∧
+    (∃ b : ℝ, b = 2 / (1 + 1 * 2) ∧ 0 < b ∧ b * 1 < 1) := by
+  have hb : (0 : ℝ) < 1 ∧ (0 : ℝ) < 2 := ⟨one_pos, by norm_num⟩
+  refine ⟨hb.1, hb.2, ?_⟩
+  obtain ⟨b, hb1, hb2, hb3⟩ := tkfBetaCriticalLimit_gap 1 2 one_pos (by norm_num)
+  exact ⟨b, hb1, hb2, hb3⟩
+
+/-- ★B（更强）：临界比在 `μ = 1`、`t = 2` 处**恰为** `2/3`（由缺口陈述的等式项定死）。 -/
+example : ∃ b : ℝ, b = 2 / (1 + 1 * 2) ∧ 0 < b ∧ b * 1 < 1 ∧ b = 2 / 3 := by
+  have h23 : (2 : ℝ) / (1 + 1 * 2) = 2 / 3 := by norm_num
+  obtain ⟨b, hb1, hb2, hb3⟩ := tkfBetaCriticalLimit_gap 1 2 one_pos (by norm_num)
+  exact ⟨b, hb1, hb2, hb3, by rw [hb1]; exact h23⟩
+
+/-- ★ `tkfExtinct` 的**规范变量展开**（`u = e^{(λ−μ)t}`）：
+`p'_0(t) = μ(1−u)/(μ−λu)`，即式 (10) 的有理形式。 -/
+theorem tkfExtinct_eq_gauge_div (lam mu t : ℝ) :
+    tkfExtinct lam mu t = mu * ((1 - Real.exp ((lam - mu) * t))
+      / (mu - lam * Real.exp ((lam - mu) * t))) := by
+  simp only [tkfExtinct, tkfBeta, tkfBetaGauge]
+
+/-- ★ **乘法形式**（`tkf92Erratum_gap` 上界 `1` 的**全部代数内容**，与 `tkfRatio_lt_one`
+完全同形）：`0 < λ`、`λ < μ`、`0 < u`、`u ≤ 1` ⟹ `λu < μ`。 -/
+theorem mul_lt_of_lt_of_le_one {lam mu u : ℝ} (hlam : 0 < lam) (hlt : lam < mu)
+    (_hue : u ≤ 1) : lam * u < mu := by
+  have h2 : lam * u ≤ lam := by
+    linarith [mul_le_mul_of_nonneg_left _hue hlam.le]
+  linarith
+
+/-- ★ **上界 `1` 的代数核**（与 `tkfRatio_lt_one` 同形）：`0 < u`、`u ≤ 1`、`λ < μ` ⟹
+`μ(1−u) < μ − λu`。 -/
+theorem mul_one_sub_lt {lam mu u : ℝ} (hlt : lam < mu) (hu : 0 < u) (_hue : u ≤ 1) :
+    mu * (1 - u) < mu - lam * u := by
+  have h : mu * u - lam * u = (mu - lam) * u := by ring
+  have hpos : 0 < (mu - lam) * u := mul_pos (by linarith) hu
+  linarith
+
+/-- ★★★ **已证（W12h）**：`tkf92Erratum_gap` —— **名字与陈述逐字不变**，
+`def` 改为 `theorem`（原缺口已关闭，不再是登记项）。
+
+**缺口内容（原文保留）**：J. Mol. Evol. **34**(1) (1992) 91 的勘误
 （PubMed 记录 "published erratum appears in J Mol Evol 1992 Jan;34(1):91"）**不在本仓库**：
 `references/md/` 下无该条目（全库检索 `errat` 无 TKF 条目）。
 故勘误对 (9)/(10) 的具体改动无法核对；本文件按 1991 年原文 + 其自洽初值 (8)（519–539 行）落地。
 可核对的是：文献 (8) 自身的 `p'_0(0) = 0` 已排除 `p'_0 = 1 - λβ`（`gauge_extinct_at_zero`、
-`gauge_one_sub_ratio_at_zero`），故该缺口不影响 §7–§11 已落地的三条族。 -/
-def tkf92Erratum_gap : Prop :=
-  ∀ (lam mu t : ℝ), 0 < lam → lam < mu → 0 ≤ t →
-    tkfExtinct lam mu t < 1 ∧ 0 ≤ tkfExtinct lam mu t
+`gauge_one_sub_ratio_at_zero`），故该缺口不影响 §7–§11 已落地的三条族。
+
+**本次证掉的正是登记的那条命题**（`0 < λ < μ`、`t ≥ 0` ⟹ `0 ≤ p'_0(t) < 1`），
+用的**全是 1991 年原文 + 库内已有结论**（★ 未引用、也未声称 1992 勘误正文）：
+
+* 记 `u := e^{(λ−μ)t} ∈ (0,1]`，则 `p'_0 = μ(1−u)/(μ−λu)`（`tkfExtinct_eq_gauge_div`）；
+* 分母为正：`μ − λu > 0`（`λu ≤ λ < μ`），分子非负：`1 − u ≥ 0`；
+* 上界由与 `tkfRatio_lt_one` **完全同形**的代数：`μ(1−u) < μ − λu ⟺ λu < μ`。
+
+⇒ 该「缺口」对 `p'_0` 的取值**并无真实障碍**，它的唯一内容是「1992 勘误正文不可核对」。 -/
+theorem tkf92Erratum_gap :
+    ∀ (lam mu t : ℝ), 0 < lam → lam < mu → 0 ≤ t →
+      tkfExtinct lam mu t < 1 ∧ 0 ≤ tkfExtinct lam mu t := by
+  intro lam mu t hlam hlt ht
+  have hu0 : 0 < Real.exp ((lam - mu) * t) := Real.exp_pos _
+  have hue : Real.exp ((lam - mu) * t) ≤ 1 := by
+    rw [Real.exp_le_one_iff]
+    nlinarith
+  have hden : 0 < mu - lam * Real.exp ((lam - mu) * t) := by
+    have h2 : lam * Real.exp ((lam - mu) * t) ≤ lam * 1 :=
+      mul_le_mul_of_nonneg_left hue hlam.le
+    linarith
+  have hnum : 0 ≤ 1 - Real.exp ((lam - mu) * t) := by linarith
+  have hmu : 0 < mu := lt_trans hlam hlt
+  constructor
+  · rw [tkfExtinct_eq_gauge_div, ← mul_div_assoc]
+    exact (div_lt_one hden).mpr (mul_one_sub_lt hlt hu0 hue)
+  · rw [tkfExtinct_eq_gauge_div, ← mul_div_assoc]
+    exact div_nonneg (mul_nonneg hmu.le hnum) hden.le
+
+/-- ★B（反空真）：上一条缺口的假设 `0 < lam`、`lam < mu`、`0 ≤ t` 可满足
+（见证 `lam = 1`、`mu = 3`、`t = 0`），且结论把 `p'_0` 夹在 `[0,1)` 内。 -/
+example : (0 : ℝ) < 1 ∧ (1 : ℝ) < 3 ∧ (0 : ℝ) ≤ 0 ∧
+    tkfExtinct 1 3 0 < 1 ∧ 0 ≤ tkfExtinct 1 3 0 :=
+  ⟨one_pos, by norm_num, le_refl 0,
+    tkf92Erratum_gap 1 3 0 one_pos (by norm_num) (le_refl 0)⟩
+
+/-- ★B（非退化数值见证）：`lam = 1`、`mu = 3`、`t = 1` 时 `p'_0 = 3(1-e^{-2})/(3-e^{-2}) < 1`，
+且**严格为正**（故上界 `1` 不是靠 `p'_0 = 0` 蒙到的）。 -/
+example : 0 < tkfExtinct 1 3 1 ∧ tkfExtinct 1 3 1 < 1 := by
+  have h := tkf92Erratum_gap 1 3 1 one_pos (by norm_num) (by norm_num)
+  have hpos : 0 < tkfExtinct 1 3 1 := by
+    rw [tkfExtinct_eq_gauge_div]
+    have hlt1 : Real.exp ((1 - 3) * 1) < 1 := by
+      rw [Real.exp_lt_one_iff]
+      norm_num
+    have hlt3 : Real.exp ((1 - 3) * 1) < 3 := by linarith
+    have h1u : (0 : ℝ) < 1 - Real.exp ((1 - 3) * 1) := by linarith
+    have hden : (0 : ℝ) < 3 - 1 * Real.exp ((1 - 3) * 1) := by linarith
+    have hkey : (3 : ℝ) * ((1 - Real.exp ((1 - 3) * 1))
+        / (3 - 1 * Real.exp ((1 - 3) * 1)))
+        = 3 * (1 - Real.exp ((1 - 3) * 1))
+          / (3 - 1 * Real.exp ((1 - 3) * 1)) := by ring
+    rw [hkey]
+    exact div_pos (mul_pos (by norm_num) h1u) hden
+  exact ⟨hpos, h.1⟩
 
 end Phylo.Stat.TKF91

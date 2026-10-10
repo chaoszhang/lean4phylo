@@ -379,4 +379,44 @@ def level1QuartetSystem_gap : Prop :=
     (∀ Q : QuartetSystem, ∀ Y : Finset (Fin 5), Y.card = 4 → multiplicity Q Y = 1 ∨ multiplicity Q Y = 2) ∧
     (∃ (Q : QuartetSystem) (Y : Finset (Fin 5)), Y.card = 4 ∧ multiplicity Q Y = 2)
 
+/-! ## 8. ★E 空转判定：两条 `_gap` 的**退化见证**（登记本身无数学内容）
+
+下面把「(D1) 的 `m = 2` 分支 + (D1) 的双值约束」用**最小的退化数据**满足掉，
+以证明这两条登记的 `Prop` **不含**任何 level-1/quarnet 内容：
+
+* 第 6 条（`level1QuartetSystem_gap`）：`QuartetSystem := PUnit`，
+  `multiplicity _ Y := if Y.card = 4 then 2 else 0`。两个合取项都成立 ——
+  「双值约束」在 `card = 4` 上取 `2`（合法），「存在 `m = 2`」也由任何 4-元集见证；
+  而 **`QuartetSystem` 与 `multiplicity` 都是被存在量词绑定的自由变量**，
+  与「网络／qnet 的展示系统」**毫无关系**（那是 `Q(N)` 的内容，本库没有）。
+* 第 5 条（`quarnetRules_level1_gap`）：见 `quarnetRules_level1_gap_degenerate` ——
+  四个谓词（`minimallyDense`／`consistent`／`cyclative`／`saturated`）也是被绑定的自由变量，
+  取 `consistent = cyclative = saturated := fun F => F = ∅`、`minimallyDense := fun _ => False`
+  即同时满足 (a)（前提 `minimallyDense` 不可满足 ⇒ 蕴含空真）与 (b)（`F = ∅` 见证）。
+  ★ 注意 (b) 的 `∃ F, …` **确实可被 `F = ∅` 满足**，故这不是「前提矛盾」，是**真·空转**。 -/
+
+/-- ★E **第 6 条的空转见证**：`level1QuartetSystem_gap` 被最小退化数据满足。 -/
+theorem level1QuartetSystem_gap_degenerate : level1QuartetSystem_gap := by
+  refine ⟨PUnit, inferInstance, fun _ Y => if Y.card = 4 then 2 else 0, ?_, ?_⟩
+  · intro Q Y hY
+    right
+    simp [hY]
+  · refine ⟨PUnit.unit, {0, 1, 2, 3}, ?_, ?_⟩
+    · decide
+    · decide
+
+/-- ★E **第 5 条的空转见证**：`quarnetRules_level1_gap` 被最小退化数据满足 ——
+`minimallyDense := fun _ => False` 使 (a) 的蕴含**空真**；
+`consistent = cyclative = saturated := fun _ => True` 与 `displayedBy := fun _ _ => False`
+使 (b) 由**单元素** `F` 见证（★ 注意 (b) 的 `∃ F` **不能**用 `F = ∅`：那会要求
+`∀ N, ¬∀ q, q ∈ ∅ ↔ False`，而该双条件对每个 `N` 都**真**，故 `F = ∅` 反而**不**满足 (b)）。 -/
+theorem quarnetRules_level1_gap_degenerate : quarnetRules_level1_gap := by
+  refine ⟨PUnit, PUnit, inferInstance, inferInstance, fun _ _ => False,
+    fun _ => False, fun _ => True, fun _ => True, fun _ => True, fun _ => False, ?_, ?_⟩
+  · intro F hF
+    exact absurd hF (by simp)
+  · refine ⟨{PUnit.unit}, by simp, by simp, by simp, ?_, by simp⟩
+    intro N h
+    exact (h PUnit.unit).mp (by simp)
+
 end Split

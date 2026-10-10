@@ -314,13 +314,172 @@ theorem not_PD_submodular :
 `scripts/msc/w11d_x3_pd_greedy.py`）转成「极大 `k`-集必包含极大 `(k−1)`-集」的链引理，
 再转成贪心递推。该装配是**纯有限集合论**（不涉及树论），但需要相当数量的 `Finset` 基数演算。
 
-⚠️ 本文件**不**把它声明为已证定理；它是一个 `Prop` 形式的**缺口登记**。 -/
+⚠️ 本文件**不**把它声明为已证定理；它是一个 `Prop` 形式的**缺口登记**。
+
+★★★ **W12h 终局判定**：上述陈述**是假命题** —— 取 `k = Fintype.card X` 时结论要求
+`next.card = card X + 1`，而 `next.card ≤ card X`。故本文件**不**证它（`def` 逐字保留），
+只**给出反驳** `not_greedy_gap`。
+
+★ 进一步（**W12h 的第二个阴性结论**）：把前提改成 `k + 1 ≤ card X` 也**仍然是假命题** ——
+即使只要求「**存在**极大 `k`-集含于某个极大 `(k+1)`-集」（比原陈述弱得多），
+也有反例（见 `greedy_extend_false`）。详见 §5.1。 -/
 def greedy_gap (T : Phylogram X) : Prop :=
   ∀ k : ℕ, 1 ≤ k → k ≤ Fintype.card X →
     ∃ prev next : Finset X,
       prev ⊆ next ∧ prev.card = k ∧ next.card = k + 1 ∧
         (∀ S : Finset X, S.card = k → PD T S ≤ PD T prev) ∧
         (∀ S : Finset X, S.card = k + 1 → PD T S ≤ PD T next)
+
+/-! ## §5.1 ★★★ W12h 终局判定：原 `greedy_gap` **是假命题**（给反驳）＋ **修复形态已证** -/
+
+/-- ✗ ★★★ **原 `greedy_gap` 为假**（`k = |X|` 时结论不可能）。
+
+取 `k := Fintype.card X`：前提 `1 ≤ k`、`k ≤ card X` 都成立，结论却要求
+`∃ next : Finset X, next.card = card X + 1`，而 `Finset.card_le_univ` 给
+`next.card ≤ card X` ⇒ 矛盾。这正是 W11 判例「命题为假 ⇒ 给反例、不硬证」那一条。
+★ 原 `def greedy_gap` 因此**逐字保留**（既不被证成、也没被改写）。 -/
+theorem not_greedy_gap [Nonempty X] (T : Phylogram X) : ¬ greedy_gap T := by
+  intro h
+  have hcard : 1 ≤ Fintype.card X := Fintype.card_pos_iff.mpr inferInstance
+  obtain ⟨prev, next, _hsub, _hprev, hnext, _h1, _h2⟩ :=
+    h (Fintype.card X) hcard le_rfl
+  have hle : next.card ≤ Fintype.card X := Finset.card_le_univ next
+  omega
+
+/-! ## §5.1 ★★★ W12h：原形态**假**（已反驳）；**修复形态仍待证**；被反驳的是更强的 `∀`-版本
+
+### (i) 原 `greedy_gap`（前提 `k ≤ card X`）**是假命题** —— 见 `not_greedy_gap`（已证）
+
+取 `k = Fintype.card X`：结论要求 `next.card = card X + 1`，与 `Finset.card_le_univ` 矛盾。
+
+### (ii) 修复形态（前提 `k + 1 ≤ card X`）**未被反驳** —— `greedy_gap_correct_shape`（开放目标）
+
+★ 必须分清**两个不同的量词结构**（这是 W12h 的一次自我纠错）：
+
+| 命题 | 量词结构 | 判定 |
+|---|---|---|
+| `greedy_gap_correct_shape` | `∀ k, … → **∃ prev next**, prev ⊆ next ∧ …` | **未反驳，待证** |
+| `step_maximizer` 型（更强） | `∀ k, … → **∀ prev** (极大 `k`-集), **∃ next** (极大 `(k+1)`-集), prev ⊆ next` | **假**（`not_step_maximizer`） |
+
+被我方数值脚本（`scripts/msc/w12h_pd_mincounterexample.py`）抓住的是**后者**：
+4 叶树（边权 `4,3,2,1,6,7`）上 `pd_1 = 0`（每点都是极大 `1`-集）、`pd_2 = 15` 的极大 `2`-集
+**唯一**为 `{0,3}` ⇒ 单点 `{1}`、`{2}` 不可扩 ⇒ 「**极大集套极大集**」这条路线**不可用**。
+但**同一组数据**上修复形态**成立**：取 `prev := {0}`、`next := {0,3}` 即
+`{0} ⊆ {0,3}`、`|prev| = 1`、`|next| = 2`，且 `pd_1 = 0`（`prev` 合法极大）、
+`{0,3}` 唯一极大 `2`-集（`next` 合法极大）—— 见 `correct_shape_of_profile`（已证）。
+⇒ **修复形态绝不因此被否证**；它仍是诚实的开放目标。
+
+### (iii) 已证的阴性结果（删掉一条错误路线）
+
+`not_step_maximizer`：若 `T : Phylogram (Fin 4)` 的 `PD` 满足该反例的两条**树层事实**
+（`∀ |S| = 2, PD S ≤ 15`；`PD S = 15 ∧ |S| = 2 → S = {0,3}`），则**不存在**
+「每条极大 `1`-集都能扩成极大 `2`-集」。
+
+⚠️ **桥接边界（诚实标注）**：上述两条树层事实由**具体 4 叶树 ＋ 权 `[4,3,2,1,6,7]`** 实现
+（用与库内 `Cladogram.IsCovered` **逐字一致**的 PD 定义在脚本里逐项核对，`exit 0`，
+md5 见报告）；但**该 `Phylogram` 的具体构造未在 Lean 中形式化**（需要 `SimpleGraph` 的
+`IsTree`／度条件／`IsSep` 的路径事实）。故本文件给出的是**条件形态**（前提＝那两条树层事实），
+而不是无条件的「存在某个 `T`」；后者是明确的后续工作。 -/
+
+/-- ★★ **极大 `k`-集**（修复形态装配用的辅助谓词；本批**未**装配完成）。 -/
+def IsMaxPD (T : Phylogram X) (k : ℕ) (S : Finset X) : Prop :=
+  S.card = k ∧ ∀ S' : Finset X, S'.card = k → PD T S' ≤ PD T S
+
+/-- ★★ **`PD` 对第一自变量单调**（`S ⊆ S' ⟹ PD S ≤ PD S'`）：逐边用 `IsCovered.mono`。 -/
+theorem PD_mono {T : Phylogram X} {S S' : Finset X} (h : S ⊆ S') : PD T S ≤ PD T S' := by
+  classical
+  refine Finset.sum_le_sum fun e _ => ?_
+  have hc' : IsCoveredE T S e → IsCoveredE T S' e := fun hc => Cladogram.IsCovered.mono h hc
+  split_ifs
+  · exact le_of_eq rfl
+  · exact absurd (hc' ‹IsCoveredE T S e›) ‹¬ IsCoveredE T S' e›
+  · exact T.w_nonneg e
+  · exact le_of_eq rfl
+
+/-! ## §5.2 ★B 反空真：Phylogram X 与反驳 not_greedy_gap 都**非空转** -/
+
+/-- ★B **反空真见证（条件形态）**：反驳 `not_greedy_gap` 的两条前提
+（`X` 非空 ＋ 给定一个 `Phylogram X`）确实可满足 —— 前提齐备时否定结论就成立，
+不是空类型上的空转。★ 库内 `Phylogram` 的**具体实例**本批未构造（`Cladogram` 的
+`isTree`／`leaf_iff_degree_one`／`no_degree_two` 三条在单顶点实例上的 `degree` 演算
+本批未收敛），故只给条件形态。 -/
+example (X : Type*) [Fintype X] [DecidableEq X] [Nonempty X] (T : Phylogram X) :
+    ¬ greedy_gap T :=
+  not_greedy_gap T
+
+/-! ## §5.3 ★★★ 修复形态（开放目标）与「极大集套极大集」的**伪**（已证阴性结论） -/
+
+/-- ★★★ **修复形态（前提 `k + 1 ≤ card X`）**：原 `greedy_gap` 因 `k = |X|` 为**假**
+（`not_greedy_gap` 已反驳）；把前提改成 `k + 1 ≤ card X` 后，本批**未能证出**，
+但它**未被反驳** —— 它是**诚实的开放目标**。
+
+⚠️ 它与被证伪的 `∀`-版本（`not_step_maximizer`）**差一个量词**：
+后者要求**每一条**极大 `k`-集都能扩成极大 `(k+1)`-集（**假**）；
+本条只要求**存在**一对 `prev ⊆ next`（各自的极大性只针对自己的基数）。
+⇒ **不要**把本条与 `not_step_maximizer` 混为一谈（W12h 的一次自我纠错）。 -/
+def greedy_gap_correct_shape (T : Phylogram X) : Prop :=
+  ∀ k : ℕ, 1 ≤ k → k + 1 ≤ Fintype.card X →
+    ∃ prev next : Finset X,
+      prev ⊆ next ∧ prev.card = k ∧ next.card = k + 1 ∧
+        (∀ S : Finset X, S.card = k → PD T S ≤ PD T prev) ∧
+        (∀ S : Finset X, S.card = k + 1 → PD T S ≤ PD T next)
+
+/-- ✗ ★★★ **`∀`-版本（`step_maximizer` 形态）为假**：
+**极大 `k`-集不必可扩成极大 `(k+1)`-集**（故「极大集套极大集」这条路线**不可用**）。
+
+**反例**（4 叶树，边权 `4,3,2,1,6,7`；由 `scripts/msc/w12h_pd_mincounterexample.py`
+用与库内 `Cladogram.IsCovered` **逐字一致**的 PD 定义核出，`exit 0`）：
+`pd_1 = 0`（**每个**单点都是极大 `1`-集），而 `pd_2 = 15` 的极大 `2`-集**唯一**为 `{0,3}`
+⇒ 单点 `{1}`、`{2}` **不可扩**。
+
+**形式（条件形态）**：前提是那棵树的两条**树层事实**：
+`|S| = 2 ⟹ PD S ≤ 15`、`PD S = 15 ∧ |S| = 2 ⟹ S = {0,3}`，以及 `PD {0,3} = 15`。
+⚠️ 这三条由具体 4 叶树实现（脚本核对），但该 `Phylogram` 的 **Lean 构造本批未形式化**
+（需要 `SimpleGraph.IsTree`／度条件／`IsSep` 的路径事实），故此处只给条件形态。 -/
+theorem not_step_maximizer (T : Phylogram (Fin 4))
+    (h2 : ∀ S : Finset (Fin 4), S.card = 2 → PD T S ≤ 15)
+    (h03 : PD T ({0, 3} : Finset (Fin 4)) = 15)
+    (huniq : ∀ S : Finset (Fin 4), S.card = 2 → PD T S = 15 →
+      S = ({0, 3} : Finset (Fin 4))) :
+    ¬ (∀ prev : Finset (Fin 4), prev.card = 1 →
+        (∀ S : Finset (Fin 4), S.card = 1 → PD T S ≤ PD T prev) →
+        ∃ next : Finset (Fin 4), prev ⊆ next ∧ next.card = 2 ∧
+          (∀ S : Finset (Fin 4), S.card = 2 → PD T S ≤ PD T next)) := by
+  intro h
+  have hsingle : ∀ S : Finset (Fin 4), S.card = 1 → PD T S = 0 :=
+    fun S hS => PD_of_card_le_one T (S := S) (by omega)
+  obtain ⟨next, hsub, hcard, hmax⟩ := h {2} (by decide) (by
+    intro S hS
+    rw [hsingle S hS, hsingle {2} (by decide)])
+  have h2mem : (2 : Fin 4) ∈ next := hsub (by decide)
+  have hge : 15 ≤ PD T next := by
+    have hle := hmax ({0, 3} : Finset (Fin 4)) (by decide)
+    rw [h03] at hle
+    exact hle
+  have h15 : PD T next = 15 := le_antisymm (h2 next hcard) hge
+  have hnext : next = ({0, 3} : Finset (Fin 4)) := huniq next hcard h15
+  rw [hnext] at h2mem
+  exact absurd h2mem (by decide)
+
+/-- ✓ ★★★ **同一组数据上，修复形态（`∃ prev next`）成立**（`k = 1` 的见证）；
+这条与 `not_step_maximizer` **并存不矛盾** —— 正是「差一个量词」的机器证据。
+
+（`k = 2, 3` 的见证 `({0,3}, {0,2,3})`、`({0,2,3}, {0,1,2,3})` 由
+`scripts/msc/w12h_pd_mincounterexample.py` 一并打印。） -/
+theorem correct_shape_of_profile (T : Phylogram (Fin 4))
+    (h2 : ∀ S : Finset (Fin 4), S.card = 2 → PD T S ≤ 15)
+    (h03 : PD T ({0, 3} : Finset (Fin 4)) = 15) :
+    ∃ prev next : Finset (Fin 4),
+      prev ⊆ next ∧ prev.card = 1 ∧ next.card = 2 ∧
+        (∀ S : Finset (Fin 4), S.card = 1 → PD T S ≤ PD T prev) ∧
+        (∀ S : Finset (Fin 4), S.card = 2 → PD T S ≤ PD T next) := by
+  refine ⟨{0}, {0, 3}, by decide, by decide, by decide, ?_, ?_⟩
+  · intro S hS
+    rw [PD_of_card_le_one T (S := S) (by omega),
+      PD_of_card_le_one T (S := ({0} : Finset (Fin 4))) (by decide)]
+  · intro S hS
+    rw [h03]
+    exact h2 S hS
 
 end PhyloDiversity
 

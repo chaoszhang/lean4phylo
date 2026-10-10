@@ -41,3 +41,8 @@ references/
 # 报废件（移出仓库视线的历史产物，见 W12 ★E）
 _retired/
 _scripts_tmp/
+
+# Python 运行产物（判据脚本在 repo 内被 python3 直接跑时会生成 __pycache__）
+__pycache__/
+*.pyc
+
