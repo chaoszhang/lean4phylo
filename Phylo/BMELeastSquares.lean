@@ -625,6 +625,41 @@ theorem sideDoublingSum_nonneg (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
   refine Finset.sum_nonneg fun x _ => ?_
   exact pow_nonneg (by norm_num) _
 
+/-! ## 11. ★★★ (d) 的**叶侧实例**（W12e19）：挂边上的一侧倍增和 = 1
+
+(d)（§7 `BmePauplinNormalization`）在 §10 被归约为「每条边**两侧**的倍增和 `D_e = 1`」。
+本节落下其中**最便宜的一半**：
+
+* ★★ `pathOf_self_edges_eq_zero`：`(T.pathOf u u).edges.length = 0`（由路径唯一性 `pathOf u u = nil`）；
+* ★★★ `sideDoublingSum_leaf_edge`：**叶 `x` 在其挂边 `s(T.leaf x, b)` 上的那一侧**
+　`L_{leaf x}(s(x,b)) = {x}`（★★ `sideLeaves_leaf_edge`）且 `d = 0` ⇒ **`D = (1/2)^0 = 1`** ✓。
+
+⚠️ 边界如实：本节**只**证了挂边的**叶侧**；(d) 本体（**每条边的两侧**都 `= 1`，等价于 §10 的
+「子树倍增和恒等式」）**仍未证** ✗ —— 需要先落**递归恒等式**
+`D_e(u) = Σ_{v ∈ N(u) ∖ (朝 e 的那一支)} (1/2)·D_{s(u,v)}(v)`
+（把 `sideLeaves e u` 按 `u` 的邻接分支**分划**；库内有 `sideVertices`/`SideSubtree` 的分层 ✓
+但分支分划的 Finset 记账未完成 ✗），见 W12e19 报告。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **到自身的唯一路径没有边**（`pathOf u u = nil`，由路径唯一性）。 -/
+theorem pathOf_self_edges_eq_zero (T : Cladogram X) (u : T.V) :
+    (T.pathOf u u).edges.length = 0 := by
+  have hnil : T.pathOf u u = SimpleGraph.Walk.nil :=
+    ((T.existsUnique_path u u).choose_spec.2 SimpleGraph.Walk.nil
+      SimpleGraph.Walk.IsPath.nil).symm
+  rw [hnil]
+  simp
+
+/-- ★★★ **(d) 在挂边上的一侧实例**：叶 `x` 与其挂边 `s(T.leaf x, b)`（`Adj`）——
+`L_{leaf x}(s(x,b)) = {x}` 且到自身的路径无`边` ⇒ `D = (1/2)^0 = 1` ✓
+（这正是 (d)「每条边两侧的倍增和 = 1」中**叶侧**那一半）。 -/
+theorem sideDoublingSum_leaf_edge (T : Cladogram X) {b : T.V} {x : X}
+    (h : T.graph.Adj (T.leaf x) b) :
+    sideDoublingSum T s(T.leaf x, b) (T.leaf x) = 1 := by
+  rw [sideDoublingSum, Cladogram.sideLeaves_leaf_edge T h, Finset.sum_singleton,
+    pathOf_self_edges_eq_zero T (T.leaf x)]
+  simp
+
 end Dissimilarity
 
 end NJ
