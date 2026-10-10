@@ -83,6 +83,7 @@ import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.FiveTaxonLemma4
 import Phylo.Stat.HadamardTransform
 import Phylo.Stat.Identifiability
+import Phylo.Stat.IndependentContrasts
 import Phylo.Stat.InvariantsRank
 import Phylo.Stat.KingmanCoalescent
 import Phylo.Stat.KingmanJumpChain
