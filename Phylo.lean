@@ -45,6 +45,7 @@ import Phylo.Mathlib.Walk
 import Phylo.PauplinFormula
 import Phylo.PerfectPhylogeny
 import Phylo.PhyloDiversity
+import Phylo.PhyloDiversitySubtree
 import Phylo.PhylogramContract
 import Phylo.PositiveRealization
 import Phylo.QuarnetRules
