@@ -24,6 +24,7 @@ import Phylo.Compatibility
 import Phylo.Consensus
 import Phylo.ConsensusAxioms
 import Phylo.ConsensusExtra
+import Phylo.ConsensusGreedy
 import Phylo.ContractCount
 import Phylo.Core
 import Phylo.Dendrogram
