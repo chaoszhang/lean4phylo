@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.KingmanCoalescent
 import Phylo.Stat.KingmanJumpChain
+import Phylo.Stat.KingmanStep
 
 /-!
 # `Phylo.Stat.KingmanLaw` —— 把 **跳链律** 与 **逗留时间律** 接成 Theorem 1
@@ -255,6 +256,180 @@ theorem jumpMeasure_singleton (n k : ℕ) (Q : PartK n k) :
       Set.indicator_of_notMem (by simpa [Set.mem_singleton_iff] using hb), smul_zero]
   · intro h
     exact absurd (Finset.mem_univ Q) h
+
+/-! ## W11g2：把**一步联合律**的两个边缘从「逐点算术」搬成「测度等式」
+
+前人的 `W11g_Probe/W11gIso.lean` 已把**全部逐点算术**打通；本节把簿记补齐：
+
+1. **逐点**：`ite_smul_apply` ＋ `step_term_left` ⇒ `hterm`（`Measure.sum` 的每一项）；
+2. **内层**：`inner_merge_filter` ⇒ `inner_sum_left`（固定 `Q`，对去向求和）；
+3. **外层**：`Finset.sum_product` ＋ `inner_ite_pull`，最后把
+   `∑_{Q ∈ univ.filter (· ∈ S)}` 与 `∑_{Q ∈ S}` **两种记法对齐**（`Finset.sum_filter` ＋ 指标集合相同）
+   才能用 `Finset.sum_congr rfl` 收口 —— 这正是前人卡住的那一步。
+-/
+
+open Phylo.Stat.KingmanStep (targets card_mergeTargets_cast sum_parents_partitionProb)
+
+/-- `(if p then c • μ else 0) s = if p then c * μ s else 0`（本库**无** `Measure.zero_apply`）。 -/
+theorem ite_smul_apply {δ : Type*} [MeasurableSpace δ] (p : Prop) [Decidable p]
+    (c : ENNReal) (μ : Measure δ) (s : Set δ) :
+    ((if p then c • μ else 0) : Measure δ) s = (if p then c * μ s else 0) := by
+  by_cases h : p
+  · rw [ite_eq_left h, ite_eq_left h, Measure.smul_apply, smul_eq_mul]
+  · rw [ite_eq_right h, ite_eq_right h, Measure.coe_zero, Pi.zero_apply]
+
+/-- 单点质量在 `↑S ×ˢ univ` 上的取值。 -/
+theorem dirac_prod_univ_left (n k : ℕ) (S : Finset (PartK n (k+1))) (Q : PartK n (k+1))
+    (y : PartK n k) :
+    (Measure.dirac (Q, y) : Measure (PartK n (k+1) × PartK n k))
+        (↑S ×ˢ (Set.univ : Set (PartK n k))) = if Q ∈ S then 1 else 0 := by
+  by_cases hQ : Q ∈ S
+  · rw [ite_eq_left hQ, Measure.dirac_apply_of_mem (show (Q, y) ∈ (↑S ×ˢ (Set.univ : Set (PartK n k)))
+      from Set.mem_prod.mpr ⟨hQ, Set.mem_univ _⟩)]
+  · rw [ite_eq_right hQ, Measure.dirac_apply]
+    exact Set.indicator_of_notMem (by
+      intro hx
+      exact hQ (Set.mem_prod.mp hx).1) (1 : PartK n (k+1) × PartK n k → ENNReal)
+
+/-- 单项 `p` 在 `↑S ×ˢ univ` 上的取值（`smul` ＋ `dirac`）。 -/
+theorem step_term_left (n k : ℕ) (S : Finset (PartK n (k+1))) (p : PartK n (k+1) × PartK n k) :
+    ((ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) •
+        (Measure.dirac p : Measure (PartK n (k+1) × PartK n k))) :
+        Measure (PartK n (k+1) × PartK n k)) (↑S ×ˢ (Set.univ : Set (PartK n k)))
+      = ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) *
+          (if p.1 ∈ S then 1 else 0) := by
+  rw [Measure.smul_apply, smul_eq_mul, dirac_prod_univ_left n k S p.1 p.2, mul_comm]
+
+/-- ★ 固定 `Q`：`C(k+1,2)` 个去向各分 `w(Q)/C(k+1,2)`，加起来 = `w(Q)`（**`ENNReal` 口径**）。 -/
+theorem sum_targets_jumpWeight_enn (n k : ℕ) (hk0 : 1 ≤ k) (Q : PartK n (k+1)) :
+    (∑ _y ∈ targets n k Q,
+        ENNReal.ofReal (jumpWeight n (k+1) Q * (((k+1).choose 2 : ℕ) : ℝ)⁻¹))
+      = ENNReal.ofReal (jumpWeight n (k+1) Q) := by
+  have hne : (((k+1).choose 2 : ℕ) : ℝ) ≠ 0 := by
+    have hpos : 0 < (k+1).choose 2 := Nat.choose_pos (by omega)
+    exact_mod_cast Nat.pos_iff_ne_zero.mp hpos
+  rw [Finset.sum_const, nsmul_eq_mul]
+  rw [show (((targets n k Q).card : ℕ) : ENNReal) =
+      ENNReal.ofReal (((targets n k Q).card : ℝ)) from (ENNReal.ofReal_natCast _).symm]
+  rw [card_mergeTargets_cast (n := n) (k := k) Q]
+  rw [← ENNReal.ofReal_mul (Nat.cast_nonneg ((k+1).choose 2))]
+  rw [show ((((k+1).choose 2 : ℕ) : ℝ)) * (jumpWeight n (k+1) Q * (((k+1).choose 2 : ℕ) : ℝ)⁻¹)
+      = jumpWeight n (k+1) Q from by
+    rw [mul_comm (jumpWeight n (k+1) Q)]
+    rw [← mul_assoc, mul_inv_cancel₀ hne, one_mul]]
+
+/-- ★ 内层：把 `if MergeInto` 换成「对去向集合求和」。 -/
+theorem inner_merge_filter (n k : ℕ) (Q : PartK n (k+1)) (a : ENNReal) :
+    (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+        (if MergeInto Q.1 y.1 then a else 0))
+      = ∑ _y ∈ targets n k Q, a := by
+  rw [show (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+        (if MergeInto Q.1 y.1 then a else 0))
+      = (∑ y ∈ (Finset.univ : Finset (PartK n k)).filter (fun y => MergeInto Q.1 y.1), a) from
+    (Finset.sum_filter (fun y : PartK n k => MergeInto Q.1 y.1) (fun _ => a)).symm]
+  rw [show (Finset.univ.filter (fun y : PartK n k => MergeInto Q.1 y.1)) = targets n k Q
+      from rfl]
+
+/-- ★ 内层（固定 `p`）：把 `(if p ∈ S …)` 提出 `∑_y`。 -/
+theorem inner_ite_pull (n k : ℕ) (S : Finset (PartK n (k+1))) (p : PartK n (k+1)) :
+    (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+        (if MergeInto p.1 y.1 then
+          ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) *
+            (if p ∈ S then 1 else 0) else 0))
+      = (if p ∈ S then
+          (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+            (if MergeInto p.1 y.1 then
+              ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) else 0))
+        else 0) := by
+  by_cases hp : p ∈ S
+  · rw [ite_eq_left hp, ite_eq_left hp]
+    exact Finset.sum_congr rfl (fun y _ => by
+      by_cases hM : MergeInto p.1 y.1
+      · rw [ite_eq_left hM, ite_eq_left hM, mul_one]
+      · rw [ite_eq_right hM, ite_eq_right hM])
+  · rw [ite_eq_right hp, ite_eq_right hp]
+    exact Finset.sum_eq_zero (fun y _ => by
+      by_cases hM : MergeInto p.1 y.1
+      · rw [ite_eq_left hM, mul_zero]
+      · rw [ite_eq_right hM])
+
+/-- ★ 内层（固定 `p`）：`∑_y (if MergeInto p y then A else 0) = ofReal (w p)`。 -/
+theorem inner_sum_left (n k : ℕ) (hk0 : 1 ≤ k) (p : PartK n (k+1)) :
+    (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+        (if MergeInto p.1 y.1 then
+          ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) else 0))
+      = ENNReal.ofReal (jumpWeight n (k+1) p) := by
+  rw [inner_merge_filter n k p
+    (ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹))]
+  exact sum_targets_jumpWeight_enn n k hk0 p
+
+/-- ★★★ **左边缘（有限矩形形式）**：`jumpStepLaw n k (↑S ×ˢ univ) = Σ_{Q ∈ S} w(Q)`。
+
+（这是 `(jumpStepLaw n k).fst = jumpMeasure n (k+1)` 的**唯一**内容：
+后者由 `Measure.ext_of_singleton` 把 `S` 取单点集即得。） -/
+theorem jumpStepLaw_fst_finset (n k : ℕ) (hk0 : 1 ≤ k)
+    (S : Finset (PartK n (k + 1))) :
+    jumpStepLaw n k (↑S ×ˢ Set.univ) = ∑ Q ∈ S, ENNReal.ofReal (jumpWeight n (k + 1) Q) := by
+  have hfg : (jumpStepLaw n k : Measure (PartK n (k+1) × PartK n k))
+      = Measure.sum (fun x : PartK n (k+1) × PartK n k =>
+          (if MergeInto x.1.1 x.2.1 then
+            ENNReal.ofReal (jumpWeight n (k+1) x.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) •
+              (Measure.dirac x : Measure (PartK n (k+1) × PartK n k)) else 0)) := by
+    rw [jumpStepLaw]
+  have hterm : ∀ p : PartK n (k+1) × PartK n k,
+      ((if MergeInto p.1.1 p.2.1 then
+          ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) •
+            (Measure.dirac p : Measure (PartK n (k+1) × PartK n k)) else 0) :
+          Measure (PartK n (k+1) × PartK n k)) (↑S ×ˢ (Set.univ : Set (PartK n k)))
+        = (if MergeInto p.1.1 p.2.1 then
+            ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) *
+              (if p.1 ∈ S then 1 else 0) else 0) := by
+    intro p
+    rw [ite_smul_apply]
+    by_cases hM : MergeInto p.1.1 p.2.1
+    · rw [ite_eq_left hM, ite_eq_left hM]
+      exact step_term_left n k S p
+    · rw [ite_eq_right hM, ite_eq_right hM]
+  rw [hfg, Measure.sum_apply_of_countable, tsum_fintype,
+    show (Finset.univ : Finset (PartK n (k+1) × PartK n k))
+      = (Finset.univ : Finset (PartK n (k+1))) ×ˢ (Finset.univ : Finset (PartK n k)) from
+    Finset.univ_product_univ.symm]
+  rw [show (∑ p ∈ (Finset.univ : Finset (PartK n (k+1))) ×ˢ (Finset.univ : Finset (PartK n k)),
+        ((if MergeInto p.1.1 p.2.1 then
+          ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) •
+            (Measure.dirac p : Measure (PartK n (k+1) × PartK n k)) else 0) :
+          Measure (PartK n (k+1) × PartK n k)) (↑S ×ˢ (Set.univ : Set (PartK n k))))
+      = ∑ p ∈ (Finset.univ : Finset (PartK n (k+1))) ×ˢ (Finset.univ : Finset (PartK n k)),
+        (if MergeInto p.1.1 p.2.1 then
+          ENNReal.ofReal (jumpWeight n (k+1) p.1 * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) *
+            (if p.1 ∈ S then 1 else 0) else 0)
+      from Finset.sum_congr rfl (fun p _ => hterm p)]
+  rw [Finset.sum_product]
+  rw [show (∑ p ∈ (Finset.univ : Finset (PartK n (k+1))),
+        ∑ y ∈ (Finset.univ : Finset (PartK n k)),
+          (if MergeInto p.1 y.1 then
+            ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) *
+              (if p ∈ S then 1 else 0) else 0))
+      = ∑ p ∈ (Finset.univ : Finset (PartK n (k+1))),
+          (if p ∈ S then
+            (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+              (if MergeInto p.1 y.1 then
+                ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) else 0))
+          else 0)
+      from Finset.sum_congr rfl (fun p _ => inner_ite_pull n k S p)]
+  -- ★ 卡点收口：两侧记法不同（`S` vs `univ.filter (· ∈ S)`），先**统一记法**再 `sum_congr`。
+  have hfilter : (Finset.univ.filter (fun Q : PartK n (k+1) => Q ∈ S)) = S := by
+    ext Q
+    simp
+  rw [show (∑ p ∈ (Finset.univ : Finset (PartK n (k+1))),
+        (if p ∈ S then
+          (∑ y ∈ (Finset.univ : Finset (PartK n k)),
+            (if MergeInto p.1 y.1 then
+              ENNReal.ofReal (jumpWeight n (k+1) p * (((k+1).choose 2 : ℕ) : ℝ)⁻¹) else 0))
+        else 0))
+      = ∑ Q ∈ S, ENNReal.ofReal (jumpWeight n (k+1) Q) from by
+    rw [← Finset.sum_filter, hfilter]
+    exact Finset.sum_congr rfl (fun Q _ => inner_sum_left n k hk0 Q)]
 
 /-! ## 仍是缺口的：一步联合律的**两个边缘等式**（精确记为可检查的 `Prop`）
 
