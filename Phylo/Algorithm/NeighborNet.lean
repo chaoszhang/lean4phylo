@@ -2831,6 +2831,20 @@ theorem Alm_comp_Mlm (n : ℕ) (δ : Pair n → ℝ) : Alm n (Mlm n δ) = δ := 
   rw [h1]
   exact hw
 
+/-! ### 11.10 第 5 步 ①（W12g-17）：打包族 ＋ 显式权重的**恒等**
+
+`phyleticDist (arcFinset n) (weightOf n δ) x y = pairVal δ x y`：
+`Finset.sum_image`（`arcSplit_injective` ⇒ 逆像唯一）把 Finset 和换成弧族和 ⇒ `weightOf_arcSplit`
+⇒ `pairVal_alm` 反向 ⇒ **`Alm_comp_Mlm`** ✓。 -/
+
+/-- ★★★ **恒等**：打包后的环形族 ＋ 显式权重 `weightOf n δ` 实现点对函数 `δ`。 -/
+theorem phyleticDist_arcFinset (n : ℕ) (δ : Pair n → ℝ) (x y : Fin n) :
+    phyleticDist (arcFinset n) (weightOf n δ) x y = pairVal δ x y := by
+  change (∑ s ∈ arcFinset n, weightOf n δ s * sepInd s x y) = pairVal δ x y
+  rw [arcFinset, Finset.sum_image (fun a _ b _ h => arcSplit_injective n h)]
+  simp only [weightOf_arcSplit]
+  rw [← pairVal_alm n (Mlm n δ) x y, Alm_comp_Mlm n δ]
+
 end FunctionalMaterial
 
 end WeightAlgebra
