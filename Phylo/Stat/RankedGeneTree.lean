@@ -183,6 +183,152 @@ def blocksOf (n : ℕ) (r : Fin n → Fin n) : Finset (Finset (Fin n)) :=
 def cladesOf (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n) : Finset (Finset (Fin n)) :=
   (Finset.range n).biUnion (fun L => blocksOf n (chainMap n f L))
 
+/-! ### §1.05 `cladesOf` 的**结构引理**（第九轮新增）
+
+这些是 `cladesOf` 与「树偏序」之间的**第一批结构事实**，供 `HookLength.lean` 的
+hook-length 公式使用（后者需要 `LaminarFamily T`）。
+
+* `stepMap_congr` / `foldl_stepMap_congr`：合并只让纤维**变粗**；
+* `stepList_succ` / `chainMap_succ`：`chainMap` 的逐步展开；
+* ★ **`chainMap_mono`**：步数越大，纤维越粗（`L` 单调）；
+* **`block_subset_of_le`**：同一元素在较粗层的块包含其在较细层的块；
+* ★★ **`laminarFamily_cladesOf`**：**`cladesOf n f` 是镶嵌族**
+  （同一棵树的两个 clade 必然嵌套或互不相交）
+  ⇒ 这正是 `LE_mul_prod_hook_eq_factorial` 对 `T = cladesOf n f` 所需的假设。 -/
+
+/-- `stepMap` 把同一个块里的元素仍映到同一个值（纤维只**变粗**，不变细）。 -/
+theorem stepMap_congr {n : ℕ} (r : Fin n → Fin n) (x y : Fin n) {z w : Fin n}
+    (h : r z = r w) : stepMap r x y z = stepMap r x y w := by
+  simp only [stepMap, h]
+
+/-- 折叠任意步序列后，纤维仍然只变粗。 -/
+theorem foldl_stepMap_congr {n : ℕ} (l : List (Fin n × Fin n)) (r : Fin n → Fin n)
+    {z w : Fin n} (h : r z = r w) :
+    (l.foldl (fun r p => stepMap r p.1 p.2) r) z
+      = (l.foldl (fun r p => stepMap r p.1 p.2) r) w := by
+  induction l generalizing r with
+  | nil => exact h
+  | cons p t ih => exact ih (stepMap r p.1 p.2) (stepMap_congr r p.1 p.2 h)
+
+/-- 第 `L` 步之前用到的合并序列（`filterMap` 形式，与 `chainMap` 的定义一致）。 -/
+def stepList (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n) (L : ℕ) : List (Fin n × Fin n) :=
+  (List.range L).filterMap (fun k => if h : k < n - 1 then some (f ⟨k, h⟩) else none)
+
+/-- `chainMap` 就是 `stepList` 上的折叠。 -/
+theorem chainMap_eq_foldl {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) (L : ℕ) :
+    chainMap n f L = (stepList n f L).foldl (fun r p => stepMap r p.1 p.2) id := rfl
+
+theorem stepList_succ {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) (L : ℕ) :
+    stepList n f (L + 1)
+      = stepList n f L ++ (if h : L < n - 1 then [f ⟨L, h⟩] else []) := by
+  simp only [stepList, List.range_succ, List.filterMap_append]
+  split_ifs with h <;> simp [h]
+
+/-- `chainMap` 的**逐步展开**：第 `L+1` 步要么多合并一对，要么（`L ≥ n-1` 之后）不变。 -/
+theorem chainMap_succ {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) (L : ℕ) :
+    chainMap n f (L + 1)
+      = if h : L < n - 1 then stepMap (chainMap n f L) (f ⟨L, h⟩).1 (f ⟨L, h⟩).2
+        else chainMap n f L := by
+  rw [chainMap_eq_foldl, chainMap_eq_foldl, stepList_succ, List.foldl_append]
+  split_ifs with h
+  · simp [List.foldl]
+  · simp
+
+/-- ★ **`chainMap` 单调**：步数越大，纤维越粗
+（`z` 与 `w` 在较细层同块 ⇒ 在较粗层也同块）。 -/
+theorem chainMap_mono {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) (L₁ L₂ : ℕ)
+    (hle : L₁ ≤ L₂) : ∀ z w : Fin n,
+      chainMap n f L₁ z = chainMap n f L₁ w → chainMap n f L₂ z = chainMap n f L₂ w := by
+  induction L₂ generalizing L₁ with
+  | zero =>
+    rw [Nat.eq_zero_of_le_zero hle]
+    exact fun z w h => h
+  | succ L ih =>
+    rcases Nat.eq_or_lt_of_le hle with heq | hlt
+    · subst heq; exact fun z w h => h
+    · have h1 := ih (L₁ := L₁) (by omega)
+      intro z w hzw
+      have h2 : chainMap n f L z = chainMap n f L w := h1 z w hzw
+      rw [chainMap_succ f L]
+      split_ifs with h
+      · exact stepMap_congr _ _ _ h2
+      · exact h2
+
+/-- 同一元素在**较粗层**的块包含其在**较细层**的块。 -/
+theorem block_subset_of_le {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) {L₁ L₂ : ℕ}
+    (hle : L₁ ≤ L₂) (w : Fin n) :
+    (Finset.univ.filter (fun z => chainMap n f L₁ z = chainMap n f L₁ w))
+      ⊆ (Finset.univ.filter (fun z => chainMap n f L₂ z = chainMap n f L₂ w)) := by
+  intro z hz
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hz ⊢
+  exact chainMap_mono f L₁ L₂ hle z w hz
+
+/-- ★★ **`cladesOf n f` 是镶嵌族**：同一棵树的两个 clade 必然**嵌套或互不相交**。
+
+（`D` 取自第 `L₁` 层、`E` 取自第 `L₂` 层；不妨 `L₁ ≤ L₂`。
+由 `block_subset_of_le`，`D` 含于第 `L₂` 层中含其代表元的块；
+而 `E` 也是第 `L₂` 层的块，两块要么相等要么不交 —— 得到 `D ⊆ E` 或 `D ∩ E = ∅`。） -/
+theorem laminarFamily_cladesOf {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) :
+    LaminarFamily (cladesOf n f) := by
+  intro A hA B hB
+  obtain ⟨L₁, -, hAblk⟩ : ∃ L ∈ Finset.range n, A ∈ blocksOf n (chainMap n f L) := by
+    simpa only [cladesOf, Finset.mem_biUnion] using hA
+  obtain ⟨L₂, -, hBblk⟩ : ∃ L ∈ Finset.range n, B ∈ blocksOf n (chainMap n f L) := by
+    simpa only [cladesOf, Finset.mem_biUnion] using hB
+  obtain ⟨w₁, hw₁⟩ :
+      ∃ w, Finset.univ.filter (fun z => chainMap n f L₁ z = chainMap n f L₁ w) = A := by
+    simpa only [blocksOf, Finset.mem_image, Finset.mem_univ, true_and] using hAblk
+  obtain ⟨w₂, hw₂⟩ :
+      ∃ w, Finset.univ.filter (fun z => chainMap n f L₂ z = chainMap n f L₂ w) = B := by
+    simpa only [blocksOf, Finset.mem_image, Finset.mem_univ, true_and] using hBblk
+  rcases le_total L₁ L₂ with hle | hle
+  · rcases eq_or_ne (chainMap n f L₂ w₁) (chainMap n f L₂ w₂) with heq | hne
+    · left
+      have hAsub : A ⊆ Finset.univ.filter
+          (fun z => chainMap n f L₂ z = chainMap n f L₂ w₁) := by
+        rw [← hw₁]; exact block_subset_of_le f hle w₁
+      rw [← hw₂]
+      refine hAsub.trans ?_
+      intro z hz
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hz ⊢
+      rw [hz, heq]
+    · right; right
+      rw [Finset.disjoint_iff_inter_eq_empty, ← Finset.not_nonempty_iff_eq_empty]
+      rintro ⟨z, hz⟩
+      rw [Finset.mem_inter] at hz
+      obtain ⟨hzA, hzB⟩ := hz
+      have hAsub : A ⊆ Finset.univ.filter
+          (fun z => chainMap n f L₂ z = chainMap n f L₂ w₁) := by
+        rw [← hw₁]; exact block_subset_of_le f hle w₁
+      have h1 := hAsub hzA
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at h1
+      rw [← hw₂] at hzB
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hzB
+      exact hne (h1.symm.trans hzB)
+  · rcases eq_or_ne (chainMap n f L₁ w₁) (chainMap n f L₁ w₂) with heq | hne
+    · right; left
+      have hBsub : B ⊆ Finset.univ.filter
+          (fun z => chainMap n f L₁ z = chainMap n f L₁ w₂) := by
+        rw [← hw₂]; exact block_subset_of_le f hle w₂
+      rw [← hw₁]
+      refine hBsub.trans ?_
+      intro z hz
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hz ⊢
+      rw [hz, heq]
+    · right; right
+      rw [Finset.disjoint_iff_inter_eq_empty, ← Finset.not_nonempty_iff_eq_empty]
+      rintro ⟨z, hz⟩
+      rw [Finset.mem_inter] at hz
+      obtain ⟨hzA, hzB⟩ := hz
+      have hBsub : B ⊆ Finset.univ.filter
+          (fun z => chainMap n f L₁ z = chainMap n f L₁ w₂) := by
+        rw [← hw₂]; exact block_subset_of_le f hle w₂
+      have h1 := hBsub hzB
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at h1
+      rw [← hw₁] at hzA
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hzA
+      exact hne (hzA.symm.trans h1)
+
 /-! ### §1.1 有限枚举（`n ≤ 4`） -/
 
 /-- ★★★ `n = 2`：ranked 树恰 `1` 个（`= H_2 = 1!·0!/2^0`）。 -/
@@ -216,6 +362,27 @@ def clades_01_23 : Finset (Finset (Fin 4)) :=
 /-- `Fin 4` 上拓扑 `(((0,1),2),3)`（caterpillar 形）的 clade 集。 -/
 def clades_012_3 : Finset (Finset (Fin 4)) :=
   ({{0}, {1}, {2}, {3}, {0, 1}, {0, 1, 2}, Finset.univ} : Finset (Finset (Fin 4)))
+
+/-- ★B：上面三个**枚举出来的** clade 集都确实是镶嵌族（`fin_cases` 逐例 + `decide`）。
+
+⚠️ `LaminarFamily` 的 `Decidable` 实例是**经典**的（`propDecidable`），
+故 `decide` 会卡在 `choice`，**必须** `fin_cases <;> decide` 展开成员。 -/
+theorem laminarFamily_clades_01_2 : LaminarFamily clades_01_2 := by
+  intro A hA B hB
+  fin_cases hA <;> fin_cases hB <;> decide
+
+theorem laminarFamily_clades_01_23 : LaminarFamily clades_01_23 := by
+  intro A hA B hB
+  fin_cases hA <;> fin_cases hB <;> decide
+
+theorem laminarFamily_clades_012_3 : LaminarFamily clades_012_3 := by
+  intro A hA B hB
+  fin_cases hA <;> fin_cases hB <;> decide
+
+/-- ★B：一般定理 `laminarFamily_cladesOf` 的**非空实例**（对任意 `f` 都成立，
+不要求 `IsMergeHistory` —— 因为 `cladesOf` 的块结构本身就给镶嵌性）。 -/
+example (f : Fin (3 - 1) → Fin 3 × Fin 3) : LaminarFamily (cladesOf 3 f) :=
+  laminarFamily_cladesOf f
 
 set_option maxRecDepth 100000 in
 /-- ★★ **Remark 6 的 `n = 3` 实例**：拓扑 `((0,1),2)` 恰有 `1` 个 ranking
@@ -654,9 +821,23 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
      `LE Tcat univ = 1`、`LE Tbal univ = 2` —— **恰好等于既有纤维数**
      `rankedFiberCount_012_3 = 1`、`rankedFiberCount_01_23 = 2` ✓
      （仅**具体拓扑数值一致**，不是一般 `n` 的双射）。
-   * ⬜ **仍缺 (ii)**：`LE` 与 `rankedFiberCount` 的**显式双射**（对任意 `n`），
-     即「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」—— 这才是
-     `rankedFiberCount_gap` 的组合实体。
+   * **★ 第九轮：`cladesOf` 的**结构引理**已落地**（本文件 §1.05）：
+     `stepMap_congr` / `foldl_stepMap_congr` / `stepList` / `chainMap_eq_foldl` /
+     `stepList_succ` / **`chainMap_succ`** / ★ **`chainMap_mono`**（步数越大纤维越粗）/
+     `block_subset_of_le` / ★★ **`laminarFamily_cladesOf : LaminarFamily (cladesOf n f)`**
+     ＋ ★B `laminarFamily_clades_01_2 / _01_23 / _012_3`（三个枚举 clade 集）。
+     ⇒ 这把 `HookLength.lean` 的 `LE_mul_prod_hook_eq_factorial` **所需的
+     `LaminarFamily T` 假设在 `T = cladesOf n f` 上真正兑现了**（此前只是假设）。
+   * ⬜ **仍缺 (ii) 的精确剩余内容**（如实登记，**未**作为定理声明）：
+     ```text
+     ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+       = LE (cladesOf n f) Finset.univ hU          -- hU : univ ∈ cladesOf n f
+     ```
+     即「**纤维数 = `LE`**」。左端是**第一性**定义（枚举 `mergeHistories` 后按 clade 集分纤维），
+     右端是 §8 的**多项式系数递推**定义；把两者接起来需要
+     「`cladesOf` 的 clade 包含偏序的**线性扩展** ⟺ 合并史的 **ranking**」的**显式双射**。
+     ⚠️ 本轮**只**完成了它的**前提**（镶嵌性），**没有**给出双射 ⇒ 一般 `n` 的
+     `rankedFiberCount_gap` **仍然开着**。
    ⬜ **仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
    （需自造 `LE` 的归纳原理 + `Finset.prod_attach` 对齐 —— Lean 基础设施问题），
    以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
