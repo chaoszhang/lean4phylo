@@ -2244,6 +2244,97 @@ theorem arcSplit_isCyclicArc (n : ℕ) (a : Arc n) :
     IsCyclicArc (Equiv.refl (Fin n)) (arcSplit a).sideA :=
   ⟨a.1.1, a.1.2, a.2.1, Or.inl (arcSplit_sideA a)⟩
 
+/-! ### 11.2 三支泛函的隔离原料（W12g-8）：`weights_eq_of_functional` 的 `hper`/`huniq`
+
+§7 的收口工具 `weights_eq_of_functional` 要四样东西：`hlin`（泛函线性）、`hz`（差的像为 0）、
+**`hper`**（逐弧隔离）、**`huniq`**（坐标唯一）。本节把 `hper`/`huniq` 的原料一次备齐：
+* 位置 helper（`dPrev/dNext/hZero/hOne/hLast`，全部由 `Arc` 的护栏 `j+1 < n` 与 `i.isLt` 无条件给出）；
+* `hper_d` / `hper_h` / `hper_l`：把 §7 的 `quad_sepInd_d` / `quad_sepInd_h` / `tri_sepInd_l`
+  在**目标弧 `idx`** 上实例化（右端条件恰是「弧 `i` 的坐标 = 弧 `idx` 的坐标」）；
+* 坐标唯一性：D 支用 `Fin.ext`＋`Subtype.ext`；H/L 支的第二析取项被护栏**直接排除**（`j' = n−1` 不可能）。 -/
+
+section FunctionalMaterial
+
+/-- 弧 `a` 的前一位置 `i − 1`（由 `i.isLt` 无条件给出）。 -/
+def dPrev {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.1.val - 1, by have h := a.1.1.isLt; omega⟩
+
+/-- 弧 `a` 的后一位置 `j + 1`（就是护栏本身）。 -/
+def dNext {n : ℕ} (a : Arc n) : Fin n := ⟨a.1.2.val + 1, a.2.2⟩
+
+/-- 末位 `n − 1`。 -/
+def hLast {n : ℕ} (a : Arc n) : Fin n := ⟨n - 1, by have h := a.2.2; omega⟩
+
+/-- 首位 `0`。 -/
+def hZero {n : ℕ} (a : Arc n) : Fin n := ⟨0, by have h := a.2.2; omega⟩
+
+/-- 第二位 `1`。 -/
+def hOne {n : ℕ} (a : Arc n) : Fin n := ⟨1, by have h := a.2.2; omega⟩
+
+@[simp] theorem dPrev_val {n : ℕ} (a : Arc n) : (dPrev a).val = a.1.1.val - 1 := rfl
+
+@[simp] theorem dNext_val {n : ℕ} (a : Arc n) : (dNext a).val = a.1.2.val + 1 := rfl
+
+@[simp] theorem hLast_val {n : ℕ} (a : Arc n) : (hLast a).val = n - 1 := rfl
+
+@[simp] theorem hZero_val {n : ℕ} (a : Arc n) : (hZero a).val = 0 := rfl
+
+@[simp] theorem hOne_val {n : ℕ} (a : Arc n) : (hOne a).val = 1 := rfl
+
+/-- ★ **护栏推论**：弧的后端点**不可能**是末位 `n − 1`（这正是 `swap` 路线里要用的矛盾点）。 -/
+theorem arc_snd_ne_last {n : ℕ} (a : Arc n) : a.1.2.val ≠ n - 1 := by
+  have h := a.2.2
+  omega
+
+/-- ★ **坐标唯一性（D 支）**：坐标相同 ⇒ 弧相同。 -/
+theorem arc_eq_of_coord {n : ℕ} {i idx : Arc n} (h1 : i.1.1.val = idx.1.1.val)
+    (h2 : i.1.2.val = idx.1.2.val) : i = idx :=
+  Subtype.ext (Prod.ext (Fin.ext h1) (Fin.ext h2))
+
+/-- ★★ **`hper_d`**：目标弧 `idx`（`i ≥ 1`）的四点泛函 D 支隔离。 -/
+theorem hper_d {n : ℕ} (idx : Arc n) (hidx : idx.1.1.val ≠ 0) (i : Arc n) :
+    quad (sepInd (arcSplit i)) (dPrev idx) idx.1.1 idx.1.2 (dNext idx)
+      = 2 * (if i.1.1.val = idx.1.1.val ∧ i.1.2.val = idx.1.2.val then (1 : ℝ) else 0) := by
+  have h1 : idx.1.1.val = (dPrev idx).val + 1 := by
+    simp only [dPrev_val]
+    omega
+  have h2 : idx.1.1.val ≤ idx.1.2.val := Fin.le_iff_val_le_val.mp idx.2.1
+  have h3 : (dNext idx).val = idx.1.2.val + 1 := rfl
+  have h := quad_sepInd_d (X := Fin n) (Equiv.refl (Fin n)) (i' := i.1.1) (j' := i.1.2)
+    (Or.inl (arcSplit_sideA i)) (dPrev idx) idx.1.1 idx.1.2 (dNext idx) h1 h2 h3
+  simpa [Equiv.refl_symm, Equiv.refl_apply] using h
+
+/-- ★★ **`hper_h`**：目标弧 `idx`（`i = 0`、`j ≥ 1`）的四点泛函 H 支隔离。
+右端第二析取项（`j' = n−1`）被护栏直接排除，故条件退化为坐标相等。 -/
+theorem hper_h {n : ℕ} (idx : Arc n) (_hidx : idx.1.1.val = 0) (hidxj : 1 ≤ idx.1.2.val)
+    (i : Arc n) :
+    quad (sepInd (arcSplit i)) (hLast idx) (hZero idx) idx.1.2 (dNext idx)
+      = 2 * (if (i.1.1.val = 0 ∧ i.1.2.val = idx.1.2.val) ∨
+          (i.1.1.val = idx.1.2.val + 1 ∧ i.1.2.val = n - 1) then (1 : ℝ) else 0) := by
+  have h := quad_sepInd_h (X := Fin n) (Equiv.refl (Fin n)) (i' := i.1.1) (j' := i.1.2)
+    i.2.1 (Or.inl (arcSplit_sideA i)) (hZero idx) idx.1.2 (dNext idx) (hLast idx)
+    rfl hidxj rfl rfl
+  simpa only [Equiv.refl_symm, Equiv.refl_apply] using h
+
+/-- ★★ **`hper_l`**：目标弧 `idx = (0,0)` 的三点泛函 L 支隔离（第二析取项 `j' = n−1` 由护栏排除，
+留给 `huniq` 处理）。 -/
+theorem hper_l {n : ℕ} (idx : Arc n) (_hidx : idx.1.1.val = 0) (_hidxj : idx.1.2.val = 0)
+    (hn : 3 ≤ n) (i : Arc n) :
+    tri (sepInd (arcSplit i)) (hZero idx) (hOne idx) (hLast idx)
+      = 2 * (if (i.1.1.val = 0 ∧ i.1.2.val = 0) ∨ (i.1.1.val = 1 ∧ i.1.2.val = n - 1)
+          then (1 : ℝ) else 0) := by
+  have h := tri_sepInd_l (X := Fin n) (Equiv.refl (Fin n)) (i' := i.1.1) (j' := i.1.2)
+    i.2.1 (Or.inl (arcSplit_sideA i)) hn (hZero idx) (hOne idx) (hLast idx) rfl rfl rfl
+  simpa only [Equiv.refl_symm, Equiv.refl_apply] using h
+
+/-- ★ 零函数的泛函为 0：`hz` 的原料。 -/
+theorem quad_zero {X : Type*} (u w v z : X) : quad (fun _ _ : X => (0 : ℝ)) u w v z = 0 := by
+  simp [quad]
+
+theorem tri_zero {X : Type*} (u v w : X) : tri (fun _ _ : X => (0 : ℝ)) u v w = 0 := by
+  simp [tri]
+
+end FunctionalMaterial
+
 end WeightAlgebra
 
 end NeighborNet
