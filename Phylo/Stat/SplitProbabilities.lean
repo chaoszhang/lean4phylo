@@ -391,11 +391,114 @@ theorem sum_two_two_mscP (t : ℝ) (hS : (Finset.univ : Finset (Fin 4)).card = 4
 
 **已证**（`Phylo.Stat.TrivialSplitCount.card_trivial_splits_gap_holds` 就是本 `Prop` 本身，
 另有主定理 `card_trivial_splits (n) (3 ≤ n)`）——本 `def` 保留为**接口/文档**，不再表示缺口。
+**W12a**：本 `Prop` 现在**在本文件内也被直接证出**（见下方 `card_trivial_splits_gap_proof`）——
+`TrivialSplitCount.lean` **import** 本文件，故此处不能反向引用它，于是把那条路线的三条零件
+（`sideA` 单点族计数 / `sideB` 单点族计数 / 两支不交）**在本地重做**（与 `TrivialSplitCount`
+是**同一条双射** `r ↦ r.sideA` 对 `univ.powersetCard 1` 的两份独立实现）。
+
+⚠️ **本 `def` 必须保持 `def` 形态**（不能升为 `theorem`）：`Phylo/Stat/TrivialSplitCount.lean:160`
+把它当**类型**用（`theorem card_trivial_splits_gap_holds : …card_trivial_splits_gap`），
+改成 `theorem` 会让 `card_trivial_splits_gap` 的类型变成 `∀ n, …` 而不是 `Prop`，
+从而**破坏 `TrivialSplitCount` 的编译**（W12a 实测：`type expected, got …`）。
+故收口方式是「`def`（接口/登记，陈述逐字未改）＋ 同名证明 `…_proof`」。
+
 `n = 2` 时公式**不成立**（`Split (Fin 2)` 只有 `2` 个元素，两侧都是单点，`2 ≠ 2n = 4`），
 故 `3 ≤ n` 是**充分**条件（`n = 0` 时两端都是 `0`，平凡成立）。 -/
 def card_trivial_splits_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n →
     (Finset.univ.filter (fun r : Split (Fin n) => IsTrivialSplit r)).card = 2 * n
+
+/-- ★★★★ **缺口 G1 闭合（W12a，本文件内直接证明）**：登记 `Prop` `card_trivial_splits_gap` 成立。
+
+路线（与 `TrivialSplitCount` 相同、独立实现）：`Split` 是**有向**的（`sideA`/`sideB`），
+`r ↦ r.sideA` 把「`sideA` 单点」的 split 与 `univ.powersetCard 1` 双射 ⟹ 恰 `n` 个；
+`sideB` 那半用 `r ↦ r.swap` 搬过来；两支不交（否则 `n = 2`，与 `3 ≤ n` 矛盾）⟹ 合计 `2n`。
+
+⚠️ 本文件 `open Classical`（第 137 行），故 `IsTrivialSplit` 的 `DecidablePred` 一律由
+`Classical.propDecidable` 提供 —— **不要**在此处再插一个 `local instance`，否则
+`(Finset.univ.filter fun r => IsTrivialSplit r)` 的**实例项**在两处不同，`rw` 会「找不到模式」。 -/
+theorem card_trivial_splits_gap_proof : card_trivial_splits_gap := by
+  have card_sideA_one : ∀ n : ℕ, 2 ≤ n →
+      ((Finset.univ : Finset (Split (Fin n))).filter
+        (fun r => r.sideA.card = 1)).card = n := by
+    intro n hn
+    set s : Finset (Split (Fin n)) :=
+      (Finset.univ : Finset (Split (Fin n))).filter (fun r => r.sideA.card = 1) with hs
+    have hinj : Set.InjOn (fun r : Split (Fin n) => r.sideA) ↑s := by
+      intro r1 _ r2 _ h
+      exact Phylo.Stat.CASTERTopoSplit.eq_of_sideA_eq h
+    have hcard : s.card = ((Finset.univ : Finset (Fin n)).powersetCard 1).card := by
+      rw [← Finset.card_image_of_injOn hinj]
+      congr 1
+      ext T
+      constructor
+      · intro hT
+        obtain ⟨r, hr, rfl⟩ := Finset.mem_image.mp hT
+        rw [hs] at hr
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hr
+        rw [Finset.mem_powersetCard]
+        exact ⟨Finset.subset_univ r.sideA, hr⟩
+      · intro hT
+        rw [Finset.mem_powersetCard] at hT
+        obtain ⟨-, hcardT⟩ := hT
+        have h1 : T.Nonempty := Finset.card_pos.mp (by omega)
+        have h2 : Tᶜ.Nonempty := by
+          apply Phylo.compl_nonempty_of_ne_univ
+          intro hTuniv
+          rw [hTuniv, Finset.card_univ, Fintype.card_fin] at hcardT
+          omega
+        refine Finset.mem_image.mpr ⟨Phylo.splitOf T h1 h2, ?_, ?_⟩
+        · rw [hs]
+          simp only [Finset.mem_filter, Finset.mem_univ, true_and, Phylo.splitOf_sideA]
+          exact hcardT
+        · simp only [Phylo.splitOf_sideA]
+    rw [hs] at hcard ⊢
+    rw [hcard, Finset.card_powersetCard, Finset.card_univ, Fintype.card_fin,
+      Nat.choose_one_right]
+  have card_sideB_one : ∀ n : ℕ, 2 ≤ n →
+      ((Finset.univ : Finset (Split (Fin n))).filter
+        (fun r => r.sideB.card = 1)).card = n := by
+    intro n hn
+    have himg : (Finset.univ : Finset (Split (Fin n))).filter (fun r => r.sideB.card = 1)
+        = (((Finset.univ : Finset (Split (Fin n))).filter
+            (fun r => r.sideA.card = 1)).image Split.swap) := by
+      ext r
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+      constructor
+      · intro hr
+        exact ⟨r.swap, by simpa using hr, by simp⟩
+      · rintro ⟨q, hq, rfl⟩
+        simpa using hq
+    rw [himg, Finset.card_image_of_injective _ Split.swap_injective, card_sideA_one n hn]
+  let famA : (n : ℕ) → Finset (Split (Fin n)) := fun n =>
+    (Finset.univ : Finset (Split (Fin n))).filter (fun r => r.sideA.card = 1)
+  let famB : (n : ℕ) → Finset (Split (Fin n)) := fun n =>
+    (Finset.univ : Finset (Split (Fin n))).filter (fun r => r.sideB.card = 1)
+  let famT : (n : ℕ) → Finset (Split (Fin n)) := fun n =>
+    (Finset.univ : Finset (Split (Fin n))).filter
+      (fun r => r.sideA.card = 1 ∨ r.sideB.card = 1)
+  have hunion : ∀ n : ℕ, famT n = famA n ∪ famB n := by
+    intro n
+    simp only [famT, famA, famB]
+    rw [Finset.filter_or]
+  have hfamT : ∀ n : ℕ, famT n
+      = (Finset.univ.filter (fun r : Split (Fin n) => IsTrivialSplit r)) := by
+    intro n
+    -- 两个谓词**定义相等**（`IsTrivialSplit` 展开即内联析取），故 `Iff.rfl` 即可；
+    -- 只有 `DecidablePred` 的**实例项**不同（`instDecidableOr` vs `Classical.propDecidable`），
+    -- 这正是要用 `Finset.filter_congr`（而非 `filter_congr_decidable`）的原因。
+    exact Finset.filter_congr fun r _ => Iff.rfl
+  intro n hn
+  have hdisj : Disjoint (famA n) (famB n) := by
+    rw [Finset.disjoint_left]
+    intro r hr hr'
+    rw [Finset.mem_filter] at hr hr'
+    have h := Phylo.Stat.CASTERTopoSplit.card_sideA_add_card_sideB r
+    have hc : Fintype.card (Fin n) = n := Fintype.card_fin n
+    omega
+  rw [← hfamT n, hunion n, Finset.card_union_of_disjoint hdisj, card_sideA_one n (by omega),
+    card_sideB_one n (by omega)]
+  omega
 
 /-- ❌ **缺口 G2（一般 `n` 的 MSC split 概率对象）** —— ADR2017 一般 `n` 的 Lemma 3.1 /
 Prop 3.2 / Cor 3.3 **唯一**真正缺的载体。
@@ -413,8 +516,28 @@ ADR2017 的 `P_σ(A|B)` 是「随机 gene tree **展示** split `A|B`」的概�
 ⚠️ 两处**没有**写进这个 `Prop`：(i) 「内部枝长 `> ε`」（没有「带长度」的树对象，故无法陈述）；
 (ii) 「展示 `A|B`」是「展示某个 quartet」的子事件（缺口 G3 之外的组合内容）。
 ⚠️ **该断言的强度弱于**真正的数学内容：真正的缺口是 `P` 必须由「binary 物种树 + MSC 的
-gene tree 分布」**诱导**，而本式只要求存在一个满足上述性质的 `P`。**未构造、未证**，
-且**本文件不在任何证明中使用它**。 -/
+gene tree 分布」**诱导**，而本式只要求存在一个满足上述性质的 `P`。
+
+### ★E 退化见证：本 `Prop` **可被平凡满足**（W12a 实测）—— 终局判定 **⬜ 保留缺口**
+
+取 `Displays := fun _ _ => True`（第三条随之**空转**），`P s r := if IsTrivialSplit r then 1 else c`
+（`c` 为常数）。可行性只需**一条**算术事实：
+
+```text
+2·(2n−3) − 2n = 2n − 6 ≥ 0   ⟺   n ≥ 3      （n = 3 时取等：此时 Split(Fin 3) 全为平凡，
+                                              且总数 2n = 6 = 2(2n−3)，取 c 任意即可）
+```
+
+即「平凡 split 的 `2n` 个 `1`」装得进总额 `2(2n−3)`，剩余质量 `2n−6` 平摊给非平凡 split 即可
+（`n ≥ 4` 时非平凡 split 存在）。脚本 `scripts/msc/w12a_gap_check.py` **Part III** 对
+`n = 3…10` 逐步复核了 `2n ≤ 2(2n−3)` 与「`n ≥ 4` ⟹ 存在非平凡 split」。
+
+⇒ 本 `Prop` **为真但空转**，**不得**用上述见证宣布「缺口已证」。
+真正的（未被本 `Prop` 捕捉的）内容是：`P` 必须由 **binary 物种树 σ ＋ MSC gene tree 分布**
+**诱导**（`P_σ(A|B) := Σ_{T 展示 A|B} P_σ(T)`，且 `Σ_T P_σ(T) = 1`、`Σ_{A|B} P_σ(A|B) = 2n−3`）。
+**缺的器材**：一般 `n` 的 **MSC gene tree 分布**（库内只有 `Fin 4` 的 quartet 权重 `MSCProof`）
+与 binary 物种树对象；文献**在库**（ADR2017，`references/`）。
+**本文件不在任何证明中使用它。** -/
 def msc_split_probability_object_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n → ∀ ε : ℝ, 0 ≤ ε →
     ∃ (σ : Type) (_ : Nonempty σ) (Displays : σ → Split (Fin n) → Prop)

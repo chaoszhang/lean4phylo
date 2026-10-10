@@ -57,8 +57,9 @@ import Phylo.JukesCantor
 5. ★★★ **`q` 就是非平凡 Hadamard 系数**：`HadP_apply` / `HadP_diag` / `q_eq_hadamard` ——
    归一化共轭 `HadP d = H · P(d) · H`（`P d = (1/4)·K d`，均匀根分布）满足
    `HadP (pathLen t i j) u u = JC.q t i j`（`u ≠ 0`）；
-6. **缺口** `evansSpeed_general_gap`：一般 `m` 片叶（含**分支顶点**）的 Evans–Speed
-   Theorem 6。
+6. ★★★ **`evansSpeed_general`（W12c 收口）**：一般 `m` 片叶的 Evans–Speed Theorem 6
+   **已证**（陈述与 `evansSpeed_general_gap` 逐字相同）——这是**纯重指标恒等式**，
+   不含树结构；见下 `§5`。
 
 ## 反例检查（★B）
 
@@ -79,9 +80,12 @@ import Phylo.JukesCantor
 
 * 本文件**只做 2 分类群（单条边）与「`n+1` 条边串联」**的 Hadamard/Fourier 陈述 ——
   即 `Fin 4` 上能显式算清的**全部**内容。
-* **未做**：一般 `m` 片叶、含**分支顶点**的 Evans–Speed Theorem 6 ——
-  见 `evansSpeed_general_gap`。缺的是「`G^m` 上的 `m` 重 Fourier 变换 +
-  `m` 重重指标」与一般树 GMM 层（= `InvariantsRank.TreeMarkovFactorGap` 的同一欠账）。
+* **已做（W12c）**：一般 `m` 片叶的 Evans–Speed Theorem 6 的**代数内核**
+  `evansSpeed_general`（= `evansSpeed_general_gap` 的逐字陈述）**已证**；
+  该陈述不含任何树/GMM 假设，故 `m ≥ 2` 的「分支」并无额外障碍。
+* **未做（真正的树模型层）**：把 `π` / `f i` 解释成**树上的** Markov 模型边缘分布
+  （`Phylo.JC.patternProb` 只有 4 叶固定拓扑）= `InvariantsRank.TreeMarkovFactorGap`
+  的同一欠账；它与上面的恒等式无关。
 * **未做**：Casanellas §5.5 的 `T^{fe}(ψ)` 分块、`S0,…,S4` 的秩条件
   （那条路线属 `Phylo.JukesCantor` / `Phylo.LakeInvariants`）。
 * 本文件**不引入**新的 Mathlib import（只用 `Phylo.JukesCantor` 自带的依赖）。
@@ -311,15 +315,14 @@ theorem chainProd_eq (n : ℕ) :
 （右端即 `π̂(∏χ) · ∏_i f̂_i(χ_i)`）。
 
 **本文件已证** `G` 上「无分支」的全部内容（`HadK_apply`/`HadK_conv`/`chainProd_eq`/
-`HadP_diag`：`Fin 4` 上显式算清的 Hadamard 共轭与「卷积 ↦ 乘法」）。
-**未证** `m ≥ 2` 的**分支**情形，需要的器材是：
+`HadP_diag`：`Fin 4` 上显式算清的 Hadamard 共轭与「卷积 ↦ 乘法」），
+**并且已证一般 `m` 的 `evansSpeed_general`**（见 §5）：该陈述是**纯重指标恒等式**，
+不含任何树结构，只需 `Finset.sum_comm` ＋ 平移 `Equiv` ＋ `Finset.prod_mul_distrib`
+＋ `Finset.prod_univ_sum`；**不需要**「一般树 GMM 的 site-pattern 概率」。
 
-* `Fin m → G` 上「逐点平移」的等价 `g ↦ g + h` 与 `Finset.prod_univ_sum` 型的
-  「乘积 ↦ 多重和」重排（`m` 重重指标）；
-* 一般树 GMM 的 site-pattern 概率（库内 `Phylo.JC.patternProb` 只有 4 叶固定拓扑）——
-  与 `Phylo.Stat.InvariantsRank.TreeMarkovFactorGap` 是同一欠账。
-
-因此如实落缺口，不把 `m = 1` 的情形冒充成一般定理。 -/
+（W11 的原判词把「抽象恒等式」与「树模型层」混为一谈 —— 见 §5 的说明。
+真正still缺的是**树模型层**：`Phylo.Stat.InvariantsRank.TreeMarkovFactorGap`
+的欠账，即「`P` 来自树上的 Markov 模型 ⟹ 存在沿边因子分解」，与本恒等式无关。） -/
 def evansSpeed_general_gap (m : ℕ) : Prop :=
   ∀ (G : Type) [AddCommGroup G] [Fintype G] [DecidableEq G]
     (π : G → ℝ) (f : Fin m → G → ℝ) (χ : Fin m → G → ℝ),
@@ -340,5 +343,109 @@ theorem evansSpeed_gap_hypotheses_satisfiable :
   · intro i a b
     show (-1 : ℝ) ^ (a + b) = (-1 : ℝ) ^ a * (-1 : ℝ) ^ b
     exact zpow_add₀ (by norm_num : (-1 : ℝ) ≠ 0) a b
+
+/-! ## 5. ★★★ «缺口 8.2» 的**收口**：一般 Evans–Speed 恒等式**已证**（对任意 `m`）
+
+W11 把 `evansSpeed_general_gap` 之后的 docstring 判词写成「需要 `m ≥ 2` 的**分支**情形、
+一般树 GMM 的 site-pattern 概率」—— 这与陈述本身不符：
+`evansSpeed_general_gap` 里**没有任何树、没有任何 GMM、也没有要求 `π` 是概率分布**，
+它是一个**纯 Fourier / 重指标恒等式**（逐坐标代换 `g_i ↦ u_i + h`）。
+
+本节的 `evansSpeed_general` 就是它，**对任意 `m` 与任意有限交换群**成立，
+只用到：`Finset.sum_comm`、`Fin m → G` 上的平移 `Equiv`（`Equiv.sum_comp`）、
+`Finset.prod_mul_distrib`、`Finset.prod_univ_sum`、`Finset.sum_mul`/`mul_sum`。
+**不需要**任何树模型层。 -/
+
+/-- `∏ i, φ i * ψ i = (∏ i, φ i) * (∏ i, ψ i)`（`Finset.prod_mul_distrib` 的重述）。 -/
+theorem prod_mul_distrib' {m : ℕ} {α : Type*} [CommMonoid α] (φ ψ : Fin m → α) :
+    (∏ i, φ i * ψ i) = (∏ i, φ i) * (∏ i, ψ i) :=
+  Finset.prod_mul_distrib
+
+/-- ★★ **每个坐标平移 `h` 不改变 `Fin m → G` 上的全和**（重指标代换的引擎）。 -/
+theorem sum_shift_coord {m : ℕ} {G : Type*} [AddCommGroup G] [Fintype G] [DecidableEq G]
+    (h : G) (F : (Fin m → G) → ℝ) :
+    (∑ g : Fin m → G, F g) = ∑ g : Fin m → G, F (fun i => g i + h) := by
+  let e : (Fin m → G) ≃ (Fin m → G) :=
+    { toFun := fun u i => u i + h
+      invFun := fun u i => u i - h
+      left_inv := by intro u; funext i; exact add_sub_cancel_right (u i) h
+      right_inv := by intro u; funext i; exact sub_add_cancel (u i) h }
+  have h2 : (∑ g : Fin m → G, F (fun i => g i + h)) = ∑ u, F (e u) := rfl
+  rw [h2, Equiv.sum_comp e F]
+
+/-- ★★ **`Fintype.prod_sum` 的重指标形式**：`∑_g ∏_i A i (g i) B i (g i) = ∏_i ∑_a A i a · B i a`。 -/
+theorem sum_prod_split {m : ℕ} {G : Type*} [Fintype G] [DecidableEq G]
+    (A B : Fin m → G → ℝ) :
+    (∑ g : Fin m → G, ∏ i, A i (g i) * B i (g i))
+      = ∏ i, (∑ a : G, A i a * B i a) := by
+  rw [Finset.prod_univ_sum (R := ℝ) (f := fun (i : Fin m) (a : G) => A i a * B i a)]
+  exact Finset.sum_congr rfl fun p _ => Finset.prod_congr rfl fun i _ => rfl
+
+/-- ★★★ **一般 Evans–Speed 恒等式**（`evansSpeed_general_gap` 的**定理形式**，陈述逐字相同）。
+
+**证明链**（逐坐标代换 `g_i ↦ u_i + h`）：
+`LHS = ∑_h π h ∑_u ∏_i f_i(u_i) χ_i(u_i + h)
+     = ∑_h π h (∏_i χ_i h) ∑_u ∏_i f_i(u_i) χ_i(u_i)
+     = (∑_h π h ∏_i χ_i h) ∏_i (∑_a f_i a χ_i a)`。
+
+（`Evans–Speed 1993` §6, 532–650 行；`Sturmfels–Sullivant 2005` Theorem 6, 628–654 行。
+文献里的 (10)/(11) 就是这条恒等式在「claw tree + 卷积」下的读法。） -/
+theorem evansSpeed_general (m : ℕ) :
+    ∀ (G : Type) [AddCommGroup G] [Fintype G] [DecidableEq G]
+      (π : G → ℝ) (f : Fin m → G → ℝ) (χ : Fin m → G → ℝ),
+      (∀ i, χ i 0 = 1) →
+      (∀ i a b, χ i (a + b) = χ i a * χ i b) →
+      (∑ g : Fin m → G, (∑ h : G, π h * ∏ i, f i (g i - h)) * ∏ i, χ i (g i))
+        = (∑ h : G, π h * ∏ i, χ i h) * ∏ i, (∑ a : G, f i a * χ i a) := by
+  intro G _ _ _ π f χ h0 hmul
+  classical
+  have hFacts : ∀ h : G, (∑ g : Fin m → G, (∏ i, f i (g i - h)) * ∏ i, χ i (g i))
+      = (∏ i, χ i h) * (∏ i, ∑ a : G, f i a * χ i a) := by
+    intro h
+    rw [sum_shift_coord h]
+    have hpt : ∀ u : Fin m → G,
+        ((∏ i, f i ((u i + h) - h)) * ∏ i, χ i (u i + h))
+          = ((∏ i, f i (u i)) * ∏ i, χ i (u i)) * ∏ i, χ i h := by
+      intro u
+      have hsub : ∀ i, (u i + h) - h = u i := fun i => add_sub_cancel_right (u i) h
+      have hchi : ∀ i, χ i (u i + h) = χ i (u i) * χ i h := fun i => hmul i (u i) h
+      simp only [hsub, hchi]
+      calc (∏ x, f x (u x)) * ∏ x, χ x (u x) * χ x h
+          = (∏ x, f x (u x)) * ((∏ x, χ x (u x)) * ∏ x, χ x h) := by
+            rw [prod_mul_distrib' (fun i => χ i (u i)) (fun i => χ i h)]
+          _ = ((∏ x, f x (u x)) * ∏ x, χ x (u x)) * ∏ x, χ x h := by ring
+    rw [Finset.sum_congr rfl (fun u _ => hpt u)]
+    have hsplit : (∑ u : Fin m → G, ((∏ i, f i (u i)) * ∏ i, χ i (u i)) * ∏ i, χ i h)
+        = (∑ u : Fin m → G, (∏ i, f i (u i)) * ∏ i, χ i (u i)) * ∏ i, χ i h :=
+      (Finset.sum_mul Finset.univ (fun u : Fin m → G =>
+        (∏ i, f i (u i)) * ∏ i, χ i (u i)) (∏ i, χ i h)).symm
+    rw [hsplit]
+    have hAA : ∀ u : Fin m → G, (∏ i, f i (u i)) * ∏ i, χ i (u i)
+        = ∏ i, f i (u i) * χ i (u i) :=
+      fun u => (prod_mul_distrib' (fun i => f i (u i)) (fun i => χ i (u i))).symm
+    rw [Finset.sum_congr rfl (fun u _ => hAA u), sum_prod_split]
+    exact mul_comm _ _
+  have hstep1 : (∑ g : Fin m → G, (∑ h : G, π h * ∏ i, f i (g i - h)) * ∏ i, χ i (g i))
+      = ∑ g : Fin m → G, ∑ h : G, π h * ((∏ i, f i (g i - h)) * ∏ i, χ i (g i)) := by
+    refine Finset.sum_congr rfl fun g _ => ?_
+    have h1 : (∑ h : G, π h * ∏ i, f i (g i - h)) * ∏ i, χ i (g i)
+        = ∑ h : G, π h * ((∏ i, f i (g i - h)) * ∏ i, χ i (g i)) := by
+      rw [Finset.sum_mul Finset.univ (fun h : G => π h * ∏ i, f i (g i - h))
+        (∏ i, χ i (g i))]
+      exact Finset.sum_congr rfl fun h _ => by ring
+    exact h1
+  have hstep2 : (∑ g : Fin m → G, ∑ h : G, π h * ((∏ i, f i (g i - h)) * ∏ i, χ i (g i)))
+      = ∑ h : G, π h * ((∏ i, χ i h) * (∏ i, ∑ a : G, f i a * χ i a)) := by
+    rw [Finset.sum_comm]
+    refine Finset.sum_congr rfl fun h _ => ?_
+    have h2 : (∑ g : Fin m → G, π h * ((∏ i, f i (g i - h)) * ∏ i, χ i (g i)))
+        = π h * (∑ g : Fin m → G, ((∏ i, f i (g i - h)) * ∏ i, χ i (g i))) :=
+      (Finset.mul_sum Finset.univ (fun g : Fin m → G =>
+        (∏ i, f i (g i - h)) * ∏ i, χ i (g i)) (π h)).symm
+    rw [h2]
+    exact congrArg (fun z : ℝ => π h * z) (hFacts h)
+  rw [hstep1, hstep2]
+  rw [Finset.sum_mul Finset.univ (fun h => π h * ∏ i, χ i h) _]
+  exact Finset.sum_congr rfl fun h _ => by ring
 
 end Phylo.Stat.HadamardTransform

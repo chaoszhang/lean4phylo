@@ -533,12 +533,60 @@ def multinomial_weight_count_gap : Prop :=
 本 `Prop` 只把「还欠什么」记成账目（与 `Phylo/Stat/SplitProbabilities.lean` 的缺口 G1–G3
 同一体例）：存在概率空间与「真树」选择，使高频 `split` 与真树相容。
 ⚠️ 它**弱于**真正的数学内容（真正的缺口是概率空间必须由字符的 iid 分布**诱导**），
-且**本文件不在任何证明中使用它。** -/
+且**本文件不在任何证明中使用它。**
+
+### ★E 退化见证（W12a 实测）—— **本 `Prop` 可被平凡满足，故它不表示真正的数学内容**
+
+取 `Ω := PUnit`、`TrueSplit := fun _ => s₀`（任取一个 `Split (Fin 4)`，如 `{0,1}|{2,3}`）、
+`p := fun _ s => if s = s₀ then 1 else 0`。则：
+
+* `0 ≤ p ≤ 1` 显然；
+* `1/2 < p ω (TrueSplit ω) = 1` ✓；
+* 第三条的前提 `1/2 < p ω s` 只对 `s = s₀` 成立，此时需要 `Split.Compatible s₀ s₀` ——
+  由 `Or.inr (Or.inl s₀.disjoint_sides)`（`sideA ⊥ sideB`）成立 ✓。
+
+⇒ 本 `Prop` **为真但空转**（见下 `example`，机器验证）。**W12a 终局判定：⬜ 保留缺口**
+（不用退化见证收口）；真正的缺口仍是 docstring 列的三条：① iid 字符概率空间、
+② 树空间上的弱收敛、③ 估计量相容性。
+
+⚠️ **组件① 的现状需要更正**：W12a 现查本工具链 Mathlib（`~/lean4phylo-t85/.lake/packages/mathlib/`）
+确认**存在**无限乘积概率测度设施：
+`Measure.infinitePi` / `Measure.infinitePiNat`（`Probability/ProductMeasure.lean`，
+含 `IsProbabilityMeasure` 实例）、`Measure.infinitePi_pi`、`Measure.infinitePi_cylinder`，
+以及 `iIndepFun_infinitePi`（`Probability/Independence/InfinitePi.lean`）。
+故「本版 Mathlib 无可数无限乘积测度」这一判词**已过时**（`Phylo/Stat/EmpiricalConvergence.lean`
+§3/§4 缺口 K 的表述需要复核 —— 该文件**不在** W12a 写域内，此处只登记发现）。
+组件②③（弱收敛、相容性）**仍缺**，故缺口本体不变。 -/
 def bootstrap_confidence_gap : Prop :=
   ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (Fin 4) → ℚ),
     (∀ ω (s : Split (Fin 4)), 0 ≤ p ω s ∧ p ω s ≤ 1) ∧
     (∀ ω, 1 / 2 < p ω (TrueSplit ω)) ∧
     ∀ (ω : Ω) (s : Split (Fin 4)), 1 / 2 < p ω s → Split.Compatible s (TrueSplit ω)
+
+/-- ★E **退化见证（机器验证）**：上条 `Prop` 的「真树 + 概率」账目**可以被平凡满足** ——
+`Ω := PUnit`、`TrueSplit := 常数 s₀`、`p` 是 `s₀` 上的点质量。
+**这正是不能拿它当「已证」的原因**（W12a 纪律 ★E）。
+`Φ` 是 `{0,1}|{2,3}`（由 `Phylo.splitOf` 造出），供第三条的 `Compatible s₀ s₀` 使用。 -/
+example : ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (Fin 4) → ℚ),
+    (∀ ω (s : Split (Fin 4)), 0 ≤ p ω s ∧ p ω s ≤ 1) ∧
+    (∀ ω, 1 / 2 < p ω (TrueSplit ω)) ∧
+    ∀ (ω : Ω) (s : Split (Fin 4)), 1 / 2 < p ω s → Split.Compatible s (TrueSplit ω) := by
+  refine ⟨PUnit, fun _ => Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide),
+    fun _ s => if s = Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide)
+      then 1 else 0, ?_, ?_, ?_⟩
+  · intro ω s
+    by_cases h : s = Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide) <;>
+      simp [h]
+  · intro ω
+    show (1 : ℚ) / 2 < (1 : ℚ)
+    rw [div_lt_iff₀ (show (0 : ℚ) < 2 by norm_num)]
+    norm_num
+  · intro ω s hs
+    by_cases h : s = Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide)
+    · subst h
+      exact Or.inr (Or.inl (Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide)).disjoint_sides)
+    · simp [h] at hs
+      exact absurd hs (by norm_num)
 
 /-! ## §7 反空真（★B）
 

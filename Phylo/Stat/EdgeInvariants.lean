@@ -66,6 +66,10 @@ import Mathlib.RingTheory.MvPolynomial.Ideal
    （用 Laplace 沿第一行展开逐次降阶）。
 7. **缺口**：`edgeInvariants_suffice_gap` —— Casanellas **Theorem 4.4 / Corollary 4.8** 的
    「充分性」半边（`Z(Σ_e I_e) ∩ U = V(T₀) ∩ U`）。
+8. **★ 该缺口的反例判定（W12c）**：`edgeInvariants_suffice_gap` 把 `U` 与 `Model` 都当
+   **任意**集合量化，故按字面是**假命题** —— `edgeInvariants_suffice_gap_refuted`（已证）
+   用点质量 `δ_(0,1,0,1)`（展平秩 1，因子分解）作见证；正确形态登记在
+   `edgeInvariants_suffice_gap_correct_shape`（固定的模型族 + 真正的一般点假设 `p ∈ U`）。
 
 ## 诚实边界
 
@@ -295,5 +299,121 @@ theorem edgeInvariants_suffice_gap_forward (U : Set (SiteFreq (Fin 4)))
     (Model : Set (SiteFreq (Fin 4))) (hM : ∀ p ∈ Model, Factorizable p) :
     ∀ p ∈ U, p ∈ Model → ∀ f ∈ edgeIdeal, evalAt p f = 0 :=
   fun p _ hp _f hf => RingHom.mem_ker.mp ((edgeIdeal_le_ker_evalAt p (hM p hp)) hf)
+
+/-! ## 8. ★★★ «缺口 8.1» 的**反例判定**：原陈述按字面量化是**假命题**
+
+`edgeInvariants_suffice_gap` 把 `U` 与 `Model` 都当**任意**集合量化。只要存在 `p ∈ U` 使
+「所有 edge invariants 在 `p` 上取 0」为真而 `p ∉ Model`，命题即假 —— 而这**必然**发生：
+`edgeIdeal` 的每个生成元都是 `5 × 5` 子式（**无常数项**），故任何**展平秩 ≤ 4** 的点都在
+`Z(Σ_e I_e)` 里；取 `Model := {零张量}` 就够了。下面用**点质量张量**
+`δ = δ_(0,1,0,1)`（它是 `A ⊗ B` 型因子分解，秩 1）作见证，证 `¬ edgeInvariants_suffice_gap`。
+
+这与「缺什么」是两回事：Casanellas **Theorem 4.4（1528–1548 行）**的正确陈述是
+「**固定的**模型族 `V(T₀)` + `p` 属于**一般（regular）点集** `U`」下的
+`p ∈ V(T₀) ⟺ p ∈ Z(Σ_e I_e)`；见下方 `edgeInvariants_suffice_gap_correct_shape` 的登记。
+本文件**不**改写 8.1 的原陈述（它是「登记过什么」的记录），只**新增**已证的反例定理。 -/
+
+/-- **点质量张量 δ_(0,1,0,1)**：`δ i j k l = [i=0][j=1][k=0][l=1]`。 -/
+def delta0101 : SiteFreq (Fin 4) :=
+  fun i j k l => (if i = 0 then (1:ℝ) else 0) * (if j = 1 then (1:ℝ) else 0)
+    * (if k = 0 then (1:ℝ) else 0) * (if l = 1 then (1:ℝ) else 0)
+
+theorem delta0101_ne_zero : delta0101 ≠ 0 := by
+  intro h
+  have h1 : delta0101 0 1 0 1 = (1 : ℝ) := by simp [delta0101]
+  rw [h] at h1
+  simp at h1
+
+set_option linter.deprecated false in
+/-- **δ_(0,1,0,1) 是因子分解的**（显式 `A ⊗ B` 形，秩 1）——说明它不是退化见证。 -/
+theorem delta0101_factor :
+    ∀ i j k l, delta0101 i j k l
+      = ∑ m : Fin 4, (if (i = 0 ∧ j = 1) ∧ m = 0 then (1:ℝ) else 0)
+        * (if m = 0 ∧ (k = 0 ∧ l = 1) then (1:ℝ) else 0) := by
+  intro i j k l
+  rw [Fin.sum_univ_four]
+  have h1 : ¬((i = 0 ∧ j = 1) ∧ (1:Fin 4) = 0) := fun hh => absurd hh.2 (by decide)
+  have h2 : ¬((i = 0 ∧ j = 1) ∧ (2:Fin 4) = 0) := fun hh => absurd hh.2 (by decide)
+  have h3 : ¬((i = 0 ∧ j = 1) ∧ (3:Fin 4) = 0) := fun hh => absurd hh.2 (by decide)
+  have g1 : ¬((1:Fin 4) = 0 ∧ (k = 0 ∧ l = 1)) := fun hh => absurd hh.1 (by decide)
+  have g2 : ¬((2:Fin 4) = 0 ∧ (k = 0 ∧ l = 1)) := fun hh => absurd hh.1 (by decide)
+  have g3 : ¬((3:Fin 4) = 0 ∧ (k = 0 ∧ l = 1)) := fun hh => absurd hh.1 (by decide)
+  rw [if_neg h1, if_neg h2, if_neg h3, if_neg g1, if_neg g2, if_neg g3]
+  simp only [mul_zero, add_zero]
+  by_cases hij : i = 0 ∧ j = 1
+  · by_cases hkl : k = 0 ∧ l = 1
+    · rw [if_pos ⟨hij, by decide⟩, if_pos ⟨by decide, hkl⟩]
+      simp only [delta0101, if_pos hij.1, if_pos hij.2, if_pos hkl.1, if_pos hkl.2]
+      norm_num
+    · rw [if_pos ⟨hij, by decide⟩, if_neg (fun hh => hkl hh.2)]
+      have hk : k ≠ 0 ∨ l ≠ 1 := by
+        by_contra hc
+        exact hkl ⟨not_not.mp (not_or.mp hc).1, not_not.mp (not_or.mp hc).2⟩
+      rcases hk with hk | hl
+      · simp only [delta0101, if_pos hij.1, if_pos hij.2, if_neg hk]
+        norm_num
+      · simp only [delta0101, if_pos hij.1, if_pos hij.2, if_neg hl]
+        norm_num
+  · rw [if_neg (fun hh => hij hh.1)]
+    have hk : i ≠ 0 ∨ j ≠ 1 := by
+      by_contra hc
+      exact hij ⟨not_not.mp (not_or.mp hc).1, not_not.mp (not_or.mp hc).2⟩
+    rcases hk with hk | hl
+    · simp only [delta0101, if_neg hk]
+      norm_num
+    · simp only [delta0101, if_neg hl]
+      norm_num
+
+/-- **δ_(0,1,0,1) 落在 `Z(Σ_e I_e)` 里**：它因子分解，故 `edgeIdeal ⊆ ker (evalAt δ)`。 -/
+theorem edgeIdeal_le_ker_delta0101 :
+    edgeIdeal ≤ RingHom.ker (evalAt delta0101) :=
+  edgeIdeal_le_ker_evalAt delta0101
+    ⟨(fun (ij : Fin 4 × Fin 4) (m : Fin 4) =>
+        if (ij.1 = 0 ∧ ij.2 = 1) ∧ m = 0 then (1:ℝ) else 0),
+     (fun (m : Fin 4) (kl : Fin 4 × Fin 4) =>
+        if m = 0 ∧ (kl.1 = 0 ∧ kl.2 = 1) then (1:ℝ) else 0),
+     delta0101_factor⟩
+
+/-- ★★★ **`edgeInvariants_suffice_gap` 按字面量化是假命题**（已证定理，不是缺口）。
+
+取 `U := univ`、`Model := {0}`、`p := δ_(0,1,0,1)`：
+`p ∈ Model` 为假，而 `∀ f ∈ edgeIdeal, evalAt p f = 0` 为真（δ 因子分解 + 秩 ≤ 4）。
+故 `p ∈ Model ↔ ∀ f ∈ edgeIdeal, evalAt p f = 0` 假。 -/
+theorem edgeInvariants_suffice_gap_refuted :
+    ¬ (∀ (U : Set (SiteFreq (Fin 4))) (Model : Set (SiteFreq (Fin 4))),
+        ∀ p ∈ U, (p ∈ Model ↔ ∀ f ∈ edgeIdeal, evalAt p f = 0)) := by
+  intro h
+  have hiff : delta0101 ∈ ({P : SiteFreq (Fin 4) | P = 0} : Set (SiteFreq (Fin 4)))
+      ↔ ∀ f ∈ edgeIdeal, evalAt delta0101 f = 0 :=
+    h Set.univ {P : SiteFreq (Fin 4) | P = 0} delta0101 (Set.mem_univ _)
+  have hker : ∀ f ∈ edgeIdeal, evalAt delta0101 f = 0 :=
+    fun f hf => RingHom.mem_ker.mp (edgeIdeal_le_ker_delta0101 hf)
+  have hz : delta0101 = 0 := hiff.mpr hker
+  exact delta0101_ne_zero hz
+
+/-- ★ **修复后的正确形态（登记用 `def`，非"已证"）**：Casanellas **Theorem 4.4 / Corollary 4.8**
+（1528–1548 / 1672–1700 行）的真正形状。
+
+与原 `edgeInvariants_suffice_gap` 的差别**恰好**是两处量化被钉死：
+1. `Model` 必须是**某个固定模型族**（`V(T₀)`）且 `Model ⊆ Z(Σ_e I_e)` 要作为**定理**推出
+   （而不是对任意 `Model` 断言）；
+2. `U` 必须是**一般（regular）点集** `U_T`（1510–1527 行），`p ∈ U` 是**真正的一般性假设**
+   —— `U = univ` **不够**（反例定理 `edgeInvariants_suffice_gap_refuted` 正是取 `U = univ`）。
+
+`hgen` 就是「一般点」条件；在 `hgen` 下 `→` 方向才可能成立。 -/
+def edgeInvariants_suffice_gap_correct_shape (U : Set (SiteFreq (Fin 4)))
+    (Model : Set (SiteFreq (Fin 4))) : Prop :=
+  (∀ p ∈ Model, Factorizable p) →
+  (∀ p ∈ U, (∀ f ∈ edgeIdeal, evalAt p f = 0) → Factorizable p) →
+  ∀ p ∈ U, (p ∈ Model ↔ ∀ f ∈ edgeIdeal, evalAt p f = 0)
+
+/-- 修复形态在「`Model` = 因子分解点集」这一**正确取法**下是真的（此时 `←` 就是第二假设）。 -/
+theorem edgeInvariants_suffice_gap_correct_shape_holds (U : Set (SiteFreq (Fin 4))) :
+    edgeInvariants_suffice_gap_correct_shape U {p | Factorizable p} := by
+  intro hM hgen p hp
+  have hgen' : (∀ f ∈ edgeIdeal, evalAt p f = 0) → Factorizable p := hgen p hp
+  have hZ : Factorizable p → ∀ f ∈ edgeIdeal, evalAt p f = 0 := fun hpF =>
+    fun f hf => RingHom.mem_ker.mp ((edgeIdeal_le_ker_evalAt p hpF) hf)
+  exact ⟨hZ, hgen'⟩
 
 end Phylo.Stat.EdgeInvariants

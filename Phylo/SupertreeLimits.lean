@@ -557,12 +557,69 @@ theorem no_rooted_P7_method :
 本文件把 P2 落成**split 层**的搬运（`SBD.P2`）—— 这是原文证明**实际用到**的形式
 （只需「输出在 `σ` 下不变」）。要把树层形式接过来，需要：
 `Iso T T' → ∀ s, T.IsSplitOf s ↔ T'.IsSplitOf s`。
-**缺什么**：`SimpleGraph.Iso` 与 `deleteEdges`/`Reachable` 的搬运
-（库内 `Phylo/SplitsDetermineTree.lean` 有反方向「split 系统决定树」）。
-**为什么不硬编**：不假装证出来，此处只把缺口落成 `Prop`。 -/
-def iso_preserves_splits_gap : Prop :=
-  ∀ {X : Type u} [Fintype X] [DecidableEq X] (T T' : Cladogram.{u, u} X),
-    Iso T T' → ∀ s : Split X, T.IsSplitOf s ↔ T'.IsSplitOf s
+
+**W12a 状态（已证）**：`def` 升为 `theorem`，**陈述逐字不改**。
+路线：`sideLeaves` = 「`Finset.filter`（叶标号）∘ `Reachable`（删边图）」（`Cladogram.mem_sideLeaves`），
+而单边删边图沿 `SimpleGraph.Iso` 同构地搬运（零件 `deleteEdgesIso`：单点集 `{s(a,b)}` 的
+`Sym2` 像由 `Sym2.eq_iff` + `φ` 的单射性给出），故 `Iso.reachable_iff` 把可达性搬过去；
+`Finset.ext` + `mem_sideLeaves` 直接给出 `sideLeaves` 的等式（**绕开** `filter` 的
+`Decidable` 实例项差异这一坑）。最后把 `IsSplitOf` 的见证 `(a,b,Adj,u)` 沿 `φ`／`φ.symm` 搬运。
+**不需要** `Phylo/SplitsDetermineTree.lean`（那是反方向：split 系统 ⟹ 同构）。
+⚠️ 这**不**等于把原文 P2 的**树层**形式（`F (σ·P)` 与 `σ·(F P)` 同构）也证出来；
+本文件仍只用 split 层形式（`SBD.P2`），本条是它的**接口补全**。 -/
+theorem iso_preserves_splits_gap :
+    ∀ {X : Type u} [Fintype X] [DecidableEq X] (T T' : Cladogram.{u, u} X),
+      Iso T T' → ∀ s : Split X, T.IsSplitOf s ↔ T'.IsSplitOf s := by
+  intro X _ _ T T' e s
+  -- 零件：`sideLeaves` 沿保标号同构搬运
+  have sideLeaves_iso : ∀ (T T' : Cladogram.{u, u} X) (e : Iso T T') (a b : T.V)
+      (_hab : T.graph.Adj a b) (u : T.V),
+      T.sideLeaves s(a, b) u
+        = T'.sideLeaves s(e.gIso.toEquiv a, e.gIso.toEquiv b) (e.gIso.toEquiv u) := by
+    intro T T' e a b _ u
+    -- 直接给**字面结构**（`toEquiv := e.gIso.toEquiv`）：投影可归约，
+    -- 从而 `⇑hiso` 与 `⇑e.gIso.toEquiv` **定义相等**（若经 `deleteEdgesIso` 的 let 绑定则不归约）。
+    let hiso : (T.graph.deleteEdges {s(a, b)}) ≃g
+        (T'.graph.deleteEdges {s(e.gIso.toEquiv a, e.gIso.toEquiv b)}) :=
+      RelIso.mk e.gIso.toEquiv (by
+        intro x y
+        rw [SimpleGraph.deleteEdges_adj, SimpleGraph.deleteEdges_adj]
+        refine and_congr e.gIso.map_adj_iff ?_
+        rw [Set.mem_singleton_iff, Set.mem_singleton_iff]
+        constructor
+        · intro h heq
+          exact h (by
+            rcases Sym2.eq_iff.mp heq with ⟨hx, hy⟩ | ⟨hx, hy⟩
+            · rw [hx, hy]
+            · rw [hx, hy, Sym2.eq_swap])
+        · intro h heq
+          refine h ?_
+          rcases Sym2.eq_iff.mp heq with ⟨hx, hy⟩ | ⟨hx, hy⟩
+          · rw [e.gIso.toEquiv.injective hx, e.gIso.toEquiv.injective hy]
+          · rw [e.gIso.toEquiv.injective hx, e.gIso.toEquiv.injective hy, Sym2.eq_swap])
+    refine Finset.ext fun x => ?_
+    rw [Cladogram.mem_sideLeaves, Cladogram.mem_sideLeaves]
+    have h1 := hiso.reachable_iff (u := T.leaf x) (v := u)
+    have h2 : (hiso : T.V → T'.V) (T.leaf x) = T'.leaf x := e.leaf_compat x
+    have h2u : (hiso : T.V → T'.V) u = e.gIso.toEquiv u := by
+      show (e.gIso.toEquiv) u = (e.gIso.toEquiv) u
+      rfl
+    rw [h2, h2u] at h1
+    exact h1.symm
+  constructor
+  · rintro ⟨a, b, hab, u, hu⟩
+    refine ⟨e.gIso.toEquiv a, e.gIso.toEquiv b, e.gIso.map_adj_iff.mpr hab, e.gIso.toEquiv u, ?_⟩
+    rw [hu]
+    exact sideLeaves_iso T T' e a b hab u
+  · rintro ⟨a, b, hab, u, hu⟩
+    refine ⟨e.gIso.toEquiv.symm a, e.gIso.toEquiv.symm b,
+      e.gIso.symm.map_adj_iff.mpr hab, e.gIso.toEquiv.symm u, ?_⟩
+    rw [hu]
+    have h := sideLeaves_iso T T' e (e.gIso.toEquiv.symm a) (e.gIso.toEquiv.symm b)
+      (e.gIso.symm.map_adj_iff.mpr hab) (e.gIso.toEquiv.symm u)
+    rw [e.gIso.toEquiv.apply_symm_apply, e.gIso.toEquiv.apply_symm_apply,
+      e.gIso.toEquiv.apply_symm_apply] at h
+    exact h.symm
 
 /-- ★ **显式缺口 2 —— 原文 Figure 1 的分类定理**（113–116 行）：
 > "there are precisely two trees that are parent trees for this collection of trees."
@@ -590,11 +647,20 @@ def two_parent_trees_gap : Prop :=
 `DecidableEq`/`Fintype`，`Finset (RootedTree X)` 这个类型**写不出来**
 （`Finset α` 要求 `[DecidableEq α]`），故该陈述在当前接口下**不可表达**。
 **缺什么**：`RootedTree` 的 `DecidableEq`（或商掉同构的树类型）。
-**为什么不硬编**：不假装证出来；只把「当前接口下不可表达」这件事本身落成 `Prop`，
-即「任何把 `RootedTree X` 当作 `Finset` 元素的尝试都要求一个可判定相等」。 -/
-def rooted_tree_decidableEq_gap : Prop :=
-  ∀ (X : Type u) [Fintype X] [DecidableEq X],
-    (∀ T T' : RootedTree.{u, u} X, Decidable (T = T')) →
-    ∀ T T' : RootedTree.{u, u} X, T = T' ∨ T ≠ T'
+
+**W12a 状态（已证）**：本 `Prop` 是「可判定相等 ⟹ 相等可判定」这一**逻辑重言**：
+假设本身即结论所需的判定程序（`cases h T T'` 消去 `Decidable`）。
+故**陈述逐字保留**，由 `def` 升为 `theorem`（零 `sorry`/零 `axiom`）。
+⚠️ 本定理**不**给出 `RootedTree X` 的 `DecidableEq` **实例**（那仍缺：`RootedTree` 含
+`V : Type*`、`SimpleGraph V` 等**数据场**，`V` 是结构里的类型场，无法对两个**不同** `V` 的
+结构判等）—— 它只闭合「这条登记命题本身」。 -/
+theorem rooted_tree_decidableEq_gap :
+    ∀ (X : Type u) [Fintype X] [DecidableEq X],
+      (∀ T T' : RootedTree.{u, u} X, Decidable (T = T')) →
+      ∀ T T' : RootedTree.{u, u} X, T = T' ∨ T ≠ T' := by
+  intro X _ _ h T T'
+  cases h T T' with
+  | isTrue hh => exact Or.inl hh
+  | isFalse hh => exact Or.inr hh
 
 end SBD
