@@ -349,6 +349,12 @@ theorem pendantEdge_unique {T : Cladogram X} {W : Finset X} {w₁ w₂ : X} {e :
   · exact fun h => hs1 ((inSide_comm T s(a, b) (T.leaf w₁) (T.leaf w₃)).mpr h)
   · exact fun h => hs2 ((inSide_comm T s(a, b) (T.leaf w₂) (T.leaf w₃)).mpr h)
 
+/-- ★★ **同侧的传递推论**：若 `a` 与 `c` 同侧、`a` 与 `b` **不同侧**，则 `b` 与 `c` 不同侧
+（`inSide_trans` 的逆否）。第十三轮的 (C) 路线用它把「正/负」同侧事实互相转化。 -/
+theorem not_inSide_of_inSide_of_not_inSide {T : Cladogram X} {e : Sym2 T.V} {a b c : T.V}
+    (hac : T.inSide e a c) (hab : ¬ T.inSide e a b) : ¬ T.inSide e b c :=
+  fun hbc => hab (inSide_trans T e hac ((inSide_comm T e b c).mp hbc))
+
 end Cladogram
 
 /-! ## §2 (A)：PD 求和装配 ＋ 条件形态的 `pdExchange_gap`
