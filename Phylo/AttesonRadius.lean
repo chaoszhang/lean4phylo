@@ -1547,3 +1547,61 @@ theorem dist_eq_sum_pathOf (T : Phylogram X) (u v : T.V) :
 
 end Cladogram
 
+
+/-! ## 16. ★★★ 逐边比较：`w_e` = `(n−2)·[异侧] − S_i(e) − S_j(e)`（W12e10）
+
+Atteson Lemma 10 的第 3 步（`:1774–1804` 的核心）：把 `Q(i,j) = (n−2)δ(i,j) − S_i − S_j` 与
+`Σ_e w_e(i,j)·l(e)` 逐边对照。对真边 `e = s(a,b)`（`i` 在 `a` 侧，§14 的计数给出
+`S_x(e) = Σ_k [e ∈ P_xk] = `**异侧**叶数）：
+
+* **同侧**（`j` 也在 `a` 侧）：`[异侧] = 0`、`S_i = S_j = |L_b(e)|` ⟹ `w_e = −2·|L_b(e)|`；
+* **异侧**（`j` 在 `b` 侧）：`[异侧] = 1`、`S_i = |L_b(e)|`、`S_j = |L_a(e)|`
+　⟹ `w_e = (n−2) − |L_a| − |L_b| = −2`（用 §12 的 `sideLeafCount_add_of_adj`：`|L_a| + |L_b| = n`）。
+
+两条都是 §13 分支定理（`attesonW_eq_neg_two_of_not_inSide` / `…_of_inSide`）的**直接推论**
+（`ℤ → ℝ` cast ＋ `linarith`），为下一轮「`attesonQ T.wExt = (n−2)·d − S_i − S_j` 的求和装配」备好接口。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **逐边比较（同侧）**：`i,j` 同在 `s(a,b)` 的 `a` 侧时 `w_e = −2·|L_b(e)|`
+（即 `(n−2)·0 − S_i(e) − S_j(e)`，因 `S_i = S_j = |L_b|`）。 -/
+theorem attesonW_cast_eq_Q_same (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b) {i j : X}
+    (hi : T.inSide s(a, b) a (T.leaf i)) (hj : T.inSide s(a, b) a (T.leaf j)) :
+    (T.attesonW (T.leaf i) (T.leaf j) s(a, b) : ℝ)
+      = -2 * (T.sideLeafCount s(a, b) b : ℝ) := by
+  have hIn : T.inSide s(a, b) (T.leaf i) (T.leaf j) :=
+    ((T.inSide_comm (s(a, b)) a (T.leaf i)).mp hi).trans hj
+  have hside : T.sideLeafCount s(a, b) (T.leaf i) = T.sideLeafCount s(a, b) a :=
+    T.sideLeafCount_eq_of_inSide ((T.inSide_comm (s(a, b)) a (T.leaf i)).mp hi)
+  have hsumR : (T.sideLeafCount s(a, b) a : ℝ) + (T.sideLeafCount s(a, b) b : ℝ)
+      = (Fintype.card X : ℝ) := by
+    rw [← Nat.cast_add, T.sideLeafCount_add_of_adj hab]
+  rw [T.attesonW_eq_sideCount_of_inSide hIn, hside]
+  push_cast
+  linarith
+
+/-- ★★★ **逐边比较（异侧）**：`i` 在 `a` 侧、`j` 在 `b` 侧时 `w_e = −2`
+（即 `(n−2)·1 − S_i(e) − S_j(e)`，因 `S_i = |L_b|`、`S_j = |L_a|` 且 `|L_a| + |L_b| = n`）。 -/
+theorem attesonW_cast_eq_Q_opposite (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j : X} (hi : T.inSide s(a, b) a (T.leaf i)) (hj : T.inSide s(a, b) b (T.leaf j)) :
+    (T.attesonW (T.leaf i) (T.leaf j) s(a, b) : ℝ)
+      = (Fintype.card X : ℝ) - 2
+        - (T.sideLeafCount s(a, b) b : ℝ) - (T.sideLeafCount s(a, b) a : ℝ) := by
+  have hNot : ¬ T.inSide s(a, b) (T.leaf i) (T.leaf j) := by
+    intro hcon
+    have hia : T.inSide s(a, b) (T.leaf i) a := (T.inSide_comm (s(a, b)) a (T.leaf i)).mp hi
+    have hjb : T.inSide s(a, b) (T.leaf j) b := (T.inSide_comm (s(a, b)) b (T.leaf j)).mp hj
+    exact T.not_reachable_deleteEdges_of_adj hab (hia.symm.trans (hcon.trans hjb))
+  have hsumR : (T.sideLeafCount s(a, b) a : ℝ) + (T.sideLeafCount s(a, b) b : ℝ)
+      = (Fintype.card X : ℝ) := by
+    rw [← Nat.cast_add, T.sideLeafCount_add_of_adj hab]
+  rw [T.attesonW_eq_neg_two_of_not_inSide hNot]
+  push_cast
+  linarith
+
+end Cladogram
+
