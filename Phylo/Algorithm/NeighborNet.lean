@@ -1620,8 +1620,9 @@ theorem circularRealization_fin4 (d : Fin 4 → Fin 4 → ℝ) (hdiag : ∀ x, d
 
 /-! ### 9.3 一般 `n` 的剩余缺口：**恒等**（非负性已证） -/
 
-/-- ⬜ **新登记缺口（W12g-3）**：一般 `n` 的**权重–距离恒等**
-`phyleticDist F w = d`（`n = 3,4` 见 `circularRealization_fin3/fin4`）。
+/-- ⬜ **新登记缺口（W12g-3/4）**：一般 `n` 的**权重–距离恒等**
+`phyleticDist F w = d`（`n = 3,4,5` 已证：`circularRealization_fin3/fin4/fin5`，
+并合并为 `circularWeights_realization_gap_fin_le_five`）。
 
 ⚠️ **非负性不再是缺口**（`kalmanson_triangle/H/D` 对一般 `n` 已证）。剩下的只是恒等，
 其正路是**线性代数**：把 §7 的逆矩阵 `M`（三行泛函）与 `A`（弧 ↔ 点对指示）都写成线性映射，
@@ -1634,6 +1635,332 @@ def circularWeights_realization_gap (n : ℕ) : Prop :=
       ∃ (F : Finset (Split (Fin n))) (w : Split (Fin n) → ℝ),
         Circular (↑F : Set (Split (Fin n))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
           ∀ x y : Fin n, x ≠ y → phyleticDist F w x y = d x y
+
+/-! ### 9.4 `n = 5` 实例（`X = Fin 5`，环序 = 恒等）
+
+代表弧 `[i,j]`（`j ≤ 3`）共 `binom 5 2 = 10` 条；权重由 §7 逆矩阵的行给出。
+本节的 boilerplate（45 条 pairwise 互异、10 条弧见证、10 条权重公式）由
+`scripts/msc/w12g_fin5_instance_gen.py` 机械生成。 -/
+
+/-- 代表弧 `[0,0]` 的 split：`{0} | 其余`。 -/
+def f₀₀ : Split (Fin 5) := ofSideA {0} (by decide) (by decide)
+
+/-- 代表弧 `[0,1]` 的 split：`{0, 1} | 其余`。 -/
+def f₀₁ : Split (Fin 5) := ofSideA {0, 1} (by decide) (by decide)
+
+/-- 代表弧 `[0,2]` 的 split：`{0, 1, 2} | 其余`。 -/
+def f₀₂ : Split (Fin 5) := ofSideA {0, 1, 2} (by decide) (by decide)
+
+/-- 代表弧 `[0,3]` 的 split：`{0, 1, 2, 3} | 其余`。 -/
+def f₀₃ : Split (Fin 5) := ofSideA {0, 1, 2, 3} (by decide) (by decide)
+
+/-- 代表弧 `[1,1]` 的 split：`{1} | 其余`。 -/
+def f₁₁ : Split (Fin 5) := ofSideA {1} (by decide) (by decide)
+
+/-- 代表弧 `[1,2]` 的 split：`{1, 2} | 其余`。 -/
+def f₁₂ : Split (Fin 5) := ofSideA {1, 2} (by decide) (by decide)
+
+/-- 代表弧 `[1,3]` 的 split：`{1, 2, 3} | 其余`。 -/
+def f₁₃ : Split (Fin 5) := ofSideA {1, 2, 3} (by decide) (by decide)
+
+/-- 代表弧 `[2,2]` 的 split：`{2} | 其余`。 -/
+def f₂₂ : Split (Fin 5) := ofSideA {2} (by decide) (by decide)
+
+/-- 代表弧 `[2,3]` 的 split：`{2, 3} | 其余`。 -/
+def f₂₃ : Split (Fin 5) := ofSideA {2, 3} (by decide) (by decide)
+
+/-- 代表弧 `[3,3]` 的 split：`{3} | 其余`。 -/
+def f₃₃ : Split (Fin 5) := ofSideA {3} (by decide) (by decide)
+
+/-- ★ 环形族（`Fin 5`：代表弧 `[i,j]`，`j ≤ 3`）。 -/
+def G5 : Finset (Split (Fin 5)) := {f₀₀, f₀₁, f₀₂, f₀₃, f₁₁, f₁₂, f₁₃, f₂₂, f₂₃, f₃₃}
+
+/-- ★ **显式解出的权重**（§7 的逆矩阵行：L / H / D）。 -/
+noncomputable def v5 (d : Fin 5 → Fin 5 → ℝ) : Split (Fin 5) → ℝ := fun s =>
+  if s = f₀₀ then (d 0 1 + d 0 4 - d 1 4) / 2
+  else if s = f₀₁ then (d 4 1 - d 0 1 - d 4 2 + d 0 2) / 2
+  else if s = f₀₂ then (d 4 2 - d 0 2 - d 4 3 + d 0 3) / 2
+  else if s = f₀₃ then (d 4 3 - d 0 3 - d 4 4 + d 0 4) / 2
+  else if s = f₁₁ then (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2
+  else if s = f₁₂ then (d 0 2 - d 1 2 - d 0 3 + d 1 3) / 2
+  else if s = f₁₃ then (d 0 3 - d 1 3 - d 0 4 + d 1 4) / 2
+  else if s = f₂₂ then (d 1 2 - d 2 2 - d 1 3 + d 2 3) / 2
+  else if s = f₂₃ then (d 1 3 - d 2 3 - d 1 4 + d 2 4) / 2
+  else if s = f₃₃ then (d 2 3 - d 3 3 - d 2 4 + d 3 4) / 2
+  else 0
+
+@[simp] theorem f₀₀_sideA : f₀₀.sideA = ({0} : Finset (Fin 5)) := by
+  simp [f₀₀]
+
+@[simp] theorem f₀₁_sideA : f₀₁.sideA = ({0, 1} : Finset (Fin 5)) := by
+  simp [f₀₁]
+
+@[simp] theorem f₀₂_sideA : f₀₂.sideA = ({0, 1, 2} : Finset (Fin 5)) := by
+  simp [f₀₂]
+
+@[simp] theorem f₀₃_sideA : f₀₃.sideA = ({0, 1, 2, 3} : Finset (Fin 5)) := by
+  simp [f₀₃]
+
+@[simp] theorem f₁₁_sideA : f₁₁.sideA = ({1} : Finset (Fin 5)) := by
+  simp [f₁₁]
+
+@[simp] theorem f₁₂_sideA : f₁₂.sideA = ({1, 2} : Finset (Fin 5)) := by
+  simp [f₁₂]
+
+@[simp] theorem f₁₃_sideA : f₁₃.sideA = ({1, 2, 3} : Finset (Fin 5)) := by
+  simp [f₁₃]
+
+@[simp] theorem f₂₂_sideA : f₂₂.sideA = ({2} : Finset (Fin 5)) := by
+  simp [f₂₂]
+
+@[simp] theorem f₂₃_sideA : f₂₃.sideA = ({2, 3} : Finset (Fin 5)) := by
+  simp [f₂₃]
+
+@[simp] theorem f₃₃_sideA : f₃₃.sideA = ({3} : Finset (Fin 5)) := by
+  simp [f₃₃]
+
+theorem isCyclicArc_f₀₀ : IsCyclicArc (Equiv.refl (Fin 5)) f₀₀.sideA := by
+  refine ⟨0, 0, by decide, Or.inl ?_⟩
+  rw [f₀₀_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₀₁ : IsCyclicArc (Equiv.refl (Fin 5)) f₀₁.sideA := by
+  refine ⟨0, 1, by decide, Or.inl ?_⟩
+  rw [f₀₁_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₀₂ : IsCyclicArc (Equiv.refl (Fin 5)) f₀₂.sideA := by
+  refine ⟨0, 2, by decide, Or.inl ?_⟩
+  rw [f₀₂_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₀₃ : IsCyclicArc (Equiv.refl (Fin 5)) f₀₃.sideA := by
+  refine ⟨0, 3, by decide, Or.inl ?_⟩
+  rw [f₀₃_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₁₁ : IsCyclicArc (Equiv.refl (Fin 5)) f₁₁.sideA := by
+  refine ⟨1, 1, by decide, Or.inl ?_⟩
+  rw [f₁₁_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₁₂ : IsCyclicArc (Equiv.refl (Fin 5)) f₁₂.sideA := by
+  refine ⟨1, 2, by decide, Or.inl ?_⟩
+  rw [f₁₂_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₁₃ : IsCyclicArc (Equiv.refl (Fin 5)) f₁₃.sideA := by
+  refine ⟨1, 3, by decide, Or.inl ?_⟩
+  rw [f₁₃_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₂₂ : IsCyclicArc (Equiv.refl (Fin 5)) f₂₂.sideA := by
+  refine ⟨2, 2, by decide, Or.inl ?_⟩
+  rw [f₂₂_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₂₃ : IsCyclicArc (Equiv.refl (Fin 5)) f₂₃.sideA := by
+  refine ⟨2, 3, by decide, Or.inl ?_⟩
+  rw [f₂₃_sideA]; ext x; fin_cases x <;> decide
+
+theorem isCyclicArc_f₃₃ : IsCyclicArc (Equiv.refl (Fin 5)) f₃₃.sideA := by
+  refine ⟨3, 3, by decide, Or.inl ?_⟩
+  rw [f₃₃_sideA]; ext x; fin_cases x <;> decide
+
+@[simp] theorem f₀₁_ne_f₀₀ : f₀₁ ≠ f₀₀ := by decide
+@[simp] theorem f₀₂_ne_f₀₀ : f₀₂ ≠ f₀₀ := by decide
+@[simp] theorem f₀₂_ne_f₀₁ : f₀₂ ≠ f₀₁ := by decide
+@[simp] theorem f₀₃_ne_f₀₀ : f₀₃ ≠ f₀₀ := by decide
+@[simp] theorem f₀₃_ne_f₀₁ : f₀₃ ≠ f₀₁ := by decide
+@[simp] theorem f₀₃_ne_f₀₂ : f₀₃ ≠ f₀₂ := by decide
+@[simp] theorem f₁₁_ne_f₀₀ : f₁₁ ≠ f₀₀ := by decide
+@[simp] theorem f₁₁_ne_f₀₁ : f₁₁ ≠ f₀₁ := by decide
+@[simp] theorem f₁₁_ne_f₀₂ : f₁₁ ≠ f₀₂ := by decide
+@[simp] theorem f₁₁_ne_f₀₃ : f₁₁ ≠ f₀₃ := by decide
+@[simp] theorem f₁₂_ne_f₀₀ : f₁₂ ≠ f₀₀ := by decide
+@[simp] theorem f₁₂_ne_f₀₁ : f₁₂ ≠ f₀₁ := by decide
+@[simp] theorem f₁₂_ne_f₀₂ : f₁₂ ≠ f₀₂ := by decide
+@[simp] theorem f₁₂_ne_f₀₃ : f₁₂ ≠ f₀₃ := by decide
+@[simp] theorem f₁₂_ne_f₁₁ : f₁₂ ≠ f₁₁ := by decide
+@[simp] theorem f₁₃_ne_f₀₀ : f₁₃ ≠ f₀₀ := by decide
+@[simp] theorem f₁₃_ne_f₀₁ : f₁₃ ≠ f₀₁ := by decide
+@[simp] theorem f₁₃_ne_f₀₂ : f₁₃ ≠ f₀₂ := by decide
+@[simp] theorem f₁₃_ne_f₀₃ : f₁₃ ≠ f₀₃ := by decide
+@[simp] theorem f₁₃_ne_f₁₁ : f₁₃ ≠ f₁₁ := by decide
+@[simp] theorem f₁₃_ne_f₁₂ : f₁₃ ≠ f₁₂ := by decide
+@[simp] theorem f₂₂_ne_f₀₀ : f₂₂ ≠ f₀₀ := by decide
+@[simp] theorem f₂₂_ne_f₀₁ : f₂₂ ≠ f₀₁ := by decide
+@[simp] theorem f₂₂_ne_f₀₂ : f₂₂ ≠ f₀₂ := by decide
+@[simp] theorem f₂₂_ne_f₀₃ : f₂₂ ≠ f₀₃ := by decide
+@[simp] theorem f₂₂_ne_f₁₁ : f₂₂ ≠ f₁₁ := by decide
+@[simp] theorem f₂₂_ne_f₁₂ : f₂₂ ≠ f₁₂ := by decide
+@[simp] theorem f₂₂_ne_f₁₃ : f₂₂ ≠ f₁₃ := by decide
+@[simp] theorem f₂₃_ne_f₀₀ : f₂₃ ≠ f₀₀ := by decide
+@[simp] theorem f₂₃_ne_f₀₁ : f₂₃ ≠ f₀₁ := by decide
+@[simp] theorem f₂₃_ne_f₀₂ : f₂₃ ≠ f₀₂ := by decide
+@[simp] theorem f₂₃_ne_f₀₃ : f₂₃ ≠ f₀₃ := by decide
+@[simp] theorem f₂₃_ne_f₁₁ : f₂₃ ≠ f₁₁ := by decide
+@[simp] theorem f₂₃_ne_f₁₂ : f₂₃ ≠ f₁₂ := by decide
+@[simp] theorem f₂₃_ne_f₁₃ : f₂₃ ≠ f₁₃ := by decide
+@[simp] theorem f₂₃_ne_f₂₂ : f₂₃ ≠ f₂₂ := by decide
+@[simp] theorem f₃₃_ne_f₀₀ : f₃₃ ≠ f₀₀ := by decide
+@[simp] theorem f₃₃_ne_f₀₁ : f₃₃ ≠ f₀₁ := by decide
+@[simp] theorem f₃₃_ne_f₀₂ : f₃₃ ≠ f₀₂ := by decide
+@[simp] theorem f₃₃_ne_f₀₃ : f₃₃ ≠ f₀₃ := by decide
+@[simp] theorem f₃₃_ne_f₁₁ : f₃₃ ≠ f₁₁ := by decide
+@[simp] theorem f₃₃_ne_f₁₂ : f₃₃ ≠ f₁₂ := by decide
+@[simp] theorem f₃₃_ne_f₁₃ : f₃₃ ≠ f₁₃ := by decide
+@[simp] theorem f₃₃_ne_f₂₂ : f₃₃ ≠ f₂₂ := by decide
+@[simp] theorem f₃₃_ne_f₂₃ : f₃₃ ≠ f₂₃ := by decide
+
+@[simp] theorem v5_f₀₀ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₀₀ = (d 0 1 + d 0 4 - d 1 4) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₀₁ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₀₁ = (d 4 1 - d 0 1 - d 4 2 + d 0 2) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₀₂ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₀₂ = (d 4 2 - d 0 2 - d 4 3 + d 0 3) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₀₃ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₀₃ = (d 4 3 - d 0 3 - d 4 4 + d 0 4) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₁₁ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₁₁ = (d 0 1 - d 1 1 - d 0 2 + d 1 2) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₁₂ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₁₂ = (d 0 2 - d 1 2 - d 0 3 + d 1 3) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₁₃ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₁₃ = (d 0 3 - d 1 3 - d 0 4 + d 1 4) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₂₂ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₂₂ = (d 1 2 - d 2 2 - d 1 3 + d 2 3) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₂₃ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₂₃ = (d 1 3 - d 2 3 - d 1 4 + d 2 4) / 2 := by simp [v5]
+
+@[simp] theorem v5_f₃₃ (d : Fin 5 → Fin 5 → ℝ) :
+    v5 d f₃₃ = (d 2 3 - d 3 3 - d 2 4 + d 3 4) / 2 := by simp [v5]
+
+theorem phyleticDist_ten (w : Split (Fin 5) → ℝ) (x y : Fin 5) :
+    phyleticDist G5 w x y = (((((((((w f₀₀ * sepInd f₀₀ x y + w f₀₁ * sepInd f₀₁ x y + w f₀₂ * sepInd f₀₂ x y + w f₀₃ * sepInd f₀₃ x y + w f₁₁ * sepInd f₁₁ x y + w f₁₂ * sepInd f₁₂ x y + w f₁₃ * sepInd f₁₃ x y + w f₂₂ * sepInd f₂₂ x y + w f₂₃ * sepInd f₂₃ x y + w f₃₃ * sepInd f₃₃ x y))))))))) := by
+  simp only [phyleticDist, sepInd, G5]
+  rw [    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₀₁_ne_f₀₀).symm, (f₀₂_ne_f₀₀).symm, (f₀₃_ne_f₀₀).symm, (f₁₁_ne_f₀₀).symm, (f₁₂_ne_f₀₀).symm, (f₁₃_ne_f₀₀).symm, (f₂₂_ne_f₀₀).symm, (f₂₃_ne_f₀₀).symm, (f₃₃_ne_f₀₀).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₀₂_ne_f₀₁).symm, (f₀₃_ne_f₀₁).symm, (f₁₁_ne_f₀₁).symm, (f₁₂_ne_f₀₁).symm, (f₁₃_ne_f₀₁).symm, (f₂₂_ne_f₀₁).symm, (f₂₃_ne_f₀₁).symm, (f₃₃_ne_f₀₁).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₀₃_ne_f₀₂).symm, (f₁₁_ne_f₀₂).symm, (f₁₂_ne_f₀₂).symm, (f₁₃_ne_f₀₂).symm, (f₂₂_ne_f₀₂).symm, (f₂₃_ne_f₀₂).symm, (f₃₃_ne_f₀₂).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₁₁_ne_f₀₃).symm, (f₁₂_ne_f₀₃).symm, (f₁₃_ne_f₀₃).symm, (f₂₂_ne_f₀₃).symm, (f₂₃_ne_f₀₃).symm, (f₃₃_ne_f₀₃).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₁₂_ne_f₁₁).symm, (f₁₃_ne_f₁₁).symm, (f₂₂_ne_f₁₁).symm, (f₂₃_ne_f₁₁).symm, (f₃₃_ne_f₁₁).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₁₃_ne_f₁₂).symm, (f₂₂_ne_f₁₂).symm, (f₂₃_ne_f₁₂).symm, (f₃₃_ne_f₁₂).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₂₂_ne_f₁₃).symm, (f₂₃_ne_f₁₃).symm, (f₃₃_ne_f₁₃).symm]),
+    Finset.sum_insert (by simp [Finset.mem_insert, Finset.mem_singleton, (f₂₃_ne_f₂₂).symm, (f₃₃_ne_f₂₂).symm]),
+    Finset.sum_insert (by simp [Finset.mem_singleton, (f₃₃_ne_f₂₃).symm]),
+    Finset.sum_singleton]
+  try ring
+
+/-- ★★★ **`n = 5` 的恒等**（干净上下文：只带具体的对称/对角等式）。 -/
+theorem v5_realizes (d : Fin 5 → Fin 5 → ℝ) (h01 : d 0 1 = d 1 0) (h02 : d 0 2 = d 2 0) (h03 : d 0 3 = d 3 0) (h04 : d 0 4 = d 4 0) (h12 : d 1 2 = d 2 1) (h13 : d 1 3 = d 3 1) (h14 : d 1 4 = d 4 1) (h23 : d 2 3 = d 3 2) (h24 : d 2 4 = d 4 2) (h34 : d 3 4 = d 4 3)
+    (hd1 : d 1 1 = 0) (hd2 : d 2 2 = 0) (hd3 : d 3 3 = 0) (hd4 : d 4 4 = 0) :
+    ∀ x y : Fin 5, x ≠ y → phyleticDist G5 (v5 d) x y = d x y := by
+  intro x y hxy
+  rw [phyleticDist_ten (v5 d) x y]
+  simp only [v5_f₀₀, v5_f₀₁, v5_f₀₂, v5_f₀₃, v5_f₁₁, v5_f₁₂, v5_f₁₃, v5_f₂₂, v5_f₂₃, v5_f₃₃]
+  fin_cases x <;> fin_cases y <;>
+    simp_all [sepInd, f₀₀, f₀₁, f₀₂, f₀₃, f₁₁, f₁₂, f₁₃, f₂₂, f₂₃, f₃₃] <;>
+    linarith [h01, h02, h03, h04, h12, h13, h14, h23, h24, h34, hd1, hd2, hd3, hd4]
+
+/-- ★★★ **`n = 5` 实例（修复形态）**：环形（Kalmanson）+ 对称 + 零对角 `d` 由**非负**加权
+环形族实现；权重是 §7 逆矩阵的行（`v5`），非负性用一般 `n` 的 `kalmanson_*` 引理。 -/
+theorem circularRealization_fin5 (d : Fin 5 → Fin 5 → ℝ) (hdiag : ∀ x, d x x = 0)
+    (hsym : ∀ x y, d x y = d y x) (hd : IsCircularDist (Equiv.refl (Fin 5)) d) :
+    ∃ (F : Finset (Split (Fin 5))) (w : Split (Fin 5) → ℝ),
+      Circular (↑F : Set (Split (Fin 5))) ∧ (∀ s ∈ F, 0 ≤ w s) ∧
+        ∀ x y : Fin 5, x ≠ y → phyleticDist F w x y = d x y := by
+  refine ⟨G5, v5 d, ?_, ?_, ?_⟩
+  · refine ⟨5, Equiv.refl (Fin 5), fun s hs => ?_⟩
+    have hs' : s ∈ G5 := hs
+    simp only [G5, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · exact Or.inl isCyclicArc_f₀₀
+    · exact Or.inl isCyclicArc_f₀₁
+    · exact Or.inl isCyclicArc_f₀₂
+    · exact Or.inl isCyclicArc_f₀₃
+    · exact Or.inl isCyclicArc_f₁₁
+    · exact Or.inl isCyclicArc_f₁₂
+    · exact Or.inl isCyclicArc_f₁₃
+    · exact Or.inl isCyclicArc_f₂₂
+    · exact Or.inl isCyclicArc_f₂₃
+    · exact Or.inl isCyclicArc_f₃₃
+  · intro s hs
+    have hs' : s ∈ G5 := hs
+    simp only [G5, Finset.mem_insert, Finset.mem_singleton] at hs'
+    rcases hs' with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+    · rw [v5_f₀₀]
+      have h := kalmanson_triangle (Equiv.refl (Fin 5)) d hdiag hd 0 1 4 (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₀₁]
+      have h := kalmanson_H (Equiv.refl (Fin 5)) d hsym hd 0 1 2 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₀₂]
+      have h := kalmanson_H (Equiv.refl (Fin 5)) d hsym hd 0 2 3 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₀₃]
+      have h := kalmanson_H (Equiv.refl (Fin 5)) d hsym hd 0 3 4 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₁₁]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 0 1 1 2 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₁₂]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 0 1 2 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₁₃]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 0 1 3 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₂₂]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 1 2 2 3 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₂₃]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 1 2 3 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+    · rw [v5_f₃₃]
+      have h := kalmanson_D (Equiv.refl (Fin 5)) d hd 2 3 3 4 (by decide) (by decide) (by decide)
+      simp only [Equiv.refl_symm, Equiv.refl_apply] at h
+      linarith
+  · exact v5_realizes d (hsym 0 1) (hsym 0 2) (hsym 0 3) (hsym 0 4) (hsym 1 2) (hsym 1 3) (hsym 1 4) (hsym 2 3) (hsym 2 4) (hsym 3 4) (hdiag 1) (hdiag 2) (hdiag 3) (hdiag 4)
+
+/-! ### 9.5 ★B：`n = 3` 的**具体** `d` 与解出的 `w` -/
+
+/-- ★B 具体距离：非对角 `1`、对角 `0`（`Fin 3`）。 -/
+def d3one : Fin 3 → Fin 3 → ℝ := fun x y => if x = y then 0 else 1
+
+theorem d3one_symm (x y : Fin 3) : d3one x y = d3one y x := by
+  unfold d3one
+  fin_cases x <;> fin_cases y <;> norm_num
+
+theorem d3one_diag (x : Fin 3) : d3one x x = 0 := by
+  unfold d3one; simp
+
+/-- ★B **具体实例**：`d3one` 解出的三条权重都是 `1/2`，且族 `G₃` 的系统发生距离**恰**等于 `d3one`。 -/
+example : v₃ d3one c₀ = 1 / 2 ∧ v₃ d3one c₁ = 1 / 2 ∧ v₃ d3one c₂ = 1 / 2 ∧
+    ∀ x y : Fin 3, x ≠ y → phyleticDist G₃ (v₃ d3one) x y = 1 := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [v₃_c₀]; norm_num [d3one]
+  · rw [v₃_c₁]; norm_num [d3one]
+  · rw [v₃_c₂]; norm_num [d3one]
+  · intro x y hxy
+    rw [v₃_realizes d3one (d3one_symm 0 1) (d3one_symm 0 2) (d3one_symm 1 2)
+      (d3one_diag 1) (d3one_diag 2) x y hxy]
+    unfold d3one
+    simp [hxy]
+
+
+/-- ✅ **部分收口（W12g-4）**：`circularWeights_realization_gap` 在 `n = 3, 4, 5` 上**已证**
+（三个实例定理的类型与 `circularWeights_realization_gap n` **逐字相同**）。一般 `n` 仍是该 `def` 的内容。 -/
+theorem circularWeights_realization_gap_fin_le_five :
+    circularWeights_realization_gap 3 ∧ circularWeights_realization_gap 4 ∧
+      circularWeights_realization_gap 5 :=
+  ⟨circularRealization_fin3, circularRealization_fin4, circularRealization_fin5⟩
 
 end CircularRealization
 
