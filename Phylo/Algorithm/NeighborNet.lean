@@ -2466,6 +2466,91 @@ theorem alm_injective_of_three_le {n : ℕ} (hn : 3 ≤ n) : Function.Injective 
       · intro i hi
         exact arc_eq_of_coord hi.1 hi.2
 
+/-! ### 11.4 收口（W12g-10）：`n ≤ 2` 的小情形、`Alm` 单射/满射、`Arc`/`Pair` 形式的恒等
+
+* `n ≤ 1` 时 `Arc n = ∅`（护栏 `j+1 < n` 直接矛盾）；`n = 2` 时 `Arc 2` 只有一个元素、
+  `Pair 2` 只有一个点对 `(0,1)`，且 `sepInd (arcSplit a) 0 1 = 1` ⇒ 逐点直算即得单射。
+* 合起来 `Alm_injective (n) : ∀ n, Injective (Alm n)`，再 ＋ `finrank_arc_eq_finrank_pair`
+  ＋ `LinearMap.injective_iff_surjective_of_finrank_eq_finrank` ⇒ **满射** ⇒ `∃ w, Alm w = d`。
+
+⚠️ **命名如实**：下面这条是 **`Arc`/`Pair` 形式**的恒等，**不是** `def circularWeights_realization_gap`
+（后者还要把 `Arc` 权重打包成 `Finset (Split (Fin n))` 并给非负性）。 -/
+
+/-- `n = 2` 时弧的两个坐标都被护栏逼成 `0`。 -/
+theorem arc_two_val (a : Arc 2) : a.1.1 = 0 ∧ a.1.2 = 0 := by
+  have h1 : a.1.1.val ≤ a.1.2.val := Fin.le_iff_val_le_val.mp a.2.1
+  have h2 : a.1.2.val + 1 < 2 := a.2.2
+  exact ⟨Fin.ext (by omega), Fin.ext (by omega)⟩
+
+/-- `n = 2` 时弧唯一。 -/
+theorem arc_two_unique (i idx : Arc 2) : i = idx := by
+  obtain ⟨h1, h2⟩ := arc_two_val i
+  obtain ⟨h1', h2'⟩ := arc_two_val idx
+  exact arc_eq_of_coord (by rw [h1, h1']) (by rw [h2, h2'])
+
+theorem arcSplit_two_sideA (a : Arc 2) : (arcSplit a).sideA = ({0} : Finset (Fin 2)) := by
+  obtain ⟨h1, h2⟩ := arc_two_val a
+  rw [arcSplit_sideA, h1, h2]
+  ext x
+  fin_cases x <;> decide
+
+theorem arcSplit_two_sideB (a : Arc 2) : (arcSplit a).sideB = ({1} : Finset (Fin 2)) := by
+  rw [sideB_eq_compl, arcSplit_two_sideA a]
+  ext x
+  fin_cases x <;> decide
+
+/-- `n = 2` 时那条唯一的 split 把唯一的点对分开。 -/
+theorem sepInd_arcSplit_two (a : Arc 2) : sepInd (arcSplit a) (0 : Fin 2) (1 : Fin 2) = 1 := by
+  unfold sepInd
+  rw [arcSplit_two_sideA a, arcSplit_two_sideB a, ite_eq_left (by decide)]
+
+/-- ★ **`n ≤ 2` 的 `Alm` 单射**（逐点直算）。 -/
+theorem alm_injective_of_le_two {n : ℕ} (hn : n ≤ 2) : Function.Injective (Alm n) := by
+  intro b₁ b₂ h
+  funext idx
+  rcases Nat.lt_or_ge n 2 with hlt | hge
+  · exact absurd idx.2.2 (by omega)
+  · have hn2 : n = 2 := le_antisymm hn hge
+    subst hn2
+    have hpair := congrFun h (⟨((0 : Fin 2), (1 : Fin 2)), by decide⟩ : Pair 2)
+    change (∑ i : Arc 2, b₁ i * sepInd (arcSplit i) (0 : Fin 2) (1 : Fin 2))
+      = ∑ i : Arc 2, b₂ i * sepInd (arcSplit i) (0 : Fin 2) (1 : Fin 2) at hpair
+    have hs₁ : (∑ i : Arc 2, b₁ i * sepInd (arcSplit i) (0 : Fin 2) (1 : Fin 2)) = b₁ idx := by
+      rw [Finset.sum_eq_single idx]
+      · rw [sepInd_arcSplit_two idx, mul_one]
+      · intro i _ hi
+        exact absurd (arc_two_unique i idx) hi
+      · intro hmem
+        exact absurd (Finset.mem_univ idx) hmem
+    have hs₂ : (∑ i : Arc 2, b₂ i * sepInd (arcSplit i) (0 : Fin 2) (1 : Fin 2)) = b₂ idx := by
+      rw [Finset.sum_eq_single idx]
+      · rw [sepInd_arcSplit_two idx, mul_one]
+      · intro i _ hi
+        exact absurd (arc_two_unique i idx) hi
+      · intro hmem
+        exact absurd (Finset.mem_univ idx) hmem
+    rw [hs₁, hs₂] at hpair
+    exact hpair
+
+/-- ★★★ **`Alm` 单射（任意 `n`）**：`n ≤ 2` 逐点直算，`3 ≤ n` 走 §11.3 的三分支装配。 -/
+theorem Alm_injective (n : ℕ) : Function.Injective (Alm n) := by
+  rcases Nat.lt_or_ge n 3 with h | h
+  · exact alm_injective_of_le_two (by omega)
+  · exact alm_injective_of_three_le h
+
+/-- ★★★ **`Alm` 满射**：单射 ＋ `finrank` 相等 ⇒ 满射（`LinearMap.injective_iff_surjective_of_finrank_eq_finrank`）。 -/
+theorem Alm_surjective (n : ℕ) : Function.Surjective (Alm n) :=
+  (LinearMap.injective_iff_surjective_of_finrank_eq_finrank
+    (finrank_arc_eq_finrank_pair n)).mp (Alm_injective n)
+
+/-- ★★★ **`Arc`/`Pair` 形式的恒等**：任意点对函数都是某个弧权重族的系统发生距离。
+
+⚠️ 这**不是** `def circularWeights_realization_gap`（后者还要打包成 `Finset (Split (Fin n))`
+并给出非负性）—— 故不取名 `…_gap_proved`。 -/
+theorem exists_arcWeights_arc_pair (n : ℕ) (d : Pair n → ℝ) :
+    ∃ w : Arc n → ℝ, Alm n w = d :=
+  Alm_surjective n d
+
 end FunctionalMaterial
 
 end WeightAlgebra
