@@ -1432,3 +1432,71 @@ theorem attesonW_eq_sideCount_of_inSide (T : Cladogram X) {i j : T.V} {e : Sym2 
 
 end Cladogram
 
+
+/-! ## 14. ★★★ 逐边分解与逐边计数（W12e8）
+
+Atteson Lemma 10（`:1774–1804`）的两步：
+
+1. **`Q(i,j) = Σ_{e} w_e(i,j)·l(e)`** —— 权重沿边的**加权和**（本节 `attesonQ`）；
+2. 于是 `Q(k,l) − Q(i,j) = Σ_e (w_e(k,l) − w_e(i,j))·l(e)` —— **逐边分解**（本节 `attesonQ_sub`），
+   再对每个 `e` 比较括号里的量（`:2023–2056` 的单调性）。
+
+本节把 (2) 与其中**唯一用到拓扑的一步** ——「走过 `e` 的路径条数 = 另一侧叶数」——
+证出来（后者正是 §13 的桥 ＋ §12 的 `sideLeafCount` 的接口）。
+⚠️ 完整的 (1)（即 `attesonQ l = NJ 的 Q` 判据）还需要「可加性」`δ(i,k) = Σ_e S_ik(e)·l(e)`
+（库内 `Phylo.PauplinFormula` 的 `dist_eq_sum_incidence`，在 `AttesonRadius` 的 import 锥之外）——
+**未做**，见本轮报告；`def atteson_lemma11_gap`（:833）逐字未动。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **`w_e` 的加权和**（Atteson `:1774–1804` 的 `Q(i,j) = Σ_e w_e(i,j)·l(e)` 的左边写法；
+`w_e` 见 §13 的 `attesonW`）。 -/
+noncomputable def attesonQ (T : Cladogram X) (l : Sym2 T.V → ℝ) (i j : T.V) : ℝ :=
+  ∑ e : Sym2 T.V, T.attesonW i j e * l e
+
+omit [DecidableEq X] in
+/-- ★★★ **逐边分解**：`Q(k,m) − Q(i,j) = Σ_e (w_e(k,m) − w_e(i,j))·l(e)`。
+
+这就是 Atteson Lemma 10 之后「**逐边比较**」的起点：左边差一个 `Q` 值，右边是逐边贡献之差。 -/
+theorem attesonQ_sub (T : Cladogram X) (l : Sym2 T.V → ℝ) (i j k m : T.V) :
+    T.attesonQ l k m - T.attesonQ l i j
+      = ∑ e : Sym2 T.V, (T.attesonW k m e - T.attesonW i j e) * l e := by
+  rw [attesonQ, attesonQ, ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  ring
+
+/-- ★★★ **逐边计数（集合版）**：叶 `x` 在 `s(a,b)` 的 `a` 侧时，
+「`x` 到各叶的路径中走过 `s(a,b)` 的那些叶」**恰好**是 `b` 侧的叶集。
+
+证明 = §13 的桥（`e ∈ P_xk ⟺ 异侧`）＋ `inSide_or_inSide`（每点只在一侧）＋「边是桥」。 -/
+theorem filter_pathOf_edges_eq_sideLeaves (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {x : X} (hx : T.inSide s(a, b) a (T.leaf x)) :
+    Finset.univ.filter (fun k : X => s(a, b) ∈ (T.pathOf (T.leaf x) (T.leaf k)).edges)
+      = T.sideLeaves s(a, b) b := by
+  ext k
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  rw [T.mem_pathOf_edges_iff_not_inSide, T.mem_sideLeaves_iff_inSide]
+  have hxa : T.inSide s(a, b) (T.leaf x) a := (T.inSide_comm (s(a, b)) a (T.leaf x)).mp hx
+  constructor
+  · intro h
+    rcases T.inSide_or_inSide (x := T.leaf k) hab with hk | hk
+    · exact absurd (hxa.trans ((T.inSide_comm (s(a, b)) (T.leaf k) a).mp hk)) h
+    · exact (T.inSide_comm (s(a, b)) (T.leaf k) b).mp hk
+  · intro hk hcon
+    exact T.not_reachable_deleteEdges_of_adj hab (hx.trans hcon |>.trans hk.symm)
+
+/-- ★★★ **逐边计数（数值版）**：`#{k : 路径 x→k 走过 s(a,b)} = |L_b(s(a,b))|`
+—— Atteson 权重里 `|L − L_i(e)|` 的**路径侧**含义（与 §12 的 `sideLeafCount` 接口对接）。 -/
+theorem card_filter_pathOf_edges (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {x : X} (hx : T.inSide s(a, b) a (T.leaf x)) :
+    (Finset.univ.filter (fun k : X => s(a, b) ∈ (T.pathOf (T.leaf x) (T.leaf k)).edges)).card
+      = T.sideLeafCount s(a, b) b := by
+  rw [filter_pathOf_edges_eq_sideLeaves T hab hx]
+  rfl
+
+end Cladogram
+
