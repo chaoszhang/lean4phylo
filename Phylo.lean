@@ -58,6 +58,7 @@ import Phylo.SplitsDetermineTree
 import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.SplitWeak
+import Phylo.Stat.AnomalousGeneTree
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.Bootstrap
 import Phylo.Stat.CASTERBridge
