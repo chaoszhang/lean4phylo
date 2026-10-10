@@ -9,6 +9,7 @@ import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
 import Phylo.Split
 import Phylo.InternalEdge
+import Phylo.TreeDistance
 
 /-!
 # `Phylo.AttesonRadius` —— Atteson 安全半径 `1/2`（W11g · D1）
@@ -1497,6 +1498,52 @@ theorem card_filter_pathOf_edges (T : Cladogram X) {a b : T.V} (hab : T.graph.Ad
       = T.sideLeafCount s(a, b) b := by
   rw [filter_pathOf_edges_eq_sideLeaves T hab hx]
   rfl
+
+end Cladogram
+
+
+/-! ## 15. ★★★ 可加性（路径版，W12e9 · 路线 ①）
+
+Atteson Lemma 10 的第一步 `Q(i,j) = Σ_e w_e(i,j)·l(e)` 需要把 `δ(i,j)` 写成**沿路径的加权和**：
+
+　　`d(u,v) = Σ_e [e ∈ P_uv]·w_e`（`[·]` 为指示函数，`w_e = T.wExt e`）。
+
+库内同一条等式是 `Phylo.PauplinFormula.dist_eq_sum_incidence`（用那里的 `pathWalk`/`incidence`），
+但 `PauplinFormula → BMELastSquares → AttesonRadius` **方向相反**，本文件引用不到 ⇒ 按 W12e9 派单
+**在本文件内自证一份**（与其证明同构：`dist = walkDist` ＋ `walkDist = 边表和` ＋
+「边表 → `toFinset` 指示函数」）。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+omit [Fintype X] [DecidableEq X] in
+/-- 唯一路径的边表无重复（`IsPath` 的直接推论）。 -/
+theorem pathOf_edges_nodup (T : Cladogram X) (u v : T.V) : (T.pathOf u v).edges.Nodup :=
+  SimpleGraph.Walk.edges_nodup_of_support_nodup
+    ((SimpleGraph.Walk.isPath_def _).mp (T.pathOf_isPath u v))
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **可加性（路径版）**：`d(u,v) = Σ_e [e ∈ P_uv]·w_e` —— 即 Atteson Lemma 10 里
+`δ` 与「边权 + 路径关联」之间的桥（也是 §13 的 `pathOf` 与 §14 的 `attesonQ` 之间的接口）。 -/
+theorem dist_eq_sum_pathOf (T : Phylogram X) (u v : T.V) :
+    T.dist u v
+      = ∑ e : Sym2 T.V, (if e ∈ (T.pathOf u v).edges then T.wExt e else (0 : ℝ)) := by
+  have hl : (T.pathOf u v).edges.Nodup := pathOf_edges_nodup T.toCladogram u v
+  have h1 : T.dist u v = (T.pathOf u v).edges.toFinset.sum T.wExt := by
+    show T.walkDist (T.pathOf u v) = _
+    rw [Phylogram.walkDist, List.sum_toFinset T.wExt hl]
+  have h2 : (∑ e : Sym2 T.V, (if e ∈ (T.pathOf u v).edges then T.wExt e else (0 : ℝ)))
+      = (T.pathOf u v).edges.toFinset.sum T.wExt := by
+    have h3 : ∀ e : Sym2 T.V,
+        (if e ∈ (T.pathOf u v).edges then T.wExt e else (0 : ℝ))
+          = if e ∈ (T.pathOf u v).edges.toFinset then T.wExt e else 0 := by
+      intro e
+      by_cases h : e ∈ (T.pathOf u v).edges <;> simp [h]
+    rw [Finset.sum_congr rfl fun e _ => h3 e, Finset.sum_ite_mem, Finset.univ_inter]
+  rw [h1, h2]
 
 end Cladogram
 
