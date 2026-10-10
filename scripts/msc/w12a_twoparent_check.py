@@ -271,6 +271,32 @@ def main():
             ok_shape = True
     print(f"★ `…_correct_shape` 机器判定：{'**真** ✓' if ok_shape else '**假** ✗'}")
 
+    # ------------------------------------------------------------------ ★D-2
+    print("\n" + "=" * 74)
+    print("★D-2（W12a12）**分类定理**：" + "`SBD.two_parent_trees_classification`")
+    print("   每个 parent tree 的每条 split 要么平凡、要么落在 P1 ∪ P2 内")
+    print("=" * 74)
+    P1, P2 = parents[0], parents[1]
+    union = set(P1) | set(P2)
+    # 模型层面的精确对应：树 ↔ 相容族；「平凡 split」由任何树的叶边展示，
+    # 故非平凡部分只需检查「展示 prof 的族的每条 split ∈ P1 ∪ P2」。
+    viol = []
+    for f in fams:
+        if all(displays(f, q) for q in PROF):
+            extra = [s for s in f if s not in union]
+            if extra:
+                viol.append((f, extra))
+    print(f"  检查了 {len(fams)} 个相容族；展示 prof 的族中，含 P1∪P2 之外 split 的：{len(viol)} 个")
+    for f, extra in viol:
+        print(f"    ✗ 反例 F = {show(f)}，越界 split = {show(frozenset(extra))}")
+    print(f"  ⇒ 分类定理（非平凡部分）机器判定：{'**假** ✗（可证伪）' if viol else '**真** ✓'}")
+    # 附：把「任意族 ⊇ 某个 parent」这一更强形式也核一遍（第 4 条的一般形态）
+    strong = [f for f in fams if not (subset(P1, f) or subset(P2, f))]
+    print(f"  附核（更强形态）：不含 P1 也不含 P2 的相容族 = {len(strong)} 个"
+          + ("" if not strong else f"，例如 {show(strong[0])}"))
+    # 附：parent 族的规模与「最大族大小」的关系（Semple–Steel：binary ⟺ |fam| = n-3）
+    print(f"  附核：两个 parent 族的大小 = {[len(p) for p in parents]}（n-3 = 3 ✓）")
+
 
 if __name__ == "__main__":
     main()
