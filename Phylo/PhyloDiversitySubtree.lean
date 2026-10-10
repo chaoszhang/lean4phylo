@@ -58,19 +58,28 @@ Steel 2005 式 (1)（PD 的加权交换性质）的选 `x` 论证需要「`W` �
 `W'∩W` 由核心引理）⇒ `¬cov(W',f) ∧ cov(W'∪{w},f)` ⇒ `P(w) ⊆ Gain(w)` ⇒
 `PD(W∖{w}) + PD(W'∪{w}) ≥ PD(W) + PD(W')` ✓（**这一步本模块未形式化**）。
 
-## 尚未完成（如实）
+## 已完成（第九–十轮）
 
-1. **(A) 的 PD 求和装配未完成**（第七轮试过，**如实记录卡点**）：需要
-   `PD(W) − PD(W∖{w}) = Σ_e [IsPendantEdgeOf] · w_e` 与并集版两个差分恒等式 ＋ 最终一次实数重排。
-   本文件里 **`ring` 不可用**（`unknown tactic`）✗、**`ite` 的两个旧引理名已弃用**（须用
-   `ite_eq_left`／`ite_eq_right`；用旧名会产生**告警** ⇒ 非 0 输出 ⇒ 验收失败）✗、`Edge` 拆成相邻对时
-   `SimpleGraph.mem_edgeSet` 名字解析失败 ✗ ⇒ 这三处需换写法（`split_ifs` ＋ `sub_add_cancel`/
-   `add_le_add_iff_right` 等显式引理 ＋ 正确 API 名）后再做一次；
-2. **`HangOff` 在互异 `w ∈ W` 上两两不交**（Steel (B) 的计数核）**未证** —— 需要两件几何：
-   (i) `z ∉ W` 到 `spanVerts T W` 的**最近点唯一**（路径论证），
-   (ii) 互异 `w` 的悬挂路径**互不相交**；
-3. 由此，`pdExchange_gap`（Steel 式 (1)）与 `greedy_gap_correct_shape` **仍是开放目标**；
-   本模块**没有**、也不声称证出它们。
+* ✅ **(A) 已完整落地**：`PD_sub_erase`／`PD_sub_insert`（两个差分恒等式）＋ `pdExchange_of_gain`
+  （装配）＋ **`pdExchange_gap_of_counting`**（条件形态：`(B) 的计数 ⇒ pdExchange_gap T`，命名如实 ✓）；
+* ✅ **(B) ⇐ (C) 已落地**：`exists_unblocked_of_hangOff_disjoint`（**鸽巢计数**：
+  `z ∉ W` 至多落在一个 `HangOff(w)` ＋ `|W'∖W| < |W∖W'|` ⇒ 存在未被挡住的 `w`）＋
+  `pdExchange_gap_of_hangOff_disjoint`（**(C) ⇒ 无条件 `pdExchange_gap T`**）＋
+  `greedy_gap_correct_shape_of_hangOff_disjoint`（**(C) ⇒ 修复形态**，与已入库的
+  `greedy_gap_correct_shape_of_exchange` 合成；原 `def greedy_gap_correct_shape` **逐字保留** ✓）。
+
+## 唯一的剩余缺口 (C)（如实）
+
+**(C)**：`∀ W, ∀ z ∉ W, ∀ w₁ w₂ ∈ W, z ∈ HangOff(w₁) → z ∈ HangOff(w₂) → w₁ = w₂`
+（即「`z ∉ W` **至多挂在一条**悬挂路径上」）。它需要一条**树分量几何**：
+`region(w) := outer(最内侧外边)` 是 `T − f(w)` 的一个连通分量（含 `leaf w`，且 `region(w) ∩ W = {w}` ✓ 已可由
+`isSep_of_isPendantEdgeOf_of_ne` 得），而**树中两条边的割分量若相交必含一个另一个** ⇒ 若
+`z ∈ region(w₁) ∩ region(w₂)`（且 `z ∉ W`）则 `region(w₁) ⊆ region(w₂)` 或反之，
+于是 `w₁ ∈ region(w₂) ∩ W = {w₂}` ⇒ `w₁ = w₂` ✗ 矛盾 ✓。
+
+⇒ **要证的就是「两条边的割分量相交 ⇒ 嵌套」这一条**（可用 `existsUnique_path`／`spanVerts` 的路径论证，
+或 `inSide_or_inSide` 的二分类性导出）。**本批未证**；`pdExchange_gap` 与 `greedy_gap_correct_shape`
+**仍是开放目标**（未被反驳 ✓；本模块**没有**、也不声称证出它们 ✓）。
 -/
 
 set_option linter.unusedSectionVars false
@@ -372,6 +381,70 @@ theorem pdExchange_gap_of_counting (T : Phylogram X)
   refine ⟨w, hw, ?_⟩
   rw [Finset.union_singleton]
   exact hfin
+
+/-- ★★★ **(C) ⇒ (B)：鸽巢计数**。
+
+若 `z ∉ W` **至多**落在一个 `HangOff(w)`（`w ∈ W`）里，且 `|W'∖W| < |W∖W'|`，
+则存在 `w ∈ W∖W'`，其 `HangOff` 不含 `W'∖W` 的任何元素。
+
+**证明**：反设每个 `w ∈ W∖W'` 都被某个 `z ∈ W'∖W` 挡住；用 `Classical.choose` 取挡者，
+由 (C) 得该选择在 `W∖W'` 上**单射**，于是 `|W∖W'| ≤ |W'∖W|`，与 `|W'∖W| < |W∖W'|` 矛盾。 -/
+theorem exists_unblocked_of_hangOff_disjoint (T : Cladogram X) {W W' : Finset X}
+    (hdisj : ∀ z : X, z ∉ W → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+      z ∈ HangOff T W w₁ → z ∈ HangOff T W w₂ → w₁ = w₂)
+    (hcard : (W' \ W).card < (W \ W').card) :
+    ∃ w ∈ W \ W', ∀ z ∈ W' \ W, z ∉ HangOff T W w := by
+  classical
+  by_contra hcon
+  have hblocked : ∀ w ∈ W \ W', ∃ z ∈ W' \ W, z ∈ HangOff T W w := by
+    intro w hw
+    by_contra h
+    exact hcon ⟨w, hw, fun z hz hzh => h ⟨z, hz, hzh⟩⟩
+  let g : ↥(W \ W') → ↥(W' \ W) := fun w =>
+    ⟨Classical.choose (hblocked w.1 w.2), (Classical.choose_spec (hblocked w.1 w.2)).1⟩
+  have hghang : ∀ w : ↥(W \ W'), (g w : X) ∈ HangOff T W w.1 := fun w =>
+    (Classical.choose_spec (hblocked w.1 w.2)).2
+  have ginj : Function.Injective g := by
+    intro w₁ w₂ heq
+    have h1 : (g w₁ : X) ∈ HangOff T W w₁.1 := hghang w₁
+    have h2 : (g w₁ : X) ∈ HangOff T W w₂.1 := by rw [heq]; exact hghang w₂
+    have hzW : (g w₁ : X) ∉ W := (Finset.mem_sdiff.mp (g w₁).2).2
+    have hw₁W : w₁.1 ∈ W := (Finset.mem_sdiff.mp w₁.2).1
+    have hw₂W : w₂.1 ∈ W := (Finset.mem_sdiff.mp w₂.2).1
+    exact Subtype.ext (hdisj (g w₁) hzW w₁.1 hw₁W w₂.1 hw₂W h1 h2)
+  have hle : (W \ W').card ≤ (W' \ W).card := by
+    have h : Fintype.card ↥(W \ W') ≤ Fintype.card ↥(W' \ W) :=
+      Fintype.card_le_of_injective g ginj
+    rwa [Fintype.card_coe, Fintype.card_coe] at h
+  exact absurd hle (not_le.mpr hcard)
+
+/-- ★★★ **(C) ⇒ 无条件 `pdExchange_gap`**：把上一条与已入库的
+`pdExchange_gap_of_counting` 合成（`|W'| < |W|` ⇒ `|W'∖W| < |W∖W'|` 用 `card_inter_add_card_sdiff`）。
+
+⚠️ 命名如实：结论以 **(C)（挂点两两不交）**为前提；**(C) 本批未证**。 -/
+theorem pdExchange_gap_of_hangOff_disjoint (T : Phylogram X)
+    (hC : ∀ (W : Finset X) (z : X), z ∉ W → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+      z ∈ Cladogram.HangOff T.toCladogram W w₁ →
+        z ∈ Cladogram.HangOff T.toCladogram W w₂ → w₁ = w₂) :
+    pdExchange_gap T := by
+  classical
+  refine pdExchange_gap_of_counting T fun W W' hW' hlt => ?_
+  have hcard : (W' \ W).card < (W \ W').card := by
+    have ha := Finset.card_inter_add_card_sdiff W' W
+    have hb := Finset.card_inter_add_card_sdiff W W'
+    rw [Finset.inter_comm W W'] at hb
+    omega
+  exact exists_unblocked_of_hangOff_disjoint T.toCladogram (hC W) hcard
+
+/-- ★★★ **(C) ⇒ 修复形态**（原 `def greedy_gap_correct_shape` **逐字保留**）：
+由 `pdExchange_gap_of_hangOff_disjoint` 与已入库的
+`greedy_gap_correct_shape_of_exchange` 合成。⚠️ **条件形态**（前提 ＝ (C) ✓），命名如实。 -/
+theorem greedy_gap_correct_shape_of_hangOff_disjoint (T : Phylogram X)
+    (hC : ∀ (W : Finset X) (z : X), z ∉ W → ∀ w₁ ∈ W, ∀ w₂ ∈ W,
+      z ∈ Cladogram.HangOff T.toCladogram W w₁ →
+        z ∈ Cladogram.HangOff T.toCladogram W w₂ → w₁ = w₂) :
+    greedy_gap_correct_shape T :=
+  greedy_gap_correct_shape_of_exchange T (pdExchange_gap_of_hangOff_disjoint T hC)
 
 end Phylo.PhyloDiversity
 
