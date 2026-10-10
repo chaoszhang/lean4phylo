@@ -412,6 +412,54 @@ theorem bme_statistical_consistency_gap_satisfiable (D : Dissimilarity X) :
   exact hη
 
 
+/-! ## 7. ★★★ `bme_pauplin_identity_gap` 的归约材料（W12e14）
+
+★D 穷举核查（`scripts/msc/w12e_bme_check.py`：n ≤ 6 的全部标号无根二叉拓扑，拓扑数 1/3/15/105
+与 `(2n−5)!!` 吻合 ⇒ 枚举自校验 ✓；**1068 次边检查、0 反例** ✓）表明缺口的 (1)(2)(3) 在
+「实现树 + 路径关联」的**规范数据**上成立：
+
+　`E := 树的边`、`S i j e := [e ∈ P_ij]`、`l := 边权`、`p i j := #(P_ij)`。
+
+本节落下两件**不依赖任何未证假设**的事：
+* ★★★ `BmePauplinNormalization`：把 (3)（Pauplin 归一化，式 (9)，`:2027`）**抽成一条独立的组合命题**
+　——即归约后**剩下的唯一内容**；
+* ★★★ `bme_pauplin_identity_gap_of_card_le_one`：**退化情形** `|Fintype.card X| ≤ 1` 直接可证
+　（取 `E := ULift Empty` ⟹ (1)(2)(3) 全空真）——故缺口陈述**不必**加 `card X ≠ 1` ✓。
+
+⚠️ **归约定理本身**（`bme_pauplin_identity_gap_of_normalization`，把缺口化归到
+`BmePauplinNormalization`）**本轮未落地**：见 W12e14 报告的卡点（`E` 的宇宙提升 ＋
+`Finset.sum_subtype` 必须配 `univ.filter (· ∈ edgeSet)` 而非 `univ`）。 -/
+
+/-- ★★★ **Pauplin 归一化（组合命题；DesperGascuel2004 式 (9)，`:2027`）**：对实现树 `T` 的
+**每条边** `e`，
+
+　`Σ_{(i,j) ∈ plane} 2^{1−p_ij} · [e ∈ P_ij] = 2`，
+
+其中 `p_ij` 是树上唯一路径 `P_ij` 的**边数**（拓扑距离）、`[·]` 是 0/1 指示。
+（`plane` 是**有序对**含对角；对角项 `S i i e = 0`，故等价于无序版 `Σ_{i<j} 2^{1−p_ij} = 1` ✓。） -/
+def BmePauplinNormalization (T : Phylogram X) : Prop :=
+  ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+    ∑ x ∈ plane, bmeCoeff ((T.pathOf (T.leaf x.1) (T.leaf x.2)).edges.length)
+        * (if e ∈ (T.pathOf (T.leaf x.1) (T.leaf x.2)).edges then (1 : ℝ) else 0) = 2
+
+omit [DecidableEq X] in
+/-- ★★★ **退化情形**（`Fintype.card X ≤ 1`）：取 `E := ULift Empty` ⟹ 三条合取全为**空真**
+——(1) 只剩对角、由 `δ.diag`；(2) 要求 `i ≠ j` 而 `|X| ≤ 1` 时无此对；(3) 对空类型空真。
+（`E` 取 `ULift Empty` 是**必要**的：缺口陈述里 `∃ (E : Type)` 的宇宙是待定的，`Empty` 钉死 0 会失败。） -/
+theorem bme_pauplin_identity_gap_of_card_le_one (δ : Dissimilarity X)
+    (h : Fintype.card X ≤ 1) : bme_pauplin_identity_gap δ := by
+  have hsub : ∀ a b : X, a = b := Fintype.card_le_one_iff.mp h
+  intro _hFP _hPD
+  refine ⟨ULift Empty, inferInstance, (fun _ _ e => nomatch e.down), (fun e => nomatch e.down),
+    (fun _ _ => 0), ?_, ?_, ?_⟩
+  · intro i j
+    rw [hsub i j, δ.diag]
+    simp
+  · intro i j hij
+    exact absurd (hsub i j) hij
+  · intro e
+    exact nomatch e.down
+
 end Dissimilarity
 
 end NJ
