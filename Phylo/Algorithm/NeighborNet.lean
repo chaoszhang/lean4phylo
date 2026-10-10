@@ -2551,6 +2551,65 @@ theorem exists_arcWeights_arc_pair (n : ℕ) (d : Pair n → ℝ) :
     ∃ w : Arc n → ℝ, Alm n w = d :=
   Alm_surjective n d
 
+/-! ### 11.5 (3) 打包（W12g-11）：`Arc` 权重 → `Finset (Split (Fin n))`
+
+* `pairVal_alm`：把 `pairVal (Alm n w)` 桥成 `∑ a, w a * sepInd (arcSplit a) x y`（后面做 (3) 的恒等要用）；
+* `arcFinset := univ.image arcSplit`（`arcSplit_injective` ⇒ 逆像至多一元）、`mem_arcFinset`、
+  **`arcFinset_circular`**（逐元用 `arcSplit_isCyclicArc`）；
+* `weightOf n δ s := ∑ a, if arcSplit a = s then (Mlm n δ) a else 0`（无原像则 0）＋
+  **`weightOf_arcSplit`**（原像处取值 = `Mlm n δ a`，靠 `arcSplit_injective`）。
+
+⚠️ **非负性需要 `Alm n (Mlm n δ) = δ`**（等价于 `Mlm ∘ Alm = id`）：`Alm_surjective` 只给"存在某个 `w`"，
+而那个 `w` 的**非负性未知** ✗；要拿到 §9 的 `kalmanson_*` 可用性，必须用**显式**权重 `Mlm n δ`，
+即需要 `Alm (Mlm δ) = δ`。这一步（及 `phyleticDist` 的恒等收口）见 docstring 登记。 -/
+
+/-- ★ `pairVal` 与 `Alm` 的桥：按大小取值的点对函数就是弧权重族的系统发生距离。 -/
+theorem pairVal_alm (n : ℕ) (w : Arc n → ℝ) (x y : Fin n) :
+    pairVal (Alm n w) x y = ∑ a : Arc n, w a * sepInd (arcSplit a) x y := by
+  unfold pairVal
+  by_cases h : x < y
+  · rw [dite_eq_left h]
+    change (AlmFun n w ⟨(x, y), h⟩) = ∑ a : Arc n, w a * sepInd (arcSplit a) x y
+    rfl
+  · by_cases h' : y < x
+    · rw [dite_eq_right h, dite_eq_left h']
+      change (AlmFun n w ⟨(y, x), h'⟩) = ∑ a : Arc n, w a * sepInd (arcSplit a) x y
+      rw [show (AlmFun n w ⟨(y, x), h'⟩) = ∑ a : Arc n, w a * sepInd (arcSplit a) y x from rfl]
+      exact Finset.sum_congr rfl fun a _ => by rw [sepInd_comm]
+    · rw [dite_eq_right h, dite_eq_right h']
+      have hxy : x = y := le_antisymm (le_of_not_gt h') (le_of_not_gt h)
+      subst hxy
+      exact (Finset.sum_eq_zero fun a _ => by rw [sepInd_diag, mul_zero]).symm
+
+/-- ★ **打包**：全部代表弧对应的 split（`arcSplit_injective` ⇒ 逆像至多一元）。 -/
+noncomputable def arcFinset (n : ℕ) : Finset (Split (Fin n)) :=
+  (Finset.univ : Finset (Arc n)).image (arcSplit (n := n))
+
+theorem mem_arcFinset {n : ℕ} {s : Split (Fin n)} :
+    s ∈ arcFinset n ↔ ∃ a : Arc n, arcSplit a = s := by
+  simp [arcFinset]
+
+/-- ★★ **打包后的系统是环形的**：逐元用 `arcSplit_isCyclicArc`。 -/
+theorem arcFinset_circular (n : ℕ) : Circular (↑(arcFinset n) : Set (Split (Fin n))) := by
+  refine ⟨n, Equiv.refl (Fin n), fun s hs => ?_⟩
+  obtain ⟨a, rfl⟩ := mem_arcFinset.mp hs
+  exact Or.inl (arcSplit_isCyclicArc n a)
+
+/-- ★ 打包后的**权重**：`s` 的唯一原像处的 `Mlm` 值（无原像取 0）。 -/
+noncomputable def weightOf (n : ℕ) (δ : Pair n → ℝ) (s : Split (Fin n)) : ℝ :=
+  ∑ a : Arc n, if arcSplit a = s then Mlm n δ a else 0
+
+/-- ★★ **原像处的取值**：`weightOf n δ (arcSplit a) = Mlm n δ a`（唯一性来自 `arcSplit_injective`）。 -/
+theorem weightOf_arcSplit (n : ℕ) (δ : Pair n → ℝ) (a : Arc n) :
+    weightOf n δ (arcSplit a) = Mlm n δ a := by
+  unfold weightOf
+  rw [Finset.sum_eq_single a]
+  · rw [ite_eq_left rfl]
+  · intro i _ hi
+    rw [ite_eq_right (fun hc => hi ((arcSplit_injective n) hc))]
+  · intro hmem
+    exact absurd (Finset.mem_univ a) hmem
+
 end FunctionalMaterial
 
 end WeightAlgebra
