@@ -38,6 +38,7 @@ import Phylo.Laminar
 import Phylo.LaminarCount
 import Phylo.LeafStatus
 import Phylo.Mathlib.Walk
+import Phylo.PhyloDiversity
 import Phylo.PhylogramContract
 import Phylo.PositiveRealization
 import Phylo.Quartet

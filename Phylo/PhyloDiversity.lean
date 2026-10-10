@@ -244,46 +244,48 @@ theorem covered_union_of_covered {T : Cladogram X} {A B : Finset X} {x : X} {e :
 
 | 集合 | `∅` | 单点 | `{a,b}` | `{a,b,c}` |
 |---|---|---|---|---|
-| `PD` | 0 | 0 | 2 | 3 |
-
-（`{a,b}` 覆盖的唯一连接边是叶边 `a`—`b`，权 `1`；`{a,b,c}` 覆盖三条叶边，权 `3`。） -/
+| `PD` | 0 | 0 | 2 | 3 | -/
 def starPD (s : Finset (Fin 3)) : ℝ :=
   if s.card ≤ 1 then 0 else if s.card = 2 then 2 else 3
 
 /-- `starPD` 在二元集上取 `2`。 -/
 theorem starPD_pair (a b : Fin 3) (h : a ≠ b) : starPD ({a, b} : Finset (Fin 3)) = 2 := by
   have hc : ({a, b} : Finset (Fin 3)).card = 2 := Finset.card_pair h
-  have h1 : ¬ ({a, b} : Finset (Fin 3)).card ≤ 1 := by omega
-  simp only [starPD, h1, hc]
+  rw [starPD]
+  simp only [hc]
+  norm_num
 
 /-- `starPD` 在三点集上取 `3`。 -/
 theorem starPD_triple : starPD ({0, 1, 2} : Finset (Fin 3)) = 3 := by
   have hc : ({0, 1, 2} : Finset (Fin 3)).card = 3 := by decide
-  have h1 : ¬ ({0, 1, 2} : Finset (Fin 3)).card ≤ 1 := by omega
-  have h2 : ¬ ({0, 1, 2} : Finset (Fin 3)).card = 2 := by omega
-  simp only [starPD, h1, h2]
+  rw [starPD]
+  simp only [hc]
+  norm_num
 
 /-- `starPD` 在单点上取 `0`（Steel 第 54 行）。 -/
 theorem starPD_single (a : Fin 3) : starPD ({a} : Finset (Fin 3)) = 0 := by
   have hc : ({a} : Finset (Fin 3)).card = 1 := Finset.card_singleton a
-  have h1 : ({a} : Finset (Fin 3)).card ≤ 1 := by omega
-  simp only [starPD, h1]
+  rw [starPD]
+  simp only [hc]
+  norm_num
+
+/-- `starPD` 在空集上取 `0`。 -/
+theorem starPD_empty : starPD (∅ : Finset (Fin 3)) = 0 := by
+  have hc : (∅ : Finset (Fin 3)).card = 0 := Finset.card_empty
+  rw [starPD]
+  simp only [hc]
+  norm_num
 
 /-- ★★★ **阴性结论（任务 ★B 的答案）**：`PD` **不满足次模性**（增量**递增**）。
 
 **反例**（3 叶星形，叶边权全 `1`）：`A = ∅`、`B = {1}`、`x = 2`。则 `A ⊆ B`、`x ∉ B`，而
-
-* `PD(A ∪ {x}) = PD({2}) = 0`，`PD(A) = PD(∅) = 0`；
-* `PD(B ∪ {x}) = PD({1,2}) = 2`，`PD(B) = PD({1}) = 0`。
-
-于是次模性所要求的 `PD(A∪{x}) + PD(B) ≥ PD(B∪{x}) + PD(A)` 化为 `0 ≥ 2` —— **假**。
-（等价地：增量 `PD(A∪{x}) − PD(A) = 0` **小于** `PD(B∪{x}) − PD(B) = 2`，
-即 `PD` 的增量在这一族上**递增**而非递减。）
+`PD(A∪{x}) = PD({2}) = 0`、`PD(B) = PD({1}) = 0`、
+`PD(B∪{x}) = PD({1,2}) = 2`、`PD(A) = PD(∅) = 0`。
+故次模性所要求的 `PD(A∪{x}) + PD(B) ≥ PD(B∪{x}) + PD(A)` 化为 `0 ≥ 2` —— **假**。
 
 ⚠️ **后果**：Steel Theorem 1 的证明**不能**经由「单调 + 次模」这条通用路线；
 必须用 Steel 第 262–275 行的**交换性质**（式 (1)），它才是 `PD` 的真正结构
-（这也是 Steel 第 332–337 行点名 **greedoid** 而非 matroid/submodular 的原因）。
-本文件因此**不**声称 `PD_submodular`，而把它做成机器可查的**阴性结论**。 -/
+（这也是 Steel 第 332–337 行点名 **greedoid** 而非 matroid/submodular 的原因）。 -/
 theorem not_PD_submodular :
     ¬ (∀ A B : Finset (Fin 3), A ⊆ B → ∀ x : Fin 3, x ∉ B →
         starPD (A ∪ {x}) + starPD B ≥ starPD (B ∪ {x}) + starPD A) := by
@@ -293,15 +295,9 @@ theorem not_PD_submodular :
   have hbad := h ∅ {1} hb 2 hx
   have e1 : (∅ : Finset (Fin 3)) ∪ {2} = {2} := by decide
   have e2 : ({1} : Finset (Fin 3)) ∪ {2} = {1, 2} := by decide
-  have v1 : starPD ({2} : Finset (Fin 3)) = 0 := starPD_single 2
-  have v2 : starPD (∅ : Finset (Fin 3)) = 0 := by
-    have hc : (∅ : Finset (Fin 3)).card = 0 := Finset.card_empty
-    have h1 : (∅ : Finset (Fin 3)).card ≤ 1 := by omega
-    simp only [starPD, h1]
-  have v3 : starPD ({1} : Finset (Fin 3)) = 0 := starPD_single 1
-  have v4 : starPD ({1, 2} : Finset (Fin 3)) = 2 := starPD_pair 1 2 (by decide)
-  rw [e1, e2, v1, v2, v3, v4] at hbad
-  norm_num at hbad
+  rw [e1, e2, starPD_single 2, starPD_single 1, starPD_pair 1 2 (by decide),
+      starPD_empty] at hbad
+  exact absurd hbad (by norm_num)
 
 /-! ## §5 显式缺口登记（Steel 式 (1) 的「极大链」装配） -/
 
