@@ -10,6 +10,7 @@ import Phylo.Algorithm.Cherry
 import Phylo.Algorithm.NJ
 import Phylo.Algorithm.NJHardCore
 import Phylo.Algorithm.NNI
+import Phylo.Algorithm.NNINeighborhood
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
 import Phylo.AttesonRadius
