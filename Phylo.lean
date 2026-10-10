@@ -109,6 +109,7 @@ import Phylo.Stat.RootJumpMass
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
+import Phylo.Stat.TKF91
 import Phylo.Stat.ToricIdeals
 import Phylo.Stat.TreeMetricDistribution
 import Phylo.Stat.TrivialSplitCount
