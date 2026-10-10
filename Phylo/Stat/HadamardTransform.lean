@@ -448,4 +448,10 @@ theorem evansSpeed_general (m : ℕ) :
   rw [Finset.sum_mul Finset.univ (fun h => π h * ∏ i, χ i h) _]
   exact Finset.sum_congr rfl fun h _ => by ring
 
+/-- ★★★ **缺口 `evansSpeed_general_gap` 的成真定理（收口登记）**：上面已证的一般 `m` 恒等式
+`evansSpeed_general` 与缺口 `def` 的陈述**逐字相同**，故该缺口**已封闭**（`def` 原文保留为登记，
+本定理是它的证明，名称沿用库内 `…_gap_proof` 体例）。 -/
+theorem evansSpeed_general_gap_proved (m : ℕ) : evansSpeed_general_gap m :=
+  evansSpeed_general m
+
 end Phylo.Stat.HadamardTransform
