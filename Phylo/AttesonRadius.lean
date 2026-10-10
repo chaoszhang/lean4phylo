@@ -1658,3 +1658,99 @@ theorem sum_ite_pathOf_eq_sideLeafCount (T : Cladogram X) {a b : T.V} (hab : T.g
 
 end Cladogram
 
+
+/-! ## 18. ★★★ 收口：`attesonQ T.wExt = (n−2)·δ(i,j) − S_i − S_j`（W12e12 · Atteson Lemma 10）
+
+本节把 §14–§17 的全部器材**收口**成 Atteson Lemma 10（`:1774–1804`）的权重等式：
+
+　　`Σ_e w_e(i,j)·w_e = (n−2)·δ(i,j) − S_i − S_j`，其中 `S_x = Σ_k δ(x,k)`。
+
+四步（(a)(b)(c) + 收口）：
+* (a) 三个 `δ` 换成沿边和：`δ(i,j)` 用 §15 `dist_eq_sum_pathOf`，`S_i`、`S_j` 用 §17 `sum_dist_eq_sum_card`；
+* (b) `Finset.mul_sum` ＋ 两次 `rw [← Finset.sum_sub_distrib]` 把右边收成**单个** `Σ_e`；
+* (c) `Finset.sum_congr` 逐项 ＋ `Sym2.ind` 取出边 `s(a,b)`：
+　　**真边**（`T.graph.Adj a b`）按「`i` 在哪侧」定向后（必要时 `Sym2.eq_swap` 换向），
+　　再用 §17 的 `sum_ite_pathOf_eq_sideLeafCount`（`'` 为 `b` 侧定向版）把内层和换成 `sideLeafCount`，
+　　并代入 §16 的两条逐边比较；
+　　**非边**两边都带因子 `wExt = 0`（`Phylo.TreeDist.wExt_eq_zero`）⇒ `simp` 自动相等。
+
+于是 §14 的 `attesonQ` 就是 NJ 判据 `Q` 的「沿边加权和」写法 ✓。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **内层计数（`b` 侧定向版）**：叶 `i` 在 `s(a,b)` 的 `b` 侧时 `Σ_k [e ∈ P_ik] = |L_a(e)|`。 -/
+theorem sum_ite_pathOf_eq_sideLeafCount' (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i : X} (hi : T.inSide s(a, b) b (T.leaf i)) :
+    (∑ k : X, (if s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges then (1 : ℝ) else 0))
+      = (T.sideLeafCount s(a, b) a : ℝ) := by
+  have hi' : T.inSide s(b, a) b (T.leaf i) := by rwa [Sym2.eq_swap]
+  have h := sum_ite_pathOf_eq_sideLeafCount T hab.symm (i := i) hi'
+  rw [Sym2.eq_swap] at h
+  exact h
+
+/-- ★★★ **逐边收口（定向版）**：`i` 在 `a` 侧时，乘积项 `w_e·wExt e` 等于收口后 `e = s(a,b)` 的那一项
+（真边的「同侧」用 §16 `attesonW_cast_eq_Q_same`、「异侧」用 `attesonW_cast_eq_Q_opposite`）。 -/
+theorem attesonW_mul_wExt_edge (T : Phylogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j : X} (hi : T.inSide s(a, b) a (T.leaf i)) :
+    T.attesonW (T.leaf i) (T.leaf j) s(a, b) * T.wExt s(a, b)
+      = ((Fintype.card X : ℝ) - 2)
+          * (if s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges then T.wExt s(a, b) else 0)
+        - (∑ k : X, (if s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf k)).edges then (1 : ℝ) else 0))
+          * T.wExt s(a, b)
+        - (∑ k : X, (if s(a, b) ∈ (T.pathOf (T.leaf j) (T.leaf k)).edges then (1 : ℝ) else 0))
+          * T.wExt s(a, b) := by
+  have hI := sum_ite_pathOf_eq_sideLeafCount T.toCladogram hab hi
+  rcases T.inSide_or_inSide (x := T.leaf j) hab with hj | hj
+  · -- `j` 也在 `a` 侧（同侧）
+    have hj' : T.inSide s(a, b) a (T.leaf j) := (T.inSide_comm (s(a, b)) (T.leaf j) a).mp hj
+    have hJ := sum_ite_pathOf_eq_sideLeafCount T.toCladogram hab hj'
+    have hnotmem : s(a, b) ∉ (T.pathOf (T.leaf i) (T.leaf j)).edges := by
+      intro hmem
+      exact ((T.mem_pathOf_edges_iff_not_inSide (s(a, b)) (T.leaf i) (T.leaf j)).mp hmem)
+        (hi.symm.trans hj')
+    rw [ite_eq_right hnotmem, hI, hJ, T.attesonW_cast_eq_Q_same hab hi hj']
+    ring
+  · -- `j` 在 `b` 侧（异侧）
+    have hj' : T.inSide s(a, b) b (T.leaf j) := (T.inSide_comm (s(a, b)) (T.leaf j) b).mp hj
+    have hJ := sum_ite_pathOf_eq_sideLeafCount' T.toCladogram hab hj'
+    have hmem : s(a, b) ∈ (T.pathOf (T.leaf i) (T.leaf j)).edges := by
+      refine (T.mem_pathOf_edges_iff_not_inSide (s(a, b)) (T.leaf i) (T.leaf j)).mpr ?_
+      intro hcon
+      have hia : T.inSide s(a, b) (T.leaf i) a := (T.inSide_comm (s(a, b)) a (T.leaf i)).mp hi
+      exact T.not_reachable_deleteEdges_of_adj hab (hia.symm.trans (hcon.trans hj'.symm))
+    rw [ite_eq_left hmem, hI, hJ, T.attesonW_cast_eq_Q_opposite hab hi hj']
+    ring
+
+/-- ★★★ **Atteson Lemma 10 的权重等式（收口）**：
+`Σ_e w_e(i,j)·w_e = (n−2)·δ(i,j) − S_i − S_j`（`S_x = Σ_k δ(x,k)`）
+—— `attesonQ`（§14）就是 NJ 判据 `Q` 的「沿边加权和」写法。 -/
+theorem attesonQ_wExt_eq (T : Phylogram X) (i j : X) :
+    T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j)
+      = ((Fintype.card X : ℝ) - 2) * T.dist (T.leaf i) (T.leaf j)
+        - (∑ k : X, T.dist (T.leaf i) (T.leaf k))
+        - (∑ k : X, T.dist (T.leaf j) (T.leaf k)) := by
+  rw [attesonQ, dist_eq_sum_pathOf T (T.leaf i) (T.leaf j), sum_dist_eq_sum_card T i,
+    sum_dist_eq_sum_card T j, Finset.mul_sum, ← Finset.sum_sub_distrib,
+    ← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl fun e _ => ?_
+  refine Sym2.ind (fun a b => ?_) e
+  by_cases hab : T.graph.Adj a b
+  · rcases T.inSide_or_inSide (x := T.leaf i) hab with hi | hi
+    · exact attesonW_mul_wExt_edge T hab ((T.inSide_comm (s(a, b)) a (T.leaf i)).mpr hi)
+    · have hi' : T.inSide s(b, a) b (T.leaf i) := by
+        rw [Sym2.eq_swap]
+        exact hi.symm
+      have h := attesonW_mul_wExt_edge (T := T) (a := b) (b := a) (i := i) (j := j) hab.symm hi'
+      rw [Sym2.eq_swap] at h
+      exact h
+  · have hnot : s(a, b) ∉ T.graph.edgeSet :=
+      fun h => hab ((SimpleGraph.mem_edgeSet T.graph).mp h)
+    rw [Phylo.TreeDist.wExt_eq_zero T hnot]
+    simp
+
+end Cladogram
+
