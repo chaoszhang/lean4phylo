@@ -12,6 +12,8 @@ import Phylo.Algorithm.NJHardCore
 import Phylo.Algorithm.NNI
 import Phylo.Algorithm.RF
 import Phylo.Algorithm.UPGMA
+import Phylo.AttesonRadius
+import Phylo.BMELeastSquares
 import Phylo.Binary
 import Phylo.Buneman
 import Phylo.BunemanGraft
@@ -70,6 +72,7 @@ import Phylo.Stat.DegnanSalter
 import Phylo.Stat.EdgeInvariants
 import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.FiveTaxonLemma4
+import Phylo.Stat.HadamardTransform
 import Phylo.Stat.Identifiability
 import Phylo.Stat.InvariantsRank
 import Phylo.Stat.KingmanCoalescent
