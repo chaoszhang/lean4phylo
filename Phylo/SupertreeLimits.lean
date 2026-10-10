@@ -629,16 +629,54 @@ theorem iso_preserves_splits_gap :
 **缺什么**：6 个 taxa 上「展示这三条 quartet 的无根树」的分类 ——
 等价于 quartet 展示 ⟹ split 系统被锁定。`Cladogram` 无 `DecidableEq`，故不写 `T₁ ≠ T₂`。
 
-⚠️ **W12a：本陈述**不忠实**于原文 Figure 1 的分类定理（见下 `…_correct_shape`）**，
-故**逐字保留**（登记用）而在下方另立改写形态。两条不忠实之处：
+⚠️ **W12a：本陈述在**形式**上弱于原文 Figure 1 的分类定理（见下 `…_correct_shape`）**，
+故**逐字保留**（登记用）而在下方另立改写形态。两条形式差异：
 1. 第三条只要求 `T₂` 的 split 系统 `= T₁` 的 **σ-像**，而原文（141–144 行）说 `σ` **交换**
    这两棵 parent tree（"simply interchanges the two parent trees"）—— 即 `σ·T₁` 与 `T₂`
-   **互为该像**；在 `T₁ = T₂` 的退化代入下这一条**恰是**「`T₁` 的 split 系统 `σ`-不变」，
-   与「两个 parent tree」的结论无关；
+   **互为该像**（在「恰有两棵 parent tree」的前提下二者等价）；在 `T₁ = T₂` 的退化代入下
+   这一条**恰是**「`T₁` 的 split 系统 `σ`-不变」，与「两个 parent tree」的结论无关；
 2. 最后一条的措辞是**包含**（`T₁` 的 split 系统 `⊆ T` 的），**不是**「`T` 恰是 `T₁` 或 `T₂`」
-   —— 而 "there are **precisely two**" 的内容是**相等**（`↔`）。代入 `T₁ = T₂` 后该条退化为
-   「每个 parent tree 都含 `T₁` 的全部 split」，这**正是**分类定理本身（非重言，
-   故**不能**用它把本缺口平凡收口）。**终局 ⬜ 保留缺口。** -/
+   —— 而 "there are **precisely two**" 的内容是**相等**（`↔`）。
+
+### ★D（W12a）**真值机器穷举**：本 `Prop` 为**真** ✓ —— 但 Lean 内仍缺「构造两棵树」的器材
+
+`scripts/msc/w12a_twoparent_check.py`（纯标准库、穷举、无 Monte Carlo）在
+「无根树 ↔ 两两相容的非平凡 split 族」模型下**穷举** 6 taxa 的全部相容族（**236** 个，最大族大小 3）：
+
+| 量 | 机器结果 |
+|---|---|
+| 展示全部三条 quartet 的（parent）split 族 | **恰 2 个** ✓（与原文 113–116 行 "precisely two" 一致） |
+| `P₁` | `{{0,1}\|rest, {0,1,2,3}\|{4,5}, {0,1,4,5}\|{2,3}}` |
+| `P₂` | `= σ(P₁)` = `{{0,1,2,5}\|{3,4}, {0,3,4,5}\|{1,2}, {0,5}\|rest}` |
+| 原 `def` 第 3 条（`T₂` = `σ(T₁)`） | **✓ 成立**（`σ(P₁) = P₂` 且 `P₂` 是 parent） |
+| 原 `def` 第 4 条（每个 parent 含 `T₁` 或 `T₂`） | **✓ 成立**（恰两根 ⇒ 自含） |
+| `…_correct_shape` 第 ②（每个 parent 恰是 `T₁` 或 `T₂`） | **✓ 成立** |
+| 每条 split 族的**显式树构造**核验 | ✓（`V=10, E=9`、内部点度 ≥ 3、叶度 1、split 系统逐条吻合） |
+
+⇒ **本 `Prop` 不是可证伪的**（我早前"两条不忠实"的担心只涉及**措辞**，不涉及真值）；
+它**真**，且真内容正是**分类定理**（机器已在小模型上证实）。
+
+**Lean 内仍缺什么（按依赖顺序）**：
+1. **两棵显式 `Cladogram.{0,0} (Fin 6)`**，其 split 系统**恰为** `P₁`、`P₂`
+   —— 库内没有「由相容 split 族构造**精确** split 系统的 `Cladogram`」的现成零件：
+   `Phylo.Stat.Supertree.supertree_displays_of_pairwiseCompatible` 只给 **⊇**（可能多出 split），
+   而本 `Prop` 的第 3 条与其最后一行的 `⊆` 都要求**精确**；
+   （`Phylo/BunemanTree.lean` 的 `bunemanSplits` 给出的是「由距离函数诱导」的精确 split 系统，
+   本处需要的是「由相容族直接构造」，是另一条路。）
+2. **树 → split 系统的桥**：`T.IsSplitOf s` ⟹ `s` 是 `T` 的边-split，且证 quartet 的见证 split
+   必非平凡、全体见证两两相容（库内 `Cladogram.PairwiseCompatible` ＋ `splits`）。
+3. **分类定理**（第 1 条的机器结果在 Lean 内的对应）：可由**可计算代理**（把 split 编码成
+   「不含 `0` 的一侧」`Finset (Fin 6)`）陈述，但 W12a 实测**两条 `decide` 路线都走不通**：
+   * 带 `∀ A B C : Finset (Fin 6)` 的版本：**综合不出可计算的 `Fintype (Finset (Fin 6))`**
+     ⇒ `failed to synthesize Decidable (∀ A B C : Finset (Fin 6), …)`；
+   * **不带量词**的实例级版本（`sideCompatible A B := A ∩ B = ∅ ∨ A ∩ Bᶜ = ∅ ∨ …`、
+     `sideDisplays A q := (∃ p ∈ q, p ⊆ A) ∧ (∃ p' ∈ q, p' ⊆ Aᶜ)`）：
+     `Decidable` 在 `∩ = ∅` / `∃ p ∈ q, p ⊆ A` 形态下**同样综合不出来**
+     （换成 `Disjoint` 亦失败）⇒ 需改写成 `Bool`/位掩码判据才可能 `decide`，本轮**未做**。
+   ⇒ 本轮 Lean 侧**未**新增定理（机器见证在 `scripts/msc/w12a_twoparent_check.py` 内，
+     含每条 split 族的**显式树构造**核验：`V=10, E=9`、内部点度 ≥ 3、叶度 1、split 系统逐条吻合 ✓）。
+
+**终局 ⬜ 保留缺口**（真值已确认为**真**，缺的是器材）。 -/
 def two_parent_trees_gap : Prop :=
   ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
     (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
@@ -647,8 +685,7 @@ def two_parent_trees_gap : Prop :=
       (∀ s : Split (Fin 6), T₁.IsSplitOf s → T.IsSplitOf s) ∨
       (∀ s : Split (Fin 6), T₂.IsSplitOf s → T.IsSplitOf s))
 
-/-- ★★ **缺口 2 的**改写形态**（W12a 新增，**不替代**原 `def`）**：原文 Figure 1 的
-"there are **precisely two** trees that are parent trees for this collection of trees"
+/-- ★★ **缺口 2 的**改写形态**（W12a 新增，**不替代**原 `def`）**：原文 Figure 1 的"there are **precisely two** trees that are parent trees for this collection of trees"
 （113–116 行）＋「`σ` 交换这两棵 parent tree」（141–144 行）的忠实落式。
 
 与原 `two_parent_trees_gap` 的三处差别：
