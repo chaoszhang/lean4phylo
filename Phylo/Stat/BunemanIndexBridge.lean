@@ -1098,4 +1098,17 @@ theorem sideA_subset_sideNotMem_meets (S u : Split X) {ρ : X}
     · exact hne
     · exact absurd (key u.sideA h (Finset.not_nonempty_iff_eq_empty.mp hne)) hA
 
+/-! ### 11.4 (★′) 极小性用的基建：`u*` 恒避开 `ρ` -/
+
+/-- `u*`（即 `sideNotMem u ρ`，`u` 的不含 `ρ` 的一侧）恒**避开 `ρ`** ✓ ——
+层析引理 `laminar_of_sidesCompatible_of_notMem` 的两个 `notMem` 前提由此得到 ✓。
+
+（附注：本仓库 **已有** `Split.sideB_eq_compl : u.sideB = u.sideAᶜ` ✓，无需新增；
+又 `Split` 是 `abbrev KPartition α 2` ⇒ **没有** `Split.ext` ✗，外延请走 `KPartition` 或侧等式 ＋ `mem_sideB_iff` ✓。） -/
+theorem notMem_sideNotMem (u : Split X) (ρ : X) : ρ ∉ sideNotMem u ρ := by
+  by_cases h : ρ ∈ u.sideA
+  · simp only [sideNotMem, h, ite_true]
+    exact Finset.disjoint_left.mp (disjoint_sides u) h
+  · simpa only [sideNotMem, h, ite_false] using h
+
 end Split
