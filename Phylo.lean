@@ -7,6 +7,7 @@ import Phylo.AdamsConsensus
 import Phylo.Aho
 import Phylo.Algorithm.BinaryCount
 import Phylo.Algorithm.Cherry
+import Phylo.Algorithm.NeighborNet
 import Phylo.Algorithm.NJ
 import Phylo.Algorithm.NJHardCore
 import Phylo.Algorithm.NNI
@@ -92,6 +93,7 @@ import Phylo.Stat.KingmanStep
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MLIdentifiability
 import Phylo.Stat.MSC
+import Phylo.Stat.MSCBayes
 import Phylo.Stat.MSCInstance
 import Phylo.Stat.MSCKingman
 import Phylo.Stat.MSCKingmanMeasure
