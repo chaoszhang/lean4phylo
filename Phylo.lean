@@ -38,6 +38,7 @@ import Phylo.Laminar
 import Phylo.LaminarCount
 import Phylo.LeafStatus
 import Phylo.Mathlib.Walk
+import Phylo.PhyloDiversity
 import Phylo.PhylogramContract
 import Phylo.PositiveRealization
 import Phylo.Quartet
@@ -49,6 +50,7 @@ import Phylo.Split
 import Phylo.SplitsDetermineTree
 import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
+import Phylo.SplitWeak
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
@@ -97,6 +99,7 @@ import Phylo.Stat.RootJumpMass
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
+import Phylo.Stat.TreeMetricDistribution
 import Phylo.Stat.TrivialSplitCount
 import Phylo.Supertree
 import Phylo.SupertreeLimits
