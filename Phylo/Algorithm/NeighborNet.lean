@@ -2653,6 +2653,119 @@ theorem MlmFun_d (n : ℕ) (δ : Pair n → ℝ) (idx : Arc n) (hne : idx.1.1.va
   rw [dite_eq_right (fun hc => hne hc.1), dite_eq_right hne]
   ring
 
+/-! ### 11.8 第 3 步（W12g-15）：`Mlm ∘ Alm = id` 的三分支
+
+三条形状引理（§11.7）⇒ `pairVal_alm`（把 `tri`/`quad` 的参数函数换成弧权重和）⇒
+`tri_sum_family`/`quad_sum_family`（把泛函推进和）⇒ `hper_l/h/d`（逐弧隔离）⇒ `huniq` ⇒ 和塌缩。
+按分支拆成三条**完整**定理：D 支与 H 支只用到 `hper_d`/`hper_h`（**不需要** `3 ≤ n` ✓），
+L 支用 `hper_l`（需 `3 ≤ n` ✓，见 §9 的 `tri_sepInd_l`）；`n ≤ 2` 的 L 支另按 `Arc 2` 一元逐点直算（待下轮）。 -/
+
+/-- ★★★ **D 支**：`Mlm n (Alm n w) idx = w idx`（`idx.1.1.val ≠ 0`）。 -/
+theorem Mlm_comp_Alm_d (n : ℕ) (w : Arc n → ℝ) (idx : Arc n) (hne : idx.1.1.val ≠ 0) :
+    Mlm n (Alm n w) idx = w idx := by
+  have hshape : Mlm n (Alm n w) idx
+      = (1 / 2) * quad (fun x y => pairVal (AlmFun n w) x y)
+          (dPrev idx) idx.1.1 idx.1.2 (dNext idx) := by
+    rw [show Mlm n (Alm n w) idx = MlmFun n (AlmFun n w) idx from rfl]
+    exact MlmFun_d n (AlmFun n w) idx hne
+  rw [hshape]
+  have hfun : (fun x y : Fin n => pairVal (AlmFun n w) x y)
+      = fun x y => ∑ a : Arc n, w a * sepInd (arcSplit a) x y := by
+    funext x y
+    exact pairVal_alm n w x y
+  rw [hfun, quad_sum_family]
+  have hper : (∑ a : Arc n, w a * quad (sepInd (arcSplit a)) (dPrev idx) idx.1.1 idx.1.2 (dNext idx))
+      = ∑ a : Arc n, w a * (2 * (if a.1.1.val = idx.1.1.val ∧ a.1.2.val = idx.1.2.val
+          then (1 : ℝ) else 0)) :=
+    Finset.sum_congr rfl fun a _ => by rw [hper_d idx hne a]
+  rw [hper]
+  have hcollapse : (∑ a : Arc n, w a * (2 * (if a.1.1.val = idx.1.1.val ∧ a.1.2.val = idx.1.2.val
+      then (1 : ℝ) else 0))) = 2 * w idx := by
+    rw [Finset.sum_eq_single idx]
+    · rw [ite_eq_left (show idx.1.1.val = idx.1.1.val ∧ idx.1.2.val = idx.1.2.val from ⟨rfl, rfl⟩)]
+      ring
+    · intro a _ ha
+      rw [ite_eq_right (fun h => ha (arc_eq_of_coord h.1 h.2))]
+      ring
+    · intro hmem
+      exact absurd (Finset.mem_univ idx) hmem
+  rw [hcollapse]
+  ring
+
+/-- ★★★ **H 支**：`Mlm n (Alm n w) idx = w idx`（`idx.1.1.val = 0`、`idx.1.2.val ≠ 0`）。 -/
+theorem Mlm_comp_Alm_h (n : ℕ) (w : Arc n → ℝ) (idx : Arc n) (hH : idx.1.1.val = 0)
+    (hne : idx.1.2.val ≠ 0) :
+    Mlm n (Alm n w) idx = w idx := by
+  have hshape : Mlm n (Alm n w) idx
+      = (1 / 2) * quad (fun x y => pairVal (AlmFun n w) x y)
+          (hLast idx) (hZero idx) idx.1.2 (dNext idx) := by
+    rw [show Mlm n (Alm n w) idx = MlmFun n (AlmFun n w) idx from rfl]
+    exact MlmFun_h n (AlmFun n w) idx hH hne
+  rw [hshape]
+  have hfun : (fun x y : Fin n => pairVal (AlmFun n w) x y)
+      = fun x y => ∑ a : Arc n, w a * sepInd (arcSplit a) x y := by
+    funext x y
+    exact pairVal_alm n w x y
+  rw [hfun, quad_sum_family]
+  have hidxj : 1 ≤ idx.1.2.val := Nat.pos_of_ne_zero hne
+  have hper : (∑ a : Arc n, w a * quad (sepInd (arcSplit a)) (hLast idx) (hZero idx) idx.1.2 (dNext idx))
+      = ∑ a : Arc n, w a * (2 * (if (a.1.1.val = 0 ∧ a.1.2.val = idx.1.2.val) ∨
+          (a.1.1.val = idx.1.2.val + 1 ∧ a.1.2.val = n - 1) then (1 : ℝ) else 0)) :=
+    Finset.sum_congr rfl fun a _ => by rw [hper_h idx hH hidxj a]
+  rw [hper]
+  have hcollapse : (∑ a : Arc n, w a * (2 * (if (a.1.1.val = 0 ∧ a.1.2.val = idx.1.2.val) ∨
+      (a.1.1.val = idx.1.2.val + 1 ∧ a.1.2.val = n - 1) then (1 : ℝ) else 0))) = 2 * w idx := by
+    rw [Finset.sum_eq_single idx]
+    · rw [ite_eq_left (Or.inl (show idx.1.1.val = 0 ∧ idx.1.2.val = idx.1.2.val from ⟨hH, rfl⟩))]
+      ring
+    · intro a _ ha
+      rw [ite_eq_right]
+      · ring
+      · intro hcon
+        rcases hcon with hcon | hcon
+        · exact ha (arc_eq_of_coord (by omega) hcon.2)
+        · exact absurd hcon.2 (arc_snd_ne_last a)
+    · intro hmem
+      exact absurd (Finset.mem_univ idx) hmem
+  rw [hcollapse]
+  ring
+
+/-- ★★★ **L 支**（`3 ≤ n`）：`Mlm n (Alm n w) idx = w idx`（`idx.1.1.val = 0`、`idx.1.2.val = 0`）。 -/
+theorem Mlm_comp_Alm_l (n : ℕ) (w : Arc n → ℝ) (idx : Arc n) (hn : 3 ≤ n)
+    (hL : idx.1.1.val = 0 ∧ idx.1.2.val = 0) :
+    Mlm n (Alm n w) idx = w idx := by
+  have hshape : Mlm n (Alm n w) idx
+      = (1 / 2) * tri (fun x y => pairVal (AlmFun n w) x y) (hZero idx) (hOne idx) (hLast idx) := by
+    rw [show Mlm n (Alm n w) idx = MlmFun n (AlmFun n w) idx from rfl]
+    exact MlmFun_l n (AlmFun n w) idx hL
+  rw [hshape]
+  have hfun : (fun x y : Fin n => pairVal (AlmFun n w) x y)
+      = fun x y => ∑ a : Arc n, w a * sepInd (arcSplit a) x y := by
+    funext x y
+    exact pairVal_alm n w x y
+  rw [hfun, tri_sum_family]
+  have hper : (∑ a : Arc n, w a * tri (sepInd (arcSplit a)) (hZero idx) (hOne idx) (hLast idx))
+      = ∑ a : Arc n, w a * (2 * (if (a.1.1.val = 0 ∧ a.1.2.val = 0) ∨
+          (a.1.1.val = 1 ∧ a.1.2.val = n - 1) then (1 : ℝ) else 0)) :=
+    Finset.sum_congr rfl fun a _ => by rw [hper_l idx hL.1 hL.2 hn a]
+  rw [hper]
+  have hcollapse : (∑ a : Arc n, w a * (2 * (if (a.1.1.val = 0 ∧ a.1.2.val = 0) ∨
+      (a.1.1.val = 1 ∧ a.1.2.val = n - 1) then (1 : ℝ) else 0))) = 2 * w idx := by
+    rw [Finset.sum_eq_single idx]
+    · rw [ite_eq_left (Or.inl hL)]
+      ring
+    · intro a _ ha
+      rw [ite_eq_right]
+      · ring
+      · intro hcon
+        rcases hcon with hcon | hcon
+        · exact ha (arc_eq_of_coord (by omega) (by omega))
+        · exact absurd hcon.2 (arc_snd_ne_last a)
+    · intro hmem
+      exact absurd (Finset.mem_univ idx) hmem
+  rw [hcollapse]
+  ring
+
 end FunctionalMaterial
 
 end WeightAlgebra
