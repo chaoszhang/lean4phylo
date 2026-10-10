@@ -52,6 +52,7 @@ import Phylo.Quartet
 import Phylo.QuartetInhabitation
 import Phylo.QuartetUnique
 import Phylo.RootedTriplet
+import Phylo.SideLeafCountWitness
 import Phylo.SideSubtree
 import Phylo.Split
 import Phylo.SplitsDetermineTree
