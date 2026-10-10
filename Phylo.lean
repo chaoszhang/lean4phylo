@@ -90,6 +90,7 @@ import Phylo.Stat.KingmanJumpChain
 import Phylo.Stat.KingmanLaw
 import Phylo.Stat.KingmanStep
 import Phylo.Stat.LMLumping
+import Phylo.Stat.MLIdentifiability
 import Phylo.Stat.MSC
 import Phylo.Stat.MSCInstance
 import Phylo.Stat.MSCKingman
