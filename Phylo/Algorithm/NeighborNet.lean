@@ -2179,6 +2179,71 @@ noncomputable def Mlm (n : ℕ) : (Pair n → ℝ) →ₗ[ℝ] (Arc n → ℝ) w
   map_add' := MlmFun_add n
   map_smul' := MlmFun_smul n
 
+/-! ### 11.1 替代路线（W12g-7）：弧族的三条结构性质
+
+路线 (b) 的**更短替代**：`Alm` 单射 ⇒ （＋`finrank_arc_eq_finrank_pair`）满射 ⇒ `∃ w, Alm w = d`。
+`Alm` 的单射走本库**已入库**的 §7 `circularIndicator_injective`（弧族满足「单射 ＋ 无 swap ＋ 环形弧」），
+于是只需弧族的这三条结构性质。本节落 `sepInd` 对称、`cycArc` 坐标可分离、**单射**、**环形弧**；
+「与 `swap` 不相交」与最终的 `Alm` 单射/满射见 docstring 登记（剩余见 `circularWeights_realization_gap`）。 -/
+
+/-- ★ `sepInd` 对称（把 `Pair` 索引与 `Fin n × Fin n` 索引桥接时要用）。 -/
+theorem sepInd_comm {n : ℕ} (s : Split (Fin n)) (x y : Fin n) : sepInd s x y = sepInd s y x := by
+  unfold sepInd
+  by_cases h : (x ∈ s.sideA ∧ y ∈ s.sideB) ∨ (x ∈ s.sideB ∧ y ∈ s.sideA)
+  · rw [ite_eq_left h, ite_eq_left]
+    rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · exact Or.inr ⟨h2, h1⟩
+    · exact Or.inl ⟨h2, h1⟩
+  · rw [ite_eq_right h, ite_eq_right]
+    rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+    · exact h (Or.inr ⟨h2, h1⟩)
+    · exact h (Or.inl ⟨h2, h1⟩)
+
+/-- ★ `cycArc`（恒等环序）的坐标可分离：`cycArc i j = cycArc i' j' ⇒ i = i' ∧ j = j'`。 -/
+theorem cycArc_inj {n : ℕ} {i j i' j' : Fin n} (hij : i ≤ j) (hij' : i' ≤ j')
+    (h : cycArc (Equiv.refl (Fin n)) i j = cycArc (Equiv.refl (Fin n)) i' j') :
+    i = i' ∧ j = j' := by
+  have hmem : ∀ t : Fin n, t ∈ cycArc (Equiv.refl (Fin n)) i j ↔
+      t ∈ cycArc (Equiv.refl (Fin n)) i' j' := fun t => by rw [h]
+  have hi : i ∈ cycArc (Equiv.refl (Fin n)) i j := by simp [mem_cycArc, Finset.mem_Icc, hij]
+  have hi' : i' ∈ cycArc (Equiv.refl (Fin n)) i' j' := by simp [mem_cycArc, Finset.mem_Icc, hij']
+  have hj : j ∈ cycArc (Equiv.refl (Fin n)) i j := by simp [mem_cycArc, Finset.mem_Icc, hij]
+  have hj' : j' ∈ cycArc (Equiv.refl (Fin n)) i' j' := by simp [mem_cycArc, Finset.mem_Icc, hij']
+  constructor
+  · have e1 : i'.val ≤ i.val := by
+      have h1 := (hmem i).mp hi
+      simp only [mem_cycArc, Finset.mem_Icc, Equiv.refl_apply] at h1
+      exact Fin.le_iff_val_le_val.mp h1.1
+    have e2 : i.val ≤ i'.val := by
+      have h2 := (hmem i').mpr hi'
+      simp only [mem_cycArc, Finset.mem_Icc, Equiv.refl_apply] at h2
+      exact Fin.le_iff_val_le_val.mp h2.1
+    exact Fin.ext (le_antisymm e2 e1)
+  · have e1 : j.val ≤ j'.val := by
+      have h1 := (hmem j).mp hj
+      simp only [mem_cycArc, Finset.mem_Icc, Equiv.refl_apply] at h1
+      exact Fin.le_iff_val_le_val.mp h1.2
+    have e2 : j'.val ≤ j.val := by
+      have h2 := (hmem j').mpr hj'
+      simp only [mem_cycArc, Finset.mem_Icc, Equiv.refl_apply] at h2
+      exact Fin.le_iff_val_le_val.mp h2.2
+    exact Fin.ext (le_antisymm e1 e2)
+
+/-- ★★ **步骤 1**：弧 → `Split` 是**单射**（`circularIndicator_injective` 的第一个前提）。 -/
+theorem arcSplit_injective (n : ℕ) : Function.Injective (arcSplit (n := n)) := by
+  intro a a' h
+  have hA : cycArc (Equiv.refl (Fin n)) a.1.1 a.1.2 =
+      cycArc (Equiv.refl (Fin n)) a'.1.1 a'.1.2 := by
+    have hh := congrArg Split.sideA h
+    simpa [arcSplit_sideA] using hh
+  obtain ⟨h1, h2⟩ := cycArc_inj a.2.1 a'.2.1 hA
+  exact Subtype.ext (Prod.ext h1 h2)
+
+/-- ★★ **步骤 3**：每个 `arcSplit a` 的 `sideA` 都是**环形弧**（取 `i := a.1.1`、`j := a.1.2`）。 -/
+theorem arcSplit_isCyclicArc (n : ℕ) (a : Arc n) :
+    IsCyclicArc (Equiv.refl (Fin n)) (arcSplit a).sideA :=
+  ⟨a.1.1, a.1.2, a.2.1, Or.inl (arcSplit_sideA a)⟩
+
 end WeightAlgebra
 
 end NeighborNet
