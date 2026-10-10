@@ -325,16 +325,42 @@ def check_t4(n, trees, bfs_limit=6):
 
 
 # ------------------------------------------------------------------ N3
+def PQ(p, q):
+    """配对 `{p}|{q}` 的规范编码（无序）。"""
+    return frozenset((frozenset(p), frozenset(q)))
+
+
+PAIRINGS = (("ab|cd", (0, 1), (2, 3)), ("ac|bd", (0, 2), (1, 3)), ("ad|bc", (0, 3), (1, 2)))
+
+
 def exhibited_quartets(t, n):
-    """`{a<b}|{c<d}` 形式的展出 quartet 集合（`frozenset` 支撑 -> 配对）。"""
+    """`4-元集 -> 被展出的配对集合`（**三种配对都检查**，故能真正检验 thin）。"""
     spl = split_system(t, n)
     out = {}
-    for a, b, c, d in combinations(range(n), 4):
-        for s in spl:
-            if a in s and b in s and c not in s and d not in s:
-                out[frozenset((a, b, c, d))] = frozenset(((a, b), (c, d)))
-                break
+    for quad in combinations(range(n), 4):
+        found = set()
+        for (_name, (i1, i2), (i3, i4)) in PAIRINGS:
+            p = (quad[i1], quad[i2])
+            q = (quad[i3], quad[i4])
+            for s in spl:
+                if (p[0] in s and p[1] in s and q[0] not in s and q[1] not in s) or \
+                   (p[0] not in s and p[1] not in s and q[0] in s and q[1] in s):
+                    found.add(PQ(p, q))
+                    break
+        out[frozenset(quad)] = found
     return out
+
+
+def disp(Q, a, b, c, d):
+    """`ab|cd` 是否被**某条**边展出（树层）。"""
+    return PQ((a, b), (c, d)) in Q.get(frozenset((a, b, c, d)), set())
+
+
+def spl_disp(s, n, p, q):
+    """**单条 split** `s` 是否展出 `p|q`（文献 `:426` 的定义，逐字）。"""
+    A = set(s)
+    B = set(range(n)) - A
+    return (set(p) <= A and set(q) <= B) or (set(p) <= B and set(q) <= A)
 
 
 def check_n3(n, trees):
@@ -342,54 +368,76 @@ def check_n3(n, trees):
     only1 = only2 = 0
     for t in trees:
         Q = exhibited_quartets(t, n)
-        for key, pair in Q.items():
-            check(len(pair) == 2 and all(len(p) == 2 for p in pair),
-                  "配对形状异常 %s" % (pair,))
-        # (1) 每个 4-元子集至多一个（thin）；枚举的 4-元子集恰有一个（存在性）
+        # (1) thin（至多一个）+ 存在性（恰有一个，因树是二叉的）
         for quad in combinations(range(n), 4):
-            check(frozenset(quad) in Q,
-                  "4-元集 %s 上无展出 quartet（存在性失效）" % (quad,))
-        # (2) Colonius–Schulze
+            got = Q[frozenset(quad)]
+            check(len(got) <= 1, "4-元集 %s 上有 %d 个展出 quartet（thin 失效）"
+                  % (quad, len(got)))
+            check(len(got) == 1, "4-元集 %s 上无展出 quartet（存在性失效）" % (quad,))
+        # (2) Colonius–Schulze：ab|cx ∧ ab|xd ⟹ ab|cd
         for a, b, c, d in combinations(range(n), 4):
-            base = Q.get(frozenset((a, b, c, d)))
-            if base is None:
-                continue
             for x in range(n):
                 if x in (a, b, c, d):
                     continue
-                qcx = Q.get(frozenset((a, b, c, x)))
-                qxd = Q.get(frozenset((a, b, x, d)))
-                if qcx == frozenset(((a, b), (c, x))) and qxd == frozenset(((a, b), (x, d))):
-                    check(base == frozenset(((a, b), (c, d))),
+                if disp(Q, a, b, c, x) and disp(Q, a, b, x, d):
+                    check(disp(Q, a, b, c, d),
                           "Colonius–Schulze 失效：%s" % ((a, b, c, d, x),))
-        # ★B：单支见证计数（用树自己的 split 系统）
+        # (2') ★B **(S1) 在单条 split 上两支互斥、且两支都真的出现**
+        #      （与 Lean `Split.exhibits_substitution_sharp` 同一命题、同一见证形状）
         for s in split_system(t, n):
             A = sorted(s)
             B = sorted(set(range(n)) - s)
-            if len(A) < 2 or len(B) < 3:
-                pass
-            # x ∈ B 且 x ∉ {c,d}：ab|cd 与 ab|cx 展出，但 ax|cd 不展出
+            if len(A) < 2 or len(B) < 2:
+                continue
             for a, b in combinations(A, 2):
                 for c, d in combinations(B, 2):
+                    if not spl_disp(s, n, (a, b), (c, d)):
+                        continue
                     for x in B:
                         if x in (c, d):
                             continue
-                        if Q.get(frozenset((a, b, c, d))) == frozenset(((a, b), (c, d))) and \
-                           Q.get(frozenset((a, b, c, x))) == frozenset(((a, b), (c, x))):
+                        if spl_disp(s, n, (a, b), (c, x)):
+                            check(not spl_disp(s, n, (a, x), (c, d)),
+                                  "单 split 上 (S1) 两支同时成立（x∈B）")
                             only1 += 1
-            # x ∈ A 且 x ∉ {a,b}：ab|cd 与 ax|cd 展出，但 ab|cx 不展出
-            for c, d in combinations(B, 2):
-                for a, b in combinations(A, 2):
                     for x in A:
                         if x in (a, b):
                             continue
-                        if Q.get(frozenset((a, b, c, d))) == frozenset(((a, b), (c, d))) and \
-                           Q.get(frozenset((a, x, c, d))) == frozenset(((a, x), (c, d))):
+                        if spl_disp(s, n, (a, x), (c, d)):
+                            check(not spl_disp(s, n, (a, b), (c, x)),
+                                  "单 split 上 (S1) 两支同时成立（x∈A）")
                             only2 += 1
-    check(only1 > 0 and only2 > 0,
-          "n=%d：(S1) 的单支情形未同时出现（only1=%d, only2=%d）" % (n, only1, only2))
-    print("      ★B：`ab|cx` 独有见证 %d 例；`ax|cd` 独有见证 %d 例（两者都非零 ⟹ 析取必要）"
-          % (only1, only2))
+    # n = 4 时没有第五点，★B 见证必然为 0（与 Lean 用 `Fin 5` 一致）
+    if n >= 5:
+        check(only1 > 0 and only2 > 0,
+              "n=%d：(S1) 的单支情形未同时出现（only1=%d, only2=%d）" % (n, only1, only2))
+        print("      ★B：`ab|cx` 独有见证 %d 例；`ax|cd` 独有见证 %d 例（都非零 ⟹ 析取必要）"
+              % (only1, only2))
+    else:
+        check(only1 == 0 and only2 == 0,
+              "n=4 上不该有 (S1) 第五点见证（only1=%d, only2=%d）" % (only1, only2))
+        print("      ★B：n=4 无第五点 ⟹ 0 例（Lean 的 ★B 见证用 `Fin 5`，与之一致）")
+
+
+# ------------------------------------------------------------------ Lean 对应表
+LEAN_MAP = """
+脚本断言 ⟷ 正本 Lean 定理（`Phylo/` 内，逐个对应）：
+  D2  pauplinLength_eq_trueLength_of_edgeCoeff   <- 逐边 Pauplin 归一化 + 公式本体（n=4..7 穷举）
+      dist_eq_sum_incidence / sum_incidence_eq_topoDist <- 「顶点对 ↔ 边」关联接口 + 计数 = 路径边数
+      starCoeff_three_ne_one                     <- ★B 星形（非二叉）反例：系数 3/2 ≠ 1
+      pauplinFormula_gap_of_edgeCoeff_gap        <- 缺口 D2-A ⟹ D2-B 的归约
+  T-4 nniResolvent_nniResolvent_parent / _swap   <- 3-循环封闭（从任一分解回到另外两个）
+      nniResolvent_three_distinct                <- 三个分解互不相同
+      nniMove_symm / nniMove_ne                  <- NNI 图对称 / 不可反身
+      nniMove_rfDistance + nniMove_sdiff         <- 一次 NNI 恰换 1 条分裂、RF 距离 = 2
+      rfDistance_le_two_mul_nniDist              <- RF ≤ 2·d_NNI（d_NNI 由本脚本 BFS 精确算）
+      nniDistanceCandidate_wrong                 <- ★B 候选 2(n−3)−|共有| 反例（n=4：候选 2，真值 1）
+  N3  displaysQuartet_thin                       <- 每个 4-元集**至多 1** 个展出 quartet
+      exhibits_substitution / displaysQuartet_saturated <- (S1) 饱和性
+      exhibits_common                            <- split 层 Colonius–Schulze 规则
+      exhibits_substitution_sharp                <- ★B (S1) 析取不可收缩（两种单支都有见证）
+      quarnetRules_level1_gap                    <- ⬜ level-1 载体缺口（脚本无法核验其内部，只核验树侧）
+"""
 
 
 # ------------------------------------------------------------------ main
@@ -406,6 +454,7 @@ def main():
         check_n3(n, trees)
         check_t4(n, trees)
     check_star_counterexample()
+    print(LEAN_MAP)
     print("")
     if FAIL:
         print("== 失败 %d 项 ==" % len(FAIL))
