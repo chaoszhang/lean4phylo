@@ -599,13 +599,13 @@ def canonicalSplitDecomposition_gap_correct_shape : Prop :=
 退化情形（四点有重合，例如 `a = a'`）自动成立：此时 `P = X` 精确相等 ⇒ 「最大者至少取两次」✓。 -/
 
 /-- 四元组上的 **W-配对**：`u` 把 `{a,a'}` 与 `{b,b'}` 分开。 -/
-def PairW (u : Split X) (a a' b b' : X) : Prop := u.Separates a a' b b'
+abbrev PairW (u : Split X) (a a' b b' : X) : Prop := u.Separates a a' b b'
 
 /-- 四元组上的 **P-配对**：`u` 把 `{a,b}` 与 `{a',b'}` 分开。 -/
-def PairP (u : Split X) (a a' b b' : X) : Prop := u.Separates a b a' b'
+abbrev PairP (u : Split X) (a a' b b' : X) : Prop := u.Separates a b a' b'
 
 /-- 四元组上的 **X-配对**：`u` 把 `{a,b'}` 与 `{a',b}` 分开。 -/
-def PairX (u : Split X) (a a' b b' : X) : Prop := u.Separates a b' a' b
+abbrev PairX (u : Split X) (a a' b b' : X) : Prop := u.Separates a b' a' b
 
 /-- ★★ **W-配对与 P-配对不相容**。 -/
 theorem not_compatible_of_PairW_PairP {u v : Split X} {a a' b b' : X}
@@ -645,28 +645,15 @@ theorem not_PairP_and_PairX {F : Finset (Split X)}
   rintro ⟨⟨u, huF, hu⟩, ⟨v, hvF, hv⟩⟩
   exact not_compatible_of_PairP_PairX hu hv (hF u huF v hvF)
 
-/-! ## 10. 修复形态的**计算核心**：进展与精确卡点（W12m）
+/-! ## 10. 修复形态的**计算核心**（W12m/W12n：`bSep` 方案）
 
-**目标**（`Split.fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
-满足文献四点条件 `FourPointStd`。收尾算法见 §9 docstring；本节记录**已落地部分**与**剩余卡点**（不写半成品）。
+按 §9 的收尾算法与「两个工具链坑」的结论，本节把逐 split 求值改为 **`Bool` 谓词** 驱动
+（`Bool` 等式的可判定实例现成 ⇒ `if … = true then … else …` 恒可判定 ⇒ 坑 1 消解；
+不再写析取 ⇒ 坑 2 消解）：
 
-### 已落地
-* `Split.mem_sideB_iff : x ∈ u.sideB ↔ x ∉ u.sideA`（两侧互补；逐 split 求值的第一块砖）✓。
-
-### 剩余（下一轮施工图）
-按 §9 的五情形表做**逐 split 求值**，再按配对谓词拆和。本轮已确认**两个工具链坑**（省后人时间）：
-
-1. **`if` 的条件不能是我定义的 `Prop` 谓词**：`SplitMetric` 自带的 `if` 能算，是因为其条件直接由
-   `∈ sideA/sideB` 构成（可判定实例现成）；而 `if PairW u a a' b b' then 2 else 0` **缺
-   `Decidable (PairW …)`**（`PairW`、`Separates` 都是 `def`，实例搜索不展开）✗。
-   ⇒ 三条出路：把配对谓词写成 `abbrev`；把条件直接写成 `∈ sideA` 的布尔组合；或回避 `if`（条件引理）。
-2. **`norm_num` 不回溯**：把五情形写成**析取**后 `first | Or.inl ⟨by norm_num, …⟩ | …` 会失败 ——
-   对假等式 `norm_num` 不是「失败」而是「化成 `False` 却留下目标」⇒ `first` 不换分支 ✗。
-   ⇒ 应写成**条件引理**（`PairW ⟹ (0,2,2)` 等；目标是合取，`norm_num` 可闭）✓ 方向已验证。
-
-**建议下一轮**：定义 `bSep (u) (x y) : Bool := decide (x ∈ u.sideA) != decide (y ∈ u.sideA)`，
-把 `SplitMetric u x y` 改写为 `if bSep u x y then 1 else 0`（`Bool` 条件**恒可判定**），
-所有逐 split 求值都在 `Bool` 上做，再用 §9 的三条族级引理完成拆和。 -/
+* `bSep u x y : Bool` —— `x,y` 是否被 `u` 分到两侧（`decide (x ∈ sideA) != decide (y ∈ sideA)`）；
+* `SplitMetric u x y = if bSep u x y = true then 1 else 0`；
+* `bPairW/bPairP/bPairX : Bool` —— 三种配对的**布尔**判据，与 §9 的 `PairW/PairP/PairX` 等价。 -/
 
 /-- `x ∈ u.sideB ↔ x ∉ u.sideA`（两侧互补；逐 split 求值的基础砖）。 -/
 theorem mem_sideB_iff (u : Split X) (x : X) : x ∈ u.sideB ↔ x ∉ u.sideA := by
@@ -680,5 +667,72 @@ theorem mem_sideB_iff (u : Split X) (x : X) : x ∈ u.sideB ↔ x ∉ u.sideA :=
     rcases Finset.mem_union.mp h with h' | h'
     · exact absurd h' ha
     · exact h'
+
+/-- `Bool` 型分离谓词：`x`、`y` 是否被 `u` 分到两侧。 -/
+def bSep (u : Split X) (x y : X) : Bool :=
+  decide (x ∈ u.sideA) != decide (y ∈ u.sideA)
+
+/-- ★ **`SplitMetric` 的 `Bool` 形式**（条件是可判定的 `Bool` 等式）。 -/
+theorem splitMetric_eq_bSep (u : Split X) (x y : X) :
+    SplitMetric u x y = if bSep u x y = true then 1 else 0 := by
+  by_cases hx : x ∈ u.sideA <;> by_cases hy : y ∈ u.sideA <;>
+    simp only [SplitMetric, bSep, mem_sideB_iff, hx, hy] <;> norm_num
+
+/-- **W-配对的布尔判据**（`{a,a'}` 同侧、`{b,b'}` 同侧、`a,b` 异侧）。 -/
+abbrev bPairW (u : Split X) (a a' b b' : X) : Bool :=
+  (bSep u a a' == false) && (bSep u b b' == false) && (bSep u a b == true)
+
+/-- **P-配对的布尔判据**（`{a,b}` 同侧、`{a',b'}` 同侧、`a,a'` 异侧）。 -/
+abbrev bPairP (u : Split X) (a a' b b' : X) : Bool :=
+  (bSep u a b == false) && (bSep u a' b' == false) && (bSep u a a' == true)
+
+/-- **X-配对的布尔判据**（`{a,b'}` 同侧、`{a',b}` 同侧、`a,a'` 异侧）。 -/
+abbrev bPairX (u : Split X) (a a' b b' : X) : Bool :=
+  (bSep u a b' == false) && (bSep u a' b == false) && (bSep u a a' == true)
+
+/-! ### 10.1 布尔判据与 §9 的 Prop 判据等价（**至多一个非零**因此可用于布尔筛选） -/
+
+/-- `bPairW = true ↔ PairW`。 -/
+theorem bPairW_eq_true_iff (u : Split X) (a a' b b' : X) :
+    bPairW u a a' b b' = true ↔ PairW u a a' b b' := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [bPairW, bSep, PairW, Separates, mem_sideB_iff, ha, ha', hb, hb'] <;> decide
+
+/-- `bPairP = true ↔ PairP`。 -/
+theorem bPairP_eq_true_iff (u : Split X) (a a' b b' : X) :
+    bPairP u a a' b b' = true ↔ PairP u a a' b b' := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [bPairP, bSep, PairP, Separates, mem_sideB_iff, ha, ha', hb, hb'] <;> decide
+
+/-- `bPairX = true ↔ PairX`。 -/
+theorem bPairX_eq_true_iff (u : Split X) (a a' b b' : X) :
+    bPairX u a a' b b' = true ↔ PairX u a a' b b' := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [bPairX, bSep, PairX, Separates, mem_sideB_iff, ha, ha', hb, hb'] <;> decide
+
+/-! ### 10.2 逐 split 差分恒等式（收尾算法的计算核心） -/
+
+/-- ★★★ **逐 split：`X_u − W_u = 2·[W-配对] − 2·[X-配对]`**（五个取值情形逐项核对）。 -/
+theorem splitMetric_diff_W (u : Split X) (a a' b b' : X) :
+    (SplitMetric u a b' + SplitMetric u a' b) - (SplitMetric u a a' + SplitMetric u b b')
+      = (if bPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairX u a a' b b' = true then (2 : ℝ) else 0) := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [SplitMetric, bPairW, bPairX, bSep, mem_sideB_iff, ha, ha', hb, hb'] <;>
+    norm_num
+
+/-- ★★★ **逐 split：`X_u − P_u = 2·[P-配对] − 2·[X-配对]`**。 -/
+theorem splitMetric_diff_P (u : Split X) (a a' b b' : X) :
+    (SplitMetric u a b' + SplitMetric u a' b) - (SplitMetric u a b + SplitMetric u a' b')
+      = (if bPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - (if bPairX u a a' b b' = true then (2 : ℝ) else 0) := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [SplitMetric, bPairP, bPairX, bSep, mem_sideB_iff, ha, ha', hb, hb'] <;>
+    norm_num
 
 end Split
