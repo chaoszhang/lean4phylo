@@ -570,21 +570,38 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
   **一般 `f`** 形式（纯内核 `decide`；原文件只有逐个拓扑的 `card_rankings_01_2`）；
 * 上面那条数值核对脚本。
 
+**★ W12f 第三轮新增：钩长器材层已落地**（`Phylo/Stat/HookLength.lean`，新模块）
+
+* `hook T C` —— 簇 `C` 在嵌套族 `T` 中的**钩长** = `|{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|`
+  （= `C` 子树内的内部结点数，正是 hook-length 公式里的 `s_v`）；
+* `children T C` —— `C` 在 `T` 内的**极大真子簇**；`children_antichain`（孩子两两不真包含）、
+  `children_ssubset`（真小于父）；
+* ★★ **`hook_eq_one_add_sum_children`**：`hook T C = 1 + Σ_{B ∈ children T C} hook T B`
+  （`T` 为镶嵌族、`2 ≤ |C|`）—— 这就是 `s_v = 1 + Σ_{孩子} s_v` 的递推；
+* `hook_pos` / `hook_pos_iff` / `hook_eq_zero_of_card_le_one` / `hook_congr_of_eq_below`；
+* ★B `n = 4` 的具体数值（`example`，`decide`）：
+  balanced `Tbal` 的钩长 `{0,1} ↦ 1`、`{2,3} ↦ 1`、`univ ↦ 3`；
+  caterpillar `Tcat` 的钩长 `{0,1} ↦ 1`、`{0,1,2} ↦ 2`、`univ ↦ 3`。
+  **注册行**（由协调侧加入 `Phylo.lean`，紧跟 `import Phylo.Stat.RankedGeneTree` 之后）：
+  `import Phylo.Stat.HookLength`。
+
 **仍然没做到（一般 `n`）—— 精确的「缺什么」**：
 
 1. **命题本身为真**（脚本 `n ≤ 6` 零反例），故**不是** ★D 意义上的假命题；
 2. 证明路线有两条，都需要**同一层新接口**：
    * **hook-length 路线**：把 `cladesOf n f` 提升成「clade 包含偏序」上的**树对象**，
-     则 `|C| − 1` 恰是内部顶点 `C` 的**子树内部顶点数**（= hook length），
-     命题化为「森林偏序的线性扩展数 = `N!/∏ s_v`」。⚠️ **Mathlib 里没有**
-     hook-length 公式（`grep hook_length` 全库 0 命中），`linearExtension` 侧只有
-     `Mathlib/Order/Extension/Linear.lean` 的基础设施（无计数公式）；
+     再把命题化为「森林偏序的线性扩展数 = `N!/∏ s_v`」。⚠️ **Mathlib 里没有**
+     hook-length 公式（`grep -rn 'hook_length\|hookLength'` 全库 **0 命中**），
+     `linearExtension` 侧只有 `Mathlib/Order/Extension/Linear.lean` 的基础设施（无计数公式）；
    * **摘樱桃路线**：`f(T) = Σ_{cherries {a,b}} f(T_{ab})` —— 同样要先有「树对象」。
-3. 这层接口**在本文件内做不出来**：`IsMergeHistory` 的编码是 `(Fin (n-1) → Fin n × Fin n)`
-   的函数，从 `cladesOf` 反推父子关系需要一套新的树/偏序结构 + 计数定理，
-   **必然要新建模块**（并按 ★G 把注册行写进报告，由协调侧处理）。
+3. 第三轮**已把第 2 点的器材层做出来**（`HookLength.lean`：钩长 + 递推 + 具体数值），
+   **但**「线性扩展数 = `N!/∏ s_v`」（hook-length 公式本体）**仍未证明** ——
+   它需要用 `Mathlib/Order/Extension/Linear.lean` 自己搭计数归纳，
+   并额外证明「`cladesOf` 的 clade 包含偏序 ⟹ 该偏序的线性扩展 ⟺ 合并史的 ranking」
+   这一步**显式双射**（这是本缺口的组合实体，不是计数公式能替代的）。
 
-⇒ 一般 `n` **如实保留缺口**。 -/
+⇒ 一般 `n` **如实保留缺口**；本轮的增量是**器材层**（可复用的钩长定义与递推），
+不是缺口本体。 -/
 def rankedFiberCount_gap : Prop :=
   ∀ (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
     ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
