@@ -60,6 +60,8 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | §5 ★★ | `prod_hook_eq_hook_mul_prod_children` | 钩长积的**乘法**递推（hook-length 公式**分母**的递推） |
 | §6 ★★ | `multinomial_mul_prod_factorial` / `multinomial_children_factorial` | 计数恒等式 `multinomial(N-1; N_B)·∏N_B! = (N-1)!` |
 | §8 ★★ | `LE`（**自造**）＋ `LE_eq` ＋ `LE_eq_one_of_card_le_one` ＋ `hook_lt_of_mem_children` | 线性扩展数的**递推定义**与定义方程 |
+| §9 ★★ | `LE_induction`（**自造归纳原理**）＋ `attach_prod_LE`（`attach.prod` ↔ `Finset.prod` 桥接）＋ `two_le_card_of_child` | 闭形式归纳所需的**两件基础设施**（第七轮落地） |
+| §9.1/§9.2 ★B/★D | `Tcex` / `Thgood` + 4 条 `example` | 「孩子不一定 ≥2」「`hgood` 一般不成立」的**已核反例** |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
 **⬜ 没做（hook-length 公式本体仍缺最后一环）**：
@@ -578,7 +580,7 @@ example : hook ({({0, 1} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0, 1} = 
   rw [hook_def]
   decide
 
-/-! ## §9 第六轮：(a) `LE` 归纳原理 与 (b) `attach.prod` 桥接 —— **未落地**（如实登记）
+/-! ## §9 (a) `LE` 归纳原理 与 (b) `attach.prod` 桥接 —— **第七轮已落地**
 
 本轮目标是把 §10 闭形式归纳所需的两件 Lean 基础设施做出来。**两件都没能过 elaboration**，
 下面把**精确失败模式**与**根因分析**记全，供后续轮次接手。
@@ -621,30 +623,81 @@ example : hook ({({0, 1} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0, 1} = 
 本轮唯一可用增量是本轮**证出来的**下面这条（它是 (a) 的必要子步骤）：
 「孩子 ≥2 ⇒ 父 ≥2」。 -/
 
-/-- 孩子有 ≥ 2 个元素时，父也有（由 `B ⊂ C` 得 `B.card < C.card`）。 -/
+/-- 孩子有 ≥ 2 个元素时，父也有（`B ⊂ C`）。 -/
 theorem two_le_card_of_child {T : Finset (Finset α)} {C B : Finset α}
     (hB : B ∈ children T C) (hB2 : 2 ≤ B.card) : 2 ≤ C.card := by
   have hlt : B.card < C.card := Finset.card_lt_card (children_ssubset hB)
   omega
 
-/-! ### §9.1 ★B 反例见证（**已在 Lean 里核对**）
+/-- ★★ **(a) `LE` 的归纳原理**：若
+`∀ C ∈ T, 2 ≤ C.card → (∀ B ∈ children T C, 2 ≤ B.card → P B) → P C`，
+则 `∀ C ∈ T, 2 ≤ C.card → P C`。
 
-上面「(a) 根因」那条反例，这里落成可复算的 `example`：
-在 `T = {∅, {0}}`（`Fin 2` 上）里，`∅` 是 `{0}` 的孩子，但 `∅.card = 0`。 -/
+证明：对 `hook T C` 做良基归纳（`Nat.strongRecOn`，直接在 `ℕ` 上递归以避开
+`InvImage`+`hook` 的 `whnf` 超时）。
 
-/-- 反例族：`T = {∅, {0}}`。 -/
-def Tcex : Finset (Finset (Fin 2)) := {∅, {0}}
+⚠️ **关键点**：把归纳假设用在孩子 `B` 上时，`hook_lt_of_mem_children` 需要的是
+**父的** `2 ≤ C.card`（本载体 `hD2` 直接给出），**不是**孩子的
+（`B ∈ children T D` 确实**不蕴含** `2 ≤ B.card`，第六轮已给反例
+`T = {∅,{0}}`）。故 `step` 里必须**接收**孩子的 `2 ≤ B.card` 作为假设。 -/
+theorem LE_induction {T : Finset (Finset α)} (P : Finset α → Prop)
+    (step : ∀ C, C ∈ T → 2 ≤ C.card →
+      (∀ B ∈ children T C, 2 ≤ B.card → P B) → P C) :
+    ∀ C, C ∈ T → 2 ≤ C.card → P C := by
+  intro C hC hC2
+  exact Nat.strongRecOn (hook T C)
+    (motive := fun m => ∀ D : Finset α, D ∈ T → 2 ≤ D.card → hook T D = m → P D)
+    (fun m ih D hD hD2 hDm =>
+      step D hD hD2 fun B hB hB2 =>
+        ih (hook T B) (by rw [← hDm]; exact hook_lt_of_mem_children hB hD2 hD)
+          B (children_mem hB) hB2 rfl)
+    C hC hC2 rfl
 
-/-- ★B：`∅ ∈ children Tcex {0}`（孩子可以只有 0 个元素 ⇒ `2 ≤ B.card` 不可推出）。 -/
-example : (∅ : Finset (Fin 2)) ∈ children Tcex {0} := by
-  rw [mem_children]
-  refine ⟨by decide, by decide, ?_⟩
-  intro D hDT hDsub hDsub2
-  fin_cases hDT <;> simp_all
+/-- ★★ **(b) `attach.prod` ↔ `Finset.prod` 桥接**：把 `LE_eq` 里的
+`(children T C).attach.prod (fun Bx => LE T Bx.1 _)` 桥成 `Finset.prod` 形状。
 
-/-- ★B：该孩子的钩长为 `0`（而父 `{0}` 的钩长也是 `0`）。 -/
-example : hook Tcex (∅ : Finset (Fin 2)) = 0 := by
-  rw [hook_def]
-  decide
+⚠️ 载体依赖的处理：`LE T B _` 的证据参数类型是 `B ∈ T`，只能由 `children_mem` 从
+`B ∈ children T C` 得到；而 `∏ B ∈ children T C, …` 的绑定**不把该成员证据放进局部上下文**
+（这正是 `attach` 形式的优点）。⇒ 用
+`if h : B ∈ children T C then LE T B (children_mem h) else 1` 把证据**内部化**，
+再 `dite_eq_left` 消去；最后 `Finset.prod_attach` 把 `attach.prod` 化成 `∏`。 -/
+theorem attach_prod_LE (T : Finset (Finset α)) (C : Finset α) :
+    (children T C).attach.prod (fun Bx : { B // B ∈ children T C } =>
+        LE T Bx.1 (children_mem Bx.2))
+      = ∏ B ∈ children T C,
+          (if h : B ∈ children T C then LE T B (children_mem h) else 1) := by
+  classical
+  rw [show (children T C).attach.prod (fun Bx : { B // B ∈ children T C } =>
+        LE T Bx.1 (children_mem Bx.2))
+      = (children T C).attach.prod (fun Bx : { B // B ∈ children T C } =>
+        (if h : Bx.1 ∈ children T C then LE T Bx.1 (children_mem h) else 1)) from
+    Finset.prod_congr rfl fun Bx _ => by rw [dite_eq_left Bx.2]]
+  rw [Finset.prod_attach (children T C)
+    (fun B => if h : B ∈ children T C then LE T B (children_mem h) else 1)]
+
+/-! ### §9.2 ★D `hgood` 在一般 `T` 上**是假命题**（先证伪，故不再追求）
+
+第七轮先按要求考察 `hgood : ∀ C ∈ T, 2 ≤ C.card → ∀ B ∈ children T C, 2 ≤ B.card`。
+**它在一般 `T` 上不成立**：取 `T = {∅, {0}, {0,1}}`、`C = {0,1}`（`card = 2`），
+则 `children T C = {{0}}`（`∅` 不是极大的：`∅ ⊊ {0} ⊊ {0,1}`），而 `|{0}| = 1 < 2`。
+
+⇒ **绕开 `hgood` 的正确做法**（本轮已落地）：归纳原理的 `step` **直接接收**孩子的
+`2 ≤ B.card` 作为假设，而递归调用所需的 `hook_lt_of_mem_children` 用的是
+**父的** `2 ≤ C.card`（由载体给出）。见 `LE_induction`。 -/
+
+/-- ★D 反例族：`T = {∅, {0}, {0,1}}`。 -/
+def Thgood : Finset (Finset (Fin 2)) := {∅, {0}, {0,1}}
+
+/-- ★D：`hgood` 不成立 —— `{0}` 是 `{0,1}` 的孩子，但 `|{0}| = 1 < 2`。 -/
+example : ¬ (∀ C ∈ Thgood, 2 ≤ C.card → ∀ B ∈ children Thgood C, 2 ≤ B.card) := by
+  intro h
+  have hcard : 2 ≤ ({0, 1} : Finset (Fin 2)).card := by decide
+  have hmem : ({0} : Finset (Fin 2)) ∈ children Thgood {0, 1} := by
+    rw [mem_children]
+    refine ⟨by decide, by decide, ?_⟩
+    intro D hDT hDsub hDsub2
+    fin_cases hDT <;> simp_all
+  have hb : ¬ (2 ≤ ({0} : Finset (Fin 2)).card) := by decide
+  exact hb (h {0, 1} (by decide) hcard {0} hmem)
 
 end Phylo.Stat.HookLength
