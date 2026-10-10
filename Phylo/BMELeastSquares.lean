@@ -460,6 +460,34 @@ theorem bme_pauplin_identity_gap_of_card_le_one (δ : Dissimilarity X)
   · intro e
     exact nomatch e.down
 
+/-! ## 8. ★★★ 库级**宇宙事实**（W12e16 探针）＋ 边集的 `Fin n` 索引
+
+对 `def bme_pauplin_identity_gap`（`:372`）里 `∃ (E : Type)` 的 `E` 槽做了 5 个探针
+（`lake env lean` 实测，`_scripts_tmp/w12e16_probe_univ*.lean`）：
+
+* ✗ `E := Sym2 T.V` —— `type mismatch: T.V has type Type u_2 … but is expected to have type Type`
+　⇒ **该槽的期望宇宙是 `Type 0`**（既不是 `X` 的宇宙、也不是待定的元变量）；
+* ✗ `E := PLift Empty` —— 同类 `type mismatch`；
+* ✓ `E := PUnit`；✓ `E := ULift.{0, 0} Empty`；✓ `E := Fin 3`（三者都是 `Type 0`）。
+
+⇒ **结论（可复用的库级事实）**：该 `E` 只能是 **`Type 0`** 的类型；
+「树的边子类型」`{e : Sym2 T.V // e ∈ T.graph.edgeSet}` 住在 `T.V` 的宇宙 `Type u_2`，
+**不能**直接充当 `E` ✗ —— 必须经 `Fin n`（或 `ULift.{0,0}`）**搬运**。
+这正是 W12e14/W12e15 里 (c) 归约的真正障碍（当时误以为 `ULift` 能修，实测**不能** ✗）。
+
+※ 另一条实测事实（命名空间）：在 `namespace NJ / Dissimilarity` 内引用 `Phylo.AttesonRadius`
+的引理必须写**全名** `Cladogram.pathOf_edges_nodup`（不带限定符会报 `Unknown identifier`）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **边集可被 `Fin n` 索引**（`n` = 边数）：这是 (c) 归约在「宇宙 0」约束下的**第一步** ——
+把 `{e : Sym2 T.V // e ∈ T.graph.edgeSet}` 沿等价搬到 `Fin n : Type 0`，之后
+`S`/`l`/`p` 都定义在 `Fin n` 上（用 `Equiv.sum_comp`/`Finset.sum_equiv` 搬运和）。
+⚠️ 注意：本定理**不是**缺口本身，也不声称缺口已被归约。 -/
+theorem exists_equiv_fin_edgeSet (T : Phylogram X) :
+    ∃ n : ℕ, Nonempty ({e : Sym2 T.V // e ∈ T.graph.edgeSet} ≃ Fin n) := by
+  classical
+  exact ⟨_, ⟨Fintype.equivFin _⟩⟩
+
 end Dissimilarity
 
 end NJ
