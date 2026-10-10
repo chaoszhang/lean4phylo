@@ -949,9 +949,27 @@ theorem exists_exact_tree_P2 :
 机器见证：`scripts/msc/w12a_twoparent_check.py` 穷举 6 taxa 上**全部 236** 个两两相容族，
 展示 `prof` 的族**恰有两个** = `P₁`、`P₂` ✓（与原文 "precisely two" 一致），
 并对每条族做了**显式树构造**核验（`V=10, E=9`、内部点度 ≥ 3、叶度 1 ✓）。
-Lean 内据它即可立得第 4 条（每个 parent tree 含 `T₁` 或 `T₂` 的全部 split）；
-`Finset (Fin 6)` 直写的两条 `decide` 路线均已实测撞墙（缺可计算 `Fintype`/`Decidable`），
-需改走 `Fin 64` 位掩码或手写情形分析 ⇒ 单独立项 ✓。 -/
+
+### ★D（W12a12）**真值：机器判定为真** ✓ —— 但两条 Lean 路线都实测被挡住 ✗
+
+该脚本 **★D-2 段**（W12a12 新增）把本 `Prop` 的「非平凡部分」在**全部 236 个相容族**上重跑：
+**含 `P₁∪P₂` 之外 split 的展示族 = 0 个** ✓ ⇒ 分类定理**真** ✓
+（附核：两个 parent 族规模均为 `3 = n-3` ✓）。
+
+**Lean 侧实测结论（★D 精神：先做最小实验判定路线）**：
+1. **`Finset (Fin 6)` 直写**（前一版已试）—— ❌ 综合不出可计算 `Fintype`/`Decidable`；
+2. **`Fin 64` 位掩码 ＋ `decide`（`64³ = 262144` 例）—— ❌ 实测不可行**：
+   * 默认 `maxRecDepth` 下报 `maximum recursion depth has been reached` ✗；
+   * 提到 `maxRecDepth 200000` 后，在**玩具判据**（`a+b+c < 3 → a+b+c < 300`）上
+     即 `(deterministic) timeout at whnf, maximum number of heartbeats (200000)`（约 40 s）✗；
+     真实判据还含「相容性 ＋ 三条 quartet 展示」的集合运算，远重于玩具 ⇒ 该路线**实质作废** ✗。
+3. **手写原文 Figure 1 情形分析** —— 未做（估计 100–200 行）✗；
+4. **尚未尝试（推荐下一轮）**：在 Lean 内写**带相容性剪枝的 `Bool` 枚举**
+   （剪枝后只有 **236** 个族 ✓，与 Python 脚本同规模 ⇒ 计算量微不足道 ✓），
+   再补一条**反射引理**（「枚举返回 `true`」⟹ 分类定理）—— 反射引理是本路线的主要工作量 ✗。
+
+⇒ 有了本 `Prop` ＋ §8.4 的 `two_parent_trees_conjuncts_1_2_3`（缺口第 1–3 条**已证** ✓），
+`two_parent_trees_gap` 的 `…_proof` 只剩**把两者拼起来**（原 `def` 逐字保留 ✓、新名如实 ✓）。 -/
 def two_parent_trees_classification : Prop :=
   ∀ T : Cladogram.{0, 0} (Fin 6), (∀ q ∈ prof, DisplaysQP T q) →
     ∀ s : Split (Fin 6), T.IsSplitOf s →
