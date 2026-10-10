@@ -268,6 +268,70 @@ theorem exists_adj_of_edge (T : Cladogram X) (e : Edge T) :
     ∃ a b : T.V, T.graph.Adj a b ∧ e.1 = s(a, b) :=
   exists_adj_of_mem (T := T) e.2
 
+/-- ★★★ **`region(w) ∩ W = {w}`**：`W` 的其它元素都不在 `HangOff(w)` 里
+（由核心引理 `isSep_of_isPendantEdgeOf_of_ne` 直接得）。 -/
+theorem not_mem_hangOff_of_mem_of_ne {T : Cladogram X} {W : Finset X} {w z : X}
+    (hz : z ∈ W) (hzw : z ≠ w) : z ∉ HangOff T W w := by
+  rintro ⟨e, he, hsep⟩
+  exact hsep (isSep_of_isPendantEdgeOf_of_ne he hz hzw)
+
+/-- ★★ **`IsCovered` 的边必是 `T` 的边**（树删去非边不改变图，仍连通 ⇒ 不可能分离）。 -/
+theorem isCovered_edgeSet {T : Cladogram X} {W : Finset X} {e : Sym2 T.V}
+    (h : IsCovered T W e) : e ∈ T.graph.edgeSet := by
+  by_contra hne
+  obtain ⟨x, _, y, _, hsep⟩ := h
+  have hd : T.graph.deleteEdges {e} = T.graph := by
+    rw [SimpleGraph.deleteEdges_eq_self]
+    simpa only [Set.disjoint_singleton_right] using hne
+  obtain ⟨p⟩ := T.isTree.connected (T.leaf x) (T.leaf y)
+  have hp : (T.graph.deleteEdges {e}).Reachable (T.leaf x) (T.leaf y) := by
+    rw [hd]
+    exact p.reachable
+  exact hsep hp
+
+/-- ★★★ **一条外边唯一确定 `w`**（(C) 的 `e₁ = e₂` 情形：「共享外边」不可能）。
+需要 `3 ≤ |W|`：取第三个元素 `w₃`，则 `w₁, w₂` 都在 `w₃` 的另一侧 ⇒ 同侧，
+与核心引理给出的 `IsSep e (leaf w₁) (leaf w₂)` 矛盾。 -/
+theorem pendantEdge_unique {T : Cladogram X} {W : Finset X} {w₁ w₂ : X} {e : Sym2 T.V}
+    (h1 : IsPendantEdgeOf T W w₁ e) (h2 : IsPendantEdgeOf T W w₂ e)
+    (h3 : 3 ≤ W.card) : w₁ = w₂ := by
+  classical
+  by_contra hne
+  have hw₁W : w₁ ∈ W := by
+    by_contra h
+    have hnco : ¬ IsCovered T (W.erase w₁) e := h1.2
+    rw [Finset.erase_eq_of_notMem h] at hnco
+    exact hnco h1.1
+  have hw₂W : w₂ ∈ W := by
+    by_contra h
+    have hnco : ¬ IsCovered T (W.erase w₂) e := h2.2
+    rw [Finset.erase_eq_of_notMem h] at hnco
+    exact hnco h2.1
+  obtain ⟨w₃, hw₃W, hw₃₁, hw₃₂⟩ : ∃ w₃ ∈ W, w₃ ≠ w₁ ∧ w₃ ≠ w₂ := by
+    by_contra hcon
+    have hsub : W ⊆ {w₁, w₂} := by
+      intro z hz
+      by_contra hz'
+      simp only [Finset.mem_insert, Finset.mem_singleton, not_or] at hz'
+      exact hcon ⟨z, hz, hz'.1, hz'.2⟩
+    have hle : W.card ≤ ({w₁, w₂} : Finset X).card := Finset.card_le_card hsub
+    have h2' : ({w₁, w₂} : Finset X).card ≤ 2 := by
+      have := Finset.card_insert_le w₁ ({w₂} : Finset X)
+      simp only [Finset.card_singleton] at this
+      omega
+    omega
+  have hs1 : T.IsSep e (T.leaf w₁) (T.leaf w₃) :=
+    isSep_of_isPendantEdgeOf_of_ne h1 hw₃W hw₃₁
+  have hs2 : T.IsSep e (T.leaf w₂) (T.leaf w₃) :=
+    isSep_of_isPendantEdgeOf_of_ne h2 hw₃W hw₃₂
+  have hs12 : T.IsSep e (T.leaf w₁) (T.leaf w₂) :=
+    isSep_of_isPendantEdgeOf_of_ne h1 hw₂W (Ne.symm hne)
+  obtain ⟨a, b, hab, heab⟩ := exists_adj_of_mem (isCovered_edgeSet h1.1)
+  rw [heab] at hs1 hs2 hs12
+  refine hs12 (inSide_of_not_inSide_of_not_inSide (u := T.leaf w₃) hab ?_ ?_)
+  · exact fun h => hs1 ((inSide_comm T s(a, b) (T.leaf w₁) (T.leaf w₃)).mpr h)
+  · exact fun h => hs2 ((inSide_comm T s(a, b) (T.leaf w₂) (T.leaf w₃)).mpr h)
+
 end Cladogram
 
 /-! ## §2 (A)：PD 求和装配 ＋ 条件形态的 `pdExchange_gap`
