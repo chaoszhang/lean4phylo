@@ -78,12 +78,16 @@ theorem fitchCost_eq (k : Fin 3) :
         else if (ones p).card = 2 then
           (if ones p = pairA k ∨ ones p = (pairA k)ᶜ then 1 else 2)
         else 1) := by
-  fin_cases k <;> native_decide
+  -- ⚠️ 原先此处用 `native_decide`：它会引入**编译器信任公理**
+  -- `…_native.native_decide.ax_1_1`（`#print axioms` 可见），属本库**禁止**项。
+  -- 改为 **`decide`**（同样枚举 `Fin 4 → Bool` 的 16 个模式 × `Fin 3` 的 3 个拓扑，
+  -- 但走**内核**检查 ⇒ `#print axioms` 只剩 `[propext, Classical.choice, Quot.sound]`）。
+  fin_cases k <;> decide
 
 /-- ★ **信息位点情形**（`fitchCost_eq` 的专门化，最常用）。 -/
 theorem fitchCost_eq_of_card_two (k : Fin 3) {p : Pattern} (h : (ones p).card = 2) :
     fitchCost k p = if ones p = pairA k ∨ ones p = (pairA k)ᶜ then 1 else 2 := by
-  rw [fitchCost_eq k p, if_neg (by rintro (h0 | h4) <;> omega), if_pos h]
+  rw [fitchCost_eq k p, ite_eq_right (by rintro (h0 | h4) <;> omega), ite_eq_left h]
 
 end Pattern
 
