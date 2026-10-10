@@ -1127,4 +1127,31 @@ theorem two_parent_trees_conjuncts_1_2_3 :
   · rw [hT₂ s, hT₁ (Split.relabel sig s), mem_famP2_iff_relabel_mem_famP1 s]
     exact or_congr Iff.rfl (trivial_relabel_iff sig s)
 
+/-! ### 8.5 (W12a13) 树层分类定理 **归约到有限核心**
+
+把第 4 条（树层分类）归约成一个**纯有限**的 `Prop`（`two_parent_trees_core`）：
+树 `T` 的**非平凡** split 族自动是「两两相容 ＋ 非平凡 ＋ 展示 `prof`」的族
+（相容性来自库内 `Phylo.pairwiseCompatible` ✓；展示的见证 split 必非平凡 ✓ ——
+因为 quartet 的每个配对都是 2 元集 ✓），于是「有限核心」直接给出分类定理 ✓。 -/
+
+/-- ⬜ **有限核心（尚未证）**：6 taxa 上任何**两两相容、非平凡、且展示 `prof`** 的 split 族，
+其成员都落在 `P₁ ∪ P₂` 内。这是分类定理的全部有限内容（机器判定为**真** ✓，见 §8.2 末）。 -/
+def two_parent_trees_core : Prop :=
+  ∀ F : Finset (Split (Fin 6)),
+    (∀ s ∈ F, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card) →
+    (∀ s ∈ F, ∀ t ∈ F, Split.Compatible s t) →
+    (∀ q ∈ prof, ∃ s ∈ F, (∃ p ∈ q, p ⊆ s.sideA) ∧ (∃ p' ∈ q, p' ⊆ s.sideB)) →
+    ∀ s ∈ F, s ∈ famP1 ∨ s ∈ famP2
+
+/-! **W12a13 状态（如实登记）**：树层归约（`two_parent_trees_core → two_parent_trees_classification`）
+本轮**未落地** ✗ —— 卡在**库内树相容性引理的名字/陈述**上：`Phylo/Split.lean:894` 的
+`pairwiseCompatible (T : Cladogram X) : T.PairwiseCompatible` 在我的文件里
+（i）`Phylo.pairwiseCompatible` 报 unknown identifier ✗、（ii）不带前缀时虽能解析，
+但它的第二参数类型与我给出的 `a ∈ T.splits` 精确不匹配（`Application type mismatch` ✗，
+报错文本还被截断，看不清期望类型）。
+⇒ **下一轮第一步**：读 `Phylo/Split.lean:880–900` 的 **namespace 块**确认全名与参数顺序
+（按你的提醒「需要库内全名就读 namespace 块」✓），再把这条桥补上；
+其余部分（`F` 的构造、非平凡性由 quartet 配对为 2 元集得到、`Finset.card_le_card`、
+`classical` 解决 `filter` 的 `DecidablePred` ✓）本轮都已试通 ✓。 -/
+
 end SBD
