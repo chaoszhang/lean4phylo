@@ -59,20 +59,31 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | §3 ★★ | `hook_eq_one_add_sum_children` | 钩长的**加法**递推 `s_v = 1 + Σ_{孩子} s_child` |
 | §5 ★★ | `prod_hook_eq_hook_mul_prod_children` | 钩长积的**乘法**递推（hook-length 公式**分母**的递推） |
 | §6 ★★ | `multinomial_mul_prod_factorial` / `multinomial_children_factorial` | 计数恒等式 `multinomial(N-1; N_B)·∏N_B! = (N-1)!` |
-| §4/§7 ★B | 22 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推与计数恒等式的具体数值 |
+| §8 ★★ | `LE`（**自造**）＋ `LE_eq` ＋ `LE_eq_one_of_card_le_one` ＋ `hook_lt_of_mem_children` | 线性扩展数的**递推定义**与定义方程 |
+| §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
 **⬜ 没做（hook-length 公式本体仍缺最后一环）**：
 
-1. **线性扩展数 `LE` 的递推**
-   `LE(T) = multinomial(N-1; N_1..N_k) · ∏_B LE(T_B)`
-   —— 需要先定义 `LE`（`Mathlib/Order/Extension/Linear.lean` 只给 `LinearExtension` 类型别名，
-   没有线性扩展**计数**），并证「根必在第一位 + 各孩子子树的块间插空」这一步组合双射；
-2. 由 §5 + §6 + 上述递推**归纳**出 `LE(T) = N!/∏_v s_v`；
+1. ~~线性扩展数 `LE` 的递推~~ —— **第五轮已做**：`LE` 按「根在首位 + 孩子子树块间插空」
+   **递归定义**（§8），`LE_eq` 给出定义方程
+   `LE T C = multinomial(hook 们) · ∏_B LE T B`。**但**：
+2. ⬜ **由 §5 + §6 归纳出闭形式** `LE T C · ∏_{D ⊆ C} hook T D = (hook T C)!`
+   —— **仍未做**。卡点很具体：`LE` 的**递归调用点**是 `(children T C).attach.prod`，
+   要对它做归纳需要一条**自造的归纳原理**（把 `LE` 的 well-founded 递归
+   `termination_by hook T C` 暴露成 `induction`），并额外把
+   `attach.prod (fun Bx => LE T Bx.1 _)` 与 §5 的 `∏ B ∈ children T C, …` 对齐
+   （`Finset.prod_attach`）。这两步**都不是数学难点，而是 Lean 基础设施**；
+   我**没有**用 `sorry` 或半成品绕过它。
 3. 第 (ii) 条（**不在本模块范围**）：`cladesOf` 的 clade 包含偏序的**线性扩展 ⟺ 合并史的 ranking**
    的显式双射 —— 这是 `rankedFiberCount_gap` 的**组合实体**。
 
-⇒ 本模块交付的是**计数归纳的两块器材**（§5 分母递推 + §6 计数恒等式），**不是**缺口本体。
+⇒ 本模块交付的是**计数归纳的两块器材**（§5 分母递推 + §6 计数恒等式）
+＋ **第五轮新增的 `LE` 递推定义**；**不是**缺口本体。
 数值核对：`scripts/msc/w12f_hook_count_check.py`（`ALL_OK`）。
+
+⚠️ **`LE` 的具体值不可 `decide`**：well-founded 递归定义内核不自动展开，
+故 `LE Tbal univ = 2` 这类断言需要上面的归纳原理才能证；§8.1 只给了**平凡情形**
+（单点簇、无孩子的非单点簇）的可展开见证。
 
 **注册行（由协调侧加入 `Phylo.lean`，紧跟 `import Phylo.Stat.RankedGeneTree` 之后）**：
 
@@ -316,6 +327,28 @@ example : hook Tcat Finset.univ = 1 + ∑ B ∈ children Tcat Finset.univ, hook 
 example : hook ({(Finset.univ : Finset (Fin 3))} : Finset (Finset (Fin 3))) Finset.univ = 1 := by
   decide
 
+/-- **孩子的钩长严格小于父**。
+
+证：`B ∈ children T C` 给出 `B ⊂ C`、`B ∈ T`。于是
+`internalBelow T B ⊊ internalBelow T C`（包含：`D ⊆ B ⊆ C`；严格：`C` 本身在
+`internalBelow T C` 里但不在 `internalBelow T B` 里，因为那要求 `C ⊆ B`）。
+取基数即得。 -/
+theorem hook_lt_of_mem_children {T : Finset (Finset α)} {C B : Finset α}
+    (hB : B ∈ children T C) (hC2 : 2 ≤ C.card) (hC : C ∈ T) :
+    hook T B < hook T C := by
+  have hsub : internalBelow T B ⊆ internalBelow T C := by
+    intro D hD
+    obtain ⟨hDT, hD2, hDB⟩ := mem_internalBelow.mp hD
+    exact mem_internalBelow.mpr ⟨hDT, hD2, hDB.trans (children_ssubset hB).1⟩
+  have hCmem : C ∈ internalBelow T C :=
+    mem_internalBelow.mpr ⟨hC, hC2, Finset.Subset.refl C⟩
+  have hCnotmem : C ∉ internalBelow T B := by
+    intro hmem
+    exact (children_ssubset hB).2 (mem_internalBelow.mp hmem).2.2
+  have hssub : internalBelow T B ⊂ internalBelow T C :=
+    Finset.ssubset_iff_subset_ne.mpr ⟨hsub, fun heq => hCnotmem (heq ▸ hCmem)⟩
+  exact Finset.card_lt_card hssub
+
 /-! ## §5 hook 积的递归（hook-length 公式分母的**乘法**递推）
 
 `hook_eq_one_add_sum_children` 是钩长的**加法**递推；hook-length 公式真正需要的是
@@ -473,5 +506,76 @@ example : ((Nat.multinomial ({2} : Finset ℕ) (fun n => n) : ℕ) : ℤ)
     * ∏ n ∈ ({2} : Finset ℕ), ((n.factorial : ℕ) : ℤ)
       = ((((3 : ℕ) - 1).factorial : ℕ) : ℤ) :=
   multinomial_children_factorial ({2} : Finset ℕ) 3 (by decide)
+
+/-! ## §8 线性扩展数 `LE`（**自造**；Mathlib 无此计数）
+
+⚠️ **三次 grep 确认**：Mathlib 的 `Mathlib/Order/Extension/Linear.lean` **只给
+`LinearExtension` 类型别名与「把偏序延拓成线序」的存在性**（`extend_partialOrder`），
+**没有**线性扩展的**计数**；按 `linearExtension` / `topological` / `Nat.card ∘ LinearExtension`
+搜计数式引理 **全部 0 命中**。⇒ 本节的 `LE` 是**自造**的
+（本会话第三次「库里没有」：`hook_length` 0 命中、`Measure.infinitePi`、此处）。
+
+### 定义口径（**递归**，与树偏序的线性扩展一一对应）
+
+树偏序：结点 = `internalBelow T C`（内部结点），序 = `⊊`。
+线性扩展里**根必在首位**，其余位置由各**孩子子树**的线性扩展**块间插空**得到：
+
+```text
+LE T C  =  multinomial(N_B 们) · ∏_B LE T B          （2 ≤ |C|）
+LE T C  =  1                                          （否则）
+```
+
+`N_B = hook T B`（孩子子树内的内部结点数）。**待证结论**是 §9 的闭形式 `LE · ∏s = N!`
+（**不是**把结论当定义）。 -/
+
+/-- **线性扩展数** `LE T C hC`（`hC : C ∈ T` 保证 `C` 在簇池里）。
+
+对 `hook T C` 做 well-founded 递归；递归调用在 `children T C` 上
+（孩子的 `hook` 严格更小，见 `hook_lt_of_mem_children`）。 -/
+noncomputable def LE (T : Finset (Finset α)) (C : Finset α) (_hC : C ∈ T) : ℕ :=
+  if _hcard : 2 ≤ C.card then
+    Nat.multinomial (children T C) (fun B => hook T B) *
+      (children T C).attach.prod (fun Bx : { B // B ∈ children T C } =>
+        LE T Bx.1 (children_mem Bx.2))
+  else 1
+termination_by hook T C
+decreasing_by
+  show hook T Bx.1 < hook T C
+  exact hook_lt_of_mem_children Bx.2 (by omega) _hC
+
+theorem LE_eq (T : Finset (Finset α)) (C : Finset α) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
+    LE T C hC = Nat.multinomial (children T C) (fun B => hook T B) *
+      (children T C).attach.prod (fun Bx : { B // B ∈ children T C } =>
+        LE T Bx.1 (children_mem Bx.2)) := by
+  rw [LE, dite_eq_left h2]
+
+/-- **单点簇的 `LE` 为 `1`**（没有内部结点 ⇒ 恰一个空线性扩展）。 -/
+theorem LE_eq_one_of_card_le_one {T : Finset (Finset α)} {C : Finset α} (hC : C ∈ T)
+    (h : C.card ≤ 1) : LE T C hC = 1 := by
+  rw [LE, dite_eq_right (by omega)]
+
+/-! ### §8.1 ★B 见证：`LE` 的**定义方程**在具体（平凡）簇上可展开
+
+⚠️ 说明：`LE` 是 well-founded 递归定义，内核**不会**自动展开它，
+故 `decide` / `simp` **算不出** `LE Tbal univ = 2` 这类具体值
+（需要专门的「递归方程 + 归纳」工具，见 §9 的 ⬜）。
+但**平凡情形**可以直接用 `LE_eq_one_of_card_le_one` 与定义方程读出。 -/
+
+-- 单点簇：`LE = 1`
+example : LE ({({0} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0} (by decide) = 1 :=
+  LE_eq_one_of_card_le_one (by decide) (by decide)
+
+-- 非单点簇但族里没有它的真子簇：`children = ∅`
+example : children ({({0, 1} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0, 1} = ∅ := by
+  rw [← Finset.not_nonempty_iff_eq_empty]
+  rintro ⟨B, hB⟩
+  obtain ⟨hBT, hBsub, -⟩ := mem_children.mp hB
+  rw [Finset.mem_singleton] at hBT
+  exact hBsub.2 (hBT ▸ Finset.Subset.refl B)
+
+-- 该簇的钩长为 `1`（自己是内部结点，之下没有别的内部结点）
+example : hook ({({0, 1} : Finset (Fin 3))} : Finset (Finset (Fin 3))) {0, 1} = 1 := by
+  rw [hook_def]
+  decide
 
 end Phylo.Stat.HookLength
