@@ -386,8 +386,8 @@ theorem jc69_caster_statisticallyConsistent_kingman_measure
     (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (hab : 0 < (a : ℝ) + (b : ℝ))
     (hf_int : Integrable Phylo.Stat.MSCInstance.jc69PropADataK.f
       (kingmanMSCMeasure (Measure.dirac (leaf, a, b))))
-    (hf_pos : ∀ θ : KingmanΘ, ¬ kingmanMSCTopoSym.deep θ →
-      0 < Phylo.Stat.MSCInstance.jc69PropADataK.f θ)
+    (hf_pos : ∀ᵐ θ ∂(kingmanMSCMeasure (Measure.dirac (leaf, a, b))),
+      ¬ kingmanMSCTopoSym.deep θ → 0 < Phylo.Stat.MSCInstance.jc69PropADataK.f θ)
     (hint : ∀ T : Phylo.Stat.CASTERWeights.Topo, Integrable
       (fun θ => ∑ T' : Phylo.Stat.CASTERWeights.Topo,
         kingmanMSCTopoSym.τd θ T' * Phylo.Stat.MSCInstance.jc69PropADataK.A θ T' T)
@@ -409,6 +409,181 @@ theorem jc69_caster_statisticallyConsistent_kingman_measure
     measurableSet_kingmanMSCTopoSym_deep
     (kingmanMSCMeasure_dirac_notDeep_pos leaf a b hab)
     hf_int hf_pos hint emp hconv hE
+
+/-! ## 6. ★★★ 三条**解析假设**从 weight 表**推出**（不再是假设）
+
+`MSCInstance` / 本文件 §5 的端到端定理带三条**解析**假设：
+`hf_int`（幅度可积）、`hf_pos`（幅度为正）、`hint`（权重一致有界 = 正文条件 (2)）。
+它们**不是**模型内容 —— 它们是**关于得分期望**的条件，而三个具体模型的幅度与权重都有
+**闭式**（`jc69Amp` / `lm1Amp` / `f84Amp`）⇒ 在具体测度上**可以算**。
+
+本节对 `ν = kingmanMSCMeasure (Measure.dirac (leaf, a, b))`（`hab : 0 < a + b`）
+把 `hf_pos`（§6.3）与 `hf_int`（§6.4）**证掉**，并在 §6.5 给出**参数更少**的旗舰端点。
+
+⚠️ **为什么必须是 `a.e.` 形式**：`toKingmanΘ` 把内枝长取 `a + b`，故**像点的内枝长恒 `> 0`**
+⇒ 像点上幅度恒正。但 `KingmanΘ`（乘积类型）里还有 `θ.1.2 ≤ 0` 的**物理上不可达**的点，
+那里 `f = 0` ⇒ 「**对每个** `θ` 为正」是**假命题**（反例见 `/lean/hf_pos_counterexample.lean`）
+⇒ 逐点形式会让这些端到端定理**空洞**（假设不可满足）。`a.e.` 形式**既可满足、又足够**
+（积分只看 `a.e.`），并且**可证**。
+
+⚠️ 诚实边界：`hint` 与 `hconv` **仍是假设**（`hint` 的 `a.e./逐点` 形式都是**定理**可做的，
+但需要 `θ ↦ τd θ T'` 与 `θ ↦ A θ T' T` 的**可测性**，库内尚无；`hconv` 是大数定律，见 §18.2）。 -/
+
+/-- **`kingmanMSCMeasure (Measure.dirac x₀)` =「固定 `x₀`、只随机等待时间」的前推**。
+
+这一步把「dirac 固定物种树侧参数」变成「只有一个随机变量 `v = (w₁, w₂)`」，
+于是「幅度为正」这类**只依赖 `x₀`** 的命题可以逐点验证。 -/
+theorem kingmanMSCMeasure_dirac_eq_map (x₀ : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0) :
+    kingmanMSCMeasure (Measure.dirac x₀)
+      = Measure.map (fun v : ℝ × ℝ => toKingmanΘ (x₀, v))
+          ((sojournLaw 2).prod (sojournLaw 2)) := by
+  haveI : IsProbabilityMeasure (sojournLaw 2) := isProbabilityMeasure_sojournLaw (by norm_num)
+  rw [kingmanMSCMeasure, Measure.dirac_prod]
+  exact Measure.map_map measurable_toKingmanΘ (measurable_const.prodMk measurable_id)
+
+/-- **`lx ≤ 0` 的点在 `ν` 下零测** —— 像点的内枝长恒为 `a + b > 0`。
+
+这条是 §6 的**枢纽**：它让「幅度为正」的 `a.e.` 形式可证（见 `jc69_hf_pos_ae`）。 -/
+theorem kingmanMSCMeasure_dirac_lx_nonpos (leaf : Fin 4 → ℝ) (a b : ℝ≥0)
+    (hab : 0 < (a : ℝ) + (b : ℝ)) :
+    kingmanMSCMeasure (Measure.dirac (leaf, a, b)) {θ : KingmanΘ | θ.1.2 ≤ 0} = 0 := by
+  have hset : MeasurableSet {θ : KingmanΘ | θ.1.2 ≤ 0} :=
+    (measurable_snd.comp measurable_fst) measurableSet_Iic
+  have hg : Measurable fun v : ℝ × ℝ => toKingmanΘ ((leaf, a, b), v) :=
+    measurable_toKingmanΘ.comp (measurable_const.prodMk measurable_id)
+  rw [kingmanMSCMeasure_dirac_eq_map, Measure.map_apply hg hset]
+  have hpre : (fun v : ℝ × ℝ => toKingmanΘ ((leaf, a, b), v)) ⁻¹' {θ : KingmanΘ | θ.1.2 ≤ 0}
+      = ∅ := by
+    ext v
+    simp only [Set.mem_preimage, Set.mem_ofPred_eq, Set.mem_empty_iff_false, iff_false, not_le,
+      toKingmanΘ]
+    exact hab
+  rw [hpre, measure_empty]
+
+/-- **JC69**：在像点上幅度取**闭式** `jc69Amp leaf (a + b)`（与等待时间无关）。 -/
+theorem jc69PropADataK_f_apply (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (v : ℝ × ℝ) :
+    MSCInstance.jc69PropADataK.f (toKingmanΘ ((leaf, a, b), v))
+      = CASTERGeneTree.jc69Amp leaf ((a : ℝ) + (b : ℝ)) := by
+  simp [toKingmanΘ, MSCInstance.jc69PropADataK, MSCInstance.transportPropAData,
+    CASTERGeneTree.jc69PropAData]
+
+/-- **LM1**：在像点上幅度取**闭式** `lm1Amp π lam (leaf, a + b)`。 -/
+theorem lm1PropADataK_f_apply (π : Fin 4 → ℝ)
+    (hsum : CASTERLM1.piR π + CASTERLM1.piY π = 1) (lam : ℝ)
+    (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (v : ℝ × ℝ) :
+    (MSCInstance.lm1PropADataK π hsum lam).f (toKingmanΘ ((leaf, a, b), v))
+      = CASTERLM1.lm1Amp π lam (leaf, (a : ℝ) + (b : ℝ)) := by
+  simp [toKingmanΘ, MSCInstance.lm1PropADataK, MSCInstance.transportPropAData,
+    CASTERLM1.lm1PropAData, CASTERLM1.lm1Amp]
+
+/-- ★★★ **JC69 的 `hf_pos`（`a.e.` 形式）是定理**：像点的内枝长是 `a + b > 0`，
+故幅度为正（`jc69Amp_pos`）。 -/
+theorem jc69_hf_pos_ae (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (hab : 0 < (a : ℝ) + (b : ℝ)) :
+    ∀ᵐ θ ∂(kingmanMSCMeasure (Measure.dirac (leaf, a, b))),
+      ¬ kingmanMSCTopoSym.deep θ → 0 < MSCInstance.jc69PropADataK.f θ := by
+  rw [ae_iff]
+  refine measure_mono_null (fun θ hθ => ?_)
+    (kingmanMSCMeasure_dirac_lx_nonpos leaf a b hab)
+  simp only [Set.mem_ofPred_eq] at hθ ⊢
+  by_contra h
+  have hf : 0 < MSCInstance.jc69PropADataK.f θ := by
+    have hval : MSCInstance.jc69PropADataK.f θ = CASTERGeneTree.jc69Amp θ.1.1 θ.1.2 := by
+      simp [MSCInstance.jc69PropADataK, MSCInstance.transportPropAData,
+        CASTERGeneTree.jc69PropAData]
+    rw [hval]
+    exact CASTERGeneTree.jc69Amp_pos θ.1.1 (not_le.mp h)
+  exact (not_imp.mp hθ).2 hf
+
+/-- ★★★ **LM1 的 `hf_pos`（`a.e.` 形式）是定理**（需 `π` 的两个分量严格正、`λ > 0`）。 -/
+theorem lm1_hf_pos_ae (π : Fin 4 → ℝ)
+    (hsum : CASTERLM1.piR π + CASTERLM1.piY π = 1) (lam : ℝ)
+    (hR : 0 < CASTERLM1.piR π) (hY : 0 < CASTERLM1.piY π) (hlam : 0 < lam)
+    (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (hab : 0 < (a : ℝ) + (b : ℝ)) :
+    ∀ᵐ θ ∂(kingmanMSCMeasure (Measure.dirac (leaf, a, b))),
+      ¬ kingmanMSCTopoSym.deep θ →
+        0 < (MSCInstance.lm1PropADataK π hsum lam).f θ := by
+  rw [ae_iff]
+  refine measure_mono_null (fun θ hθ => ?_)
+    (kingmanMSCMeasure_dirac_lx_nonpos leaf a b hab)
+  simp only [Set.mem_ofPred_eq] at hθ ⊢
+  by_contra h
+  have hf : 0 < (MSCInstance.lm1PropADataK π hsum lam).f θ := by
+    have hval : (MSCInstance.lm1PropADataK π hsum lam).f θ
+        = CASTERLM1.lm1Amp π lam θ.1 := by
+      simp [MSCInstance.lm1PropADataK, MSCInstance.transportPropAData, CASTERLM1.lm1PropAData,
+        CASTERLM1.lm1Amp]
+    rw [hval]
+    exact CASTERLM1.lm1Amp_pos π hR hY hlam (not_le.mp h)
+  exact (not_imp.mp hθ).2 hf
+
+/-- ★★★ **JC69 的 `hf_int` 也是定理** —— 像点上幅度是**常数**，故可积。 -/
+theorem jc69_hf_int (leaf : Fin 4 → ℝ) (a b : ℝ≥0) :
+    Integrable MSCInstance.jc69PropADataK.f
+      (kingmanMSCMeasure (Measure.dirac (leaf, a, b))) := by
+  haveI : IsProbabilityMeasure (Measure.dirac ((leaf, a, b) : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0)) :=
+    inferInstance
+  haveI : IsProbabilityMeasure (kingmanMSCMeasure (Measure.dirac (leaf, a, b))) :=
+    isProbabilityMeasure_kingmanMSCMeasure
+  haveI : IsProbabilityMeasure (sojournLaw 2) := isProbabilityMeasure_sojournLaw (by norm_num)
+  haveI : IsProbabilityMeasure ((sojournLaw 2).prod (sojournLaw 2)) := inferInstance
+  have hmeas : Measurable MSCInstance.jc69PropADataK.f := by
+    unfold MSCInstance.jc69PropADataK MSCInstance.transportPropAData CASTERGeneTree.jc69PropAData
+      CASTERGeneTree.jc69Amp Phylo.JC.e
+    fun_prop
+  rw [kingmanMSCMeasure_dirac_eq_map]
+  refine (integrable_map_measure hmeas.aestronglyMeasurable
+    ((measurable_toKingmanΘ.comp (measurable_const.prodMk measurable_id)).aemeasurable)).mpr ?_
+  exact (integrable_const _).congr
+    (Filter.Eventually.of_forall fun v => (jc69PropADataK_f_apply leaf a b v).symm)
+
+/-- ★★★ **LM1 的 `hf_int` 也是定理**（同为「像点上常数」）。 -/
+theorem lm1_hf_int (π : Fin 4 → ℝ)
+    (hsum : CASTERLM1.piR π + CASTERLM1.piY π = 1) (lam : ℝ)
+    (leaf : Fin 4 → ℝ) (a b : ℝ≥0) :
+    Integrable (MSCInstance.lm1PropADataK π hsum lam).f
+      (kingmanMSCMeasure (Measure.dirac (leaf, a, b))) := by
+  haveI : IsProbabilityMeasure (Measure.dirac ((leaf, a, b) : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0)) :=
+    inferInstance
+  haveI : IsProbabilityMeasure (kingmanMSCMeasure (Measure.dirac (leaf, a, b))) :=
+    isProbabilityMeasure_kingmanMSCMeasure
+  haveI : IsProbabilityMeasure (sojournLaw 2) := isProbabilityMeasure_sojournLaw (by norm_num)
+  haveI : IsProbabilityMeasure ((sojournLaw 2).prod (sojournLaw 2)) := inferInstance
+  have hmeas : Measurable (MSCInstance.lm1PropADataK π hsum lam).f := by
+    unfold MSCInstance.lm1PropADataK MSCInstance.transportPropAData CASTERLM1.lm1PropAData
+      CASTERLM1.ee
+    fun_prop
+  rw [kingmanMSCMeasure_dirac_eq_map]
+  refine (integrable_map_measure hmeas.aestronglyMeasurable
+    ((measurable_toKingmanΘ.comp (measurable_const.prodMk measurable_id)).aemeasurable)).mpr ?_
+  exact (integrable_const _).congr
+    (Filter.Eventually.of_forall fun v => (lm1PropADataK_f_apply π hsum lam leaf a b v).symm)
+
+/-- ★★★ **旗舰端点的「假设最少」版本**：`hf_int` 与 `hf_pos` 已由 §6.3–§6.4 **从 weight 表推出**
+⇒ 与 `jc69_caster_statisticallyConsistent_kingman_measure` 结论**逐字相同**，
+但**少两个参数**（更强）。
+
+剩下的是 `hint`（正文条件 (2)，可证但需可测性）与 `hconv`（大数定律）。 -/
+theorem jc69_caster_statisticallyConsistent_kingman_measure_derived
+    (leaf : Fin 4 → ℝ) (a b : ℝ≥0) (hab : 0 < (a : ℝ) + (b : ℝ))
+    (hint : ∀ T : Phylo.Stat.CASTERWeights.Topo, Integrable
+      (fun θ => ∑ T' : Phylo.Stat.CASTERWeights.Topo,
+        kingmanMSCTopoSym.τd θ T' * Phylo.Stat.MSCInstance.jc69PropADataK.A θ T' T)
+      (kingmanMSCMeasure (Measure.dirac (leaf, a, b))))
+    (emp : ℕ → Phylo.Stat.CASTERTopo.TopoWeight (Fin 4))
+    (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N,
+      Phylo.Stat.CASTERTopo.TopoClose (emp n)
+        (Phylo.Stat.CASTERTopo.TopoIdeal.ofModel kingmanMSCTopoSym
+          (kingmanMSCMeasure (Measure.dirac (leaf, a, b)))
+          measurableSet_kingmanMSCTopoSym_deep Phylo.Stat.MSCInstance.jc69PropADataK
+          (jc69_hf_int leaf a b) (jc69_hf_pos_ae leaf a b hab)
+          (kingmanMSCMeasure_dirac_notDeep_pos leaf a b hab) hint).W ε)
+    {E : ℕ → Phylo.Stat.CASTERTopo.TopoChoice (Fin 4)}
+    (hE : ∀ (n : ℕ) (q : Phylo.Stat.CASTERTopo.TopoChoice (Fin 4)),
+      Phylo.Stat.CASTERTopo.topoScore (emp n) q ≤ Phylo.Stat.CASTERTopo.topoScore (emp n) (E n)) :
+    ∃ N : ℕ, ∀ n ≥ N,
+      Phylo.Stat.CASTERTopo.IsTrueT (fun _ _ => Phylo.Stat.CASTERWeights.Topo.ab_cd) (E n) :=
+  jc69_caster_statisticallyConsistent_kingman_measure leaf a b hab
+    (jc69_hf_int leaf a b) (jc69_hf_pos_ae leaf a b hab) hint emp hconv hE
 
 end Phylo.Stat.MSCKingmanMeasure
 

@@ -258,7 +258,7 @@ theorem f84_caster_statisticallyConsistent_of
     (S : MSCTopoSym F84Theta) (ν : Measure F84Theta) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hf_int : Integrable (f84PropAData_of hD hA hB).f ν)
-    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (f84PropAData_of hD hA hB).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < (f84PropAData_of hD hA hB).f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo, S.τd θ T' * (f84PropAData_of hD hA hB).A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))
@@ -374,7 +374,7 @@ theorem f84_caster_statisticallyConsistent
     (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ)) (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hf_int : Integrable (f84PropAData pi kap hR hY).f ν)
-    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (f84PropAData pi kap hR hY).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < (f84PropAData pi kap hR hY).f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo, S.τd θ T' * (f84PropAData pi kap hR hY).A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))

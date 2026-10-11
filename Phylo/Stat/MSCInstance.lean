@@ -59,6 +59,16 @@ Phase 1 给出了具体实例；**本文件把那个实例真正喂进端到端�
 `hconv`（大数定律）**仍然是显式假设** —— 它们属于**渐近层与解析正则性**，
 与缺口 G5′（溯祖层的拓扑分布从哪来）是两件事。本文件只把 `S` 这一个参数真正消掉。
 
+⚠️ **2026-10-11 两处更新**（详见各文件）：
+1. **`hf_pos` 的陈述形态由「逐点正」改为「`ν`-`a.e.` 正」**。原逐点形式是**假命题**
+   （`KingmanΘ` 里有 `¬deep ∧ 内枝长 = 0` 的物理上不可达点，那里幅度恰为 `0`）
+   ⇒ 带它的 7 条端到端定理**空洞**。反例与说明见 `/lean/hf_pos_counterexample.lean`。
+2. **对 Kingman 具体测度，`hf_int` 与 `hf_pos` 已由 weight 表推出**（不再是假设）：
+   `Phylo/Stat/MSCKingmanMeasure.lean` §6 的 `jc69_hf_int` / `jc69_hf_pos_ae` /
+   `lm1_hf_int` / `lm1_hf_pos_ae`，并给出参数更少的端点
+   `jc69_caster_statisticallyConsistent_kingman_measure_derived`
+   （只余 `hint` 与 `hconv`）。**本文件的 6 条定理签名随之改为 `a.e.`**。
+
 ## 4. 文献
 
 * Allman, Degnan & Rhodes (2011) **Lemma 4**（`references/md/AllmanDegnanRhodes2011_IdentifyingRootedSpeciesTree.md`
@@ -110,7 +120,7 @@ theorem jc69_caster_statisticallyConsistent_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hf_int : Integrable jc69PropADataK.f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ → 0 < jc69PropADataK.f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ → 0 < jc69PropADataK.f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo, kingmanMSCTopoSym.τd θ T' * jc69PropADataK.A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))
@@ -133,7 +143,7 @@ theorem jc69_recovers_true_tree_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hf_int : Integrable jc69PropADataK.f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ → 0 < jc69PropADataK.f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ → 0 < jc69PropADataK.f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo, kingmanMSCTopoSym.τd θ T' * jc69PropADataK.A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))
@@ -173,7 +183,7 @@ theorem lm1_caster_statisticallyConsistent_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (π : Fin 4 → ℝ) (hsum : Phylo.CASTERLM1.piR π + Phylo.CASTERLM1.piY π = 1) (lam : ℝ)
     (hf_int : Integrable (lm1PropADataK π hsum lam).f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ → 0 < (lm1PropADataK π hsum lam).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ → 0 < (lm1PropADataK π hsum lam).f θ)
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo,
@@ -196,7 +206,7 @@ theorem lm1_recovers_true_tree_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (π : Fin 4 → ℝ) (hsum : Phylo.CASTERLM1.piR π + Phylo.CASTERLM1.piY π = 1) (lam : ℝ)
     (hf_int : Integrable (lm1PropADataK π hsum lam).f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ → 0 < (lm1PropADataK π hsum lam).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ → 0 < (lm1PropADataK π hsum lam).f θ)
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo,
@@ -243,7 +253,7 @@ theorem f84_caster_statisticallyConsistent_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hf_int : Integrable (f84PropADataK pi kap hR hY).f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ →
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ →
       0 < (f84PropADataK pi kap hR hY).f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo,
@@ -268,7 +278,7 @@ theorem f84_recovers_true_tree_kingman
     (hdeep : MeasurableSet {θ | kingmanMSCTopoSym.deep θ})
     (hpos : 0 < ν {θ | ¬ kingmanMSCTopoSym.deep θ})
     (hf_int : Integrable (f84PropADataK pi kap hR hY).f ν)
-    (hf_pos : ∀ θ, ¬ kingmanMSCTopoSym.deep θ →
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ kingmanMSCTopoSym.deep θ →
       0 < (f84PropADataK pi kap hR hY).f θ)
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo,

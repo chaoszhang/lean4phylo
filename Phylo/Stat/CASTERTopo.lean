@@ -249,7 +249,7 @@ theorem topo_greedy_consistent (M : TopoIdeal X)
 `S`/`ν` 由 MSC 侧供给，`hint_*` 对应正文的「权重一致有界」。 -/
 theorem propB_of_bridge {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (ν : Measure Θ)
     [IsProbabilityMeasure ν] (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
-    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < P.f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint_ab : Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' .ab_cd) ν)
     (hint_ac : Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' .ac_bd) ν)
@@ -277,7 +277,7 @@ variable {Θ : Type*} [MeasurableSpace Θ]
 故不失一般性）；`propB` 由 ★★★ `propB_of_bridge` 供给。 -/
 noncomputable def ofModel (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
-    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < P.f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' T) ν) :
     TopoIdeal X where
@@ -305,8 +305,8 @@ noncomputable def ofFamily
     (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
     (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
     (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
-    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
-      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4),
+      ∀ᵐ θ ∂(ν S hS), ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
     (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
     (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
       Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS)) :

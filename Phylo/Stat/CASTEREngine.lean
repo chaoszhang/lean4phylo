@@ -239,25 +239,30 @@ theorem geneExpect_sub {Θ : Type*} [MeasurableSpace Θ] (ν : Measure Θ)
   rw [← Finset.sum_sub_distrib]
   exact Finset.sum_congr rfl fun T _ => by ring
 
-/-- ★★ **解析核心**：集合 `s` 上处处为正的可积函数，其指示函数的积分 `> 0`（`s` 正测度）。
+/-- ★★ **解析核心**：集合 `s` 上 **`ν`-几乎处处**为正的可积函数，其指示函数的积分 `> 0`（`s` 正测度）。
 
-（`propB` 用它：那里 `s = {θ | θ 无深合并}`，指示函数积分正是「无深合并那一部分的期望」。） -/
+（`propB` 用它：那里 `s = {θ | θ 无深合并}`，指示函数积分正是「无深合并那一部分的期望」。）
+
+⚠️ **2026-10-11 由「逐点正」改为「`ν`-`a.e.` 正」**：原来的 `∀ θ ∈ s, 0 < f θ`
+**作为假设不可满足**（例如 `Kingman` 实例里 `¬deep ∧ 内枝长 = 0` 的点会给出 `f = 0`
+⇒ 带该假设的 7 条端到端定理**空洞**）。积分只关心 `ν`-`a.e.`，故 `a.e.` 形式
+**同样够用**，但**可满足**（并且对三个具体模型可由 weight 表**证出**）。 -/
 theorem integral_pos_of_indicator {Θ : Type*} [MeasurableSpace Θ] (ν : Measure Θ)
     [IsProbabilityMeasure ν] (s : Set Θ) (hs : MeasurableSet s)
-    (f : Θ → ℝ) (hf_int : Integrable f ν) (hf_pos : ∀ θ ∈ s, 0 < f θ) (hpos : 0 < ν s) :
+    (f : Θ → ℝ) (hf_int : Integrable f ν)
+    (hf_pos : ∀ᵐ θ ∂ν, θ ∈ s → 0 < f θ) (hpos : 0 < ν s) :
     0 < ∫ θ, s.indicator f θ ∂ν := by
   have hint : Integrable (s.indicator f) ν := hf_int.indicator hs
   have hnn : 0 ≤ᵐ[ν] s.indicator f :=
-    Filter.Eventually.of_forall fun θ => Set.indicator_nonneg (fun θ hθ => (hf_pos θ hθ).le) θ
-  have hsupp : Function.support (s.indicator f) = s := by
-    ext θ
-    simp only [Function.mem_support]
+    hf_pos.mono fun θ hθ => Set.indicator_nonneg (fun _ hmem => (hθ hmem).le) θ
+  have hsupp : Function.support (s.indicator f) =ᵐ[ν] s := by
+    filter_upwards [hf_pos] with θ hθ
     by_cases h : θ ∈ s
-    · rw [Set.indicator_of_mem h]
-      exact iff_of_true (hf_pos θ h).ne' h
-    · rw [Set.indicator_of_notMem h]
-      exact iff_of_false (fun hz => hz rfl) h
-  exact (integral_pos_iff_support_of_nonneg_ae hnn hint).mpr (by rwa [hsupp])
+    · simp [Function.mem_support, h, (hθ h).ne']
+    · simp [Function.mem_support, h]
+  exact (integral_pos_iff_support_of_nonneg_ae hnn hint).mpr (by
+    rw [measure_congr hsupp]
+    exact hpos)
 
 /-! ## 5. ★★★ 命题 B（物种树层） -/
 
@@ -268,7 +273,8 @@ theorem integral_pos_of_indicator {Θ : Type*} [MeasurableSpace Θ] (ν : Measur
 theorem MSCTopoSym.propB_of {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (ν : Measure Θ)
     [IsProbabilityMeasure ν] (hdeep : MeasurableSet {θ | S.deep θ}) (sgn : Topo → ℝ)
     (hsum : ∑ T : Topo, sgn T = 0) (hab : sgn .ab_cd = 1)
-    (f : Θ → ℝ) (hf_int : Integrable f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < f θ)
+    (f : Θ → ℝ) (hf_int : Integrable f ν)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ}) :
     0 < geneExpect ν S.τd (fun θ T => sgn T * f θ) := by
   have hs : MeasurableSet {θ : Θ | ¬ S.deep θ} := hdeep.compl
@@ -286,7 +292,8 @@ theorem MSCTopoSym.propB_of {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ
     · rw [Set.indicator_of_mem h, Set.indicator_of_mem h, one_mul]
     · rw [Set.indicator_of_notMem h, Set.indicator_of_notMem h, zero_mul]
   rw [hcongr]
-  exact integral_pos_of_indicator ν _ hs f hf_int (fun θ hθ => hf_pos θ hθ) hpos
+  exact integral_pos_of_indicator ν _ hs f hf_int (by simpa only [Set.mem_ofPred_eq] using hf_pos)
+    hpos
 
 /-- ★★★ **命题 B（物种树层）**：真物种树拓扑 `ab|cd` 与错拓扑 `ac|bd` 的
 **期望权重差严格为正**。
@@ -299,7 +306,8 @@ theorem MSCTopoSym.propB_of {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ
 无深合并的那些（拓扑必为 `ab|cd`）留下 `+f > 0`。 -/
 theorem MSCTopoSym.propB {Θ : Type*} [MeasurableSpace Θ] (S : MSCTopoSym Θ) (ν : Measure Θ)
     [IsProbabilityMeasure ν] (hdeep : MeasurableSet {θ | S.deep θ})
-    (f : Θ → ℝ) (hf_int : Integrable f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < f θ)
+    (f : Θ → ℝ) (hf_int : Integrable f ν)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ}) :
     0 < geneExpect ν S.τd (fun θ T => sign T * f θ) :=
   S.propB_of ν hdeep sign (by rw [sum_topo]; simp [sign]) rfl f hf_int hf_pos hpos

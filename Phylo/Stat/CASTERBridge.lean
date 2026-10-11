@@ -143,7 +143,7 @@ noncomputable def expWeight (ν : Measure Θ) (τd : Θ → Topo → ℝ)
 给出严格正。 -/
 theorem expWeight_strict (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
-    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < P.f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint_ab : Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' .ab_cd) ν)
     (hint_ac : Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' .ac_bd) ν)

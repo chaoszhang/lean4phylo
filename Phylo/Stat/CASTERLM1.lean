@@ -1372,7 +1372,7 @@ theorem lm1_propB_of_bridge (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ))
     (hdeep : MeasurableSet {θ | S.deep θ})
     (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
     (hf_int : Integrable (lm1PropAData π hsum lam).f ν)
-    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (lm1PropAData π hsum lam).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < (lm1PropAData π hsum lam).f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint_ab : Integrable
       (fun θ => ∑ T' : Topo, S.τd θ T' * (lm1PropAData π hsum lam).A θ T' .ab_cd) ν)

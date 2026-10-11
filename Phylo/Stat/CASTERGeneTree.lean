@@ -514,6 +514,22 @@ theorem jc69PropA_delta (G : GTree) :
 「幅度 `f` 只依赖时间数据」那一条的具体内容。） -/
 def jc69Amp (l : Fin 4 → ℝ) (lx : ℝ) : ℝ := (3 / 4) * (∏ i : Fin 4, e (l i)) * (1 - e lx)
 
+/-- ★★ **JC69 幅度为正**（内枝长 `> 0`，叶长任意）。
+
+**这不是新假设，而是由闭式算出来的**：`e x = exp (−(4/3)·x)` 严格递减且 `e 0 = 1`，
+故 `1 − e lx > 0 ⟺ lx > 0`。⇒ 一致性定理里「幅度为正」这条**解析条件**
+在具体模型上可以**证**（见 `Phylo/Stat/MSCKingmanMeasure.lean` §6：
+「幅度为正」的 `a.e.` 形式对 JC69 / LM1 / F84 三模型被推出，不再是假设）。 -/
+theorem jc69Amp_pos (l : Fin 4 → ℝ) {lx : ℝ} (h : 0 < lx) : 0 < jc69Amp l lx := by
+  have h1 : (0 : ℝ) < ∏ i : Fin 4, e (l i) := Finset.prod_pos fun i _ => Real.exp_pos _
+  have h2 : e lx < 1 := by
+    rw [e, Real.exp_lt_one_iff]
+    nlinarith
+  have h3 : (0 : ℝ) < 1 - e lx := by linarith
+  have h4 : (0 : ℝ) < 3 / 4 := by norm_num
+  unfold jc69Amp
+  exact mul_pos (mul_pos h4 h1) h3
+
 /-- ★ **重指标**：`∏ i, e (l (perm S i)) = ∏ i, e (l i)`（`f` 与形状无关的关键）。 -/
 theorem prod_e_len_perm (l : Fin 4 → ℝ) (S : Topo) :
     ∏ i : Fin 4, e (l (perm S i)) = ∏ i : Fin 4, e (l i) :=
@@ -620,7 +636,7 @@ noncomputable def jc69PropAData : PropAData ((Fin 4 → ℝ) × ℝ) where
 theorem propAData_caster_statisticallyConsistent {Θ : Type*} [MeasurableSpace Θ]
     (S : MSCTopoSym Θ) (ν : Measure Θ) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (P : PropAData Θ)
-    (hf_int : Integrable P.f ν) (hf_pos : ∀ θ, ¬ S.deep θ → 0 < P.f θ)
+    (hf_int : Integrable P.f ν) (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < P.f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * P.A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))
@@ -650,7 +666,7 @@ theorem jc69_caster_statisticallyConsistent
     (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ)) (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hf_int : Integrable jc69PropAData.f ν)
-    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < jc69PropAData.f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < jc69PropAData.f θ)
     (hint : ∀ T : Topo, Integrable (fun θ => ∑ T' : Topo, S.τd θ T' * jc69PropAData.A θ T' T) ν)
     (emp : ℕ → TopoWeight (Fin 4))
     (hconv : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n ≥ N,

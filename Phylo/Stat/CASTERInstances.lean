@@ -63,7 +63,7 @@ theorem lm1_caster_statisticallyConsistent
     (S : MSCTopoSym ((Fin 4 → ℝ) × ℝ)) (ν : Measure ((Fin 4 → ℝ) × ℝ)) [IsProbabilityMeasure ν]
     (hdeep : MeasurableSet {θ | S.deep θ}) (π : Fin 4 → ℝ) (hsum : piR π + piY π = 1) (lam : ℝ)
     (hf_int : Integrable (lm1PropAData π hsum lam).f ν)
-    (hf_pos : ∀ θ, ¬ S.deep θ → 0 < (lm1PropAData π hsum lam).f θ)
+    (hf_pos : ∀ᵐ θ ∂ν, ¬ S.deep θ → 0 < (lm1PropAData π hsum lam).f θ)
     (hpos : 0 < ν {θ | ¬ S.deep θ})
     (hint : ∀ T : Topo, Integrable
       (fun θ => ∑ T' : Topo, S.τd θ T' * (lm1PropAData π hsum lam).A θ T' T) ν)
@@ -182,8 +182,8 @@ theorem caster_statisticallyConsistent_of_family {X : Type u} [Fintype X] [Decid
     (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
     (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
     (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
-    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
-      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4),
+      ∀ᵐ θ ∂(ν S hS), ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
     (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
     (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
       Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS))
@@ -218,8 +218,8 @@ theorem caster_greedy_consistent_of_family {X : Type u} [Fintype X] [DecidableEq
     (hdeep : ∀ (S : Finset X) (hS : S.card = 4), MeasurableSet {θ | (M S hS).deep θ})
     (P : ∀ (S : Finset X) (hS : S.card = 4), PropAData (Θ S hS))
     (hf_int : ∀ (S : Finset X) (hS : S.card = 4), Integrable (P S hS).f (ν S hS))
-    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4) (θ : Θ S hS),
-      ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
+    (hf_pos : ∀ (S : Finset X) (hS : S.card = 4),
+      ∀ᵐ θ ∂(ν S hS), ¬ (M S hS).deep θ → 0 < (P S hS).f θ)
     (hpos : ∀ (S : Finset X) (hS : S.card = 4), 0 < ν S hS {θ | ¬ (M S hS).deep θ})
     (hint : ∀ (S : Finset X) (hS : S.card = 4) (T : Topo),
       Integrable (fun θ => ∑ T' : Topo, (M S hS).τd θ T' * (P S hS).A θ T' T) (ν S hS))
