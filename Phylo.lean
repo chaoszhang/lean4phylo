@@ -63,6 +63,7 @@ import Phylo.SplitWeak
 import Phylo.Stat.AnomalousGeneTree
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.BlockModelAE
+import Phylo.Stat.BlockModelRhoAE2
 import Phylo.Stat.BlockSLLN
 import Phylo.Stat.BlockSLLNIndex
 import Phylo.Stat.BlockSLLNNoL1
