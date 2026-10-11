@@ -96,6 +96,19 @@ blockW b = ∑_{i ∈ Fin C} [i < L] · siteW b i ,   siteW b i = ∑_{T'} τd �
    ⇒ 本文件把它当**模型条件**而非装饰。
 10. **无未完成证明 / 无公理**：全部声明正面构造；`#print axioms` 只应出现
     `[propext, Classical.choice, Quot.sound]`。
+11. ★★ **「物种树写进【类型】」的代价**（W16a 于 2026-10-12 实测定位；**值得后人知道** ✓）：
+    本文件的 `Block M C leaf a b` 把物种树 `(leaf, a, b)` 编进**类型** —— 这在**固定环境**下很省事
+    （上面的 `hleaf` / `hab` 因此**处处**满足 ✓），但它**排除了「环境本身随机」的推广** ✗：
+    要让物种树随机，就需要 `Measurable (bb ↦ Block M C bb.sp.1 bb.sp.2.1 bb.sp.2.2)` 这类**依赖族** ✗，
+    而 Lean 4 的 `Measurable f` **要求余定义域是固定类型** ⇒ **连陈述的 elaboration 都过不去** ✗
+    （报错原文：`Application type mismatch: … has type (p : …) → Block M C p.1.1 p.1.2.1 p.1.2.2
+    but is expected to have type ?m.1 → ?m.2 in the application Measurable …` ✓）；
+    `rw` / `convert` / `Measurable.of_comap_le` / `Sigma` 打包**四条路全部撞同一面墙** ✗
+    （`Sigma` 只是把依赖**换个地方**陈述 ✓）。
+    ★★ **出路**：**在块数据上【原生重定义】权重** ✓（把 `siteW` 写成乘积空间上的**非依赖**函数 ✓，
+    再照本文件的老路逐条重证 ✓），**不要**对固定环境的 `blockW` 做依赖复合 ✗。
+    ⇒ 完整记录见 `_scripts_tmp/W16a_BLOCKER.md`（142 行：确切 error 原文 · 四条路各自失败点 ·
+    已验证的出路公式 ✓）。
 -/
 
 set_option autoImplicit false
