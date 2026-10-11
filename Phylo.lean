@@ -62,6 +62,7 @@ import Phylo.SplitsMaximal
 import Phylo.SplitWeak
 import Phylo.Stat.AnomalousGeneTree
 import Phylo.Stat.ASTRAL
+import Phylo.Stat.BlockModelAE
 import Phylo.Stat.BlockSLLN
 import Phylo.Stat.BlockSLLNIndex
 import Phylo.Stat.BlockSLLNTopoClose
