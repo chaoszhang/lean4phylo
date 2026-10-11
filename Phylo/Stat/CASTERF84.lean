@@ -105,7 +105,12 @@ K(t) := e^{−λMt} = Π + e^{−λt}·(B − Π) + e^{−λ(1+κ)t}·(I − B) 
 半群律与生成元相容**不需要**任何符号/非负假设。
 **边界**：(a) `lam` 是自由参数，不形式化附录 1601 的 `λ` 闭式与谱归一化的对应；
 (b) 权重表采用 §0.3 口径（照印系数 ÷ 4）；(c) 本文件交付文件头 §2 的**核心里程碑**；
-`patternProb` / `wF84` / 主定理与抽象引擎对接**未完成**（缺口清单见 §6）。
+`patternProb` / `wF84` / 主定理与抽象引擎的对接**已在 `Phylo/Stat/CASTERF84PropA.lean` 完成**
+（`f84Weight_eq` / `f84PropAData` / `f84_caster_statisticallyConsistent`）；
+另见 `Phylo/Stat/CASTERF84Pos.lean`（`lamF84_pos` / `f84Amp_pos` / `f84_hf_pos_ae` / `f84_hf_int`），
+F84 的 `hf_pos` 与 `hf_int` 自此**不再是额外假设**。
+更正留痕：本处原文写「对接**未完成**（缺口清单见 §6）」——该说法**已过期**（本文件**没有** §6），
+2026-10-12 由子批 W13h 的执行与协调侧的核查一并更正。
 -/
 
 set_option maxHeartbeats 1600000

@@ -537,6 +537,15 @@ gene tree 分布」**诱导**，而本式只要求存在一个满足上述性质
 **诱导**（`P_σ(A|B) := Σ_{T 展示 A|B} P_σ(T)`，且 `Σ_T P_σ(T) = 1`、`Σ_{A|B} P_σ(A|B) = 2n−3`）。
 **缺的器材**：一般 `n` 的 **MSC gene tree 分布**（库内只有 `Fin 4` 的 quartet 权重 `MSCProof`）
 与 binary 物种树对象；文献**在库**（ADR2017，`references/`）。
+**2026-10-12 更新（子批 W13g ＋ 协调侧核查）**：上面那句「`P` 必须由 binary 物种树 σ ＋
+MSC gene tree 分布**诱导**」在 **quartet 层**已经有了**正面对象** ——
+`Phylo.Stat.GeneTreeSamplingAE.GeneTreeModel`（`Phylo/Stat/GeneTreeSamplingAE.lean`）的字段
+`hpush`（`∫ g, (freqOf g).p S hS q ∂ν = m.freq.p S hS q`，即「理论频率 ＝ 基因树分布的**推前**」）
+与定理 `GeneTreeModel.meanFreq_eq_law`（推前均值表 ＝ 理论表）；该文件并用**基因树层强大数定律**
+把它抬成**几乎必然**结论（`emp_eventually_close_ae`）⇒ **ASTRAL 侧的 `hmean` 不再是假设**
+（`astral_iso_ae_of_geneTrees` 的假设面里没有它）。
+⚠️ **仍然是缺口**：**一般 `n`**（本 `Prop` 要的是任意 `n`）的 gene tree 分布与 binary 物种树对象**仍不在库内**；
+上述新对象是**每个 4-元子集**层面的（对任意 `X`）。
 **本文件不在任何证明中使用它。** -/
 def msc_split_probability_object_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n → ∀ ε : ℝ, 0 ≤ ε →
