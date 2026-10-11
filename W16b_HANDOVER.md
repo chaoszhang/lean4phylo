@@ -183,6 +183,21 @@ but is expected to have type
   ⇒ ★ **旧结论对新树仍然成立**（299 的可判定论证 ✓）。
 * ★ **要重跑门时的建议** ✓：先 `timeout 8 git -C .lake/packages/mathlib ls-remote --exit-code origin HEAD` 探一下网络 ✓；
   不通 ⇒ **不要重试到超时** ✗，直接记为"**基建失败、待网络恢复**" ✓。
+* ★★★ **06:27 补记：口径 ③ 的独立复核【已完成并通过 ✓】** —— 网络恢复后，在**镜像**里做（★ 前提：先证
+  `BlockModelAE` / `GeneTreeSamplingAE` / `CASTERRateBoxAE` 三模块与**正本 md5 逐字一致** ✓，
+  故结论对正本内容有效 ✓；★ 不动正本任何字节 ✓）：
+  ```
+  EXIT = 0 · stdout = 416 字节 · stderr = 0 ✓
+  '…astral_iso_ae_of_geneTrees'                            depends on axioms: [propext, Classical.choice, Quot.sound]
+  '…abar_caster_statisticallyConsistent_kingman_ae_blocks'  depends on axioms: [propext, Classical.choice, Quot.sound]
+  '…abar_caster_statisticallyConsistent_kingman_ae_box'     depends on axioms: [propext, Classical.choice, Quot.sound]
+  ⇒ ★ 三条头条【恰好】依赖这 3 条公理 ✓（无 sorryAx ✓、无其他公理 ✓）
+  ```
+  ★ 附（自查 ✗）：我自己的判定脚本报了**假阴性**（"恰为 3 条 = 0"✗）—— 因为输出**跨行折行**而我的模式是**单行**的 ✗
+  ⇒ ★ **核查脚本与原始输出冲突时，以原始输出为准** ✓（本季第 12 次"模式/数据不匹配" ✗，与 257 同族 ✓）。
+* ★ **另一条基建事实（对本仓有用 ✓）**：**正本的 `.lake` 从未本地构建**（`.lake/build/lib/lean` 条目 = **0** ✓）
+  ⇒ 一切 `lake env lean` 的检查都**在镜像里**做 ✓（镜像有 `Phylo.olean` ＋ `Phylo/Stat` **83** 个 `.olean` ✓）
+  ⇒ ★ **要复核正本内容时，先在镜像里跑、再证"被验文件与正本 md5 一致"** ✓（本批即此流程 ✓）。
 
 ---
 
