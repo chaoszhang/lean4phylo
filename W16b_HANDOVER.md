@@ -199,6 +199,23 @@ but is expected to have type
   ⇒ 一切 `lake env lean` 的检查都**在镜像里**做 ✓（镜像有 `Phylo.olean` ＋ `Phylo/Stat` **83** 个 `.olean` ✓）
   ⇒ ★ **要复核正本内容时，先在镜像里跑、再证"被验文件与正本 md5 一致"** ✓（本批即此流程 ✓）。
 
+### 10.1 ⚠ 工具卫生：`guard_batch.sh` 会在镜像里**留下** `Phylo/GuardProbe.lean` ✗（2026-10-12 06:31 实测）
+
+* ★★ **实测**：镜像 `~/lean4phylo-main/Phylo/` 比正本多 **8** 个 `.lean` ✗，其中**根因是 guard 自己**：
+  ```
+  ./GuardProbe.lean（★ 步骤④生成、跑完【不删】✗）· ./Stat/CASTER.lean · ./Stat/MSCSamplingVacuity.lean
+  ./Stat/SamplingAxiomVacuity.lean · ./Stat/W11gProbe.lean · ./Stat/W11gProbe2.lean · ./Stat/W11gProbe3.lean
+  ./Stat/_probe_t55.lean
+  （反向：正本独有 = 0 ✓，因为 ① 步刚 `cp` 同步过 ✓）
+  ```
+* ★★ **为什么要紧** ✓：`GuardProbe.lean` 在 `Phylo/` 内 ⇒ **进构建目标 ⇒ 计入 job 数** ✓
+  ⇒ ★ 它把**工具自己的痕迹**伪装成**项目的状态** ✗（后人会以为"镜像与正本不同步" ✓，白花时间解释 ✓）。
+  ★ **当前不影响判据** ✓：`3965` 这个基线**本来就是含它测出来的** ✓（整季同一镜像 ✓），
+  且每次运行**重写同一路径** ⇒ **文件数不变 ⇒ job 数不漂移** ✓。
+* ★ **建议（一行 ✓，属改入库工具 ⇒ 待老师裁示 ✗，未动手 ✓）**：
+  在 `guard_batch.sh` 的 `trap` 里加 `rm -f "$MIRROR/Phylo/GuardProbe.lean"` ✓；
+  ★ 另可一次性清点其余 **7** 个历史遗留件 ✓（W11 探针 / 早期 WIP ⇒ 已不在正本 ✓）。
+
 ---
 
 ## 11. ★ 下一棒的**派单模板**（可直接粘贴 ✓；供老师选 (A) 时用 ✓）
