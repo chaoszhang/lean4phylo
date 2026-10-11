@@ -122,3 +122,56 @@ cp -r <正本>/Phylo/. <镜像>/Phylo/ && cp <正本>/Phylo.lean <镜像>/
   第一版直接把 `{1,2,3}` 的叶集喂给 `n = 3` 的树表 ⇒ 标签错位。
 
 运行方式（纯标准库，`python3 rooted_triplet_aho.py`，`n = 6` 全跑约 1 分钟）。
+
+---
+
+# W13（把「位点分布 = MSC 理论分布」假设升级为**定理**）的复核脚本 —— **13 个**
+
+背景：W13 用老师给的三步显式生成模型，把库内两条端到端 a.e. 一致性定理所挂的
+「位点分布 ＝ MSC 理论分布」假设**双双升级为定理** —— ASTRAL 侧 `hmean`
+（`Phylo/Stat/GeneTreeSamplingAE.lean`）与 CASTER 侧 `hconv`
+（`Phylo/Stat/BlockModelAE.lean`）。本目录的脚本为**每一步**提供独立数值背书。
+
+| 脚本 | 对应声明／模块 | 复核什么 | 结果 |
+|---|---|---|---|
+| `W13aSiteWeightCheck.py` | `SiteWeightMeasurable.lean`（**W13a**） | 位点权重函数的**可测性（B2）＋ 有界性（B3）**（含**阴性对照**：负枝长时有界性确实会失效） | **PASS** |
+| `W13b_rate_mixture_check.py` | `SiteRateMixture.lean`（**W13b+c**） | `Ã` 的定义性恒等式 · **命题 A/B 在 `Ã` 下保持** · 混合可交换 · 退化一致性 · **箱体一致下界** · 并实测「`fbar_pos` 需内枝长 > 0，无限制的一致下界为**假**」 | **VERDICT: PASS** |
+| `w13_coord_f84_audit.py` | `CASTERF84Pos.lean`（**W13h**） | **协调侧自写实现**的独立审计：`lamF84_pos`／`f84Amp_pos`（20 万随机 ＋ 5 万逼近退化样本，无反例）＋ JC69 退化点 `lamF84 = 4/3` 逐字吻合 | **VERDICT: PASS** |
+| `W13e_endtoend_check.py` | `CASTERRateAE.lean`（**W13e**） | 端到端装配（`abarPropAData → TopoIdeal.ofModel` ＋ 与块级 SLLN 的组合）＋ **退化一致性** | **ALL CHECKS PASSED** |
+| `w13f_fixed_k_check.py` | `ToyMSCFin4.lean`（**W13f**） | ★ **规格 §4.1「`k` 固定 ⇒ 结论假」的机制**：`k = 1` 时在正测度事件上极限 `= freqA ≠ m.freq`（**差 1/10**），`k → ∞` 才收敛 | 机制数值确认 ✓ |
+| `w13g_gap_check.py` | `GeneTreeSamplingAE.lean`（**W13g ⭐**） | 缺口 G2 ／ 基因树层：任意常数表 `C` 上 `(1/k)·Σ_(j<k) C = C`（`k = 1..5` 逐点）＋ 规格 §4.1 同族反例 | **全部断言通过** |
+| `w13h_f84_positivity_audit.py` | `CASTERF84Pos.lean`（**W13h**） | F84 正性链 `lamF84_pos`／`f84Amp_pos`；JC69 退化点吻合；并说明**为何「π 正下界」是必需**（分母的**一致**下界） | **AUDIT PASSED** |
+| `w13i_coeff_check.py` | `GeneTreeHmeasDischarge.lean`（**W13i**） | `siteCoeff` 的**单位分解** ＋ ★ **证伪**「`1/4 = p(1−p)/n`」（**仅 `n = 1` 成立** ⇒ 原命题为假） | **ALL CHECKS PASSED** |
+| `W13j_index_shift_check.py` | `BlockSLLNIndex.lean`（**W13j**） | 规格 **§3.3 换指标**（`n = 7999`：块平均 = 前缀平均，**差 0**）＋ ★ **`L_j ≤ C` 的必要性**（块长无界 ⇒ 前缀平均在 `0` 与 `1/3` 振荡） | **全部通过** |
+| `w13_coord_kmat_audit.py` | `CASTERF84.lean`／`KmatNonneg.lean` | **协调侧自写实现**的独立审计：`Kmat ≥ 0`（JC69 退化点失配 0；并给出三个**反例**值 `−0.429570`／`−3.352558`） | **AUDIT PASSED** |
+| `w13k_blockmodel_check.py` | `BlockModelAE.lean`（**W13k**） | **块概率空间**：6 类检查共 **1784 条断言**（`sum_ite_lt_card`／`blockW_eq_sum_filter`／`rateMeasure` 归一与积分／`blockMeasure` 边缘律与 iid 配对／退化点），**全部 `Fraction` 精确有理数** | **ALL CHECKS PASSED** |
+| `w13l_split_kmat_check.py` | `SplitFin4Count.lean`／`KmatNonneg.lean`（**W13l**） | `Fintype.card (Split (Fin 4)) = 14 = 6 + 8` **穷举** ＋ `Kmat` 网格 **4096 格** `0 ≤ Kmat ≤ 1` ＋ 3 反例 ＋ 2 退化点 | **VERDICT: PASS** |
+| `W13m_no_L1_check.py` | `BlockSLLNNoL1.lean`（**W13m**） | 零假设取商恒等式（**20 万次**随机，含 75763 个 `ΣL = 0` 样本）＋ ★ **`∫L₀ ≠ 0` 不能再瘦**的反例（`{±1}` 一维随机游走） | **汇总：8/8 通过** |
+
+**两个追加脚本**（不是 W13 规格要求，是协调侧补的）：
+
+| 脚本 | 补什么 | 结果 |
+|---|---|---|
+| `W13_astral_msc_convergence_check.py` | ★★ **ASTRAL 主线的独立端到端数值背书**：真的按 **MSC 采基因树**（内枝 `T ~ Exp(1)`），验**经验** quartet 频率收敛到 `Coalescent.pConcordant`（`Phylo/Stat/Coalescent.lean:374`／`:382`，**与脚本公式逐字对应**）；并验理论式与独立推导一致 ＋ 退化极限 | **VERDICT: PASS**<br>（`t=0.1, k=10⁴`：`emp_conc = 0.396600` vs 理论 `0.396775`，**Δ = 1.75e-4**） |
+| `w11h_x9_pic_root_check.py` | ★ 给 W11h「**未定根 ⇒ PIC 对比量集合依赖根**」补数值背书（原 `w11h_x9_pic.py` **从未跑完过**，见下"已知红"）：6 种根 × 16 叶对 = **96 组合**根不变性 ＋ **6 种不同**姊妹对集合 | **VERDICT: PASS** |
+
+## ★ 本目录脚本的**判据纪律**（2026-10-12 起）
+
+`run_all.sh` 的判据是「**`exit 0`** 」＋「输出里出现 `PASS`/`通过`/`OK`」（见上文）。
+为让这个"绿"**携带信息**，本目录脚本遵守三条（均有**失败注入自测**佐证）：
+
+1. **必须有真正的判据**，并且**判据为假时退出码真的会变**（★ 反例：只有 `print('FAIL')` 而恒 `exit 0`
+   —— 失败只存在于 stdout，任何看退出码的消费者都看不见）；
+2. **判据要能抓真错、又不许对正确实现假红**（例：收敛判据用**有原理的界** `3/√k`，
+   而不是"末档偏差必须小于首档"这种会被小样本幸运值破坏的规则）；
+3. **注入自测**：注入一处错误 ⇒ 非零退出 ＋ 打印 `FAIL`；未注入 ⇒ `exit 0` ＋ `PASS`。
+
+## ⚠️ 已知红（`run_all.sh` 当前仍有 **3** 个，均**已定性**、**不是**本目录脚本的回归）
+
+| 脚本 | 状态 | 说明 |
+|---|---|---|
+| `w12g_fin5_instance_gen.py` | **结构性例外**（**不是检查**） | 它是**生成器/打补丁工具**（成功 = 往 `Phylo/Algorithm/NeighborNet.lean` 追加 §9.4/§9.5），**没有可判定断言** ⇒ 跑过也证明不了任何东西。它**先查哨兵**（`'### 9.4' in src`）⇒ 幂等；且从 `run_all.sh` 的 cwd（`scripts/msc`）跑会在**读**文件时 `FileNotFoundError`（在写之前就失败 ⇒ 无害）。**建议移到 `scripts/tools/`**（需老师定）。 |
+| `w12g_fin5_nni_gen.py` | 同上 | 同因（目标 `Phylo/Algorithm/NNINeighborhood.lean` 的 §8）。 |
+| `w11h_x9_pic.py` | **真红灯** | 它**有**失败路径也有判定词，红是因为**判据真的为假**：4 条 `[FAIL]` 后崩在 `root_at_node` 的 `assert len(ch) == 2`（它自己的错误信息写着「**除根外**内部顶点度应为 3」，但代码把**根**也算进去了 ⇒ 6 种根**全部**触发 ⇒ 该脚本**从未跑完过**）。它要背书的结论已由 **`w11h_x9_pic_root_check.py`** 补上（见上表）；本脚本**未修**（需把树表示扩到"多子根"，属结构性改动）。 |
+
+> ★ 除上述 3 个外，`run_all.sh` 的**其余脚本**（含 W13 的 13 个 ＋ 两个追加脚本）**都能为假且都会自报** ✓。
