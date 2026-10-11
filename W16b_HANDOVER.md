@@ -183,3 +183,35 @@ but is expected to have type
   ⇒ ★ **旧结论对新树仍然成立**（299 的可判定论证 ✓）。
 * ★ **要重跑门时的建议** ✓：先 `timeout 8 git -C .lake/packages/mathlib ls-remote --exit-code origin HEAD` 探一下网络 ✓；
   不通 ⇒ **不要重试到超时** ✗，直接记为"**基建失败、待网络恢复**" ✓。
+
+---
+
+## 11. ★ 下一棒的**派单模板**（可直接粘贴 ✓；供老师选 (A) 时用 ✓）
+
+> **任务**：续做 W16b —— 让 `Phylo/Stat/BlockModelRhoAE3.lean` 通过**单文件门**，从而可落盘。
+>
+> **背景与全部细节**：读 **`lean4phylo/W16b_HANDOVER.md`**（§3 卡点 · §4 解法 · §5 待跑门 · §7 ★A 名单 ✓）。
+>
+> **取件**（**从这里取，也只往这里写** ✓）：镜像 `~/lean4phylo-w16b/Phylo/Stat/BlockModelRhoAE3.lean`
+> —— 冻结件 **617 行 / 27 声明 / md5 `86a80436c0f6bb475cd2c335c3c2c132`** ✓（★ 交付时请**复核 md5** ✓）。
+>
+> **卡点（唯一）**：`Integrable G (Measure.map φ μ)` 与 `Integrable (G∘φ) μ` **不合一** ✗
+> （根因：`abbrev` 在**显式测度参数位**不展开）；
+> 首错在 `:159` 与 `:184`，其余 **13 条为连坐** ✓ ⇒ **一通皆通** ✓。
+>
+> **建议次序**（`W16b_HANDOVER.md` §9.1 ✓）：
+> ① **目标改复合形态**（`Integrable (fun q => G (toKingmanΘ q)) (Measure.map (fun q => toKingmanΘ q) μ)` ✓）
+> ⇒ 无需那次"认出" ✓、**不必碰已落盘文件** ✓；② 直接构造 `AEStronglyMeasurable G (map φ μ)`（自证一条 `comp` 小引理 ✓）；
+> ③ 最后才考虑在 `MSCKingmanMeasure.lean` **只加不改**补一条变体引理 ✓（★ 需老师明确授权 ✓）。
+>
+> **验收（缺一不可 ✓）**：单文件门（**`exit 0` 且 stdout 0 字节** ✓ —— ★ 二者是**合取** ✓）→
+> 全量 `lake build`（**job 数须等于预期** ✓）→ 锚定 `#print axioms`（条数 = 声明数 ✓，荷载仅 3 条公理 ✓）→
+> 门 5 四条 Dirac 探针**编译** ✓ →（可选 ★G）数值脚本**与库内定义逐字对齐** ✓。
+>
+> **纪律（摘要）**：★ 写域只限镜像 ✓（**临时脚本放 `_scripts_tmp/`** ✓，**不要碰 `/Project/lean/_scratch/`** ✗）；
+> ★ 不许改**已落盘**文件 ✓；★ **同错两次即停** ✓ 并**如实报告卡在哪** ✗→✓；★ **时间盒 90 分钟** ✓；
+> ★ **交报告请带：行数 ＋ md5 ＋ 门实测（exit / stdout 字节 / error 条数）** ✓。
+>
+> **★ 两个已踩过的坑（免得再踩 ✓）**：① `empWeight_tendsto_ae` 须写**全限定名** ✓
+> （同文件 `import` 的模块里 unqualified 名不可见 ✓）；② 跑门前**先探网络** ✓（`importGraph` 是 partial clone ✓，
+> 断网会给出 `exit 1` ＋ **stdout 0 字节**的假象 ✗ —— 见 §10 ✓）。
