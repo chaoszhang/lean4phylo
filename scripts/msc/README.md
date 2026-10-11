@@ -154,6 +154,14 @@ cp -r <正本>/Phylo/. <镜像>/Phylo/ && cp <正本>/Phylo.lean <镜像>/
 |---|---|---|
 | `W13_astral_msc_convergence_check.py` | ★★ **ASTRAL 主线的独立端到端数值背书**：真的按 **MSC 采基因树**（内枝 `T ~ Exp(1)`），验**经验** quartet 频率收敛到 `Coalescent.pConcordant`（`Phylo/Stat/Coalescent.lean:374`／`:382`，**与脚本公式逐字对应**）；并验理论式与独立推导一致 ＋ 退化极限 | **VERDICT: PASS**<br>（`t=0.1, k=10⁴`：`emp_conc = 0.396600` vs 理论 `0.396775`，**Δ = 1.75e-4**） |
 | `w11h_x9_pic_root_check.py` | ★ 给 W11h「**未定根 ⇒ PIC 对比量集合依赖根**」补数值背书（原 `w11h_x9_pic.py` **从未跑完过**，见下"已知红"）：6 种根 × 16 叶对 = **96 组合**根不变性 ＋ **6 种不同**姊妹对集合 | **VERDICT: PASS** |
+| `W15a_box_prior_check.py` | ★★ 给 **W15a（`Phylo/Stat/CASTERRateBoxAE.lean`，★ 超出规格）** 做数值背书：逐字重实现库内 JC69 链，验**箱体上 `max\|geneScore\|`/`max\|Ã\|`/`max\|f̃\|`/`max\|hint\|` 全部 `≤ 1`**（实测 0.2267 / 0.1203 / 0.1345 / 0.1203）＋ 把重实现**钉在库内定理上**（`max\|Σ_σ patternProb − 1\| = 2.2e−16`；`clause_*` 恒等式 `4.2e−17`）＋ **反空洞**（箱体**外** `max\|geneScore\| = 5.27e11` ⇒ 「枝长非负」前提**必需**，即 `CASTERRateAE:64` 那句"爆炸"的数值复核） | 未注入 **`exit 0` ＋ `VERDICT: PASS`**<br>**`--inject` ⇒ `exit 1` ＋ `FAIL`**（`max\|hint\| = 1.33e12 > 1`）<br>**`--inject=amplify` ⇒ `exit 1` ＋ `FAIL`**（`max\|fbar\| = 1.075739 > 1`）⇒ **能为假** ✓ |
+
+> ★ 与之配套的 Lean 模块是 **`Phylo/Stat/CASTERRateBoxAE.lean`（710 行 / 34 定理 / 37 条声明）**：
+> **箱体先验 ⇒ `Ã` 有界（上界恰为 1）⇒ `Integrable`**，从而把
+> `hf_int` / `hint` / `hlx` / `hdeep` / `hf_pos` / **`hpos`** **全部证掉**，
+> 并给出与 Dirac 端点**同形**的端到端变体 `abar_caster_statisticallyConsistent_kingman_ae_box`
+> （物种树侧假设面**只剩箱体先验**；`leaf`/`a`/`b`/`hab` 全部消失）＋ **`…_via_box_dirac`**（Dirac 是其机器验证特例）。
+> ⚠️ **本件超出 W13 规格**（规格 §1.2 把物种树取为**固定** ⇒ Dirac 情形**已满足规格**），属**库内一般性的加强**，**可叫停**。
 
 ## ★ 本目录脚本的**判据纪律**（2026-10-12 起）
 
