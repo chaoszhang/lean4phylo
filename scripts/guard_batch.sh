@@ -164,7 +164,14 @@ fi
 
 # ⑤/⑥ 两个既有脚本
 bash "$CANON/scripts/check_file_imports.sh" || exit 1
-bash "$CANON/scripts/list_star_claims.sh" | tail -3
+# ★ 2026-10-12 协调侧审计修正（原为 `| tail -3`）：
+#   `list_star_claims.sh` 是**提示型**脚本 —— 它**总是 exit 1**（因为总会有若干"只在 ★ 行出现"的名字），
+#   所以这里**不能**写 `|| exit 1`（那会让 guard 永远失败）✗。
+#   但原写法 `| tail -3` 只显示**最后 3 行** ⇒ 会**截掉可疑名单的头部** ✗ ——
+#   实测：名单有 6 个名字（F_r/Monoid/Tcex/n_xy/ne_two/prod_sum）时，`tail -3` 只显示后 3 个，
+#   **新增的可疑名若排在前面就完全看不见** ⇒ 这条验收口径（"无新增告警"）实际上**不可检查** ✗。
+#   ⇒ 改为**完整输出**，使"新增告警"能被**逐条比对**看见 ✓（是否要进一步"机械强制"需引入基线名单文件，另议）。
+bash "$CANON/scripts/list_star_claims.sh"
 
 # ⑦ git
 cd "$CANON" || exit 1
