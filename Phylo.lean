@@ -105,6 +105,7 @@ import Phylo.Stat.KingmanCoalescent
 import Phylo.Stat.KingmanJumpChain
 import Phylo.Stat.KingmanLaw
 import Phylo.Stat.KingmanStep
+import Phylo.Stat.KmatNonneg
 import Phylo.Stat.LMLumping
 import Phylo.Stat.MLIdentifiability
 import Phylo.Stat.MSC
@@ -127,6 +128,7 @@ import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.RootJumpMass
 import Phylo.Stat.SiteRateMixture
 import Phylo.Stat.SiteWeightMeasurable
+import Phylo.Stat.SplitFin4Count
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
