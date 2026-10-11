@@ -157,3 +157,29 @@ but is expected to have type
 * ★ **乐观面**：13 条 error 是**连坐** ✓ ⇒ 该条一通，其余按 `W16a_BLOCKER.md` §8 的归约**逐条即可过** ✓；
 * ★ **止损线**：若**方案 1 与 2 各试一轮仍不通** ✗ ⇒ **停止自旋** ✓，转方案 3 或**收档** ✓，
   并**如实登记**"试过什么、为何不通" ✓（本季纪律：★ 同错两次即停 ✓）。
+
+---
+
+## 10. ⚠ 环境注记（**给所有跑"单文件门"的人** ✓，2026-10-12 06:23 实测）
+
+* ★★ **现象**：`lake env lean <任何文件>` 会先跑 **`importGraph`** ✓，而它是 **partial/promisor clone**
+  （实测 `git config remote.origin.promisor = true` · `partialclonefilter = tree:0` ✓）
+  ⇒ **需要联网 fetch** ✗ ⇒ **断网时必然失败** ✓：
+  ```
+  info: importGraph: checking out revision '10a2cfff…'
+  fatal: unable to access 'https://github.com/leanprover-community/import-graph/':
+         Failed to connect to github.com port 443 after 134127 ms
+  fatal: could not fetch c8305b8a… from promisor remote ⇒ error: external command 'git' exited with code 128
+  ```
+* ★★★ **这与命题/代码【无关】** ✓ —— 但它**长得像"门没过"** ✗：
+  `EXIT = 1` ✓ 且 **`stdout = 0 字节`** ✓（**0 字节这个词本身就出现在门的判据里** ✗）。
+  ⇒ ★★ **判据必须是"`exit 0` **且** 0 字节"的【合取】** ✓：**只看 0 字节必然假绿** ✗，
+  只看 exit 会把网络抖动误报成数学问题 ✗。
+* ★ **正确归类（教训 303 ✓）**：复核失败要分三类 ——
+  **① 代码失败**（真信号 ✓）· **② 基建失败**（网络/克隆/磁盘 ✓，与命题无关 ✗）· **③ 我的命令写错**（如同日的 `EXIT=127` ✓）。
+  ⇒ ★ **报告里必须写明属于哪类** ✓；**"我复核不了"要如实说** ✗→✓，**不得**含糊成"通过/不通过" ✗。
+* ★ **对 W13 验收证据的影响：无** ✓ —— 所有门在**网络可用时**已跑绿 ✓（`guard 3965` 全绿 ✓ ＋ 各次落盘的单文件门 ✓），
+  且此后 **`.lean` 一个字节都没变** ✓（`git diff --name-only 5b30bed..HEAD -- '*.lean'` = 0 ✓）
+  ⇒ ★ **旧结论对新树仍然成立**（299 的可判定论证 ✓）。
+* ★ **要重跑门时的建议** ✓：先 `timeout 8 git -C .lake/packages/mathlib ls-remote --exit-code origin HEAD` 探一下网络 ✓；
+  不通 ⇒ **不要重试到超时** ✗，直接记为"**基建失败、待网络恢复**" ✓。
