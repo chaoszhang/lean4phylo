@@ -82,17 +82,32 @@ def search(n, grid):
     return cnt, ex
 
 def main():
+    # ★ W14b（2026-10-12 协调侧加固）：本脚本原先【没有任何失败路径】（无条件 return 0）✗ ——
+    #   于是 `scripts/msc/run_all.sh` 的"绿"对它**不携带信息** ✗。
+    #   现按它**自己的结论句**（下面那句"计数 > 0 ⇒ …"）立判据：
+    #   若某个网格**找不到**「处处非 Strong 但某处 Max」的见证（计数 ≤ 0），
+    #   则本脚本的结论**不成立** ⇒ 必须**非零退出** ✗。
+    failures = []
     for n, grid in ((4, (-1, 0, 1, 2)), (5, (0, 1, 2))):
         cnt, ex = search(n, grid)
         print(f"n={n} 穷尽网格{list(grid)}：『处处非 Strong 但某处 Max』的 δ 个数 = {cnt}")
         for vals, wit in ex:
             print(f"    例：独立值 {list(vals)}；Max 成立的 split 例 {wit}")
+        if cnt <= 0:
+            failures.append((n, grid, cnt))
     print()
     print("⇒ 计数 > 0 ⇒ 库内 `SplitPrime`（¬Max）**严格强于**文献 split-prime（¬Strong）")
     print("   ⇒ `canonicalSplitDecomposition_gap` 的残差条件比文献强 ⇒ 该缺口**可疑（可能为假）** ✗")
     print("   建议：按 ★D 判例 —— 原 `def` 逐字保留 ＋ 另立 `SplitPrimeStd`（¬Strong）")
     print("         ＋ 证 `SplitPrime → SplitPrimeStd` ✓（¬Max ⟹ ¬Strong）＋ 反向给反例 ✗")
     print("         ＋ 把 `canonicalSplitDecomposition_gap` 的正确形态以 `SplitPrimeStd` 重述 ✓")
+    if failures:
+        print()
+        print("VERDICT: FAIL")
+        for n, grid, cnt in failures:
+            print(f"  ✗ n={n} 网格{list(grid)}：见证计数 = {cnt}（本脚本的结论要求 > 0）")
+        return 1
+    print("VERDICT: PASS")
     return 0
 
 if __name__ == "__main__":
