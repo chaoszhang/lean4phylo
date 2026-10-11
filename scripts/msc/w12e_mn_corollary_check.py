@@ -9,6 +9,8 @@
 #   ==> D = {D : t <= |D|} for t = min{|D| : D in D}, and then NTreeValued forces k < 2t.
 # This script exhaustively checks that combinatorial core, and that (iii) cannot be dropped.
 # Exact combinatorics, no Monte Carlo, standard library only.
+# Exit code: 0 = core holds (0 counterexamples) AND dropping (iii) does produce witnesses;
+#            1 = either judgment fails (prints VERDICT: FAIL).
 import itertools, sys
 from fractions import Fraction  # unused, kept for style parity with other msc scripts
 
@@ -72,6 +74,7 @@ def main():
               f'  [subset families total {1 << len(subsets)}]')
     print(f'K1 checked={checked} counterexamples={bad}')
     print('== necessity of (iii): drop permutation-invariance (k=2,3) ==')
+    wits = {}
     for k in (2, 3):
         subsets = [frozenset(c) for c in itertools.chain.from_iterable(
             itertools.combinations(range(k), c) for c in range(k + 1))]
@@ -87,11 +90,26 @@ def main():
                     print(f'  k={k} upward-closed but NOT perm-invariant and NOT threshold: '
                           f'{sorted(sorted(D) for D in fam)}')
         print(f'  k={k}: such witnesses = {wit}')
+        wits[k] = wit
     print('== k=0,1 edge cases (staircase) ==')
     for k in (0, 1):
         print(f'  k={k}: candidate families = {{∅}}, {{∅,...}}: min size t and k<2t ->',
               [(t, k < 2 * t) for t in range(0, k + 2)])
-    sys.exit(1 if bad else 0)
+    fails = []
+    if bad != 0:
+        fails.append(f'组合核 (i)+(ii)+(iii) => 阈值族：有 {bad} 个反例（应为 0）')
+    for k in (2, 3):
+        if wits.get(k, 0) <= 0:
+            fails.append(f'k={k}: 去掉 (iii) 后「上闭但非阈值」的见证数 = {wits.get(k, 0)} <= 0 '
+                         f'=> 未复现「(iii) 不能去掉」')
+    if fails:
+        print('VERDICT: FAIL')
+        for m in fails:
+            print('   x ' + m)
+        sys.exit(1)
+    print('VERDICT: PASS（组合核：满足 (i)-(iii) 的族 %d 个、反例 0；'
+          '且 (iii) 不可去：k=2 见证 %d 个、k=3 见证 %d 个）' % (checked, wits[2], wits[3]))
+    sys.exit(0)
 
 
 if __name__ == '__main__':

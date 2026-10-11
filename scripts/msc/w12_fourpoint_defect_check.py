@@ -23,6 +23,8 @@
 
 注：`Phylo/Algorithm/NJ.lean` 的 `Dissimilarity.FourPoint` 是**析取形态**（「三对和无严格最大者」），
 与文献一致、树度量满足它 ✓ —— 缺陷只在 `Split.FourPoint` 这一个 `def`。
+
+退出码：0 ＝ 下面三个机器判定 [1][2][3] 全部复现（打印判定词）；1 ＝ 有判定失败并逐条列出。
 """
 import random
 from itertools import product
@@ -76,7 +78,7 @@ def random_tree_metric(n, rng):
                     st.append(v)
     return [[0 if i == j else dist(i, j) for j in range(n)] for i in range(n)]
 
-def part1():
+def part1(fails):
     print("=== [1] 方向：库内形态 vs 标准形态（穷尽 + 抽样）===")
     for n, grid in ((3, (0, 1, 2)), (4, (0, 1, 2))):
         pairs = [(i, j) for i in range(n) for j in range(i + 1, n)]
@@ -88,6 +90,8 @@ def part1():
             elif s: only_std += 1
             else: neither += 1
         print(f"  n={n} 穷尽：都真 {both} · **仅库内真 {only_lib}** · 仅标准真 {only_std} · 都假 {neither}")
+        if only_lib != 0:
+            fails.append(f"[1] n={n} 穷尽：『仅库内真』= {only_lib} ≠ 0 ⇒ 库内形态不再严格更强")
     rng = random.Random(12); only_lib = only_std = 0
     for _ in range(20000):
         d = mk(5, [rng.randint(0, 6) for _ in range(10)])
@@ -95,9 +99,11 @@ def part1():
         if t and not s: only_lib += 1
         if s and not t: only_std += 1
     print(f"  n=5 随机 20000：仅库内真 {only_lib} · 仅标准真 {only_std}")
+    if only_lib != 0:
+        fails.append(f"[1] n=5 随机 20000：『仅库内真』= {only_lib} ≠ 0 ⇒ 库内形态不再严格更强")
     print("  ⇒ 『仅库内真』恒为 0 ⇒ 库内形态**严格更强**（库内 ⟹ 标准；反向不成立 ✗）")
 
-def part2():
+def part2(fails):
     print("\n=== [2] 严重性：**树度量**是否满足库内形态？===")
     rng = random.Random(7)
     for n in (4, 5, 6, 7):
@@ -109,9 +115,14 @@ def part2():
             if F_lib(n, d): good += 1
         print(f"  n={n}: 有效树度量 {tot} 个 ⇒ 其中满足**库内**形态的 {good} 个"
               f"{'  ✓' if good == tot else '  ✗ 大量反例'}")
+        if tot == 0:
+            fails.append(f"[2] n={n}: 无有效树度量样本（生成器退化）")
+        elif good >= tot:
+            fails.append(f"[2] n={n}: {tot} 个有效树度量**全部**满足库内形态 ⇒ "
+                         f"『树度量几乎全不满足库内形态』未复现")
     print("  ⇒ 树度量几乎全部**不满足**库内形态 ⇒ 以它为假设的定理对真实对象**空转** ✗")
 
-def part3():
+def part3(fails):
     print("\n=== [3] 最小显式见证 ===")
     d = [[0, 2, 3, 3], [2, 0, 3, 3], [3, 3, 0, 2], [3, 3, 2, 0]]   # 4 叶平衡树、边权全 1
     bad = [(a, ap, b, bp) for a, ap, b, bp in quads(4)
@@ -123,15 +134,29 @@ def part3():
           f"  LHS = {d[bad[0][0]][bad[0][3]] + d[bad[0][1]][bad[0][2]] if bad else '-'}"
           f" > RHS = {max(d[bad[0][0]][bad[0][1]] + d[bad[0][2]][bad[0][3]], d[bad[0][0]][bad[0][2]] + d[bad[0][1]][bad[0][2]]) if bad else '-'}")
     print(f"  标准第三式在同一 δ 上违反数 = {len(bad_std)}  ⇒ {'成立 ✓' if not bad_std else '也失败 ✗'}")
-    print("  ⇒ **最简的 4 叶树度量**即证伪库内形态 ✗")
+    if not bad:
+        fails.append("[3] 4 叶平衡树（边权全 1）**未**违反库内第三式 ⇒ 最小见证不成立")
+    if bad_std:
+        fails.append(f"[3] 标准第三式在同一 δ 上违反 {len(bad_std)} 处 ⇒ 未复现「标准形态成立」")
+    if bad and not bad_std:
+        print("  ⇒ **最简的 4 叶树度量**即证伪库内形态 ✗")
 
 def main():
-    part1(); part2(); part3()
+    fails = []
+    part1(fails); part2(fails); part3(fails)
     print("\n=== 结论 ===")
     print("(a) `Split.FourPoint` 严格强于文献四点条件，且**把真实树度量排除在外** ✗；")
     print("(b) 故 `fourPointOfSplitMetricSum_gap`（B1）**为假** ⇒ 应证伪，并另立以 `FourPointStd` 表述的正确目标；")
     print("(c) 有用的正面引理是 `Split.FourPoint → FourPointStd`（机器判定支持）；")
     print("(d) 仍**不改** `Split.FourPoint` 的定义（★C：不弱化既有字段），以 `FourPointStd` 并存 ＋ 关系定理解决。")
+    if fails:
+        print()
+        print("VERDICT: FAIL")
+        for m in fails:
+            print("   ✗ " + m)
+        return 1
+    print()
+    print("VERDICT: PASS（判定 [1] 方向 / [2] 树度量空转 / [3] 最小见证，三项全部复现）")
     return 0
 
 if __name__ == "__main__":

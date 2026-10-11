@@ -214,8 +214,8 @@ def main(nmax=5):
     for c in gap2_counter[:10]:
         print("   ", c)
     ok = not gap1_counter and not gap2_counter
-    print("VERDICT:", "both gap statements hold on all instances (no counterexample)"
-          if ok else "COUNTEREXAMPLE FOUND -> statement must be rewritten")
+    print("VERDICT:", "PASS -- both gap statements hold on all instances (no counterexample)"
+          if ok else "FAIL -- COUNTEREXAMPLE FOUND -> statement must be rewritten")
     return 0 if ok else 1
 
 

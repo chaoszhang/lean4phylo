@@ -9,6 +9,8 @@
 # Part B: exhaustive over 5-point integer metrics with entries in {1,2,3} (symmetry + zero
 #         diagonal), checking whether FourPoint + IsCherry(i,j) *alone* imply (*).
 # Exact rational arithmetic only (fractions.Fraction); no Monte Carlo.
+# Exit code: 0 = Part A has zero failures (prints VERDICT: PASS);
+#            1 = Part A has failures (prints VERDICT: FAIL).  Bound to the same `bad`.
 import sys, itertools
 from fractions import Fraction as F
 
@@ -155,4 +157,10 @@ if __name__ == '__main__':
     print('== Part B: abstract metrics, entries in {1,2,3}, symmetry+diag+FourPoint+IsCherry(0,1) ==')
     t, c, k = part_b()
     print(f'B: enumerated={t} satisfying FourPoint&IsCherry={c} counterexamples={k}')
-    sys.exit(1 if bad else 0)
+    if bad:
+        print(f'VERDICT: FAIL (Part A: {bad} failures => the cherry convex-merge lemma '
+              f'fails on 5-leaf tree metrics)')
+        sys.exit(1)
+    print(f'VERDICT: PASS (Part A: {ck} cases (topology x weight grid x theta) with 0 failures; '
+          f'Part B: {c} abstract metrics satisfying FourPoint&IsCherry(0,1) with {k} counterexamples)')
+    sys.exit(0)

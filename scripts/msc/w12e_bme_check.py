@@ -19,6 +19,8 @@
 `Σ_e S i j e = p i j`（命题 (2)）在真树上成立（这是「可加性 + 关联计数」的一致性检查）。
 
 只使用标准库 + 精确有理数（`Fraction`），无随机、无浮点。
+
+退出码：0 ＝ 命题 (2)/(3) ＋ 倍增和全部成立且枚举树数 = (2n-5)!!（打印判定词）；1 ＝ 有判定失败。
 """
 from fractions import Fraction
 from itertools import combinations
@@ -190,7 +192,25 @@ def main():
     print("树数:", per_n)
     print("边检查总数:", total_edges)
     print("反例数:", bad)
-    sys.exit(0 if bad == 0 else 1)
+    fails = []
+    if bad != 0:
+        fails.append(f"命题 (2)/(3) 与倍增和共 {bad} 处不符（应为 0）")
+    # 生成器自检：标号无根二叉拓扑数 = (2n-5)!!（n=3..6 ⇒ 1, 3, 15, 105）；
+    # 总边检查数 = Σ_n #trees(n)·(2n-3) = 1068。
+    want_trees = {3: 1, 4: 3, 5: 15, 6: 105}
+    if per_n != want_trees:
+        fails.append(f"树数 {per_n} ≠ (2n-5)!! = {want_trees} ⇒ 枚举器有漏/有多")
+    want_edges = sum(want_trees[n] * (2 * n - 3) for n in want_trees)
+    if total_edges != want_edges:
+        fails.append(f"边检查总数 {total_edges} ≠ Σ_n #trees(n)·(2n-3) = {want_edges}")
+    if fails:
+        print("VERDICT: FAIL")
+        for m in fails:
+            print("   ✗ " + m)
+        sys.exit(1)
+    print("VERDICT: PASS（命题 (2)(3) ＋ 倍增和全部成立：%d 条边 × 4 项核对；树数 = (2n-5)!!）"
+          % total_edges)
+    sys.exit(0)
 
 
 main()

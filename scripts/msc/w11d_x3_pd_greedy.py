@@ -21,9 +21,12 @@ msc/w11d_x3_pd_greedy.py —— W11d / X3 的 ★C 穷举核对
 
 文献：Steel 2005, Syst. Biol. 54(4):527–529；
       Pardi & Goldman 2005, PLoS Genet 1(6):e71。
+
+退出码：0 ＝ 下面 (0)/(1)/(1b)/(2)/(3) 五项判定全部复现（打印判定词）；1 ＝ 有判定失败。
 """
 
 import itertools
+import sys
 from collections import deque
 
 # ---------------------------------------------------------------- 树
@@ -158,7 +161,7 @@ def star_four():
 
 # ---------------------------------------------------------------- 核对
 
-def check(kind, tree):
+def check(kind, tree, fails):
     leaves = tree.leaves
     n = len(leaves)
     print(f"\n=== {kind}（{n} 叶，{len(tree.edges)} 边）===")
@@ -169,6 +172,8 @@ def check(kind, tree):
            if tree.pd_lean(list(S)) != tree.pd_steel(list(S))]
     print(f"  (0) PD_lean = PD_steel 对全部 {2**n - 1} 个非空子集："
           f"{'成立' if not bad else '失败 ' + str(bad[:3])}")
+    if bad:
+        fails.append(f"{kind}: (0) PD_lean ≠ PD_steel —— {len(bad)} 个反例，例如 {bad[:3]}")
 
     # (1) ★B 次模性穷举 —— 预期**有**反例（PD 不次模；见 Lean `not_PD_submodular`）
     viol = []
@@ -188,6 +193,10 @@ def check(kind, tree):
                             viol.append((A, B, x, lhs - rhs))
     print(f"  (1) ★B 次模性（增量随集合增大而不增）穷举："
           f"{'无反例' if not viol else f'有反例 {len(viol)} 个，最小 = ' + str(viol[0])}")
+    if not viol:
+        fails.append(f"{kind}: (1) ★B 次模性**无反例** ⇒ 未复现 `not_PD_submodular`（阴性判定失效）")
+    elif not any(v[0] == () for v in viol):
+        fails.append(f"{kind}: (1) 反例中**没有** A = ∅ 型（结论句点名的形态）")
 
     # (1b) Steel 式 (1) 的交换性质（穷举）—— 预期**零**失败
     ex_fail = []
@@ -205,6 +214,8 @@ def check(kind, tree):
                         ex_fail.append((tuple(sorted(Ws)), tuple(sorted(Wps))))
     print(f"  (1b) Steel 式(1) 交换性质（2 ≤ |W'| < |W|）穷举："
           f"{'零失败' if not ex_fail else '失败 ' + str(ex_fail[:3])}")
+    if ex_fail:
+        fails.append(f"{kind}: (1b) 交换性质失败 {len(ex_fail)} 例，例如 {ex_fail[:3]}")
 
     # (2) ★C 贪心 vs 穷举
     print("  (2) ★C 贪心 vs 穷举（每 k；贪心按 Steel 形式从最大 2-集起步）：")
@@ -216,12 +227,17 @@ def check(kind, tree):
         all_ok &= ok
         print(f"      k={k}: 穷举最大 PD={bf:3d}  贪心 PD={gp:3d}  序列={seq}  "
               f"{'✓' if ok else '✗ 不等'}")
+        if not ok:
+            fails.append(f"{kind}: (2) k={k}：贪心 PD={gp} ≠ 穷举最大 PD={bf}（★C 反例）")
     print(f"      贪心对**每个** k 都最优：{'是' if all_ok else '否'}")
 
     # (3) 论文数值核对
     if kind.startswith("Steel"):
         S = [0, 1, 4, 6]
         print(f"  (3) 论文数值：PD({{a,b,g,e}}) = {tree.pd_steel(S)}（论文 = 18）")
+        if tree.pd_steel(S) != 18:
+            fails.append(f"{kind}: (3) PD({{a,b,g,e}}) = {tree.pd_steel(S)} ≠ 18"
+                         f"（Steel 2005 图 1 的论文数值）")
 
     # (4) ★B 阴性：k = 1 无区分度
     if kind.startswith("star"):
@@ -236,10 +252,11 @@ def main():
     print("=" * 74)
     print(" W11d / X3 —— PD 贪心最优性的穷举核对（纯标准库、整数、无随机）")
     print("=" * 74)
-    check("Steel 2005 图 1（7 叶）", steel_figure_1())
-    check("最小 4 叶实例", minimal_four_leaf())
-    check("star 3 叶", star_three())
-    check("star 4 叶", star_four())
+    fails = []
+    check("Steel 2005 图 1（7 叶）", steel_figure_1(), fails)
+    check("最小 4 叶实例", minimal_four_leaf(), fails)
+    check("star 3 叶", star_three(), fails)
+    check("star 4 叶", star_four(), fails)
     print("\n" + "=" * 74)
     print(" 结论：")
     print("  * PD_lean（Lean 侧定义）= PD_steel（Steel 2005 定义）逐子集成立；")
@@ -251,7 +268,15 @@ def main():
     print("  * 贪心（**从最大 2-集起步** + 每步最大增量）对每个 k 都达到穷举最大值（★C）；")
     print("  * 「任取单点起步」的变体在 k = 1 → 2 一步**不**最优（Pardi–Goldman Observation）。")
     print("=" * 74)
+    if fails:
+        print("VERDICT: FAIL")
+        for m in fails:
+            print("   ✗ " + m)
+        return 1
+    print("VERDICT: PASS（(0) PD_lean = PD_steel 逐子集 / (1) ★B 有反例且含 A = ∅ 型 / "
+          "(1b) 交换性质零失败 / (2) 贪心逐 k 最优 / (3) 论文数值 18）")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

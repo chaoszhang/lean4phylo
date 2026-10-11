@@ -9,7 +9,11 @@
 * `sig = Equiv.swap 1 5 * Equiv.swap 2 4`（= 原文的 2↔6、3↔5，0-based）。
 
 纯标准库、精确整数/集合、无 Monte Carlo。运行：python3 w12a_twoparent_check.py
+
+退出码：0 ＝ 下面各项判定（split 数 25 / ★parent 数 = 2 且显式构造核验通过 / 判据一二为真 /
+分类定理无反例）全部复现（打印判定词）；1 ＝ 有判定失败并逐条列出。
 """
+import sys
 from itertools import combinations
 
 N = 6
@@ -219,21 +223,37 @@ def show(fam):
 
 
 def main():
+    fails = []
     print("=" * 74)
     print("W12a · `two_parent_trees_gap` 真值机器穷举（6 taxa，无根树 ↔ 相容 split 族）")
     print("=" * 74)
     print(f"非平凡 split 数 = {len(SPLITS)}（理论值 2*C(6,2)/2+… = 25 ✓）")
+    if len(SPLITS) != 25:
+        fails.append(f"非平凡 split 数 = {len(SPLITS)} ≠ 25（6 taxa 的理论值）")
     fams = all_compatible_families()
     print(f"两两相容族总数 = {len(fams)}")
     # 最大尺寸
     mx = max(len(f) for f in fams)
     print(f"最大族大小 = {mx}（= n-3 = 3，即 binary 树）")
+    if mx != N - 3:
+        fails.append(f"最大族大小 = {mx} ≠ n-3 = {N-3}（Semple–Steel：binary ⟺ |fam| = n-3）")
 
     parents = [f for f in fams if all(displays(f, q) for q in PROF)]
     print(f"\n★ **parent tree 数 = {len(parents)}**（原文 Figure 1 说 2）")
+    if len(parents) != 2:
+        fails.append(f"parent tree 数 = {len(parents)} ≠ 2（原文 Figure 1 / 本脚本的核心事实）")
     for i, p in enumerate(parents):
         ok, msg = validate_tree(p)
         print(f"  P{i+1}: {show(p)}   显式构造核验: {'✓' if ok else '✗'} {msg}")
+        if not ok:
+            fails.append(f"P{i+1}: ★B 显式构造核验失败（{msg}）")
+    if len(parents) < 2:
+        print()
+        print("VERDICT: FAIL")
+        for m in fails:
+            print("   ✗ " + m)
+        print("   ✗ parent tree 数 < 2 ⇒ 后续『判据一/二』无法构造 T₁、T₂")
+        return 1
 
     print("\n" + "=" * 74)
     print("判据一（原 `def two_parent_trees_gap` 第 3 条）：T₂ 的 split 系统 = sig(T₁ 的)")
@@ -255,6 +275,9 @@ def main():
         else:
             ok_any = True
     print(f"\n★ 原 `def two_parent_trees_gap` 机器判定：{'**真** ✓' if ok_any else '**假** ✗（可证伪）'}")
+    if not ok_any:
+        fails.append("原 `def two_parent_trees_gap` 的判据一/二在 6 taxa 上**无**满足对 ⇒ "
+                     "与脚本自身打印的『真』不一致（须按 ★D 重新定性）")
 
     print("\n" + "=" * 74)
     print("另核：`…_correct_shape` 的第 ②（每个 parent 的 split 系统**恰**是 T₁ 或 T₂ 的）")
@@ -270,6 +293,8 @@ def main():
         if not bad:
             ok_shape = True
     print(f"★ `…_correct_shape` 机器判定：{'**真** ✓' if ok_shape else '**假** ✗'}")
+    if not ok_shape:
+        fails.append("`…_correct_shape` 第 ② 无满足对 ⇒ 与脚本自身打印的『真』不一致")
 
     # ------------------------------------------------------------------ ★D-2
     print("\n" + "=" * 74)
@@ -290,13 +315,28 @@ def main():
     for f, extra in viol:
         print(f"    ✗ 反例 F = {show(f)}，越界 split = {show(frozenset(extra))}")
     print(f"  ⇒ 分类定理（非平凡部分）机器判定：{'**假** ✗（可证伪）' if viol else '**真** ✓'}")
+    if viol:
+        fails.append(f"分类定理（非平凡部分）有 {len(viol)} 个反例，例如 "
+                     f"{show(viol[0][0])}（越界 split {show(frozenset(viol[0][1]))}）")
     # 附：把「任意族 ⊇ 某个 parent」这一更强形式也核一遍（第 4 条的一般形态）
     strong = [f for f in fams if not (subset(P1, f) or subset(P2, f))]
     print(f"  附核（更强形态）：不含 P1 也不含 P2 的相容族 = {len(strong)} 个"
           + ("" if not strong else f"，例如 {show(strong[0])}"))
     # 附：parent 族的规模与「最大族大小」的关系（Semple–Steel：binary ⟺ |fam| = n-3）
     print(f"  附核：两个 parent 族的大小 = {[len(p) for p in parents]}（n-3 = 3 ✓）")
+    if any(len(p) != N - 3 for p in parents):
+        fails.append(f"parent 族大小 = {[len(p) for p in parents]} ≠ n-3 = {N-3}")
+    if fails:
+        print()
+        print("VERDICT: FAIL")
+        for m in fails:
+            print("   ✗ " + m)
+        return 1
+    print()
+    print("VERDICT: PASS（非平凡 split 25 / 相容族 236 / ★parent 数 = 2 且两个 parent 的"
+          "显式构造核验通过 / 判据一二为真 / 分类定理零反例）")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

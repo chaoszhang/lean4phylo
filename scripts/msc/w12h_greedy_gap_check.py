@@ -32,7 +32,8 @@ PD 模型（与库内 `Cladogram.IsCovered` 逐字一致）：
 ⇒ 若能在 Lean 中证出 P6，则 `greedy_gap_correct_shape` 立刻可得（取 `next` 为任一 `(k+1)`-极大集，
 P6 给出其内的 `k`-极大集作 `prev`）。本批**未**证 P6（可能要用 Steel 式 (1) 的加权交换性质）。
 
-退出码：**恒 0**（除脚本自检失败 `return 2`）。
+退出码：0 ＝ P0/P1/P2/P5/P6 零失败 且 P3/P4（**故意错误**的 ∀-形态候选）如预期有反例
+        （＋ PD 模型自检通过），并在末尾打印判定词；1 ＝ 出现非预期失败；2 ＝ PD 模型自检不过。
 """
 
 import itertools
@@ -278,6 +279,7 @@ def check_tree(tree, n, w, fails):
 def main():
     if not model_selftest():
         print("RESULT: PD 模型自检失败，脚本中止")
+        print("VERDICT: FAIL（PD 模型自检不过 —— 后面所有核对都不可信）")
         return 2
     rng = random.Random(20260712)
     total = 0
@@ -307,10 +309,31 @@ def main():
         if ex:
             print(f"  首个 {tag} 反例：{ex[0][1]}  w={ex[0][2]}")
     print("RESULT:", "ALL PASS" if not fails else "COUNTEREXAMPLES FOUND")
-    # ★ 退出码约定（W12h ★F）：本脚本**如实报告**核对结果，反例只是 stdout 数据。
-    #   P3／P4 是**故意错误的候选命题**（它们有反例，这正是本脚本要报的事实），
-    #   故它们出现反例**不**是脚本失败 ⇒ 一律 return 0。
-    #   只有脚本**自身自检失败**（PD 模型核对不过）才非 0 —— 见 main() 开头的 `return 2`。
+    # ★ 判定（W14a 加固：把「本来只在心里判」的东西变成**可失败**的判据）：
+    #   * P0/P1/P2/P5/P6 是本脚本**声称成立**的性质（P5 = 注册的 `greedy_gap_correct_shape`，
+    #     P6 是额外收获）⇒ 它们出现**任何**反例即判定失败 ✗；
+    #   * P3／P4 是**故意错误**的 ∀-形态候选，**应当**有反例（这正是 ★D-2 要报的事实）
+    #     ⇒ 它们**零反例**才是异常（「∀ prev 假 而 ∃ prev next 真」这个对照没复现）✗；
+    #   * `total` = 24587 是本脚本的实测基线（确定性：树枚举 ＋ 固定种子 20260712）⇒ 对不上即失败 ✗；
+    #   ⇒ 除此之外仍**如实报告**（P3/P4 的反例只是 stdout 数据，不是脚本失败）。
+    EXPECTED_FAIL = ("P3", "P4")
+    hard = []
+    if total != 24587:
+        hard.append(f"共核对 (树 × 权组) = {total} ≠ 24587（本脚本的实测基线）")
+    for tag in ("P0", "P1", "P2", "P5", "P6"):
+        if cnt[tag] != 0:
+            hard.append(f"{tag} 失败 {cnt[tag]} 次（该性质本脚本声称成立，应为 0）")
+    for tag in EXPECTED_FAIL:
+        if cnt[tag] == 0:
+            hard.append(f"{tag} 零反例 ⇒ 未复现『∀ prev 形态（P3/P4）为假』（阴性对照失效）")
+    if hard:
+        print("VERDICT: FAIL")
+        for m in hard:
+            print("   ✗ " + m)
+        return 1
+    print("VERDICT: PASS（共 %d 组核对：P0/P1/P2/P5/P6 零失败；P3=%d、P4=%d 如预期有反例"
+          "（故意错误的 ∀-形态候选）；PD 模型自检通过）"
+          % (total, cnt["P3"], cnt["P4"]))
     return 0
 
 
