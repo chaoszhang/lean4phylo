@@ -89,6 +89,7 @@ import Phylo.Stat.DegnanSalter
 import Phylo.Stat.EdgeInvariants
 import Phylo.Stat.EmpiricalConvergence
 import Phylo.Stat.FiveTaxonLemma4
+import Phylo.Stat.GeneTreeHmeasDischarge
 import Phylo.Stat.GeneTreeSamplingAE
 import Phylo.Stat.HadamardTransform
 import Phylo.Stat.HookLength
