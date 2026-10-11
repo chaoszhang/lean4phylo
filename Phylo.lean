@@ -115,6 +115,7 @@ import Phylo.Stat.QuartetMeanEquidistributed
 import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.RootJumpMass
+import Phylo.Stat.SiteRateMixture
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
 import Phylo.Stat.SVDQuartets
