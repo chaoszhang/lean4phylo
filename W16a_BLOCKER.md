@@ -207,6 +207,16 @@ theorem integral_expWeight_dirac_mix (M : SiteRateModel)
   `CASTERRateBoxAE.abarHint_integrable_of_boxParam`（`G` 关于 `kingmanMSCMeasure ρ` 可积）
   ＋ `ae_boxTheta_of_ae_boxParam` ＋ `abs_hint_le_one`（`|G θ| ≤ 1` 在 `BoxTheta` 上）✓。
 
+★★ **器材已确认（`MSCKingmanMeasure.lean:436`，逐字）—— 让上面「左」的一步变成纯 `integral_map`**：
+```lean
+theorem kingmanMSCMeasure_dirac_eq_map (x₀ : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0) :
+    kingmanMSCMeasure (Measure.dirac x₀)
+      = Measure.map (fun v : ℝ × ℝ => toKingmanΘ (x₀, v))
+          ((sojournLaw 2).prod (sojournLaw 2))
+```
+⇒ 左端逐项即 `∫ p, (∫ v, G (toKingmanΘ (p, v)) ∂σ) ∂ρ`，
+与右端（`integral_prod`）**同一个二重积分** ✓ —— **不需要**中间的 `dirac_prod` 搬运 ✓。
+
 ### 9.5 组端到端（与 `BlockModelAE.abar_caster_statisticallyConsistent_kingman_ae_blocks` 同形）
 `blockL_integral_R`（`= ∫ l, ((l:ℕ):ℝ) ∂νL`，可直接搬 `BlockModelAE.blockL_integral` 的 `integral_fun_fst`/`_snd` 两步）
 ⇒ `blockW_div_blockL_R`（商 ＝ `expWeight (kingmanMSCMeasure ρ) τd M.Abar T`，用 `integral_LIdx_pos` 消分母）
