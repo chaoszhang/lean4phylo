@@ -65,6 +65,8 @@ import Phylo.Stat.ASTRAL
 import Phylo.Stat.BlockModelAE
 import Phylo.Stat.BlockSLLN
 import Phylo.Stat.BlockSLLNIndex
+import Phylo.Stat.BlockSLLNNoL1
+import Phylo.Stat.BlockSLLNNoL1Extra
 import Phylo.Stat.BlockSLLNTopoClose
 import Phylo.Stat.Bootstrap
 import Phylo.Stat.BunemanIndexBridge
