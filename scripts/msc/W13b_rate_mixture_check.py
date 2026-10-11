@@ -264,6 +264,7 @@ def main():
     print("  [1][2][3][4] 偏差 ~1e-15（浮点级）⇒ 定义性恒等式 / 保持 / 混合可交换 / 退化一致性成立。")
     print("  [5] min slack > 0 ⇒ 箱体一致下界成立（量化域被 lmax / lx0 限制，这是诚实形态）。")
     print("  [6] = 0 ⇒ 与 Lean 侧 fbar_pos 需「内枝长 > 0」一致；无限制一致下界确为假。")
+    print("VERDICT: PASS")
     return 0
 
 

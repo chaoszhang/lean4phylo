@@ -81,3 +81,8 @@ print("  · (A)(B) 在 20 万随机样本 + 5 万逼近退化样本上【无反�
 print("  · (C) JC69 退化点 lamF84 = 4/3 逐字吻合 ⇒ 与规格 §8④ 的退化一致性口径一致 ✓")
 print("  · 注意：(D) 里当「某些 pi_i -> 0」时分母 -> 0（但**严格为正**）⇒ 这正说明「π 有正下界」为何必需：")
 print("    它给出分母的**一致**下界；若允许 pi_i = 0，则分母可为 0 而 lamF84 无定义/为 0。")
+
+# ----- 自报判定（供 scripts/msc/run_all.sh 的约定使用；不改任何上面已算出的结论） -----
+_ok = (badA == 0) and (badB == 0) and bool(c_ok) and (worst[0] > 0)
+print()
+print("VERDICT: " + ("PASS" if _ok else "FAIL"))
