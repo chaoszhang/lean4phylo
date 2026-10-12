@@ -36,6 +36,18 @@ cp "$CANON/Phylo.lean" "$MIRROR/Phylo.lean" || { echo '✗ 同步 Phylo.lean 失
 
 cd "$MIRROR" || { echo '✗ 镜像不存在'; exit 1; }
 
+# ④″ 工具痕迹卫生（2026-10-13 W17 任务 C ①，老师 2026-10-12 23:44 批准）：**无条件** EXIT trap。
+#   —— 既清掉 `$MIRROR/Phylo/GuardProbe.lean`（步骤 ④ 会创建它），也放回暂存（若有）。
+#   ★ 原实现把 `trap restore_stash EXIT` 只装在 `NSTASH ≤ 8` 的 else 分支里 ⇒
+#     在 ③/④ 及各 `exit 1` 路径上**不生效**，于是 GuardProbe.lean 每次都被留在镜像里 ✗。
+#   ★ 只装**这一个** trap：后文原有的 `trap restore_stash EXIT` 已删除（trap 会互相覆盖）。
+PROBE="$MIRROR/Phylo/GuardProbe.lean"
+cleanup_guard() {
+  rm -f "$PROBE"
+  if declare -F restore_stash >/dev/null 2>&1; then restore_stash; fi
+}
+trap cleanup_guard EXIT
+
 # ② 全量构建
 LOG=$(mktemp)
 ~/.elan/bin/lake build > "$LOG" 2>&1
@@ -156,7 +168,6 @@ if [ "$NSTASH" -gt 8 ]; then
   restore_stash
   STASHED=""
 else
-  trap restore_stash EXIT
   if [ -n "$STASHED" ]; then
     echo "ℹ️ 已暂存未登记的在建文件（验收后自动放回）：$STASHED"
   fi
