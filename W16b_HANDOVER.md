@@ -304,3 +304,22 @@ but is expected to have type
   照同文件 `:447` 的成功写法改为 `(S : Finset (Fin 4)) (_ : S.card = 4)` ✓（消掉 2 条 error ✓）。
 * 改动清单（镜像内 ✓）：`integrable_Gfun_prod` 体改写 ✓ · `expWeight_dirac_eq_integral_sojourn` 删多余 `dsimp` ✓ ·
   `abs_siteWR_le_one` 附近的字段记号 ✓；**`abs_siteWR_le_one` 的陈述本身未动** ✗（等老师定口径 ✓）。
+### 12.5 W17 第二/三轮实测（同日 01:03 更新）：**error 15 → 8** ✓，且修掉一条**陈述缺陷** ✓
+
+| 轮次 | 改动 | error |
+|---|---|---|
+| 起 | 冻结件 `86a80436…`（617 行） | **15** |
+| 1 | `integrable_Gfun_prod` 改 **θ 型陈述** ＋ `Integrable.comp_measurable` 收口 | **11** |
+| 2 | `:554/:557` 字段记号（`(Finset (Fin 4)).card` ✗ → `(S …) (_ : S.card = 4)` ✓） | **9** |
+| 3 | `abs_siteWR_le_one` / `abs_blockWR_le` **加强为逐点 `hleaf`** ✓ ＋ `integrable_blockWR` 加箱体假设并改用 **a.e. 界** ✓（级联 7＋3 处 ✓） | 9 → 9（先清掉 `:241` 那组 ✓，新位置 `:290`） |
+| 4 | `:290` 用 **`QuasiMeasurePreserving.ae`**（Mathlib `QuasiMeasurePreserving.lean:108`）把 `ρ`-a.e. 沿 `Prod.fst` 抬到乘积测度 ✓ | **8** |
+
+* 现件：**621 行** · md5 **`103e67f0aaa23426b88920298e5c3369`** · 门 `EXIT=1` · stdout **3795 字节** · **8** 条 error · **正本一字未动** ✓ · 备份 **9 份** ✓。
+* ★ **剩余 8 条分两簇**（实测 ✓）：
+  1. **`:350–375` 一簇**（4 条）：`hIntP.comp_aemeasurable hconst.aemeasurable` ✗ ——
+     报错显示 Lean 推断的被积函数是 **`fun r => Finset.univ.sum (…siteWR…)`**（即 `blockWR` 的**展开式** ✗），
+     而 `hIntP` 是 `Integrable (fun p => blockWR … )` ✗ ⇒ ★ **两者只差 `blockWR` 的展开** ✓
+     ⇒ 修法：把目标写成 `blockWR` 形态 ✓，或 `simpa only [blockWR, …] using hIntP.comp_measurable …` ✓。
+     （`hbox`/`hleaf` 的抬升请**照抄 §12.5 第 4 轮** ✓，不要再用 `Filter.Eventually.of_forall` ✗。）
+  2. **三处 elaboration 心跳超时**（`:397` **whnf** · `:570` **isDefEq** · `:594` **isDefEq**）✗ ⇒
+     ★ 这类通常是**上游目标畸形**的症状 ✓ ⇒ 建议**先修第 1 簇再复跑** ✓（超时很可能随之消失 ✓）。
