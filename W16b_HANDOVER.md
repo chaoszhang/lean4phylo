@@ -247,3 +247,60 @@ but is expected to have type
 > **★ 两个已踩过的坑（免得再踩 ✓）**：① `empWeight_tendsto_ae` 须写**全限定名** ✓
 > （同文件 `import` 的模块里 unqualified 名不可见 ✓）；② 跑门前**先探网络** ✓（`importGraph` 是 partial clone ✓，
 > 断网会给出 `exit 1` ＋ **stdout 0 字节**的假象 ✗ —— 见 §10 ✓）。
+
+---
+
+## 12. ★★★ W17（2026-10-13）续攻结果：**原「唯一卡点」已清除** ✓，但发现【一条陈述为假】✗
+
+### 12.1 本轮实测（全部有逐字证据 ✓）
+
+| 项 | 值 |
+|---|---|
+| 门 | `EXIT=1` · stdout **3669 字节** · **9** 条 error（原 **15**） |
+| 文件 | **612 行**（原 617）· md5 `a0fdf00d0fdc561c0b55884af7f1b302` |
+| 改动 | **仅镜像** ✓（正本零改动 ✓）· 6 份备份可回退（`_scripts_tmp/W17A_backup_*.lean` ✓） |
+| 落盘 | ✗ **不可落盘**（门未过；且下列 §12.3 的陈述问题未修 ⇒ **不应**落盘） |
+
+### 12.2 ★★★ 原「唯一卡点」是**写法问题**，不是 `abbrev` 桥（§3 的判断**错**了 ✗）
+
+* §3 说「`Integrable G (Measure.map φ μ)` 与 `Integrable (G∘φ) μ` 不合一，根因 = `abbrev` 在显式测度参数位不展开」✗。
+* ★ **实测否证**：把 `integrable_Gfun_prod` 的证明体改成 **θ 型陈述**（照抄**同文件** `integrable_Gfun_kingman:140-145` ✓）
+  ＋ 用库内 **`Integrable.comp_measurable`**（`Integrable.lean:368`）收口后 ⇒
+  **报错列表从 `:159` 前移到 `:241`** ✓ —— 原 `:159/:165/:186` 那一组**全部消失** ✓。
+* 真因（三处写法 ✓）：① `(integrable_map_measure …).mpr` **方向反了** ✗（应 `.mp` ✓）；
+  ② `hgoal` 写成「**乘积型测度 ＋ 复合函数**」的**混形** ✗（应为 **θ 型** ✓）；
+  ③ `dsimp only` 多余 ✗（修 ① 后它报 `made no progress` ✓）。
+* ★★ **连带结论**：派单任务 A③ 所授权的「在 `MSCKingmanMeasure.lean` 只加不改补一条 `integral_map` 桥引理」
+  —— **其前提为假** ✗ ⇒ **不必写、也不该写** ✓（本轮未写 ✓，正本因此保住"一字未动" ✓）。
+* ⚠️ §3 末的「其余 13 条 error **全是连坐**」也被否证 ✗：改掉第一组后，其余错误**仍在原处** ✓ ⇒ 它们是**独立的** ✓。
+
+### 12.3 ★★★ **发现一条陈述为假**：`abs_siteWR_le_one`（`BlockModelRhoAE3.lean:235`）
+
+**陈述**：`theorem abs_siteWR_le_one (M) (C) (T) (bb : BlockR M C) (i : Fin C) : |siteWR M C T bb i| ≤ 1`
+—— 对**任意** `bb` 断言，且 docstring 自称「**不需要**叶长非负」✗。
+
+**证据（三条独立来源，均为库内既有 ✓）**：
+1. `SiteWeightMeasurable.lean:282`：「前提 `∀ i, 0 ≤ l i`、`0 ≤ lx` 是**必需的**（**负枝长时 `patternProb` 无界**）」✓；
+2. `BlockModelAE.lean:78`：「W13a 的 `abs_geneScore_le_one` **必须有非负枝长**（负枝长时 `|patternProb|` 可达 **3.5e4**）」✓；
+3. `BlockModelAE.lean:396-398`：`abs_tauA_le_one` 的 docstring「只需 θ 的枝长非负 —— 这是 W13a 的**必需**前提（负枝长时无界）」，
+   且其**签名**明确带 `(hl : ∀ i, 0 ≤ θ.1.1 i)` ✓。
+
+**为何在本文件里就不可满足**：
+* `BlockR.sp : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0`（`BlockModelRhoAE2.lean:171-175`）⇒ **叶长是任意实数、无任何非负证据** ✗；
+* `siteWR` 用的正是 `BlockR.thetaOf bb` 的 `.1.1`（= 叶长 ✓）⇒ 于是 `hl` 分支**无法提供** ✗
+  —— 这正是门里 `:241` 那条 `Type mismatch`（给的是 `(bb.sp.2.1).2 : 0 ≤ ↑bb.sp.2.1`，要的是 `0 ≤ (thetaOf bb).1.1 j` ✗）。
+* ★ 且该引理**被两处依赖**：`:258`（`abs_blockWR_le` 内部）与 **`:285`（"整体有界 ⇒ `Integrable`"那一步）**
+  ⇒ ★ **整条可积性链都压在这条假陈述上** ✗。
+
+**正确的修法（下一棒照此做，勿再试证明 ✓）**：
+* 把假设**加强**为 `(hleaf : ∀ j : Fin 4, 0 ≤ bb.sp.1 j)` ✓（于是 `:241` 的 `hl` 直接由 `hleaf j` 给出 ✓）；
+* ★ 并**先回答一个数学问题**（★D）：**`BlockR` 上的块测度是否只把质量放在"叶长非负"的块上**？
+  若**否** ⇒ `blockWR_integral_R` 的 `Integrable` **前提本身不成立** ✗ ⇒ 需要**改测度/改陈述**（不是改证明 ✗）；
+  若**是** ⇒ 只需在用到 `:258/:285` 的地方把该测度性质传下来 ✓。
+
+### 12.4 本轮的其它修正（已生效 ✓，均为写入法层面）
+
+* `:554/:557` 的**字段记号**错 ✗：`(Finset (Fin 4)).card` ⇒ 解析器按类型投影报 `invalid field notation` ✓；
+  照同文件 `:447` 的成功写法改为 `(S : Finset (Fin 4)) (_ : S.card = 4)` ✓（消掉 2 条 error ✓）。
+* 改动清单（镜像内 ✓）：`integrable_Gfun_prod` 体改写 ✓ · `expWeight_dirac_eq_integral_sojourn` 删多余 `dsimp` ✓ ·
+  `abs_siteWR_le_one` 附近的字段记号 ✓；**`abs_siteWR_le_one` 的陈述本身未动** ✗（等老师定口径 ✓）。
