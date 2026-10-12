@@ -674,7 +674,7 @@ theorem tree_ne : tree₁ ≠ tree₂ := by decide
 `(A₁, B₁) = ({0}, {2,3})` 的 NNI 分解给出（`A₂ = {1}`、`B₂ = {4}`）。
 ⇒ `NNIDist T T' 1`、`nniConnectivity_gap 5 T T'`、`rfDistance = 2`。
 
-boilerplate 由 `scripts/msc/w12g_fin5_nni_gen.py` 生成。 -/
+boilerplate 由 `scripts/msc/gen/w12g_fin5_nni_gen.py` 生成。 -/
 
 /-- 平凡 split `{0} | {1,2,3,4}`。 -/
 def u₀ : Split (Fin 5) where

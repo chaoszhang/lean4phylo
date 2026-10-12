@@ -1651,7 +1651,7 @@ def circularWeights_realization_gap (n : ℕ) : Prop :=
 
 代表弧 `[i,j]`（`j ≤ 3`）共 `binom 5 2 = 10` 条；权重由 §7 逆矩阵的行给出。
 本节的 boilerplate（45 条 pairwise 互异、10 条弧见证、10 条权重公式）由
-`scripts/msc/w12g_fin5_instance_gen.py` 机械生成。 -/
+`scripts/msc/gen/w12g_fin5_instance_gen.py` 机械生成。 -/
 
 /-- 代表弧 `[0,0]` 的 split：`{0} | 其余`。 -/
 def f₀₀ : Split (Fin 5) := ofSideA {0} (by decide) (by decide)

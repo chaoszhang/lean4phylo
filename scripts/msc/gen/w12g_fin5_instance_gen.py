@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
+# --------------------------------------------------------------------------------------------
+# ★ 为何【不在】run_all.sh 的扫描面内（2026-10-13 W17 任务 B；老师 2026-10-12 20:1x 批准）
+#   本文件是【生成器】：把样板机械产出并写入 Lean 文件；它【没有可判定断言】，也【不输出】 PASS。
+#   run_all.sh 的判据是「exit 0 ＋ 自报 PASS/通过/OK」⇒ 生成器必然被判红，属【结构误判】而非真失败。
+#   ⇒ 依老师批准移入 scripts/msc/gen/：run_all.sh 只 glob 它所在目录的 *.py，故子目录天然不在扫描面内；
+#     这样就【不引入】任何新的排除清单，避免重演旧问题（README 记：硬编码清单曾漏掉 4 个新脚本 ⇒ 假绿）。
+#   ★ 因此：本文件不是检查器，判据须另设（它的成功 ＝ 对目标 Lean 文件产出/补齐样板，且幂等）。
+# --------------------------------------------------------------------------------------------
 # -*- coding: utf-8 -*-
 """W12g-4 生成器：把 `NeighborNet.lean` §9.4（`n = 5` 实例）与 §9.5（★B 具体 `d`/`w`）
 机械产出并插入文件。所有 boilerplate（45 条 ne 引理、10 条弧见证、10 条权重公式、
 10 项 sum 展开）都由本脚本按同一模式生成，避免手写出错。
 
 用法（在正本目录）：
-  python3 scripts/msc/w12g_fin5_instance_gen.py Phylo/Algorithm/NeighborNet.lean
+  python3 scripts/msc/gen/w12g_fin5_instance_gen.py Phylo/Algorithm/NeighborNet.lean
 """
 
 import sys
@@ -183,7 +191,7 @@ def section94():
 
 代表弧 `[i,j]`（`j ≤ %d`）共 `binom %d 2 = %d` 条；权重由 §7 逆矩阵的行给出。
 本节的 boilerplate（%d 条 pairwise 互异、%d 条弧见证、%d 条权重公式）由
-`scripts/msc/w12g_fin5_instance_gen.py` 机械生成。 -/
+`scripts/msc/gen/w12g_fin5_instance_gen.py` 机械生成。 -/
 
 %s
 

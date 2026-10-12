@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+# --------------------------------------------------------------------------------------------
+# ★ 为何【不在】run_all.sh 的扫描面内（2026-10-13 W17 任务 B；老师 2026-10-12 20:1x 批准）
+#   本文件是【生成器】：把样板机械产出并写入 Lean 文件；它【没有可判定断言】，也【不输出】 PASS。
+#   run_all.sh 的判据是「exit 0 ＋ 自报 PASS/通过/OK」⇒ 生成器必然被判红，属【结构误判】而非真失败。
+#   ⇒ 依老师批准移入 scripts/msc/gen/：run_all.sh 只 glob 它所在目录的 *.py，故子目录天然不在扫描面内；
+#     这样就【不引入】任何新的排除清单，避免重演旧问题（README 记：硬编码清单曾漏掉 4 个新脚本 ⇒ 假绿）。
+#   ★ 因此：本文件不是检查器，判据须另设（它的成功 ＝ 对目标 Lean 文件产出/补齐样板，且幂等）。
+# --------------------------------------------------------------------------------------------
 # -*- coding: utf-8 -*-
 """W12g-5 生成器：往 `Phylo/Algorithm/NNINeighborhood.lean` 追加 §8（`n = 5` 的 NNI 连通性实例）。
 
@@ -6,7 +14,7 @@
 split 用**结构字面量**（该文件不 import `SplitWeak`，故没有 `ofSideA`）+ 显式 `NNIMove` 见证链，
 **不用** `decide` 硬算组合爆炸（唯一的 `decide` 用于「显式集合相等」这种小判定）。
 
-用法：python3 scripts/msc/w12g_fin5_nni_gen.py Phylo/Algorithm/NNINeighborhood.lean
+用法：python3 scripts/msc/gen/w12g_fin5_nni_gen.py Phylo/Algorithm/NNINeighborhood.lean
 幂等：若文件已含「## 8.」则不做任何事。
 """
 
@@ -57,7 +65,7 @@ def main():
 `(A₁, B₁) = ({0}, {2,3})` 的 NNI 分解给出（`A₂ = {1}`、`B₂ = {4}`）。
 ⇒ `NNIDist T T' 1`、`nniConnectivity_gap 5 T T'`、`rfDistance = 2`。
 
-boilerplate 由 `scripts/msc/w12g_fin5_nni_gen.py` 生成。 -/
+boilerplate 由 `scripts/msc/gen/w12g_fin5_nni_gen.py` 生成。 -/
 
 ''' + '\n'.join(split_def(*s) for s in SPLITS) + '''
 /-- ★C 二叉树 `T` 的 split 系统（5 条平凡 + 2 条内部）。 -/

@@ -178,8 +178,8 @@ cp -r <正本>/Phylo/. <镜像>/Phylo/ && cp <正本>/Phylo.lean <镜像>/
 
 | 脚本 | 状态 | 说明 |
 |---|---|---|
-| `w12g_fin5_instance_gen.py` | **结构性例外**（**不是检查**） | 它是**生成器/打补丁工具**（成功 = 往 `Phylo/Algorithm/NeighborNet.lean` 追加 §9.4/§9.5），**没有可判定断言** ⇒ 跑过也证明不了任何东西。它**先查哨兵**（`'### 9.4' in src`）⇒ 幂等；且从 `run_all.sh` 的 cwd（`scripts/msc`）跑会在**读**文件时 `FileNotFoundError`（在写之前就失败 ⇒ 无害）。**建议移到 `scripts/tools/`**（需老师定）。 |
-| `w12g_fin5_nni_gen.py` | 同上 | 同因（目标 `Phylo/Algorithm/NNINeighborhood.lean` 的 §8）。 |
+| `gen/w12g_fin5_instance_gen.py` | **结构性例外**（**不是检查**） | 它是**生成器/打补丁工具**（成功 = 往 `Phylo/Algorithm/NeighborNet.lean` 追加 §9.4/§9.5），**没有可判定断言** ⇒ 跑过也证明不了任何东西。它**先查哨兵**（`'### 9.4' in src`）⇒ 幂等；且从 `run_all.sh` 的 cwd（`scripts/msc`）跑会在**读**文件时 `FileNotFoundError`（在写之前就失败 ⇒ 无害）。**已于 2026-10-13 按老师批准移入 `gen/`**（见本文件头"W17 任务 B"说明；`run_all.sh` 只 glob 本目录 ⇒ 子目录不扫 ✓）。 |
+| `gen/w12g_fin5_nni_gen.py` | 同上 | 同因（目标 `Phylo/Algorithm/NNINeighborhood.lean` 的 §8）。 |
 | `w11h_x9_pic.py` | **真红灯** | 它**有**失败路径也有判定词，红是因为**判据真的为假**：4 条 `[FAIL]` 后崩在 `root_at_node` 的 `assert len(ch) == 2`（它自己的错误信息写着「**除根外**内部顶点度应为 3」，但代码把**根**也算进去了 ⇒ 6 种根**全部**触发 ⇒ 该脚本**从未跑完过**）。它要背书的结论已由 **`w11h_x9_pic_root_check.py`** 补上（见上表）；本脚本**未修**（需把树表示扩到"多子根"，属结构性改动）。 |
 
 > ★ 除上述 3 个外，`run_all.sh` 的**其余脚本**（含 W13 的 13 个 ＋ 两个追加脚本）**都能为假且都会自报** ✓。
