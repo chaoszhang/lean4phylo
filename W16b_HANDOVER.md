@@ -323,3 +323,22 @@ but is expected to have type
      （`hbox`/`hleaf` 的抬升请**照抄 §12.5 第 4 轮** ✓，不要再用 `Filter.Eventually.of_forall` ✗。）
   2. **三处 elaboration 心跳超时**（`:397` **whnf** · `:570` **isDefEq** · `:594` **isDefEq**）✗ ⇒
      ★ 这类通常是**上游目标畸形**的症状 ✓ ⇒ 建议**先修第 1 簇再复跑** ✓（超时很可能随之消失 ✓）。
+### 12.6 ★★★ 第三轮：簇① 的真因 —— **同一个"叶长非负"缺陷已出现 4 处**（系统性问题，非长尾）
+
+**簇①（`:350–375`）的真实结构**（逐字读过 ✓）：
+* `blockW_integral_R`（`:312`）的 `hinner`（`:345-350`）要对**固定但任意**的 `sp` 断言
+  `∫ r, blockWR M C T (BlockR.ofRaw (sp, r)) ∂σ = 𝔼[L]·expWeight (dirac sp) …`；
+* 但它给出的"叶长非负"证据（`:361-363`）是
+  `Filter.Eventually.of_forall (fun _ i => zero_le _)` ✗ —— **`sp.1 : Fin 4 → ℝ` 是任意实值** ✗
+  ⇒ ★ **该证据为假**（与 §12.3 的 `abs_siteWR_le_one` **同型** ✗：把"逐点恒成立"当成"能推出来" ✗）；
+* 且 `hIntP` 在 **`ρ.prod σ`** 上，而 `Integrable.comp_aemeasurable` 要 **`map (fun r => (sp, r)) σ`** 上 ✗
+  ⇒ 测度也不匹配 ✗（这两条 error 是同一处结构问题的两个面 ✓）。
+* ★ **正确修法**：把 `hinner` 改成 **`ρ`-a.e.** 的陈述（`hbox.mono` 抬 ✓，然后 `integral_congr_ae` ✓），
+  **不要**再试图用 `of_forall` 造逐点证据 ✗；`hIntP2` 则应由 **`abs_blockWR_le` ＋ 该 a.e. 叶长非负** 直接给出 ✓
+  （即 §12.5 第 4 轮的 ae-lift 手法 ✓），而**不是**从 `hIntP` 走 `comp_aemeasurable` ✗。
+
+**★★★ 结论（给协调侧/老师）**：`BlockModelRhoAE3.lean` 里"**陈述暗含叶长非负、数据却只给任意实值**"的缺陷
+**已确认 4 处**（§12.3 的 `abs_siteWR_le_one`；本节的 `hinner`；以及 §12.5 里由它派生的两处 ✓）。
+⇒ ★ 这**不是**"再修几行的长尾" ✗，而是需要**一次系统性贯通** ✓：
+**把"叶长非负"作为 `ρ`-a.e. 假设，从 `hbox` 出发逐层穿到每一个用到 `abs_tauA_le_one` / `abs_blockW_le` 的地方** ✓。
+★ 建议下一棒**先做这次贯通**（一次改完再复跑 ✓），而不要逐条试错 ✗ —— 逐条试错会不断"消灭一条、冒出下一条" ✗（本轮已实测三次 ✓）。
