@@ -421,3 +421,68 @@ but is expected to have type
   `BlockModelAE.blockW_integral`（`:604`）**本身就带** `(hleaf : ∀ i, 0 ≤ leaf i)` ✓ ⇒ 这是**还原**假设面 ✓。
 * ★ **心跳放宽的最终账目** ✓：文件第 12 行 `set_option maxHeartbeats 800000`（= 默认 200000 的 4 倍 ✗，
   **原本就有、此前从未登记** ⇒ 已登记 ✓）；本轮的两处**局部**放宽**已全部撤销** ✓（修好写法后不再需要 ✓）。
+
+---
+
+## 13. W18 任务 B —— 旗舰端点【假设台账】（(M)/(R)/(A)/(G) 四类 ＋ 消 (G)）
+
+> 老师 2026-10-13 原话：「争取证明**只依赖 mathlib 和合理假设**（如 pi 均为正数、变异速率为正且有界等）」
+> ⇒ 落成：**(M)** Mathlib 层 · **(R)** 合理模型假设 · **(A)** 算法定义 · **(G)** 数据侧/便利型 ＝ **消靶**。
+
+### 13.1 台账（逐端点、逐条）
+
+**① `BlockModelAE.abar_caster_statisticallyConsistent_kingman_ae_blocks`（W13 主端点，固定物种树）**
+| 假设 | 标签 | 备注 |
+|---|---|---|
+| `M : SiteRateModel` | **(R)** | 速率**正且有上下界**＝**结构字段**（`rL_pos/rL_le/ρL_pos/ρL_le`，`SiteRateMixture.lean:104` 起 ✓）⇒ 老师说的"变异速率为正且有界"**已在模型内** ✓ |
+| `(a b : ℝ≥0) (hab : 0 < a + b)` | **(R)** | 内枝长非负 ＋ 正下界 ✓ |
+| `(C : ℕ)` · `[IsProbabilityMeasure νL]` | **(R)/(M)** | 位点数上界 / Mathlib ✓ |
+| **`(hleaf : ∀ i, 0 ≤ leaf i)`** | **(R)（固定树）** | ★ 在**固定**物种树的语境里，"叶长非负"是**合理的物种树条件** ✓；★ 它是 (G) 靶子的**来源**，但**只在随机树版本里**才可消 ✓（见 ①′） |
+| `(hE : argmax 型)` | **(A)** | 算法定义 ✓ |
+
+**①′ `BlockModelRhoAE3.abar_caster_statisticallyConsistent_kingman_ae_blocks_box`（W16b，随机物种树，2026-10-14 落盘 `b6ef715`）**
+| 假设 | 标签 | 备注 |
+|---|---|---|
+| `M` · `(C)` · `{lmax lx0} (hlx0 : 0 < lx0)` | **(R)** | 同上 ✓ |
+| `(hbox : ∀ᵐ p ∂ρ, p ∈ BoxParam lmax lx0)` | **(R)** | ★ **箱体先验** ✓：`BoxParam` 定义（`CASTERRateBoxAE.lean:155-156` ✓）**含** `0 ≤ p.1 i ∧ p.1 i ≤ lmax` ⇒ 叶长 ∈ [0,lmax] ⇒ **a.e. 非负** ✓ |
+| `[IsProbabilityMeasure ρ]` · `[IsProbabilityMeasure νL]` | **(M)** | ✓ |
+| `(hE : argmax 型)` | **(A)** | ✓ |
+| ★★ **不含 `hleaf`** ✓ | — | **靶子① 已消** ✓：逐点叶长非负由 `hbox` 的 **a.e.** 版本顶上（实现手法：`QuasiMeasurePreserving.ae` 沿第一分量抬 ✓，`QuasiMeasurePreserving.lean:108` ✓） |
+| ★★ **不含 `hconv`** ✓ | — | **靶子② 已消** ✓：由 `block_emp_tendsto_ae_R`（本件内）**供给** ✓（见 §12.8 的落盘验收 ✓） |
+
+**② `CASTERRateBoxAE.abar_caster_statisticallyConsistent_kingman_ae_box`（W15a）**：`M`/`hlx0`/`hbox` **(R)** ✓ ·
+`[IsProbabilityMeasure ρ/μ]` **(M)** ✓ · **`hconv` (G) → 已由 ①′ 消** ✓ · `{E} hE` **(A)** ✓。
+
+**③ `GeneTreeSamplingAE.astral_iso_ae_of_geneTrees`（W13 ASTRAL 主线）**
+| 假设 | 标签 | 备注 |
+|---|---|---|
+| `(M : GeneTreeModel)` | **(R)** | 基因树模型（`ν` 概率测度 ＋ `freqOf` 可测 ＋ `m : MSCFreq` ＋ `hpush` ✓；**不含** `hmean`/`hint`/`hindep`/`hident` ✓——那正是 W13 证掉的 ✓） |
+| `(hT : M.m.tree.IsBinary)` · `{E} (hE : ∀ D, IsASTRAL D (E D))` · `(hEbin : …)` | **(A)** | 真树与估计量的算法性质 ✓ |
+| **`(hNE : ∃ q, ¬ IsTrueChoice M.m q)`** | ★ **(R)（已判定 ✓）** | ★ 见 13.2 ✓ |
+
+**④ F84 / LM1（老师说的"π 均为正数"落点 —— 按 B3 **不重做** ✓）**：`π` 正概率向量 / `κ ∈ [0,κ⁺]` 为 **(R)** ✓，
+**已落地** ✓：`CASTERF84Pos.lean` 的 `f84_denom_pos`(:163) · `lamF84_pos`(:192) · `f84Amp_pos`(:216) ·
+`f84_hf_pos_ae`(:334) · `f84_hf_int`(:488) ✓ ⇒ 台账里**指认**即可 ✓，**不在 JC69 口径硬造 π** ✗。
+
+### 13.2 ★★ 靶子③ `hNE` 的判定（结论：属 **(R)**，**不是** (G) 靶子 ✗，故无需消 ✓）
+
+* **语义**（逐字 ✓）：`IsTrueChoice m q := ∀ S (hS : S.card = 4), q S hS = m.q S hS ∨ q S hS = (m.q S hS).swap`
+  （`Stability.lean:38-39` ✓）⇒ `hNE` ＝「**存在一个不是真选择的 quartet 选择**」✓。
+* **库内自述用途**（`GeneTreeSamplingAE.lean:409` ✓ 逐字）：
+  「`hNE` —— 真 quartet **不与任何竞争 quartet 并列**（库内既有口径，用于**取正间隙 `δ`**）」✓
+  ⇒ ★ 它是**可识别性/无并列**条件 ✓：保证真 quartet 的概率与竞争者之间**有正间隙** ✓，argmax 论证才成立 ✓。
+* **它是 (R) 而非 (G) 的理由** ✓：它**不是**"从数据里读来的便利假设" ✗，而是**模型侧的数学条件** ✓
+  （"真 quartet 不被并列锁住" ✓）—— 与 `IsBinary`（结构）和"速率有界"（结构字段）同类 ✓。
+* ★ **反例点（按本季纪律"新增缺口先花五分钟造反例" ✓，此处用于说明其必要性 ✓）**：
+  若真 quartet 的概率与竞争者**并列**（极端例：**星形树**下三个拓扑各 `1/3` ✓）⇒ argmax **无唯一解** ✗ ⇒
+  估计量可以**永远**选一个错树 ✗ ⇒ 结论**失效** ✓。库内正有呼应：`MSC.lean:229 not_statisticallyConsistent_const` ✓。
+* ★ **反空洞（可满足性）✓**：库内**已证** `hNE` 可满足 —— `CASTERRateAE.lean:561`「**反空洞（`hNE` 的可满足性）**：
+  确实存在非真选择」✓；且在 `X = Fin 4` 上由 `fun _ _ => Topo.ac_ab` **显式给出** ✓（`CASTERGeneTree.lean:649` ✓）。
+  ⇒ **它不是空真假设** ✓，**也不是缺口** ✓（无需登记为 gap ✓）。
+
+### 13.3 B4 收口核对
+* **docstring 改动** ⇒ `scripts/list_star_claims.sh` 已跑 ✓（本轮落盘时 **新增=[] 消失=[]** ✓）；
+* **退化一致性**：`ρ = Measure.dirac` ⇒ 新结论**逐字**退回 W13 端点 ✓ —— 由门 5 的四条 Dirac 探针**编译**
+  （`blockWR_dirac_eq_blockW` · `block_emp_tendsto_ae_R_dirac_target` · `blockW_integral_R_dirac` ·
+  `blockW_div_blockL_R_dirac` ✓）＋ `integral_expWeight_dirac_mix` 保证 ✓；
+* 台账**表格**已回写 `lean4phylo/HANDOVER.md` 顶部块（零·G ✓），此处为**入库**副本 ✓。
