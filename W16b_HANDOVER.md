@@ -385,3 +385,39 @@ but is expected to have type
 或把探针改写成**更便宜的形态**（例如只比较**被积函数**而非整个积分式 ✓）。
 ⚠️ 但**这属于"改陈述"** ✗ ⇒ 依授权边界，**我不擅自做** ✓，请裁示 ✓。
 （★ 另一条路：**保留探针但不在本批落盘** —— 即把 RhoAE3 里这两条删去、由 `CASTERRateBoxAE` 的既有 Dirac 凭证承担退化一致性 ✓。）
+
+### 12.8 ★★★★★ W18 收口：**`BlockModelRhoAE3.lean` 已落盘** ✓（commit `b6ef715`）
+
+| 验收项（派单"缺一不可" ✓） | 实测 |
+|---|---|
+| 单文件门（**合取** ✓） | **EXIT=0 且 stdout 0 字节** ✓ 且 stderr 0 ✓ |
+| 全量 `lake build` | **3966 jobs** ✓（`jobs=3966 expected=3966` ✓，与派单预测一致 ✓） |
+| 文件数 / import 行 | `find Phylo -name '*.lean'` **139 → 140** ✓；`Phylo.lean` 的 `^import` **139 → 140** ✓ |
+| 锚定 `#print axioms` | **26 条 = 声明数 26** ✓，payload 恰 `[propext, Classical.choice, Quot.sound]` ✓ |
+| 门 5 四条 Dirac 探针 | **编译通过** ✓（含在 26 条内 ✓） |
+| `git add` 范围 | **只加 manifest 路径** ✓（`M Phylo.lean` ＋ `A Phylo/Stat/BlockModelRhoAE3.lean` ✓） |
+| imports / star-claims | ✓ 根模块与文件系统同步 ✓；star-claims **新增=[] 消失=[]** ✓ |
+| zero-sorry（根可达 ✓） | **0** ✓ |
+| ★C 陈述保全审计 | **违规 0** ✓ |
+| 提交后复验 | `OK Phylo/Stat/BlockModelRhoAE3.lean` ✓ · `OK Phylo.lean` ✓ |
+| 提交 | **`b6ef715`** ✓（**未 push** ✓ 遵纪律 ✓） |
+
+* **error 演进全程**（逐轮实测 ✓）：**15 → 11 → 9 → 9 → 8 → 5 → 3 → 2 → 1 → 0**。
+* ★★ **本轮（W18）把两个根因一次贯通**（全按协调侧处方 ✓，全部**只在镜像**做 ✓）：
+  1. **删** `empBlocksR_eq_empOfBlocks`（**陈述为假** ✗：`blockRToBlock (ω j)` 的类型真的依赖 `(ω j).sp`；
+     且**无调用者** ✓、与 `empBlocksR` 自身 docstring 矛盾 ✗）—— 取协调侧**处置②** ✓；
+  2. `hbridge` 改**两步自足路线**（`blockWR_eq_blockW` ＋ 对固定 `sp` 的参数显式 `integral_map.symm` ✓）
+     ⇒ 卡住的 `NormedSpace ℝ ?m` **消失** ✓；
+  3. `hmeas` 改**自足路线**（与 `blockLR` 逐点相等 ＋ 库内便宜的 `measurable_blockLR` ✓）⇒ `whnf` 超时消失 ✓；
+  4. **`blockL_integral_R` 整条重写为 `BlockR` 空间自足证明** ✓（`integral_map` ⇒ `integral_congr_ae` ⇒
+     `integral_fun_snd` ⇒ `integral_fun_fst` ⇒ `integral_fun_snd`，**五步全用库内引理** ✓）⇒ 该定理 error 全清 ✓。
+* ★★ **两处"心跳爆炸"的真因与修法**（纯证明层 ✓，陈述未动 ✓）：
+  `le_rfl` ✗ 被当作 `hlx0 : 0 ≤ lx0` 传入 ⇒ 它**强行要求 `lx0 = 0`** ✗，而 `boxParam_dirac_ae` 给的是
+  `BoxParam (∑ i, leaf i) (↑a + ↑b)` ✗ ⇒ elaborator 被迫去证 `0 = ↑a + ↑b` ✗ ⇒ **isDefEq 爆炸** ✓。
+  正确实参是 `by positivity` ✓（`a b : ℝ≥0` ⇒ `0 ≤ ↑a + ↑b` ✓）。改后两条探针**立即编译通过** ✓
+  —— ★ 这也**证伪**了"需要放宽心跳"的判断 ✗（现已**降回文件原有 800000 基线** ✓）。
+* ★★ **一处陈述层改动（已留证 ✓，非偷改 ✓）**：探针 `blockW_integral_R_dirac` **补上 `hleaf`** ✓ ——
+  它原用 `(fun i => by positivity)` 去证**任意** `leaf i ≥ 0` ✗（**为假** ✗），而其**库内对应物**
+  `BlockModelAE.blockW_integral`（`:604`）**本身就带** `(hleaf : ∀ i, 0 ≤ leaf i)` ✓ ⇒ 这是**还原**假设面 ✓。
+* ★ **心跳放宽的最终账目** ✓：文件第 12 行 `set_option maxHeartbeats 800000`（= 默认 200000 的 4 倍 ✗，
+  **原本就有、此前从未登记** ⇒ 已登记 ✓）；本轮的两处**局部**放宽**已全部撤销** ✓（修好写法后不再需要 ✓）。
