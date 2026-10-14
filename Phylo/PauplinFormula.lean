@@ -367,6 +367,21 @@ theorem sum_ite_mem_eq_sum (s : Finset X) (f : X → ℝ) :
   rw [← Finset.sum_filter]
   simp
 
+omit [DecidableEq X] in
+/-- ★★★ **两支双重和的因式分解** ✓（桥公式收口的数学内核 ✓）：
+
+　`Σ_{x∈u侧} Σ_{y∈v侧} (1/2)^{d_u(x)}·(1/2)^{d_v(y)} = D_e(u)·D_e(v)` ✓
+
+证：一行 —— `sideDoublingSum` 的定义 ＋ **`Finset.sum_mul_sum`**
+（`BigOperators/Ring/Finset.lean:62` ✓：`Σ i∈s, Σ j∈t, f i * g j = (Σ i∈s, f i) * (Σ j∈t, g j)` ✓）。 -/
+theorem sum_sum_mul_of_mem_sideLeaves (T : Phylogram X) {u v : T.V} :
+    (∑ x ∈ T.sideLeaves s(u, v) u, ∑ y ∈ T.sideLeaves s(u, v) v,
+        (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+          * (1 / 2) ^ (T.pathOf v (T.leaf y)).edges.length)
+      = sideDoublingSum T.toCladogram s(u, v) u
+        * sideDoublingSum T.toCladogram s(u, v) v := by
+  rw [sideDoublingSum, sideDoublingSum, Finset.sum_mul_sum]
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
