@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.TreeDistance
 import Phylo.BMELeastSquares
+import Phylo.SplitsMaximal
 
 /-!
 # `Phylo.PauplinFormula` —— Pauplin（BME）树长公式（W11g · D2）
@@ -158,6 +159,37 @@ theorem incidence_eq_one_of_mem_sideLeaves_of_adj (T : Phylogram X) {u v : T.V}
     exact (T.mem_pathOf_edges_iff_not_inSide (e := s(u, v))
       (u := T.leaf x) (v := T.leaf y)).mpr hnot
   rw [incidence, ite_eq_left hmem]
+
+/-- ★★★ **跨侧两段路径的支撑集不交** ✓（路径长度可加性的前置 ✓）：
+`x` 在 `e = s(u,v)` 的 `v` 侧、`y` 在 `u` 侧时，
+「`leaf x` → `v`」与「`u` → `leaf y`」两段路径**没有公共顶点** ✓。
+
+证明：若 `z` 同时落在两段支撑集里，则用 `takeUntil z` 取各自的前缀 ✓，
+其边表 ⊆ 全路径边表（`SimpleGraph.Walk.edges_takeUntil_subset_edges`）⇒ 两段都**避开** `e`
+（全路径避 `e`，由 `mem_pathOf_edges_iff_not_inSide` 与 `hx`/`hy` ✓）
+⇒ 在 `T - e` 中得 `v → leaf x → z → u` 可达 ⇒ `v` 与 `u` 在 `T - e` 中互通 ⇒ 与「边是桥」矛盾 ✓。 -/
+theorem disjoint_support_pathOf_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x y : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) (hy : y ∈ T.sideLeaves s(u, v) u) :
+    ∀ z, z ∈ (T.pathOf (T.leaf x) v).support → z ∈ (T.pathOf u (T.leaf y)).support → False := by
+  intro z hzx hzy
+  have hxv : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hyu : T.inSide s(u, v) u (T.leaf y) := (T.mem_sideLeaves_iff_inSide).mp hy
+  -- 两段路径都避开 e
+  have e1 : s(u, v) ∉ (T.pathOf (T.leaf x) v).edges := fun h =>
+    ((T.mem_pathOf_edges_iff_not_inSide (e := s(u, v)) (u := T.leaf x) (v := v)).mp h)
+      ((T.inSide_comm s(u, v) v (T.leaf x)).mp hxv)
+  have e2 : s(u, v) ∉ (T.pathOf u (T.leaf y)).edges := fun h =>
+    ((T.mem_pathOf_edges_iff_not_inSide (e := s(u, v)) (u := u) (v := T.leaf y)).mp h) hyu
+  -- 前缀给出避开 e 的走法
+  have h1 : (T.graph.deleteEdges {s(u, v)}).Reachable (T.leaf x) z :=
+    SimpleGraph.reachable_deleteEdges_of_notMem_edges _
+      (fun h => e1 (SimpleGraph.Walk.edges_takeUntil_subset_edges (T.pathOf (T.leaf x) v) hzx h))
+  have h2 : (T.graph.deleteEdges {s(u, v)}).Reachable u z :=
+    SimpleGraph.reachable_deleteEdges_of_notMem_edges _
+      (fun h => e2 (SimpleGraph.Walk.edges_takeUntil_subset_edges (T.pathOf u (T.leaf y)) hzy h))
+  exact (T.not_reachable_deleteEdges_of_adj huv)
+    (hxv.trans (h1.trans h2.symm)).symm
 
 /-! ## 2. 三条基本性质 -/
 
