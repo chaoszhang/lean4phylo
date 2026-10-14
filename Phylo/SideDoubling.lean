@@ -274,4 +274,30 @@ theorem eq_of_mem_edges_pathOf_of_adj (T : Cladogram X) {u z : T.V} (huz : u ≠
       · exact absurd (SimpleGraph.Walk.mem_support_of_mem_edges h₂ (by simp)) hno
     · exact absurd (SimpleGraph.Walk.mem_support_of_mem_edges h₁ (by simp)) hno
 
+/-! ## ⑦ 用 ⑥ 的砖收 **两支不交**（(a) 的 `hdisj` ✓）
+
+`u` 的两条**不同**邻边 `s(u,v)`、`s(u,w)` 给出的两支**不交** ✓：
+若某叶 `x` 同时在两支上，则由 ⑤ 的前向引理，两条边都在 `(pathOf u (leaf x)).edges` 里 ✓，
+由 ⑥ 得二者**相等** ⇒ `v = w` ✗（或 `v = u` ✗，与 `Adj` 的无自环矛盾 ✓）—— 皆与假设冲突 ✓。 -/
+
+/-- ★★★ **两支不交** ✓（(a) 的 `hdisj` 前提 ✓；下一条拼装直接用它 ✓）。 -/
+theorem disjoint_sideLeaves_of_adj_adj (T : Cladogram X) {u v w : T.V}
+    (huv : T.graph.Adj u v) (huw : T.graph.Adj u w) (hvw : v ≠ w) :
+    Disjoint (T.sideLeaves s(u, v) v) (T.sideLeaves s(u, w) w) := by
+  rw [Finset.disjoint_left]
+  intro x hx1 hx2
+  -- `u ≠ T.leaf x`：若相等，则在 `T - s(u,v)` 中 `u` 与 `v` 可达 —— 与「边是桥」矛盾
+  have hux : u ≠ T.leaf x := by
+    intro h
+    have hside : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx1
+    exact (T.not_reachable_deleteEdges_of_adj huv) (h ▸ hside.symm)
+  have e1 : s(u, v) ∈ (T.pathOf u (T.leaf x)).edges :=
+    mem_edge_pathOf_u_of_mem_sideLeaves T huv hx1
+  have e2 : s(u, w) ∈ (T.pathOf u (T.leaf x)).edges :=
+    mem_edge_pathOf_u_of_mem_sideLeaves T huw hx2
+  have heq := eq_of_mem_edges_pathOf_of_adj T hux e1 e2
+  rcases Sym2.eq_iff.mp heq with ⟨-, h⟩ | ⟨_, h2⟩
+  · exact hvw h
+  · exact huv.ne h2.symm
+
 end Phylo.SideDoubling
