@@ -56,6 +56,7 @@ import Phylo.RootedTriplet
 import Phylo.SideLeafCountWitness
 import Phylo.SideSubtree
 import Phylo.Split
+import Phylo.SideDoubling
 import Phylo.SplitsDetermineTree
 import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
