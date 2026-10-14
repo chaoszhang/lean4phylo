@@ -371,4 +371,36 @@ theorem mem_union_sideLeaves_of_mem_sideLeaves (T : Cladogram X) {u v w y₀ : T
       rw [h] at htail_reach
       exact (T.mem_sideLeaves).mpr htail_reach.symm)
 
+/-! ## ⑨ ③ 良基归纳：**底情形（`u` 是叶）** ✓
+
+`u` 是叶且 `e ∋ u`（`e` 为**真边** ✓）时，`e` 必是 `u` 的**挂边** ✓（度为 1 ⇒ 唯一邻居，
+用 `degree_eq_one_iff_existsUnique_adj` ✓，库内 `Split.lean:564` 已在用 ✓），
+故由库内 `sideDoublingSum_leaf_edge`（`BMELeastSquares.lean:656` ✓）得 **`D_e(u) = 1`** ✓。
+
+**注** ✓：`e ∈ T.graph.edgeSet` 这一假设**不可省** ✗ —— 若 `e` 不是真边，则删去它不改变连通性，
+`u` 侧的叶是**全部**叶，`D_e(u) ≠ 1` ✗。 -/
+
+/-- ★★★ **归纳底情形** ✓：`u` 是叶、`e ∋ u` 且 `e` 是真边 ⇒ `D_e(u) = 1` ✓。 -/
+theorem sideDoublingSum_eq_one_of_isLeaf (T : Cladogram X) {u : T.V} (hu : T.IsLeaf u)
+    {e : Sym2 T.V} (he : u ∈ e) (hedge : e ∈ T.graph.edgeSet) :
+    sideDoublingSum T e u = 1 := by
+  obtain ⟨x, rfl⟩ := hu
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf x)).mp ⟨x, rfl⟩
+  obtain ⟨b, hb, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  induction e using Sym2.ind with
+  | h a c =>
+    rw [Sym2.mem_iff] at he
+    rcases he with h | h
+    · subst h
+      rw [SimpleGraph.mem_edgeSet] at hedge
+      rw [huniq c hedge]
+      exact sideDoublingSum_leaf_edge T hb
+    · subst h
+      rw [SimpleGraph.mem_edgeSet] at hedge
+      have hab : a = b := huniq a hedge.symm
+      subst hab
+      rw [Sym2.eq_swap]
+      exact sideDoublingSum_leaf_edge T hb
+
 end Phylo.SideDoubling
