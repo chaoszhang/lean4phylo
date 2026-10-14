@@ -553,7 +553,53 @@ theorem row_sum_eq_of_mem_v (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v
   rw [sum_ite_mem_eq_sum, ← Finset.mul_sum, sideDoublingSum,
     length_pathOf_comm T.toCladogram (T.leaf x) v]
 
-/-! ## 2. 三条基本性质 -/
+/-- ★★★ **最后拼装 ①：双重和按 `x` 的侧分支化** ✓
+
+　`Σ_x Σ_y bmeCoeff(topoDist x y)·incidence x y e`
+　`= Σ_x (if x ∈ A then (1/2)^{d_u(x)}·D_e(v) else (1/2)^{d_v(x)}·D_e(u))` ✓
+
+（`A = sideLeaves e u`；由两条平铺行和引理 `row_sum_eq_of_mem_u/v` ✓ ＋ `by_cases` ✓
+＋「不在 `A` 即在 `B`」（`sideLeaves_compl_adj` ✓）✓。） -/
+theorem double_sum_eq_ite_sum (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) :
+    (∑ x : X, ∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+      = ∑ x : X, (if x ∈ T.sideLeaves s(u, v) u then
+            (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) v
+          else
+            (1 / 2) ^ (T.pathOf v (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) u) := by
+  refine Finset.sum_congr rfl fun x _ => ?_
+  by_cases hxA : x ∈ T.sideLeaves s(u, v) u
+  · rw [row_sum_eq_of_mem_u T huv hxA, ite_eq_left hxA]
+  · have hxB : x ∈ T.sideLeaves s(u, v) v := by
+      rw [T.sideLeaves_compl_adj huv]
+      exact Finset.mem_compl.mpr hxA
+    rw [row_sum_eq_of_mem_v T huv hxB, ite_eq_right hxA]
+
+/-! **★★★ W19 登记：最后拼装 ②（按侧拆和并因式分解）—— 两处精确修法已看清**
+
+**目标** ✓：`Σ_x (if x ∈ A then (1/2)^{d_u(x)}·D_e(v) else (1/2)^{d_v(x)}·D_e(u)) = 2·D_e(u)·D_e(v)` ✓
+（配合已证的 `double_sum_eq_ite_sum` ✓ 即得 `Σ_x Σ_y … = 2·D_e(u)·D_e(v)` ✓。）
+
+**骨架（已跑通的部分 ✓）**：
+1. `rw [← Finset.sum_add_sum_compl (T.sideLeaves s(u, v) u)]` ✓（按 A 与补拆开 ✓）；
+2. 两块分别用 `Finset.sum_congr` ＋ `ite_eq_left`/`ite_eq_right` 化简 ✓（这一步本身已通 ✓）。
+
+**★★ 第一处未过（左侧块）** ✗：`rw [← sideDoublingSum]` 报
+「Failed to rewrite using equation theorems for `sideDoublingSum`」——
+在 `Finset.sum_mul` 之后目标是 `(∑_{x∈A} (1/2)^{d_u(x)}) * D_e(v) = D_e(u) * D_e(v)` ✓，
+而 `sideDoublingSum` 的方程定理作用在 **`T.toCladogram`** 的写法上 ⇒ 直接 `rw [← sideDoublingSum]` 匹配不上 ✗。
+⇒ **修法（下一轮直接用）**：先证一条 rfl 级小引理把定义写成显式求和，例如
+「`sideDoublingSum_dfn : sideDoublingSum T.toCladogram e u = ∑ x ∈ …, (1/2)^{…}` ✓」（`rfl` ✓），
+再 `rw [← sideDoublingSum_dfn]` ✓；或直接用 `show` 把目标写成显式求和形式 ✓。
+
+**★★ 第二处未过（补侧块）** ✗：`rw [T.sideLeaves_compl_adj huv]` 报找不到模式
+（目标里是 **`(sideLeaves e u)ᶜ`**，而该等式是 `sideLeaves e v = (sideLeaves e u)ᶜ` ✓）
+⇒ **修法**：用 **`rw [← T.sideLeaves_compl_adj huv]`** ✓（把补集换成 `v` 侧 ✓，方向反了 ✗）。
+
+**收口** ✓：两块分别得 `D_e(u)·D_e(v)` 与 `D_e(v)·D_e(u)` ⇒ 相加 ⇒ `ring` 给 `2·D_e(u)·D_e(v)` ✓。
+
+-//-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
