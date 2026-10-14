@@ -419,13 +419,22 @@ omit [Fintype X] [DecidableEq X] in
 /-- ★★ **度 3 ⇒ 取出另两条邻边**（覆盖假设 ✓）。 -/
 theorem exists_two_adj_of_card_three (T : Cladogram X) {u : T.V}
     (h3 : (T.graph.neighborFinset u).card = 3) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) :
-    ∃ v w : T.V, v ≠ w ∧ ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w := by
+    ∃ v w : T.V, T.graph.Adj u v ∧ T.graph.Adj u w ∧ v ≠ w ∧ v ≠ y₀ ∧ w ≠ y₀ ∧
+      ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w := by
   have hy₀mem : y₀ ∈ T.graph.neighborFinset u :=
     (SimpleGraph.mem_neighborFinset T.graph u y₀).mpr hy₀
   have h2 : ((T.graph.neighborFinset u).erase y₀).card = 2 := by
     rw [Finset.card_erase_of_mem hy₀mem, h3]
   obtain ⟨v, w, hvw, hpair⟩ := Finset.card_eq_two.mp h2
-  refine ⟨v, w, hvw, fun z hz => ?_⟩
+  have hvmem : v ∈ (T.graph.neighborFinset u).erase y₀ := by rw [hpair]; simp
+  have hwmem : w ∈ (T.graph.neighborFinset u).erase y₀ := by rw [hpair]; simp
+  have hvne : v ≠ y₀ := (Finset.mem_erase.mp hvmem).1
+  have hwne : w ≠ y₀ := (Finset.mem_erase.mp hwmem).1
+  have huv : T.graph.Adj u v :=
+    (SimpleGraph.mem_neighborFinset T.graph u v).mp (Finset.mem_erase.mp hvmem).2
+  have huw : T.graph.Adj u w :=
+    (SimpleGraph.mem_neighborFinset T.graph u w).mp (Finset.mem_erase.mp hwmem).2
+  refine ⟨v, w, huv, huw, hvw, hvne, hwne, fun z hz => ?_⟩
   have hzmem : z ∈ T.graph.neighborFinset u :=
     (SimpleGraph.mem_neighborFinset T.graph u z).mpr hz
   rw [← Finset.insert_erase hy₀mem, hpair] at hzmem
@@ -435,9 +444,42 @@ omit [Fintype X] [DecidableEq X] in
 /-- ★★ **二叉内部点 ⇒ 覆盖假设**（把 ⑩ 的第一块与 `IsBinary.degree_eq_three` 接起来 ✓）。 -/
 theorem exists_two_adj_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u : T.V}
     (hu : ¬ T.IsLeaf u) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) :
-    ∃ v w : T.V, v ≠ w ∧ ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w :=
+    ∃ v w : T.V, T.graph.Adj u v ∧ T.graph.Adj u w ∧ v ≠ w ∧ v ≠ y₀ ∧ w ≠ y₀ ∧
+      ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w :=
   exists_two_adj_of_card_three T (by
     rw [SimpleGraph.card_neighborFinset_eq_degree]
     exact hbin.degree_eq_three hu) hy₀
+
+/-- ★★★ **打包：二叉内部点处 `e` 的两侧分划 ＋ 不交** ✓
+（正是 ② 代数内核所需的 `hpart` 与 `hdisj` ✓）。 -/
+theorem sideLeaves_eq_union_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u : T.V}
+    (hu : ¬ T.IsLeaf u) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) {e : Sym2 T.V} (he : e = s(u, y₀)) :
+    ∃ v w : T.V, v ≠ w ∧
+      T.sideLeaves e u = T.sideLeaves s(u, v) v ∪ T.sideLeaves s(u, w) w ∧
+      Disjoint (T.sideLeaves s(u, v) v) (T.sideLeaves s(u, w) w) := by
+  obtain ⟨v, w, huv, huw, hvw, hvy, hwy, hcover⟩ := exists_two_adj_of_isBinary T hbin hu hy₀
+  -- `e ≠ s(u,v)`（否则 v = y₀）
+  have hnev : s(u, v) ≠ e := by
+    intro hc
+    have h1 : s(u, v) = s(u, y₀) := hc.trans he
+    rcases Sym2.eq_iff.mp h1 with ⟨-, h⟩ | ⟨_, h⟩
+    · exact hvy h
+    · exact absurd h.symm huv.ne
+  have hnew : s(u, w) ≠ e := by
+    intro hc
+    have h1 : s(u, w) = s(u, y₀) := hc.trans he
+    rcases Sym2.eq_iff.mp h1 with ⟨-, h⟩ | ⟨_, h⟩
+    · exact hwy h
+    · exact absurd h.symm huw.ne
+  refine ⟨v, w, hvw, ?_, disjoint_sideLeaves_of_adj_adj T huv huw hvw⟩
+  ext x
+  constructor
+  · intro hx
+    exact mem_union_sideLeaves_of_mem_sideLeaves T he hcover
+      (fun h => hu (h ▸ (⟨x, rfl⟩ : T.IsLeaf (T.leaf x)))) hx
+  · intro hx
+    rcases Finset.mem_union.mp hx with hx | hx
+    · exact mem_sideLeaves_of_mem_sideLeaves_adj T huv he hnev hx
+    · exact mem_sideLeaves_of_mem_sideLeaves_adj T huw he hnew hx
 
 end Phylo.SideDoubling
