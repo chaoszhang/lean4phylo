@@ -39,11 +39,20 @@ import Phylo.AdamsConsensus
   intersection of all the sets R"*）；**无 R\***。
 * ⇒ **落地为缺口 `rStarConsensus_gap`（见 §6），不写任何 R\* 的猜测性定义。**
   缺的原始出处是 **Bryant, D. (2003), *A classification of consensus methods for
-  phylogenetics*, DIMACS Series in Discrete Math. and Theor. Comp. Sci. 61:163–184**
-  （DOI `10.1090/dimacs/061/12`）。该篇即
+  phylogenetics*, DIMACS Series in Discrete Math. and Theor. Comp. Sci. 61:163–183**
+  （DOI `10.1090/dimacs/061/11`）。该篇即
   `AllmanDegnanRhodes2016_NJst_StatisticalConsistency.md:1279–1281` 的文献 `[9]` ——
-  **本库 0 篇在手**（`references/md/` 无 Bryant 2003；仅 `BryantSteel1995`、
-  `BryantMoulton2004` 两篇同名作者但内容无关）。
+  **已入库（2026-10-14）**：`references/{pdf,md,img,ocr}/Bryant2003_ClassificationConsensusMethodsPhylogenetics*`
+  （`img/` 有 **21 页 PNG** ✓）。⚠️ 该篇**文本层损坏**（md 是 OCR 产物）⇒ ★ **公式/符号请直接读
+  `references/img/Bryant2003_…_p*.png`** ✓；已知 OCR 系统性误识：花体 `T`→`7`/`J` · `Q*`→`@*` ·
+  `⊆`→`C` · split 的 `|`→`l`（`ac|bd`→`aclbd`）✓。
+
+  ★★ **2026-10-14 更正登记（依据：`references/README.md` §3.0.4 ✓）**：
+  1. 页码 **旧「61:163–184」✗ → 新「61:163–183」✓**（实测该 PDF **共 21 页** ⇒ `163–183` ✓，与 Crossref 一致 ✓）；
+  2. DOI **旧「`10.1090/dimacs/061/12`」✗ → 新「`10.1090/dimacs/061/11`」✓** ——
+     `…/12` 是同卷**相邻章** Thorley & Wilkinson, *A view of supertree methods*, pp. 185–193 ✓；
+     `…/11` 由**该 PDF 首页页眉自印** ✓（最强证据 ✓）；
+  3. 「**本库 0 篇在手**」✗ → 「**已入库（2026-10-14）**」✓（老师提供；见 `references/README.md` §3.0.4 ✓）。
 
 ### C4「贪心共识」：在手文献**只有一句话转述，没有定义**
 
