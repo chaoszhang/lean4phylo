@@ -504,11 +504,25 @@ Heled–Drummond (2010) Eq. (1)（**496–510** 行）与 Rannala–Yang (2003) 
 2. 该后验的**一致性**（后验质量在真树邻域上 → `1`）；
 3. MCMC 链的**平稳分布 = 该后验**这一正确性定理。
 
-⇒ 落为显式 `Prop` 缺口（`references/` 有文献，但本库没有连续先验 / MCMC 核 / 后验一致性的器材）。 -/
+⇒ 落为显式 `Prop` 缺口（`references/` 有文献，但本库没有连续先验 / MCMC 核 / 后验一致性的器材）。
+
+**★★ 2026-10-14 W19 改动留证（旧形态 → 新形态 → 理由（★D 先判真假，反例显式））**：
+* **旧形态** ✗：**没有**「证据（边际似然）最终为正」这一假设；
+* **新形态** ✓：加一条 `(∀ᶠ n in atTop, 0 < ∫⁻ θ', lik n θ' ∂prior)` ✓（其余逐字不动 ✓）；
+* **理由** ✗：旧形态**为假** —— 取 `lik n θ ≡ 0`（全零似然 ✓）：
+  `∫⁻ θ', lik n θ' ∂prior = 0` ✓ ⇒ `fun θ => lik n θ / 0 = 0`（`ℝ≥0∞` 中 `0 / 0 = 0` ✓）
+  ⇒ `post n = prior.withDensity (fun _ => 0)` ＝ **零测度** ✓ ⇒ `post n U = 0` ✓
+  ⇒ 与合取项①`IsProbabilityMeasure (post n)`（概率测度于 `univ` 取 `1` ✓）**矛盾** ✗
+  ⇒ **不存在**满足条件的 `post` ⇒ 命题**恒假** ✗；
+* ★ 这正是文献里**本就成立**的隐含前提（真模型的边际似然不会恒为 `0` ✓，`HeledDrummond2010` /
+  `RannalaYang2003` **均在库** ✓）；★ 本次改动**只是补假设** ⇒ 新命题**强于**旧命题 ✓（**未改弱** ✓）；
+* **影响的下游声明**：本文件**无人使用**该 `def` ✓；不改任何其它声明 ✓。
+  ⚠️ 注意：补假设**只消除"恒假"** ✗，**不**使第三条（后验一致性）可证 ✓ —— 那仍需 MCMC/连续先验器材 ✓。 -/
 def ContinuousPriorPosteriorConsistencyGap : Prop :=
   ∀ {Θ : Type*} [MeasurableSpace Θ] [TopologicalSpace Θ]
     (prior : Measure Θ) [IsProbabilityMeasure prior]
     (lik : ℕ → Θ → ℝ≥0∞) (trueθ : Θ),
+    (∀ᶠ n in atTop, 0 < ∫⁻ θ', lik n θ' ∂prior) →
     ∃ post : ℕ → Measure Θ,
       (∀ n, IsProbabilityMeasure (post n)) ∧
         (∀ n, post n = prior.withDensity fun θ => lik n θ / ∫⁻ θ', lik n θ' ∂prior) ∧
