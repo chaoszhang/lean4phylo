@@ -515,7 +515,7 @@ def ContinuousPriorPosteriorConsistencyGap : Prop :=
         ∀ U : Set Θ, IsOpen U → trueθ ∈ U →
           Tendsto (fun n : ℕ => post n U) atTop (𝓝 1)
 
-/-- **缺口（X6-B）：多位点后验集中（有限树空间版）**。
+/-- **缺口（X6-B）：多位点后验集中（有限树空间版）** —— ★ **2026-10-14 W19 按真假审查更正** ✓。
 
 §1 只做了**单**位点的 Bayes 层（`evidence = ∑ᵢ ρᵢLᵢ`）。
 「`n` 个**独立**位点 ⇒ 似然取乘积 ⇒ 后验随 `n → ∞` 集中到真树」需要：
@@ -523,11 +523,26 @@ def ContinuousPriorPosteriorConsistencyGap : Prop :=
 这三样本库**都没有**（`MSCSampling.converges` 在 `Phylo/Stat/MSC.lean` 里仍是**公理化**的
 大数定律，且是**确定性**的 `ε`-接近形式）。
 
-⇒ 落为显式 `Prop` 缺口：本文件**不**声称后验一致性。 -/
+⇒ 落为显式 `Prop` 缺口：本文件**不**声称后验一致性。
+
+**★★ 改动留证（旧形态 → 新形态 → 依据 → 理由）**：
+* **旧形态** ✗：**没有**「真似然最终为正」这一假设；
+* **新形态** ✓：加一条 `(∀ᶠ n in atTop, 0 < perLocus i₀ n)` ✓（其余逐字不动 ✓）；
+* **理由（★D 先判真假 ✓，反例显式 ✓）** ✗：旧形态**为假** ——
+  取 `ι = Fin 2`、`i₀ = 0`、`prior ≡ 1/2`、`perLocus i n ≡ 0`：
+  `0 ≤ prior` ✓、`∑ prior = 1` ✓、`0 < prior 0` ✓、`∀ i n, 0 ≤ perLocus i n` ✓、
+  衰减假设对 `i = 1` 化为 `0 ≤ Real.exp (-c*n) * 0` ✓（成立 ✓）；
+  而结论的表达式恒为 `0 * (1/2) / (0 * (1/2) + 0 * (1/2)) = 0 / 0 = 0`（`ℝ` 中除零取 `0` ✓）
+  ⇒ 恒等于 `0` ✗ ⇒ `Tendsto … (𝓝 1)` **不成立** ✗。
+  ★ 这正是**文献里当然成立的隐含前提**（真模型的似然不会恒为 `0` ✓）—— 补上它后命题才与
+  Heled–Drummond (2010) / Rannala–Yang (2003) 的**后验集中**陈述相符 ✓；
+* **影响的下游声明**：本文件**无人使用**该 `def` ✓（§5 只登记 ✓）；本次改动**只是补假设** ✓，
+  **未改弱结论** ✓（新命题**强于**旧命题 ✓：前提更多 ✓）。 -/
 def MultiLocusPosteriorConcentrationGap : Prop :=
   ∀ {ι : Type*} [Fintype ι] [DecidableEq ι] (i₀ : ι) (prior : ι → ℝ),
     (∀ i, 0 ≤ prior i) → (∑ i, prior i = 1) → 0 < prior i₀ →
       ∀ perLocus : ι → ℕ → ℝ, (∀ i n, 0 ≤ perLocus i n) →
+        (∀ᶠ n in atTop, 0 < perLocus i₀ n) →
         (∀ i, i ≠ i₀ → ∃ c : ℝ, 0 < c ∧ ∀ᶠ n in atTop,
           perLocus i n ≤ Real.exp (-c * n) * perLocus i₀ n) →
           Tendsto (fun n : ℕ =>
