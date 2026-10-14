@@ -300,4 +300,34 @@ theorem disjoint_sideLeaves_of_adj_adj (T : Cladogram X) {u v w : T.V}
   · exact hvw h
   · exact huv.ne h2.symm
 
+/-! ## ⑧ (a) 的第三块：反向包含 —— **本轮只落「取首边」，路线已写清** ⬜
+
+**已证** ✓：`exists_adj_of_edges_pathOf` —— `u ≠ z` 时 `pathOf u z` 的**首边**是 `u` 的某条邻边 `s(u,y)` ✓。
+
+**★★ 反向包含的清晰路线（下一轮按此写，避免缠团 ✗）**：
+设 `x ∈ sideLeaves e u` ✓，`e = s(u,y₀)` ✓，覆盖假设 `∀ z, Adj u z → z = y₀ ∨ z = v ∨ z = w` ✓：
+1. 由 `mem_sideLeaves_iff_inSide` ＋ `mem_pathOf_edges_iff_not_inSide`
+   ⇒ **路径 `pathOf u (leaf x)` 避开 `e`** ✓；
+2. 取首边（本文件 ✓）得 `s(u,y) ∈ (pathOf u (leaf x)).edges` ✓ ⇒ 由 1. 有 `s(u,y) ≠ e` ⇒ `y ≠ y₀` ✓
+   ⇒ 由覆盖假设 `y = v ∨ y = w` ✓；
+3. ★★ **关键简化** ✓：**不必**做"support 不回头"的分析 ✗ ——
+   直接用 `pathOf_edges_nodup`（`AttesonRadius.lean:1539` ✓）：**每条边在路径边表里至多一次** ✓
+   ⇒ 若 `y = v`，则**尾走法**里**不再有** `s(u,v)` ✓ ⇒ 尾走法是一条**避开 `s(u,v)`** 的 `v → leaf x` 走法 ✓
+   ⇒ 由 `reachable_deleteEdges_of_notMem_edges` 得 `(T - s(u,v)).Reachable v (leaf x)` ✓
+   ⇒ `x ∈ sideLeaves s(u,v) v` ✓；`y = w` 同理 ✓。
+⇒ ★ 教训 **376**：**"边表 `Nodup`" 可以替代整段"支撑集不回头"的推理** ✓
+  （本轮我先把证明写缠了 ✗，正是因为忘了 `pathOf_edges_nodup` ✓）。
+
+**诚实边界** ⬜：反向包含**本轮未完成**（缠团的草稿已按铁律 5 撤下 ✓）；
+本定理族仍把 `u ≠ T.leaf x` 作为**显式前提**（二叉场合可另证 ✓，不引入 `Phylogram` 度数器材 ✓ 教训 375 ✓）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **取首边**：`u ≠ z` ⇒ 路径 `pathOf u z` 的首边是 `u` 的某条邻边 ✓。 -/
+theorem exists_adj_of_edges_pathOf (T : Cladogram X) {u z : T.V} (huz : u ≠ z) :
+    ∃ y : T.V, T.graph.Adj u y ∧ s(u, y) ∈ (T.pathOf u z).edges := by
+  cases hp : T.pathOf u z with
+  | nil => exact (huz rfl).elim
+  | cons hadj p =>
+    exact ⟨_, hadj, by rw [SimpleGraph.Walk.edges_cons]; exact List.mem_cons_self⟩
+
 end Phylo.SideDoubling
