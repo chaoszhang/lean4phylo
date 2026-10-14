@@ -148,4 +148,49 @@ theorem mem_edge_pathOf_u_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
   have hside : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
   exact (T.not_reachable_deleteEdges_of_adj huv) (hc.trans hside.symm)
 
+/-- ★★★ **几何前提 (b)：深度关系** ✓ —— `x` 在 `u` 朝 `v` 那一支上时，
+从 `u` 到 `leaf x` 的路径**恰比**从 `v` 到 `leaf x` 的路径**多一条边** ✓：
+
+　`(T.pathOf u (T.leaf x)).edges.length = (T.pathOf v (T.leaf x)).edges.length + 1` ✓。
+
+证明（"边集只差一条"路线 ✓）：
+* `s(u,v) ∈ (pathOf u (leaf x)).edges` ✓（本文件 `mem_edge_pathOf_u_of_mem_sideLeaves` ✓）；
+* `s(u,v) ∉ (pathOf v (leaf x)).edges` ✓（由 `mem_pathOf_edges_iff_not_inSide` ＋ `inSide` ✓）；
+* 其余边 `e ≠ s(u,v)`：两条路径的成员关系**一致** ✓ —— 由 `inSide_congr_of_adj`
+  （`a — b` 为边且 `e ≠ s(a,b)` 时两**端点同侧** ✓，见 `LeafStatus.lean:787` 的用法 ✓）得
+  `inSide e (leaf x) u ↔ inSide e (leaf x) v` ✓；
+* 故 `edges.toFinset` 只差一条 ⇒ 取**基数**（`pathOf_edges_nodup` ✓ `AttesonRadius.lean:1539` ✓）即得 `+1` ✓。 -/
+theorem length_pathOf_eq_succ_of_adj_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x : X} (hx : x ∈ T.sideLeaves s(u, v) v) :
+    (T.pathOf u (T.leaf x)).edges.length = (T.pathOf v (T.leaf x)).edges.length + 1 := by
+  have hside : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hin : s(u, v) ∈ (T.pathOf u (T.leaf x)).edges :=
+    mem_edge_pathOf_u_of_mem_sideLeaves T huv hx
+  have hnotin : s(u, v) ∉ (T.pathOf v (T.leaf x)).edges := fun hmem =>
+    (T.mem_pathOf_edges_iff_not_inSide (e := s(u, v)) (u := v) (v := T.leaf x)).mp hmem hside
+  have hset : (T.pathOf u (T.leaf x)).edges.toFinset
+      = insert s(u, v) (T.pathOf v (T.leaf x)).edges.toFinset := by
+    ext e
+    rw [Finset.mem_insert]
+    by_cases he : e = s(u, v)
+    · subst he
+      simp [hin, hnotin]
+    · have he' : s(u, v) ≠ e := fun h => he h.symm
+      have hcongr : T.inSide e (T.leaf x) u ↔ T.inSide e (T.leaf x) v :=
+        T.inSide_congr_of_adj (e₁ := e) (u₁ := T.leaf x) huv he'
+      have hiff : e ∈ (T.pathOf u (T.leaf x)).edges ↔ e ∈ (T.pathOf v (T.leaf x)).edges := by
+        rw [T.mem_pathOf_edges_iff_not_inSide, T.mem_pathOf_edges_iff_not_inSide]
+        exact not_congr ((T.inSide_comm e u (T.leaf x)).trans
+          (hcongr.trans (T.inSide_comm e v (T.leaf x)).symm))
+      simp only [List.mem_toFinset]
+      rw [hiff]
+      exact ⟨fun h => Or.inr h, fun h => h.elim (fun h1 => absurd h1.symm he') id⟩
+  have hnu : (T.pathOf u (T.leaf x)).edges.Nodup := T.pathOf_edges_nodup u (T.leaf x)
+  have hnv : (T.pathOf v (T.leaf x)).edges.Nodup := T.pathOf_edges_nodup v (T.leaf x)
+  have h1 : (T.pathOf u (T.leaf x)).edges.toFinset.card
+      = (T.pathOf u (T.leaf x)).edges.length := List.toFinset_card_of_nodup hnu
+  have h2 : (T.pathOf v (T.leaf x)).edges.toFinset.card
+      = (T.pathOf v (T.leaf x)).edges.length := List.toFinset_card_of_nodup hnv
+  rw [← h1, ← h2, hset, Finset.card_insert_of_notMem (fun h => hnotin (List.mem_toFinset.mp h))]
+
 end Phylo.SideDoubling
