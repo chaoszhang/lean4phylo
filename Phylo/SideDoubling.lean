@@ -242,4 +242,36 @@ theorem mem_sideLeaves_of_mem_sideLeaves_adj (T : Cladogram X) {u v y : T.V} {e 
     (SimpleGraph.deleteEdges_adj.mpr ⟨huv, hne⟩).reachable
   exact (hreach_uv.trans hreach_v).symm
 
+/-! ## ⑥ 砖块：从 `u` 出发的路径至多用到 `u` 的一条邻边
+
+这一块同时给出 **(a) 的反向包含** 与 **两支不交** 所需的全部信息 ✓：
+
+　`u ≠ z` 时，若 `s(u,y₁)` 与 `s(u,y₂)` 都出现在 `(T.pathOf u z).edges` 里，则 `s(u,y₁) = s(u,y₂)` ✓。
+
+证明：把 `pathOf u z` 按 `Walk.cons` 分解 ✓ —— 两条边**都必须是首边** ✗ 否则其另一端点在尾走法的支撑集里 ✓
+（`SimpleGraph.Walk.mem_support_of_mem_edges` ✓），而 `pathOf` 是**路径** ⇒ 支撑集无重复 ⇒ `u` 不可能再出现 ✓。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **`u` 处至多一条邻边在路径边表里** ✓（见 §⑥ 说明 ✓）。 -/
+theorem eq_of_mem_edges_pathOf_of_adj (T : Cladogram X) {u z : T.V} (huz : u ≠ z)
+    {y₁ y₂ : T.V}
+    (h₁ : s(u, y₁) ∈ (T.pathOf u z).edges) (h₂ : s(u, y₂) ∈ (T.pathOf u z).edges) :
+    s(u, y₁) = s(u, y₂) := by
+  cases hp : T.pathOf u z with
+  | nil => rw [hp] at h₁; simp at h₁
+  | cons hadj p =>
+    rw [hp] at h₁ h₂
+    simp only [SimpleGraph.Walk.edges_cons, List.mem_cons] at h₁ h₂
+    have hno : u ∉ p.support := by
+      have hpath : (SimpleGraph.Walk.cons hadj p).IsPath := by
+        rw [← hp]; exact T.pathOf_isPath u z
+      rw [SimpleGraph.Walk.isPath_def, SimpleGraph.Walk.support_cons,
+        List.nodup_cons] at hpath
+      exact hpath.1
+    rcases h₁ with h₁ | h₁
+    · rcases h₂ with h₂ | h₂
+      · rw [h₁, h₂]
+      · exact absurd (SimpleGraph.Walk.mem_support_of_mem_edges h₂ (by simp)) hno
+    · exact absurd (SimpleGraph.Walk.mem_support_of_mem_edges h₁ (by simp)) hno
+
 end Phylo.SideDoubling
