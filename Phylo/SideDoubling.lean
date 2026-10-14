@@ -133,4 +133,19 @@ theorem sideDoublingSum_eq_half_mul_add_of_union (T : Cladogram X) (e : Sym2 T.V
 **诚实边界** ⬜：本节的引理若本轮未过门，即如实登记为"未落地"，并在下一轮以 359/361 的策略继续
 （**不**改任何既有声明 ✗）。 -/
 
+/-- ★★★ **几何前提 (b) 的第一半**：`x` 落在 `u` 朝 `v` 那一支上（`x ∈ sideLeaves s(u,v) v` ✓）时，
+从 **`u`** 到 `leaf x` 的路径**必经**边 `s(u,v)` ✓
+（因 `u` 与 `leaf x` 分居该边两侧 ✓ —— 用「跨越侧界的 walk 必用该边」的引擎 ✓）。
+
+库内器材（探路实测 ✓）：`mem_pathOf_edges_iff_not_inSide`（`AttesonRadius.lean:1394` ✓）·
+`mem_sideLeaves_iff_inSide`（`Split.lean:648` ✓）· `not_reachable_deleteEdges_of_adj`（`Split.lean:540` ✓，边是桥 ✓）·
+`reachable_comm` ✓。 -/
+theorem mem_edge_pathOf_u_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x : X} (hx : x ∈ T.sideLeaves s(u, v) v) :
+    s(u, v) ∈ (T.pathOf u (T.leaf x)).edges := by
+  rw [T.mem_pathOf_edges_iff_not_inSide]
+  intro hc
+  have hside : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  exact (T.not_reachable_deleteEdges_of_adj huv) (hc.trans hside.symm)
+
 end Phylo.SideDoubling
