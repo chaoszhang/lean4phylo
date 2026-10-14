@@ -132,6 +132,7 @@ import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.RootJumpMass
 import Phylo.Stat.SiteRateMixture
+import Phylo.Stat.SiteSamplingAE
 import Phylo.Stat.SiteWeightMeasurable
 import Phylo.Stat.SplitFin4Count
 import Phylo.Stat.SplitProbabilities
