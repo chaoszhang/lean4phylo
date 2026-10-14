@@ -302,18 +302,71 @@ example : ExistsAGT (1 / 100) (1 / 100) := Or.inl four_taxon_agt_witness
 
 /-! ## 5. 缺口（显式 `def … : Prop`，见 §4 的清单） -/
 
-/-- 异常区边界函数 `a`（DR2006 式 (4) 的化简形式）：`a(x) = log(18(1 − e^{−x})/(12 − 9e^{−x} − 2e^{−3x}))`。 -/
+/-- 异常区边界函数 `a`（DR2006 **式(4)**）。
+
+**★★ 2026-10-14 W19 更正（旧形态 → 新形态 → 文献依据 → 理由）**：
+* **旧形态** ✗：`Real.log (18 * (1 - Z x) / (12 - 9 * Z x - 2 * Z x ^ 3))`（**差一个负号** ✗）；
+* **新形态** ✓：`Real.log ((12 - 9 * Z x - 2 * Z x ^ 3) / (18 * (1 - Z x)))`（即旧式的**倒数** ✓）；
+* **文献依据** ✓（`references/md/DegnanRosenberg2006_DiscordanceSpeciesTreesMostLikelyGeneTrees.md`）：
+  `:265-277` **式(4)** `a(x) = log( 2/3 + (3e^{2x} − 2)/(18(e^{3x} − e^{2x})) )` ✓；
+  `:259`「**0 AGTs if `y ≥ a(x)`**」✓；`:303`「**as `x` approaches 0, `a(x)` approaches ∞**」✓
+  ⇒ ★★ `a(x) > 0`（小 `x` 时 ✓），而旧形态给 `log A < 0` ✗（因 `A < 1` ✓）⇒ **符号反** ✗；
+* **等价性（已核 ✓）**：把文献式通分即 `exp(a(x)) = (12e^{3x} − 9e^{2x} − 2)/(18(e^{3x} − e^{2x}))` ✓
+  ＝ 旧式的**倒数** ✓（旧式上下乘 `e^{3x}` 得 `18(e^{3x}−e^{2x})/(12e^{3x}−9e^{2x}−2)` ✓）；
+* **理由** ✓：旧形态使 `a(x) < 0`，而枝长 `y > 0` ⇒ 判据 `y < a(x)` **恒假** ✗ ⇒
+  与文献（"0 AGTs if `y ≥ a(x)`" ✓、`a(x) → ∞` ✓）**不符** ✗ ⇒ 依老师 2026-10-14 令改为**等于文献那条** ✓；
+* **影响的下游声明**：`anomalyZoneBoundaryLog`（本文件 ✓，本轮随之升为**定理** ✓）；`threeAgtBoundary`
+  同病**同轮一并更正** ✓（见下 ✓）；`figure`/脚本未引用本函数 ✓。 -/
 def anomalyZoneBoundary (x : ℝ) : ℝ :=
-  Real.log (18 * (1 - Z x) / (12 - 9 * Z x - 2 * Z x ^ 3))
+  Real.log ((12 - 9 * Z x - 2 * Z x ^ 3) / (18 * (1 - Z x)))
 
-/-- **缺口 1**（DR2006 式 (4) 的 `Real.log` 形式）：`h > f ⟺ y < a(x)`。
-本文件已证 ⑥ 的**代数内核**（`h_gt_f_iff_div`），`log` 层的逐点等价**未证**。 -/
-def anomalyZoneBoundaryLog : Prop :=
-  ∀ x y : ℝ, 0 < x → (h x y > f x y ↔ y < anomalyZoneBoundary x)
+/-- ★★★ **DR2006 式(4) 的 `Real.log` 形式（原缺口 1，2026-10-14 W19 已证 ✓）**：
+`h(x,y) > f(x,y) ⟺ y < a(x)`。
 
-/-- 3-AGT 边界函数 `b`（DR2006 式 (5) 的化简形式）：`b(x) = log(6(3 − 2e^{−x})/(12 − 3e^{−x} − 2e^{−3x}))`。 -/
+**由 `def` 升为 `theorem`，陈述逐字不改** ✓（本库既有惯例：见 `Parsimony.card_separates_four_gap` 的
+「W12a 状态（已证）：`def` 升为 `theorem`，陈述逐字不改」✓）。
+证明＝已证的代数内核 `h_gt_f_iff_div`（`:193` ✓）＋ `Z y = Real.exp (-y)` 的 `log` 换底 ✓。 -/
+theorem anomalyZoneBoundaryLog :
+    ∀ x y : ℝ, 0 < x → (h x y > f x y ↔ y < anomalyZoneBoundary x) := by
+  intro x y hx
+  have hx0 : 0 ≤ x := le_of_lt hx
+  have hZx_lt : Z x < 1 := Z_lt_one hx
+  have hZx0 : 0 ≤ Z x := Z_nonneg x
+  have hnum : 0 < 1 - Z x := by linarith
+  have hden : 0 < 12 - 9 * Z x - 2 * Z x ^ 3 := by
+    have h3 : Z x ^ 3 ≤ 1 := by nlinarith [hZx0, Z_le_one hx0, sq_nonneg (Z x), sq_nonneg (Z x - 1)]
+    linarith
+  have hA : 0 < 18 * (1 - Z x) / (12 - 9 * Z x - 2 * Z x ^ 3) := by positivity
+  have hden18 : (0 : ℝ) < 18 * (1 - Z x) := by positivity
+  -- `Z y = exp (-y)` 的 `log`，以及倒数取对数的恒等式
+  have hlogZ : Real.log (Z y) = -y := by rw [Z, Real.log_exp]
+  have hlogInv :
+      Real.log ((12 - 9 * Z x - 2 * Z x ^ 3) / (18 * (1 - Z x)))
+        = -Real.log (18 * (1 - Z x) / (12 - 9 * Z x - 2 * Z x ^ 3)) := by
+    rw [div_eq_mul_inv, Real.log_mul (ne_of_gt hden) (inv_ne_zero (ne_of_gt hden18)),
+      Real.log_inv, div_eq_mul_inv, Real.log_mul (ne_of_gt hden18) (inv_ne_zero (ne_of_gt hden)),
+      Real.log_inv]
+    ring
+  -- 单调性：`A < Z y ↔ log A < log (Z y)`
+  have hiff := (Real.log_lt_log_iff hA (Z_pos y)).symm
+  rw [h_gt_f_iff_div hx0, hiff, hlogZ]
+  unfold anomalyZoneBoundary
+  rw [hlogInv]
+  constructor <;> intro hh <;> linarith
+
+/-- 3-AGT 边界函数 `b`（DR2006 **式(5)**）。
+
+**★★ 2026-10-14 W19 更正（与 `anomalyZoneBoundary` 同病，一并修 ✓）**：
+* **旧形态** ✗：`Real.log (6 * (3 - 2 * Z x) / (12 - 3 * Z x - 2 * Z x ^ 3))`（**差一个负号** ✗）；
+* **新形态** ✓：`Real.log ((12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x)))`（旧式的**倒数** ✓）；
+* **文献依据** ✓：`:281-291` **式(5)** `b(x) = log( 2/3 + (5e^{2x} − 2)/(6(3e^{3x} − 2e^{2x})) )` ✓；
+  ★★ **判决性见证** `:299`：「at most one AGT occurs if `y` is greater than or equal to
+  **`b(0) = log(7/6) ≈ 0.1542`**」✓ —— 旧形态在 `x = 0` 给 `log(6/7) ≈ −0.1542` ✗（恰为其**相反数** ✗），
+  新形态给 `log(7/6) ≈ 0.1542` ✓ ⇒ **与文献数字逐字吻合** ✓；
+* 等价性：文献式通分得 `exp(b(x)) = (12e^{3x} − 3e^{2x} − 2)/(6(3e^{3x} − 2e^{2x}))` ✓，正是旧式的倒数 ✓；
+* **影响的下游**：缺口 `threeAgtCriterion`（本文件 ✓，**仍未证** ✗）；未被他处引用 ✓。 -/
 def threeAgtBoundary (x : ℝ) : ℝ :=
-  Real.log (6 * (3 - 2 * Z x) / (12 - 3 * Z x - 2 * Z x ^ 3))
+  Real.log ((12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x)))
 
 /-- **缺口 2**（DR2006 式 (5)）：`g > f ⟺ y < b(x)`（即 3-AGT 区与 1-AGT 区的分界）。 -/
 def threeAgtCriterion : Prop :=
