@@ -72,4 +72,52 @@ theorem sideDoublingSum_ne_one_of_side_eq_three_leaves (T : Cladogram X) (e : Sy
   rw [sideDoublingSum_eq_three_halves_of_side_eq_three_leaves T e u hside hab hac hbc hda hdb hdc]
   norm_num
 
+/-! ## ② 递归恒等式（**代数内核**，条件化形态）
+
+恒等式 `D = 1` 的证明走「对 `sideLeaves.card` 的良基归纳」：**底**＝挂边叶侧（库内 `:656` ✓ **已证** ✓）；
+**步**＝内部点 `u`（二叉时度 3 ⇒ 除朝 `e` 的那一支外**恰有两支** `v, w`）：
+
+* **分支分划**（几何，待补 ⬜）：`sideLeaves e u = sideLeaves s(u,v) v ∪ sideLeaves s(u,w) w`（**不交** ✓）；
+* **深度关系**（几何，待补 ⬜）：该两支上的叶满足 `d_u(x) = d_v(x) + 1`；
+* ★ **代数内核**（本文件 **已证** ✓）：上述两条 ⇒ `D_e(u) = (1/2)·(D_{s(u,v)}(v) + D_{s(u,w)}(w))` ✓。
+
+⇒ 归纳步：两支各自的 `D` 由归纳假设为 `1` ⇒ `D_e(u) = (1/2)·(1 + 1) = 1` ✓。
+
+**诚实边界** ⬜：上面两条「几何前提」（分划与深度关系）本轮**未落地** ✗ ——
+它们需要 `sideLeaves`/`pathOf` 在 `u` 的邻接分支上的 `Finset` 记账（库内有 `sideVertices`/`SideSubtree`
+分层 ✓，但记账未完成 ✗）；本文件先把**代数内核**钉死 ✓，几何两条按教训 359 如实登记为缺口 ✓。 -/
+
+/-- ★★★ **递归恒等式（②的代数内核，条件形态）**：若某侧恰是「朝 `u` 的两支」的**不交并**，
+且两支上的叶深度各比 `u` 深 `1`，则倍增和满足**两支递归**
+
+　`D_e(u) = (1/2)·(D_{s(u,v)}(v) + D_{s(u,w)}(w))` ✓。
+
+（二叉内部点 `u` 度 3 ⇒ 除朝 `e` 一支外**恰有两支** ✓，正是归纳步所需的形状 ✓。） -/
+theorem sideDoublingSum_eq_half_mul_add_of_union (T : Cladogram X) (e : Sym2 T.V)
+    (u v w : T.V)
+    (hpart : T.sideLeaves e u = T.sideLeaves s(u, v) v ∪ T.sideLeaves s(u, w) w)
+    (hdisj : Disjoint (T.sideLeaves s(u, v) v) (T.sideLeaves s(u, w) w))
+    (hdv : ∀ x ∈ T.sideLeaves s(u, v) v,
+      (T.pathOf u (T.leaf x)).edges.length = (T.pathOf v (T.leaf x)).edges.length + 1)
+    (hdw : ∀ x ∈ T.sideLeaves s(u, w) w,
+      (T.pathOf u (T.leaf x)).edges.length = (T.pathOf w (T.leaf x)).edges.length + 1) :
+    sideDoublingSum T e u
+      = (1 / 2) * (sideDoublingSum T s(u, v) v + sideDoublingSum T s(u, w) w) := by
+  have hA : (∑ x ∈ T.sideLeaves s(u, v) v,
+        (1 / 2) ^ ((T.pathOf u (T.leaf x)).edges.length))
+      = (1 / 2) * sideDoublingSum T s(u, v) v := by
+    rw [sideDoublingSum, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun x hx => ?_
+    rw [hdv x hx, pow_succ]
+    ring
+  have hB : (∑ x ∈ T.sideLeaves s(u, w) w,
+        (1 / 2) ^ ((T.pathOf u (T.leaf x)).edges.length))
+      = (1 / 2) * sideDoublingSum T s(u, w) w := by
+    rw [sideDoublingSum, Finset.mul_sum]
+    refine Finset.sum_congr rfl fun x hx => ?_
+    rw [hdw x hx, pow_succ]
+    ring
+  rw [sideDoublingSum, hpart, Finset.sum_union hdisj, hA, hB]
+  ring
+
 end Phylo.SideDoubling
