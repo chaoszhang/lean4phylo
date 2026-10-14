@@ -120,4 +120,17 @@ theorem sideDoublingSum_eq_half_mul_add_of_union (T : Cladogram X) (e : Sym2 T.V
   rw [sideDoublingSum, hpart, Finset.sum_union hdisj, hA, hB]
   ring
 
+/-! ## ③ 几何前提 (b)：深度关系（沿邻接分支 +1）
+
+归纳步还需要：**若 `x` 落在 `u` 朝 `v` 的那一支上（`x ∈ sideLeaves s(u,v) v` ✓），
+则 `d_u(x) = d_v(x) + 1`** ✓（路径 `u — v — ⋯ — x` ✓）。
+
+库内可用器材（探路实测 ✓）：`Cladogram.pathOf`（`AttesonRadius.lean:1336` ✓）· `pathOf_isPath`（`:1341` ✓）·
+`existsUnique_path`（`Phylo/Core.lean:83` ✓）· `inSide_*` 族（`LeafStatus.lean` ✓）。
+做法：把「`u — v` 接着 `pathOf v (leaf x)`」这条 walk 证成 **`IsPath`**（用 `x` 在 `v` 侧 ⇒ 该 walk 不回访 `u` ✓），
+再用路径**唯一性**与 `pathOf` 的定义相等，最后取边数（`Walk.edges_cons` ✓）。
+
+**诚实边界** ⬜：本节的引理若本轮未过门，即如实登记为"未落地"，并在下一轮以 359/361 的策略继续
+（**不**改任何既有声明 ✗）。 -/
+
 end Phylo.SideDoubling
