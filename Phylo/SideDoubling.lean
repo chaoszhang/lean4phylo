@@ -454,7 +454,7 @@ theorem exists_two_adj_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u : T.
 （正是 ② 代数内核所需的 `hpart` 与 `hdisj` ✓）。 -/
 theorem sideLeaves_eq_union_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u : T.V}
     (hu : ¬ T.IsLeaf u) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) {e : Sym2 T.V} (he : e = s(u, y₀)) :
-    ∃ v w : T.V, v ≠ w ∧
+    ∃ v w : T.V, T.graph.Adj u v ∧ T.graph.Adj u w ∧ v ≠ w ∧
       T.sideLeaves e u = T.sideLeaves s(u, v) v ∪ T.sideLeaves s(u, w) w ∧
       Disjoint (T.sideLeaves s(u, v) v) (T.sideLeaves s(u, w) w) := by
   obtain ⟨v, w, huv, huw, hvw, hvy, hwy, hcover⟩ := exists_two_adj_of_isBinary T hbin hu hy₀
@@ -471,7 +471,7 @@ theorem sideLeaves_eq_union_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u
     rcases Sym2.eq_iff.mp h1 with ⟨-, h⟩ | ⟨_, h⟩
     · exact hwy h
     · exact absurd h.symm huw.ne
-  refine ⟨v, w, hvw, ?_, disjoint_sideLeaves_of_adj_adj T huv huw hvw⟩
+  refine ⟨v, w, huv, huw, hvw, ?_, disjoint_sideLeaves_of_adj_adj T huv huw hvw⟩
   ext x
   constructor
   · intro hx
@@ -481,5 +481,36 @@ theorem sideLeaves_eq_union_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u
     rcases Finset.mem_union.mp hx with hx | hx
     · exact mem_sideLeaves_of_mem_sideLeaves_adj T huv he hnev hx
     · exact mem_sideLeaves_of_mem_sideLeaves_adj T huw he hnew hx
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **取锚点**：`e ∋ u` 且 `e` 是真边 ⇒ `∃ y₀, Adj u y₀ ∧ e = s(u, y₀)` ✓。 -/
+theorem exists_adj_of_mem_of_mem_edgeSet (T : Cladogram X) {u : T.V} {e : Sym2 T.V}
+    (he : u ∈ e) (hedge : e ∈ T.graph.edgeSet) :
+    ∃ y₀ : T.V, T.graph.Adj u y₀ ∧ e = s(u, y₀) := by
+  induction e using Sym2.ind with
+  | h a b =>
+    rw [Sym2.mem_iff] at he
+    rcases he with h | h
+    · subst h
+      exact ⟨b, by rwa [SimpleGraph.mem_edgeSet] at hedge, rfl⟩
+    · subst h
+      rw [SimpleGraph.mem_edgeSet] at hedge
+      exact ⟨a, hedge.symm, Sym2.eq_swap⟩
+
+/-- ★★★ **一支的 card 严格小于并集**（归纳假设的前提 ✓）：
+若 `sideLeaves E u = A ∪ B` 且 `A ⊥ B`，`B` 非空（由 `Adj u w` 得一叶 ✓），则 `A.card < (sideLeaves E u).card` ✓。 -/
+theorem card_sideLeaves_lt_of_union (T : Cladogram X) {u v w : T.V} {E : Sym2 T.V}
+    (huw : T.graph.Adj u w)
+    (hpart : T.sideLeaves E u = T.sideLeaves s(u, v) v ∪ T.sideLeaves s(u, w) w)
+    (hdisj : Disjoint (T.sideLeaves s(u, v) v) (T.sideLeaves s(u, w) w)) :
+    (T.sideLeaves s(u, v) v).card < (T.sideLeaves E u).card := by
+  rw [hpart]
+  refine Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr
+    ⟨Finset.subset_union_left, ?_⟩)
+  intro hEq
+  have hBsub : T.sideLeaves s(u, w) w ⊆ T.sideLeaves s(u, v) v := by
+    rw [hEq]; exact Finset.subset_union_right
+  obtain ⟨x, hx⟩ := T.sideLeaves_nonempty_of_adj' huw
+  exact (Finset.disjoint_left.mp hdisj (hBsub hx)) hx
 
 end Phylo.SideDoubling
