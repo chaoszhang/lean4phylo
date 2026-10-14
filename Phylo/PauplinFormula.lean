@@ -272,6 +272,31 @@ theorem bmeCoeff_mul_incidence_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
     incidence_eq_one_of_mem_sideLeaves_of_adj T huv hx hy]
   ring
 
+/-! ### ★★★ W19 登记：桥公式的【最后拼装】—— 状态与可用工具（2026-10-14）
+
+**目标（等价形式，经 `Dissimilarity.sum_sum_eq_plane` ✓ 与 `plane = univ.product univ` ✓）**：
+
+　`∑ x, ∑ y, bmeCoeff (topoDist T x y) · incidence T x y s(u,v)  =  2 · D_e(u) · D_e(v)`
+
+**已证齐备的零件** ✓：
+* 逐对贡献三条（本文件 ✓）：同侧 `0` ✓ · 跨侧 `= (1/2)^{d_v(x)}·(1/2)^{d_u(y)}` ✓ · 跨侧量值 ✓；
+* 边数可加性 `topoDist_eq_add_of_mem_sideLeaves` ✓；
+* `D_e(u) = 1`（`Phylo/SideDoubling.lean` 的 `sideDoublingSum_eq_one_of_isBinary` ✓，二叉 ✓）；
+* 情形划分的两把钥匙 ✓：`Cladogram.sideLeaves_compl_adj`（`Split.lean:756` ✓，**另侧即补集** ✓）
+  与 `Cladogram.inSide_or_inSide`（`Split.lean:764` 用例 ✓，**每点在两侧之一** ✓）；
+* 双重和 ↔ 平面对和：`Dissimilarity.sum_sum_eq_plane`（`BMELeastSquares.lean:176` ✓）。
+
+**卡点（约定性，非数学性 ✓）** ✗：左式索引集是 `Finset.univ`、右式（`sideDoublingSum` 的定义 ✓）
+是 `sideLeaves e u` **子集** ✗ ⇒ `Finset.sum_congr rfl` 无法直接匹配 ✓。
+需要先做一次「**子集和 → `univ` 带指示函数**」的转换（`Finset.sum_filter` ✓ ＋ `univ.filter p = p` 的归一 ✓），
+再对 `univ` 逐点用 `inSide_or_inSide` 分两侧 ✓ 并用逐对贡献引理 ✓。
+
+**建议的两步走（下一轮）** ✓：
+1. 先证【同索引集】版：`∑ y : X, (贡献 x y) = ∑ y ∈ sideLeaves e u, (1/2)^{d_v(x)}·(1/2)^{d_u(y)}`
+   —— 用 `← Finset.sum_filter` ＋ `by_cases` ＋ 逐对贡献引理 ✓；
+2. 再对右式用 `Finset.mul_sum` 分离出 `D_e(u)` ✓；对 `x` 侧同理（镜像，用 `huv.symm` ＋ `Sym2.eq_swap` ✓）。
+-/
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
