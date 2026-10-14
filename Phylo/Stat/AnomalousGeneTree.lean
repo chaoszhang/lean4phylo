@@ -442,31 +442,54 @@ theorem agt_mid (x y : ℝ) (hx : 0 < x) :
   · intro h; nlinarith [h, hA]
   · intro h; nlinarith [h, hA]
 
-/-! ### ★★★ W19 登记（C1-M3② Stage B2/B3）：**只剩最后一步不等式**，其余全部已就位 ✓
+/-- ★★ **倒数-乘积互化（初等版）** ✓：`0 < z ⇒ (z⁻¹ < c ↔ 1 < c·z)` ✓。
 
-**已完成** ✓：Stage A（`agt_factor`／`agt_key`／`agt_A_pos`／`agt_B_pos` ✓）＋ Stage B1（`agt_mid` ✓）。
+★ 为何不用 `inv_lt_iff_one_lt_mul`：该引理在 `ℝ` 上会触发**类型类卡住**
+（`MulRightStrictMono ?m` ✗，隐式类型参数是元变量 ✓ —— **教训 413**）；
+本证明只用 `mul_lt_mul_of_pos_left/right` ＋ `inv_mul_cancel₀` ✓，**只依赖 `z > 0`** ✓。 -/
+theorem inv_lt_iff_one_lt_mul_real {z c : ℝ} (hz : 0 < z) : z⁻¹ < c ↔ 1 < c * z := by
+  constructor
+  · intro h
+    have h1 := mul_lt_mul_of_pos_right h hz
+    rwa [inv_mul_cancel₀ (ne_of_gt hz)] at h1
+  · intro h
+    have h2 := mul_lt_mul_of_pos_right h (inv_pos.mpr hz)
+    rwa [one_mul, mul_assoc, mul_inv_cancel₀ (ne_of_gt hz), mul_one] at h2
 
-**⑤ 精确剩余（一步）** ✓：`agt_log` 的证明已推进到**目标恰为**
-　`(Z y)⁻¹ < C ↔ 1 < C · (Z y)` ✓（`C := (12 − 3Zx − 2Zx³)/(6(3 − 2Zx))` ✓），
-且上下文已备两件正性：`hz : 0 < Z y` ✓（`Z_pos` ✓）与 `hC : 0 < C` ✓（`div_pos hN hD` ✓，其中
-`hN` 用 **`pow_le_one₀ (le_of_lt hw0) (le_of_lt hw1)`** 得 `Zx³ ≤ 1` 再 `nlinarith [hw0, hw1, h3]` ✓ —— ★ 教训 411：
-**`pow_le_one₀` 的指数由目标推断，不传 `3`** ✓）。
+/-- ★★★ **Stage B2（`hlog`）**：`y < threeAgtBoundary x ↔ 1 < C(w)·(Z y)` ✓。
 
-**★★ 两处已排除的写法（别再试 ✗）**：
-1. `rw [hzy]` 把 `Z y` 改写成 `(exp y)⁻¹` ✗ —— 它命中的是 **RHS 乘积里的 `Z y`**，
-   而 LHS 仍是 `exp y` ⇒ 目标错位 ✗；**正解**是反方向：`hy : Real.exp y = (Z y)⁻¹` ✓
-   （`by rw [Z, Real.exp_neg, inv_inv]` ✓）⇒ `rw … , hy` ✓ **一次到位** ✓；
-2. `exact inv_lt_iff_one_lt_mul` ✗ —— 它取自 `Algebra/Order/Group/Unbundled/Basic.lean:179` ✓，
-   在 `ℝ` 上触发 **类型类卡住**（`MulRightStrictMono ?m` ✗：隐式类型参数是元变量 ✓）。
+证：`threeAgtBoundary x = log C` ✓ ⇒ 由 `Real.exp_lt_exp` ✓ 把 `y < log C` 化为 `exp y < C` ✓；
+`Real.exp_log` ✓（需 `C > 0` ✓）消去 `exp log` ✓；`Real.exp_neg` ✓ 给 `exp y = (Z y)⁻¹` ✓
+（★ 方向必须如此：★ 教训 414 的反例——反向 `rw` 会命中 RHS 乘积里的 `Z y` 而错位 ✗）；
+最后用本文件刚证的 **`inv_lt_iff_one_lt_mul_real`** ✓ 收口 ✓。 -/
+theorem agt_log (x y : ℝ) (hx : 0 < x) :
+    y < threeAgtBoundary x
+      ↔ 1 < ((12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x))) * Z y := by
+  have hw0 : 0 < Z x := Z_pos x
+  have hw1 : Z x < 1 := Z_lt_one hx
+  have hD : 0 < 6 * (3 - 2 * Z x) := by linarith
+  have h3 : Z x ^ 3 ≤ 1 := pow_le_one₀ (le_of_lt hw0) (le_of_lt hw1)
+  have hN : 0 < 12 - 3 * Z x - 2 * Z x ^ 3 := by nlinarith [hw0, hw1, h3]
+  have hC : 0 < (12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x)) := div_pos hN hD
+  have hy : Real.exp y = (Z y)⁻¹ := by rw [Z, Real.exp_neg, inv_inv]
+  rw [threeAgtBoundary, ← Real.exp_lt_exp, Real.exp_log hC, hy]
+  exact inv_lt_iff_one_lt_mul_real (Z_pos y)
 
-**★★★ 下一轮的候选写法（按优先级 ✓）**：
-1. **`rw [inv_lt_comm₀ hz hC]`** ✓（`Algebra/Order/GroupWithZero/Basic.lean:1237` ✓：
-   `a⁻¹ < b ↔ b < a` ✗ **不是**所需 ⇐ ★ 注意方向 ✗）⇒ 应改用
-   **`one_lt_inv_iff₀`**（`:939` ✓：`1 < a⁻¹ ↔ 0 < a ∧ a < 1` ✗ 亦不合 ✗）；
-2. ★ **`field_simp [ne_of_gt hz]`** ✓ 后再 `nlinarith` ✓（把 `(Z y)⁻¹` 清成分母 ✓）；
-3. ★ **`lt_inv_comm₀ hz (inv_pos.mpr hz)`** 类 ✓，或直接
-   **`rw [inv_lt_iff_one_lt_mul' (a := (Z y : ℝ)) …]`** ✓（**显式标注类型** ✓ ——
-   ★ 编译器原文提示：「Adding type annotations and supplying implicit arguments can give Lean more
-   information for typeclass resolution」✓）。
+/-- ★★★★★ **W19 C1-M3② 闭环：`threeAgtCriterion`（DR2006 式 (5)）已证** ✓✓
 
--/end Phylo.Stat.AnomalousGeneTree
+　`∀ x y, 0 < x → 0 < y → (g x y > f x y ↔ y < threeAgtBoundary x)` ✓
+
+证：**两段等价 ＋ 传递** ✓ —— `agt_mid`（`g > f ⟺ 1 < C·(Z y)` ✓）与
+`agt_log`（`y < threeAgtBoundary x ⟺ 1 < C·(Z y)` ✓）的复合 ✓。
+
+★ 文献依据：`DegnanRosenberg2006_DiscordanceSpeciesTreesMostLikelyGeneTrees.md`
+**式 (5)**（`:281-291` ✓）＋ 判决性见证 **`:299`**（`b(0) = log(7/6) ≈ 0.1542` ✓）；
+本库 `threeAgtBoundary` 的符号本季已按此纠正 ✓（【命题改动表】两处 AGT 边界修正 ✓）。
+★ 数值复核：`scripts/msc/w19_threeAgtCriterion_algebra.py` ✓（★G 已入库 ✓）。
+★ 注：假设 `0 < y`（式 (5) 的假设 ✓）在本证明中**未被使用**（分界只依赖 `x` 的侧 ✓），
+故写作 `_hy` 以免 linter 报警 ✓。 -/
+theorem threeAgtCriterion_holds : threeAgtCriterion := by
+  intro x y hx _hy
+  exact (agt_mid x y hx).trans (agt_log x y hx).symm
+
+end Phylo.Stat.AnomalousGeneTree
