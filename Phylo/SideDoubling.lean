@@ -214,4 +214,32 @@ theorem not_mem_support_pathOf_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
     SimpleGraph.reachable_deleteEdges_of_notMem_edges _ fun h => hedge (hsub h)
   exact (T.not_reachable_deleteEdges_of_adj huv) hreach.symm
 
+/-! ## ⑤ 几何前提 (a) 的一半：`v` 支 ⊆ `u` 侧
+
+`e = s(u,y)` 是 `u` 的**另一条**邻边（`s(u,v) ≠ e` ✓）时，`v` 支上的叶都在 `u` 侧 ✓：
+
+　`sideLeaves s(u,v) v ⊆ sideLeaves e u` ✓。
+
+证明（现在有砖了 ✓）：取 `p := T.pathOf v (T.leaf x)` ✓。由 ④ 知 `u ∉ p.support` ✓，
+故 `SimpleGraph.reachable_deleteEdges_of_notMem_support`（`SplitsMaximal.lean:232` ✓，
+"支撑集不含 `w` 的 walk 不使用任何以 `w` 为端点的边" ✓）给出 `(T - e).Reachable v (T.leaf x)` ✓；
+又 `u — v` 这条边在 `T - e` 中仍在（`s(u,v) ≠ e` ✓，`deleteEdges_adj` ✓），
+故 `(T - e).Reachable u (T.leaf x)` ✓，即 `x ∈ sideLeaves e u` ✓。 -/
+
+/-- ★★★ **(a) 的一半**：`e = s(u,y)`（`u` 的另一条邻边，`s(u,v) ≠ e` ✓）时
+`x ∈ sideLeaves s(u,v) v ⇒ x ∈ sideLeaves e u` ✓。 -/
+theorem mem_sideLeaves_of_mem_sideLeaves_adj (T : Cladogram X) {u v y : T.V} {e : Sym2 T.V}
+    (huv : T.graph.Adj u v) (he : e = s(u, y)) (hne : s(u, v) ≠ e) {x : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) : x ∈ T.sideLeaves e u := by
+  rw [T.mem_sideLeaves]
+  have hnotmem : u ∉ (T.pathOf v (T.leaf x)).support :=
+    not_mem_support_pathOf_of_mem_sideLeaves T huv hx
+  have hreach_v : (T.graph.deleteEdges {e}).Reachable v (T.leaf x) := by
+    rw [he]
+    exact SimpleGraph.reachable_deleteEdges_of_notMem_support
+      (z := y) (T.pathOf v (T.leaf x)) hnotmem
+  have hreach_uv : (T.graph.deleteEdges {e}).Reachable u v :=
+    (SimpleGraph.deleteEdges_adj.mpr ⟨huv, hne⟩).reachable
+  exact (hreach_uv.trans hreach_v).symm
+
 end Phylo.SideDoubling
