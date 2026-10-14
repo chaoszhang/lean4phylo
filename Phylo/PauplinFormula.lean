@@ -101,6 +101,39 @@ noncomputable def topoDist (T : Phylogram X) (x y : X) : ℕ := (pathWalk T x y)
 noncomputable def incidence (T : Phylogram X) (x y : X) (e : Sym2 T.V) : ℝ :=
   if e ∈ (pathWalk T x y).edges then 1 else 0
 
+/-! ### ★★★ W19 补：把 `pathWalk` 与 `Cladogram.pathOf` 接上（桥的第一块）
+
+`pathWalk` 是 `existsUnique_path` 的 `choose` ✓，而**树中路径唯一** ✓ ⇒ 它与
+`T.pathOf (T.leaf x) (T.leaf y)` 是**同一条** ✓。接上之后，库内已有的**顶点级**引理
+`Cladogram.mem_pathOf_edges_iff_not_inSide`（`AttesonRadius.lean:1394` ✓）就能用在
+`pathWalk`/`incidence` 上 —— 这正是把 `sideDoublingSum` 与 `bmeCoeff·incidence`
+两套形式化接起来所缺的第一块砖 ✓。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`pathWalk` 就是 `pathOf`**（树中两点间路径唯一 ✓）。 -/
+theorem pathWalk_eq_pathOf (T : Phylogram X) (x y : X) :
+    pathWalk T x y = T.pathOf (T.leaf x) (T.leaf y) :=
+  (T.existsUnique_path (T.leaf x) (T.leaf y)).unique (pathWalk_isPath T x y)
+    (T.pathOf_isPath (T.leaf x) (T.leaf y))
+
+/-- ★★★ **同侧对不含 `e`** ✓：`x`、`y` 都落在 `e` 的 `u` 侧 ⇒ `e` 不在 `x`-`y` 路径上
+⇒ `S_xy(e) = 0` ✓（桥的"同侧贡献为零"那一半 ✓）。
+
+证明：两端点都从 `u` 在 `T - e` 中可达 ⇒ 它们在 `T - e` 中互通 ✓ ⇒
+由 `mem_pathOf_edges_iff_not_inSide` 的**逆否**，`e ∉ (pathOf (leaf x) (leaf y)).edges` ✓
+⇒ 经上一条换成 `pathWalk` ✓。 -/
+theorem incidence_eq_zero_of_same_side (T : Phylogram X) {e : Sym2 T.V} {u : T.V} {x y : X}
+    (hx : x ∈ T.sideLeaves e u) (hy : y ∈ T.sideLeaves e u) : incidence T x y e = 0 := by
+  rw [incidence]
+  have hx' : T.inSide e u (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hy' : T.inSide e u (T.leaf y) := (T.mem_sideLeaves_iff_inSide).mp hy
+  have hside : T.inSide e (T.leaf x) (T.leaf y) := hx'.symm.trans hy'
+  have hnot : e ∉ (pathWalk T x y).edges := by
+    rw [pathWalk_eq_pathOf T x y]
+    exact fun h => ((T.mem_pathOf_edges_iff_not_inSide (e := e)
+      (u := T.leaf x) (v := T.leaf y)).mp h) hside
+  simp [hnot]
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
