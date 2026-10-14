@@ -382,24 +382,22 @@ theorem sum_sum_mul_of_mem_sideLeaves (T : Phylogram X) {u v : T.V} :
         * sideDoublingSum T.toCladogram s(u, v) v := by
   rw [sideDoublingSum, sideDoublingSum, Finset.sum_mul_sum]
 
-/-! ★★ **路径反向 ＋ 边数换向** —— ★ **本轮未成形，登记其正确依据（下一轮直接落）** ⬜
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **路径反向**：`(pathOf a b).reverse = pathOf b a` ✓
+（树中路径唯一 ⇒ 与 `pathWalk_eq_pathOf` 同款手法：`existsUnique_path` 的 `.unique` ✓）。 -/
+theorem pathOf_reverse_eq (T : Cladogram X) (a b : T.V) :
+    (T.pathOf a b).reverse = T.pathOf b a :=
+  (T.existsUnique_path b a).unique (T.pathOf_isPath a b).reverse (T.pathOf_isPath b a)
 
-**目标** ✓：`(pathOf a b).reverse = pathOf b a` ✓ 与 `|pathOf a b| = |pathOf b a|` ✓。
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **边数换向**：`|pathOf a b| = |pathOf b a|` ✓（反向 ＋ `length_reverse` ✓ ＋ `length_edges` ✓）。
 
-**★★★ 本轮的关键发现（值得记 ✓）**：`pathOf_unique` **不是全局引理** ✗ ——
-它是 `Phylo/SplitsMaximal.lean:122` 里的一句**局部 `have`**
-（`have pathOf_unique : ∀ q (r : T.graph.Walk w q), r.IsPath → r = pathOf q` ✓）
-⇒ 在其他文件里**无法引用** ✗（Lean 报 `Unknown identifier` ✓）。
-
-**正确依据** ✓：用 **`Cladogram.existsUnique_path`** 的**唯一性** ✓ ——
-即我在 `pathWalk_eq_pathOf`（本文件 ✓）里**已经用过**的同款手法：
-`(T.existsUnique_path a b).unique hp1 hp2` ✓。
-具体：`(T.pathOf a b).reverse` 是 `b → a` 的路径 ✓（`(T.pathOf_isPath a b).reverse` ✓），
-与 `T.pathOf b a` 同为 `b → a` 的路径 ✓ ⇒ 由 `existsUnique_path b a` 的唯一性得二者相等 ✓；
-边数相等再由 **`SimpleGraph.Walk.length_reverse`**（`Operations.lean:243` ✓）＋ `length_edges`（`Basic.lean:269` ✓）得 ✓
-（★ 注意 `length_edges` 的方向：目标里是 `edges.length` ⇒ 用**正向** `rw` 换成 `length` ✓）。
-
--/
+★ 用途：逐点恒等式里 `x` 侧的指数拼作 `|pathOf (leaf x) u|`（**叶在前** ✗），
+而 `sideDoublingSum` 的定义是 `|pathOf u (leaf x)|`（**基准在前** ✓）⇒ 需本引理换向 ✓。 -/
+theorem length_pathOf_comm (T : Cladogram X) (a b : T.V) :
+    (T.pathOf a b).edges.length = (T.pathOf b a).edges.length := by
+  rw [SimpleGraph.Walk.length_edges, SimpleGraph.Walk.length_edges,
+    ← SimpleGraph.Walk.length_reverse (T.pathOf a b), pathOf_reverse_eq]
 
 /-! ### ★★★ W19 登记：最后一项（行和引理）—— 形状已定，工具已齐（下一轮落）
 
