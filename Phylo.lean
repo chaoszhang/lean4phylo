@@ -114,6 +114,7 @@ import Phylo.Stat.KmatNonneg
 import Phylo.Stat.LMLumping
 import Phylo.Stat.LongBranchAttraction
 import Phylo.Stat.MLIdentifiability
+import Phylo.Stat.MLSamplingAE
 import Phylo.Stat.MSC
 import Phylo.Stat.MSCBayes
 import Phylo.Stat.MSCInstance
