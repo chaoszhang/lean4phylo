@@ -372,6 +372,44 @@ def threeAgtBoundary (x : ℝ) : ℝ :=
 def threeAgtCriterion : Prop :=
   ∀ x y : ℝ, 0 < x → 0 < y → (g x y > f x y ↔ y < threeAgtBoundary x)
 
+/-! ### ★★★ W19（C1-M3②）`threeAgtCriterion` 的**代数内核**（Stage A ✓）
+
+数值脚本 `scripts/msc/w19_threeAgtCriterion_algebra.py` ✓（★G 已入库 ✓）验证了本节的
+两条恒等式（精确有理数，35 组／0 不符 ✓）⇒ 缺口 `threeAgtCriterion` 的证明**已归约**为：
+
+　`g x y − f x y = −A′(w) + B(w)·z` ✓（`w = Z x`、`z = Z y`）
+　`A′(w)·N(w) = B(w)·D(w)` ✓（`N = 12 − 3w − 2w³`、`D = 6(3 − 2w)`）
+
+其中 `A′(w) = 1 − (2/3)w` ✓、`B(w) = 2/3 − w/6 − w³/9` ✓ —— 恰是 `threeAgtBoundary` 的分子分母之比 ✓。
+
+★ 与文献一致：`w = 1`（即 `x = 0`）时 `B/A′ = (7/18)/(1/3) = 7/6` ＝ DR2006 **`:299`** 的
+「`b(0) = log(7/6) ≈ 0.1542`」✓。 -/
+
+/-- ★★ **代数内核 (i)**：`g − f` 关于 `z = Z y` 的**仿射因式分解** ✓（数值 35 组／0 不符 ✓）。 -/
+theorem agt_factor (x y : ℝ) :
+    g x y - f x y
+      = -(1 - (2 / 3) * Z x) + ((2 / 3) - Z x / 6 - Z x ^ 3 / 9) * Z y := by
+  rw [g, f]
+  ring
+
+/-- ★★ **代数内核 (ii)**：`A′(w)·N(w) = B(w)·D(w)` ✓（等价于 `B/A′ = (12−3w−2w³)/(6(3−2w))` ✓，
+即 `threeAgtBoundary` 的分式恒等式 ✓；数值 0 不符 ✓）。 -/
+theorem agt_key (w : ℝ) :
+    (1 - (2 / 3) * w) * (12 - 3 * w - 2 * w ^ 3)
+      = ((2 / 3) - w / 6 - w ^ 3 / 9) * (6 * (3 - 2 * w)) := by
+  ring
+
+/-- ★★ **正性 (A′)**：`0 < w < 1 ⇒ 0 < 1 − (2/3)w` ✓。 -/
+theorem agt_A_pos {w : ℝ} (h1 : w < 1) : 0 < 1 - (2 / 3) * w := by
+  linarith
+
+/-- ★★ **正性 (B)**：`0 ≤ w ≤ 1 ⇒ 0 < 2/3 − w/6 − w³/9` ✓
+（`w³ ≤ 1` ⇒ `B ≥ 2/3 − 1/6 − 1/9 = 7/18 > 0` ✓）。 -/
+theorem agt_B_pos {w : ℝ} (h0 : 0 ≤ w) (h1 : w ≤ 1) :
+    0 < (2 / 3) - w / 6 - w ^ 3 / 9 := by
+  have h3 : w ^ 3 ≤ 1 := pow_le_one₀ h0 h1
+  linarith
+
 /-- **缺口 3（一般 `n`）**：DR2006 Proposition 2（`n ≥ 5` 任意物种树拓扑都产 AGT）与
 Rosenberg 2013 Theorem 1（产生 AGT ⟺ 有两个相邻内部枝）的**抽象骨架**：
 模型 `P : 枝长 → 基因树 → ℝ` 与物种树拓扑 `st` 作为**参数**传入（**不假设**任何模型性质 ✓），
