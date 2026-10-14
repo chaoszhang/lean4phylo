@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.BMELeastSquares
+import Phylo.SplitsMaximal
 
 /-!
 # `Phylo.SideDoubling` —— 子树倍增恒等式的**反例侧**（W19 任务 C1.5 的 ★B 件）
@@ -192,5 +193,25 @@ theorem length_pathOf_eq_succ_of_adj_of_mem_sideLeaves (T : Cladogram X) {u v : 
   have h2 : (T.pathOf v (T.leaf x)).edges.toFinset.card
       = (T.pathOf v (T.leaf x)).edges.length := List.toFinset_card_of_nodup hnv
   rw [← h1, ← h2, hset, Finset.card_insert_of_notMem (fun h => hnotin (List.mem_toFinset.mp h))]
+
+/-! ## ④ 几何前提 (a) 的关键一步：`v` 侧路径**不经过 `u`**
+
+`x` 在 `u` 朝 `v` 那一支上时，从 `v` 到 `leaf x` 的唯一路径**不经过 `u`** ✓ ——
+否则该路径的前缀 `takeUntil u` 是一条**避开 `s(u,v)`** 的 `v → u` 走法（边表是子集 ✓
+`SimpleGraph.Walk.edges_takeUntil_subset_edges`，`Mathlib/…/Walk/Decomp.lean:235` ✓），
+与「边是桥」矛盾 ✓。这一步是 (a) 分支分划的直接前提 ✓。 -/
+
+/-- ★★★ **`v` 侧路径不经过 `u`**：`x ∈ sideLeaves s(u,v) v` ⇒ `u ∉ (T.pathOf v (T.leaf x)).support` ✓。 -/
+theorem not_mem_support_pathOf_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x : X} (hx : x ∈ T.sideLeaves s(u, v) v) :
+    u ∉ (T.pathOf v (T.leaf x)).support := by
+  intro hmem
+  have hside : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hedge : s(u, v) ∉ (T.pathOf v (T.leaf x)).edges := fun h =>
+    ((T.mem_pathOf_edges_iff_not_inSide (e := s(u, v)) (u := v) (v := T.leaf x)).mp h) hside
+  have hsub := SimpleGraph.Walk.edges_takeUntil_subset_edges (T.pathOf v (T.leaf x)) hmem
+  have hreach : (T.graph.deleteEdges {s(u, v)}).Reachable v u :=
+    SimpleGraph.reachable_deleteEdges_of_notMem_edges _ fun h => hedge (hsub h)
+  exact (T.not_reachable_deleteEdges_of_adj huv) hreach.symm
 
 end Phylo.SideDoubling
