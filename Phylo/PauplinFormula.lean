@@ -382,6 +382,46 @@ theorem sum_sum_mul_of_mem_sideLeaves (T : Phylogram X) {u v : T.V} :
         * sideDoublingSum T.toCladogram s(u, v) v := by
   rw [sideDoublingSum, sideDoublingSum, Finset.sum_mul_sum]
 
+/-! ★★ **路径反向 ＋ 边数换向** —— ★ **本轮未成形，登记其正确依据（下一轮直接落）** ⬜
+
+**目标** ✓：`(pathOf a b).reverse = pathOf b a` ✓ 与 `|pathOf a b| = |pathOf b a|` ✓。
+
+**★★★ 本轮的关键发现（值得记 ✓）**：`pathOf_unique` **不是全局引理** ✗ ——
+它是 `Phylo/SplitsMaximal.lean:122` 里的一句**局部 `have`**
+（`have pathOf_unique : ∀ q (r : T.graph.Walk w q), r.IsPath → r = pathOf q` ✓）
+⇒ 在其他文件里**无法引用** ✗（Lean 报 `Unknown identifier` ✓）。
+
+**正确依据** ✓：用 **`Cladogram.existsUnique_path`** 的**唯一性** ✓ ——
+即我在 `pathWalk_eq_pathOf`（本文件 ✓）里**已经用过**的同款手法：
+`(T.existsUnique_path a b).unique hp1 hp2` ✓。
+具体：`(T.pathOf a b).reverse` 是 `b → a` 的路径 ✓（`(T.pathOf_isPath a b).reverse` ✓），
+与 `T.pathOf b a` 同为 `b → a` 的路径 ✓ ⇒ 由 `existsUnique_path b a` 的唯一性得二者相等 ✓；
+边数相等再由 **`SimpleGraph.Walk.length_reverse`**（`Operations.lean:243` ✓）＋ `length_edges`（`Basic.lean:269` ✓）得 ✓
+（★ 注意 `length_edges` 的方向：目标里是 `edges.length` ⇒ 用**正向** `rw` 换成 `length` ✓）。
+
+-/
+
+/-! ### ★★★ W19 登记：最后一项（行和引理）—— 形状已定，工具已齐（下一轮落）
+
+**目标** ✓：固定 `x` 后对 `y` 求和
+
+　`Σ_y bmeCoeff(topoDist x y)·incidence x y e`
+　`= if x ∈ A then (1/2)^{d_u(x)}·D_e(v) else if x ∈ B then (1/2)^{d_v(x)}·D_e(u) else 0` ✓
+（`A = sideLeaves e u`、`B = sideLeaves e v` ✓）
+
+**工具已全部定名** ✓：
+* 逐点恒等式：`contribution_eq_ite`（本文件 ✓）；
+* 内和的 `ite → 子集和`：**`sum_ite_mem_eq_sum`**（本文件 ✓）；
+* 提出常数因子：**`Finset.mul_sum`**／`Finset.sum_mul` ✓；
+* 外和按侧划分：**`Finset.sum_add_sum_compl`** ✓（`S` 与其补 ✓，配合 `sideLeaves_compl_adj` ✓）；
+* 指数换向：**`length_pathOf_comm`**（本件 ✓）；
+* 同型参考（库内已有）：**`AttesonRadius.sum_ite_pathOf_eq_sideLeafCount`**（`:1663` ✓，
+  「`Σ_x ite(路径含 e)` = 侧叶数」✓ —— 与本次内和**同型** ✓，可直接照其手法 ✓）。
+
+**收口最后两步** ✓：行和引理（本登记 ✓）⇒ 对 `x` 求和（`sum_add_sum_compl` ✓）
+⇒ `D_u·D_v + D_v·D_u = 2·D_e(u)·D_e(v)` ⇒ 代入 `D = 1` ⇒ `= 2` ＝ **D2-A′** ⇒ 经已证的 `:458`/`:494`
+⇒ **`pauplinFormula_gap`（`l̂ = l`）** ✓。 -/
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
