@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Phylo.TreeDistance
 import Phylo.BMELeastSquares
 import Phylo.SplitsMaximal
+import Phylo.SideDoubling
 
 /-!
 # `Phylo.PauplinFormula` —— Pauplin（BME）树长公式（W11g · D2）
@@ -1010,6 +1011,36 @@ def pauplinEdgeCoeff_gap_correct_shape (T : Phylogram X) : Prop :=
   T.IsBinary → ∀ e ∈ T.graph.edgeSet,
     ∑ p ∈ Dissimilarity.plane, bmeCoeff (topoDist T p.1 p.2) * incidence T p.1 p.2 e = 2
 
+/-- ★★★ **收官引理：桥公式 ⇒ 二叉树上每条真边的系数 `= 2`** ✓（即 D2-A′ 的修复形态 ✓）
+
+　`pauplinEdgeCoeff_gap_correct_shape T` ✓ —— 即
+　`T.IsBinary → ∀ e ∈ T.graph.edgeSet, Σ_{p ∈ plane} bmeCoeff(topoDist p)·incidence p e = 2` ✓。
+
+证：把 `e` 写成 `s(a,b)`（`Sym2.ind` ✓）⇒ 由 `mem_edgeSet` 得 `Adj a b` ✓
+⇒ 用桥公式 `double_sum_eq_two` ✓ 得 `2·D_e(a)·D_e(b)` ✓
+⇒ 由**二叉性**（`sideDoublingSum_eq_one_of_isBinary` ✓，`Phylo/SideDoubling.lean` ✓）得两个因子都是 `1` ✓
+⇒ `ring` 收口 ✓。
+
+★★ 意义：这是 **C1.5（D2 Pauplin）** 的最后一块 ——
+接 `pauplinFormula_gap_of_correct_shape`（本文件 ✓）即得 `pauplinFormula_gap T`
+（`T.IsBinary → pauplinLength T = trueLength T` ✓），即文献 DesperGascuel2004:1990
+转述的 Pauplin 公式证明的**完整形式化** ✓。 -/
+theorem pauplinEdgeCoeff_gap_correct_shape_of_isBinary (T : Phylogram X) :
+    pauplinEdgeCoeff_gap_correct_shape T := by
+  intro hbin e he
+  revert he
+  refine Sym2.ind (fun a b => ?_) e
+  intro he
+  have hab : T.graph.Adj a b := (SimpleGraph.mem_edgeSet T.graph).mp he
+  rw [← Dissimilarity.sum_sum_eq_plane
+      (fun p q => bmeCoeff (topoDist T p q) * incidence T p q s(a, b)),
+    double_sum_eq_two T hab]
+  rw [Phylo.SideDoubling.sideDoublingSum_eq_one_of_isBinary T.toCladogram hbin (T.sideLeaves s(a, b) a).card a
+        s(a, b) (Sym2.mem_mk_left a b) ((SimpleGraph.mem_edgeSet T.graph).mpr hab) rfl,
+      Phylo.SideDoubling.sideDoublingSum_eq_one_of_isBinary T.toCladogram hbin (T.sideLeaves s(a, b) b).card b
+        s(a, b) (Sym2.mem_mk_right a b) ((SimpleGraph.mem_edgeSet T.graph).mpr hab) rfl]
+  ring
+
 omit [DecidableEq X] in
 /-- ★ **原缺口 ⟹ 修复形态**（只是变弱，未偷换命题）：`∀ e` 推出 `∀ e ∈ edgeSet`。 -/
 theorem pauplinEdgeCoeff_gap_correct_shape_of_gap (T : Phylogram X)
@@ -1061,6 +1092,20 @@ omit [DecidableEq X] in
 theorem pauplinFormula_gap_of_correct_shape (T : Phylogram X)
     (h : pauplinEdgeCoeff_gap_correct_shape T) : pauplinFormula_gap T :=
   fun hb => pauplinLength_eq_trueLength_of_edgeCoeff_on_edges T (h hb)
+
+/-- ★★★★★ **C1.5 收官：Pauplin 公式（D2-B）已证** ✓✓✓
+
+　`pauplinFormula_gap T` ✓ —— 即 `T.IsBinary → pauplinLength T = trueLength T` ✓
+　（二叉树上 **Pauplin 长度 = 真长度** ✓，即文献 DesperGascuel2004:1990 转述的 Pauplin 公式 ✓）。
+
+证：本文件刚证的 `pauplinEdgeCoeff_gap_correct_shape_of_isBinary`（桥公式 ＋ 子树倍增恒等式 ✓）
+＋ 既有的 `pauplinFormula_gap_of_correct_shape`（D2-A ⟹ D2-B ✓）—— **一行复合** ✓。
+
+★ 至此 W19 派单 C1.5 的"真正剩余 = 子树倍增恒等式"**已形式化并证明** ✓
+（该恒等式即 `Phylo.SideDoubling.sideDoublingSum_eq_one_of_isBinary` ✓，本季先前已证 ✓）。 -/
+theorem pauplinFormula_gap_of_isBinary (T : Phylogram X) : pauplinFormula_gap T :=
+  pauplinFormula_gap_of_correct_shape T (pauplinEdgeCoeff_gap_correct_shape_of_isBinary T)
+
 
 /-! ## 11. ★B ★C 可满足性见证（W12e2）：4 叶二叉树的**真路径关联数据** -/
 
