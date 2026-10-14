@@ -61,6 +61,7 @@ import Phylo.SplitsDetermineTree
 import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.SplitWeak
+import Phylo.Stat.AESampling
 import Phylo.Stat.AnomalousGeneTree
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.BlockModelAE
@@ -124,6 +125,7 @@ import Phylo.Stat.MSCSamplingAE
 import Phylo.Stat.MultiLocusASTRAL
 import Phylo.Stat.MultiLocusLaw
 import Phylo.Stat.NJst
+import Phylo.Stat.NJstSamplingAE
 import Phylo.Stat.NJstWitness
 import Phylo.Stat.Parsimony
 import Phylo.Stat.QuartetDecides
