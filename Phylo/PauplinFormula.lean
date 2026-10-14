@@ -272,32 +272,43 @@ theorem bmeCoeff_mul_incidence_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
     incidence_eq_one_of_mem_sideLeaves_of_adj T huv hx hy]
   ring
 
-/-! ### ★★★ W19 登记：桥公式的【最后拼装】—— 状态与可用工具（2026-10-14）
+/-! **★★★ W19 最后拼装 ①：逐点恒等式（四情形）** ✓
 
-**目标（等价形式，经 `Dissimilarity.sum_sum_eq_plane` ✓ 与 `plane = univ.product univ` ✓）**：
+关键取舍（教训 397 的直接后果 ✓）：**不**做「子集和 → `univ`」的转换 ✗，
+而把等式**两边都写成 `univ` 上的双重和**（用**指示函数** ✓）⇒ 逐点 `Finset.sum_congr` 即可 ✓。
 
-　`∑ x, ∑ y, bmeCoeff (topoDist T x y) · incidence T x y s(u,v)  =  2 · D_e(u) · D_e(v)`
+四情形（`A = sideLeaves e u`、`B = sideLeaves e v`、`e = s(u,v)` ✓，用 `inSide_or_inSide` ✓）：
+* `x ∈ B, y ∈ A` ⇒ 跨侧 ⇒ `incidence = 1` ⇒ 贡献 `(1/2)^{d_v(x)}·(1/2)^{d_u(y)}` ✓；
+* `x ∈ A, y ∈ B` ⇒ 跨侧（**镜像**，用 `huv.symm` ＋ `Sym2.eq_swap` ✓）⇒ `(1/2)^{d_u(x)}·(1/2)^{d_v(y)}` ✓；
+* 同侧的两种 ⇒ `incidence = 0` ⇒ 贡献 `0` ✓。
+⇒ ★ **两行都非零** ✓（纠正见 MEMORY 377 批 ✓），合计 `D_u·D_v + D_v·D_u = 2·D_u·D_v` ✓。 -/
 
-**已证齐备的零件** ✓：
-* 逐对贡献三条（本文件 ✓）：同侧 `0` ✓ · 跨侧 `= (1/2)^{d_v(x)}·(1/2)^{d_u(y)}` ✓ · 跨侧量值 ✓；
-* 边数可加性 `topoDist_eq_add_of_mem_sideLeaves` ✓；
-* `D_e(u) = 1`（`Phylo/SideDoubling.lean` 的 `sideDoublingSum_eq_one_of_isBinary` ✓，二叉 ✓）；
-* 情形划分的两把钥匙 ✓：`Cladogram.sideLeaves_compl_adj`（`Split.lean:756` ✓，**另侧即补集** ✓）
-  与 `Cladogram.inSide_or_inSide`（`Split.lean:764` 用例 ✓，**每点在两侧之一** ✓）；
-* 双重和 ↔ 平面对和：`Dissimilarity.sum_sum_eq_plane`（`BMELeastSquares.lean:176` ✓）。
+/-! **★★★ W19 最后拼装 ①：逐点恒等式 —— 已精确定形，卡在三条【约定】（下一轮直接落）** ⬜
 
-**卡点（约定性，非数学性 ✓）** ✗：左式索引集是 `Finset.univ`、右式（`sideDoublingSum` 的定义 ✓）
-是 `sideLeaves e u` **子集** ✗ ⇒ `Finset.sum_congr rfl` 无法直接匹配 ✓。
-需要先做一次「**子集和 → `univ` 带指示函数**」的转换（`Finset.sum_filter` ✓ ＋ `univ.filter p = p` 的归一 ✓），
-再对 `univ` 逐点用 `inSide_or_inSide` 分两侧 ✓ 并用逐对贡献引理 ✓。
+**目标（逐点，四情形）** ✓：`A = sideLeaves e u`、`B = sideLeaves e v`、`e = s(u,v)` ✓
 
-**建议的两步走（下一轮）** ✓：
-1. 先证【同索引集】版：`∑ y : X, (贡献 x y) = ∑ y ∈ sideLeaves e u, (1/2)^{d_v(x)}·(1/2)^{d_u(y)}`
-   —— 用 `← Finset.sum_filter` ＋ `by_cases` ＋ 逐对贡献引理 ✓；
-2. 再对右式用 `Finset.mul_sum` 分离出 `D_e(u)` ✓；对 `x` 侧同理（镜像，用 `huv.symm` ＋ `Sym2.eq_swap` ✓）。
--/
+　`bmeCoeff(topoDist x y)·incidence x y e`
+　`= if x ∈ B ∧ y ∈ A then (1/2)^{d_v(x)}·(1/2)^{d_u(y)}`
+　`  else if x ∈ A ∧ y ∈ B then (1/2)^{d_u(x)}·(1/2)^{d_v(y)} else 0` ✓
 
-/-! ## 2. 三条基本性质 -/
+**已尝试 5 轮，全部卡在【约定性】而非数学性** ✗ ⇒ 按铁律 5 撤回，登记三条约定：
+
+1. ★★ **`if_neg` 已弃用** ✗ ⇒ 用 **`ite_eq_right`**（`(if c then a else b) = b`，给 `¬c` 的证明 ✓）
+   与 **`ite_eq_left`**（= `a`，给 `c` 的证明 ✓）；
+2. ★★★ **`ite` 的条件【不是命题逻辑恒真】** ✗ —— 从 `x ∈ A` 推不出 `x ∉ B` ✗，需
+   **`Cladogram.not_inSide_both`**（`Phylo/Split.lean:750` ✓：`¬(inSide e u y ∧ inSide e v y)` ✓）
+   或 `sideLeaves_compl_adj`（`:756` ✓）✓；
+3. ★★★ **`inSide e a b` 的第二个参数是【起点】** ✗（即 `inSide e u (leaf x)` ✓ 读作「从 `u` 到 `leaf x`」✓）
+   ⇒ `inSide_or_inSide huv (x := T.leaf x)` 给的是
+   `inSide e (leaf x) u ∨ inSide e (leaf x) v`（**从叶出发** ✗）
+   ⇒ 与 `not_inSide_both huv` 需要的 `inSide e u y ∧ inSide e v y`（**以基准为起点** ✓）**朝向相反** ✗
+   ⇒ ★ 必须用 **`T.inSide_comm`** 翻转（`(T.inSide_comm e (T.leaf x) u).mp hxA` ✓）✓。
+
+**建议的下一轮写法** ✓：`rcases` 四情形后，先在**每个分支**把 `hxA`/`hyA`/`hxB`/`hyB` 用
+`inSide_comm` 统一翻成「以基准为起点」的形式 ✓，再用 `ite_eq_right`/`ite_eq_left` ＋ `not_inSide_both`
+判两个条件 ✓，最后用三条逐对贡献引理（跨侧需 `huv.symm` ＋ `Sym2.eq_swap` 的镜像 ✓）。
+
+-//-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
