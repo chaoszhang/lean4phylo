@@ -513,4 +513,56 @@ theorem card_sideLeaves_lt_of_union (T : Cladogram X) {u v w : T.V} {E : Sym2 T.
   obtain ⟨x, hx⟩ := T.sideLeaves_nonempty_of_adj' huw
   exact (Finset.disjoint_left.mp hdisj (hBsub hx)) hx
 
+/-! ## ⑬ ★★★ **最终定理**：二叉树上 `D_e(u) = 1`
+
+把 ② 的代数内核、⑤ 的前向引理、⑦ 的不交、⑧ 的反向包含、⑩ 的取邻边、⑫ 的取锚点与 card 不等式
+与 (b) 的深度关系接起来，对 `(T.sideLeaves e u).card` 做**强归纳**：
+
+* **底**（`u` 是叶）：`sideDoublingSum_eq_one_of_isLeaf` ✓；
+* **步**（`u` 内部，二叉 ⇒ 度 `3`）：取锚点 `e = s(u,y₀)` ⇒ 取另两条邻边 `v, w`
+  ⇒ 代入 ② 得 `D_e(u) = (1/2)·(D_{s(u,v)}(v) + D_{s(u,w)}(w))`
+  ⇒ 两支的 `card` 严格更小（⑫ ✓）⇒ 归纳假设给两支各为 `1` ⇒ `(1/2)(1+1) = 1` ✓。
+
+⚠️ `e` 必须是**真边**（`e ∈ T.graph.edgeSet` ✓）：否则取锚点不成立，命题为假 ✗。 -/
+
+/-- ★★★ **最终定理**：二叉树上，真边 `e` 与 `u ∈ e` ⇒ `D_e(u) = 1` ✓
+（`sideDoublingSum` 的**子树倍增归一化** ✓ —— Pauplin 公式的核心恒等式 ✓）。 -/
+theorem sideDoublingSum_eq_one_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) :
+    ∀ (n : ℕ) (u : T.V) (e : Sym2 T.V), u ∈ e → e ∈ T.graph.edgeSet →
+      (T.sideLeaves e u).card = n → sideDoublingSum T e u = 1 := by
+  intro n
+  refine Nat.strong_induction_on n ?_
+  intro m ih u e he hedge hcard
+  by_cases hu : T.IsLeaf u
+  · exact sideDoublingSum_eq_one_of_isLeaf T hu he hedge
+  · obtain ⟨y₀, hy₀, hee⟩ := exists_adj_of_mem_of_mem_edgeSet T he hedge
+    obtain ⟨v, w, huv, huw, hvw, hpart, hdisj⟩ :=
+      sideLeaves_eq_union_of_isBinary T hbin hu hy₀ hee
+    have hdv : ∀ x ∈ T.sideLeaves s(u, v) v,
+        (T.pathOf u (T.leaf x)).edges.length = (T.pathOf v (T.leaf x)).edges.length + 1 :=
+      fun x hx => length_pathOf_eq_succ_of_adj_of_mem_sideLeaves T huv hx
+    have hdw : ∀ x ∈ T.sideLeaves s(u, w) w,
+        (T.pathOf u (T.leaf x)).edges.length = (T.pathOf w (T.leaf x)).edges.length + 1 :=
+      fun x hx => length_pathOf_eq_succ_of_adj_of_mem_sideLeaves T huw hx
+    have hrec := sideDoublingSum_eq_half_mul_add_of_union T e u v w hpart hdisj hdv hdw
+    have hcv : (T.sideLeaves s(u, v) v).card < (T.sideLeaves e u).card :=
+      card_sideLeaves_lt_of_union T huw hpart hdisj
+    have hcw : (T.sideLeaves s(u, w) w).card < (T.sideLeaves e u).card := by
+      rw [hpart]
+      refine Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr
+        ⟨Finset.subset_union_right, ?_⟩)
+      intro hEq
+      have hAsub : T.sideLeaves s(u, v) v ⊆ T.sideLeaves s(u, w) w := by
+        rw [hEq]; exact Finset.subset_union_left
+      obtain ⟨x, hx⟩ := T.sideLeaves_nonempty_of_adj' huv
+      exact (Finset.disjoint_left.mp hdisj hx) (hAsub hx)
+    have hDv : sideDoublingSum T s(u, v) v = 1 :=
+      ih _ (by rw [← hcard]; exact hcv) v s(u, v) (by simp)
+        ((SimpleGraph.mem_edgeSet (G := T.graph) (v := u) (w := v)).mpr huv) rfl
+    have hDw : sideDoublingSum T s(u, w) w = 1 :=
+      ih _ (by rw [← hcard]; exact hcw) w s(u, w) (by simp)
+        ((SimpleGraph.mem_edgeSet (G := T.graph) (v := u) (w := w)).mpr huw) rfl
+    rw [hDv, hDw] at hrec
+    linarith
+
 end Phylo.SideDoubling
