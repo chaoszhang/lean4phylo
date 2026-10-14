@@ -134,6 +134,31 @@ theorem incidence_eq_zero_of_same_side (T : Phylogram X) {e : Sym2 T.V} {u : T.V
       (u := T.leaf x) (v := T.leaf y)).mp h) hside
   simp [hnot]
 
+/-- ★★★ **跨侧对必含 `e`** ✓：`x` 落在 `e = s(u,v)` 的 `v` 侧、`y` 落在 `u` 侧 ⇒
+`e` **在** `x`-`y` 路径上 ⇒ `S_xy(e) = 1` ✓（桥公式"跨侧贡献"的那一半 ✓，与
+`incidence_eq_zero_of_same_side` 配对 ✓）。
+
+证明：若两叶在 `T - e` 中互通，则沿「`v` ↔ `leaf x`」与「`leaf y` ↔ `u`」两段可得
+`v` 与 `u` 在 `T - e` 中互通，与「边是桥」（`not_reachable_deleteEdges_of_adj`）矛盾 ✓
+⇒ `¬ inSide e (leaf x) (leaf y)` ⇒ 由 `mem_pathOf_edges_iff_not_inSide` 的 `.mpr`
+得 `e ∈ (pathOf (leaf x) (leaf y)).edges` ⇒ 经 `pathWalk_eq_pathOf` 换成 `pathWalk` ✓。 -/
+theorem incidence_eq_one_of_mem_sideLeaves_of_adj (T : Phylogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x y : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) (hy : y ∈ T.sideLeaves s(u, v) u) :
+    incidence T x y s(u, v) = 1 := by
+  have hx' : T.inSide s(u, v) v (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hy' : T.inSide s(u, v) u (T.leaf y) := (T.mem_sideLeaves_iff_inSide).mp hy
+  have hnot : ¬ T.inSide s(u, v) (T.leaf x) (T.leaf y) := by
+    intro hc
+    -- hc : Reachable (leaf x) (leaf y)，hx'.symm : Reachable (leaf x) v，hy' : Reachable u (leaf y)
+    exact (T.not_reachable_deleteEdges_of_adj huv)
+      (hx'.trans (hc.trans hy'.symm)).symm
+  have hmem : s(u, v) ∈ (pathWalk T x y).edges := by
+    rw [pathWalk_eq_pathOf T x y]
+    exact (T.mem_pathOf_edges_iff_not_inSide (e := s(u, v))
+      (u := T.leaf x) (v := T.leaf y)).mpr hnot
+  rw [incidence, ite_eq_left hmem]
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
