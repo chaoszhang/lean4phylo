@@ -403,4 +403,41 @@ theorem sideDoublingSum_eq_one_of_isLeaf (T : Cladogram X) {u : T.V} (hu : T.IsL
       rw [Sym2.eq_swap]
       exact sideDoublingSum_leaf_edge T hb
 
+/-! ## ⑩ ③ 步情形的第一块：从「度 3」取出 `u` 的另两条邻边
+
+内部顶点 `u`（二叉 ⇒ 度为 `3` ✓）与一条邻边 `s(u,y₀)` 给出**覆盖假设** ✓：
+
+　`∃ v w, v ≠ w ∧ ∀ z, Adj u z → z = y₀ ∨ z = v ∨ z = w` ✓。
+
+手段（与库内 `PhylogramContract.lean:427-434` 的"度 2 取两条邻边"**完全同款** ✓）：
+`SimpleGraph.card_neighborFinset_eq_degree`（`Finite.lean:244` ✓）把度换成 `neighborFinset` 的基数 ✓；
+`y₀` 在集里 ✓；按 `Finset.card_erase_of_mem` 删去后基数为 `2` ✓；
+再用 **`Finset.card_eq_two`**（`Card.lean:800` ✓）取出 `v, w` ✓；
+最后由 `Finset.insert_erase` 还原覆盖假设 ✓。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **度 3 ⇒ 取出另两条邻边**（覆盖假设 ✓）。 -/
+theorem exists_two_adj_of_card_three (T : Cladogram X) {u : T.V}
+    (h3 : (T.graph.neighborFinset u).card = 3) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) :
+    ∃ v w : T.V, v ≠ w ∧ ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w := by
+  have hy₀mem : y₀ ∈ T.graph.neighborFinset u :=
+    (SimpleGraph.mem_neighborFinset T.graph u y₀).mpr hy₀
+  have h2 : ((T.graph.neighborFinset u).erase y₀).card = 2 := by
+    rw [Finset.card_erase_of_mem hy₀mem, h3]
+  obtain ⟨v, w, hvw, hpair⟩ := Finset.card_eq_two.mp h2
+  refine ⟨v, w, hvw, fun z hz => ?_⟩
+  have hzmem : z ∈ T.graph.neighborFinset u :=
+    (SimpleGraph.mem_neighborFinset T.graph u z).mpr hz
+  rw [← Finset.insert_erase hy₀mem, hpair] at hzmem
+  simpa only [Finset.mem_insert, Finset.mem_singleton] using hzmem
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **二叉内部点 ⇒ 覆盖假设**（把 ⑩ 的第一块与 `IsBinary.degree_eq_three` 接起来 ✓）。 -/
+theorem exists_two_adj_of_isBinary (T : Cladogram X) (hbin : T.IsBinary) {u : T.V}
+    (hu : ¬ T.IsLeaf u) {y₀ : T.V} (hy₀ : T.graph.Adj u y₀) :
+    ∃ v w : T.V, v ≠ w ∧ ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w :=
+  exists_two_adj_of_card_three T (by
+    rw [SimpleGraph.card_neighborFinset_eq_degree]
+    exact hbin.degree_eq_three hu) hy₀
+
 end Phylo.SideDoubling
