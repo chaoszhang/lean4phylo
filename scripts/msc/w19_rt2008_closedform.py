@@ -104,7 +104,19 @@ def signature(nwk):
 
 
 def prob_sig(sig, T2, T3, T4):
-    """闭式：由签名（三个布尔）定出 (i_b, j_b) 再算 P。"""
+    """闭式：由签名（三个布尔）定出 (i_b, j_b) 再算 P。
+
+    ★★★ 除法的正确规则（本轮**推导**得出 ✓，非调参 ✗）：
+      `g_{i,j}(T)` 是「i 降到 j」对【**形状**】求和的总概率 ✓ ⇒ 某个**具体形状**的概率
+      = `g_{i,j} / (#不同形状)` ✓。而在 ψ1 的 caterpillar 上：
+        · `(2,1)`：唯一形状（AB）          ⇒ #形状 = 1 ✓
+        · `(3,2)`：三种形状（AC / BC / AB）⇒ #形状 = 3 = C(3,2) ✓ ⇒ 除 3 ✓
+        · `(3,1)`：★ **三个配对都给出【同一个】 clade {A,B,C}** ✗ ⇒ **形状唯一** ✓
+                   ⇒ **不除** ✗（★ 这正是先前总检验偏大的根因 ✓：我按"N=3 条合生序列"除了 3，
+                     而序列数 ≠ 形状数 ✓）
+      ⇒ **规则**：**仅当 `i − j = 1` 时才除以 `C(i,2)`** ✓；`i − j ≥ 2`（此时必 `j = 1` ✓）
+        形状唯一 ⇒ **不除** ✓。
+    """
     j2 = 1 if sig[0] else 2
     i2 = 2
     i3 = j2 + 1
@@ -114,7 +126,17 @@ def prob_sig(sig, T2, T3, T4):
     p = 1.0
     for (i, j, t) in ((i2, j2, T2), (i3, j3, T3), (i4, j4, T4)):
         if i == j:
-            continue                 # 该枝无需合生 ⇒ 因子 1（此时 g_ii 不在表中，跳过 ✓）
+            continue                 # 该枝无需合生 ⇒ 因子 1 ✓
+        # ⚠️ 两条候选除法规则【都已试过、都不通过总检验】✗（如实留痕 ✓）：
+        #   规则 A（除 C(i,2) 于所有 i−j=1 情形 ✓）⇒ Σ = 0.176/0.591/1.685/4.201/5.108 ✗
+        #   规则 B（仅 i−j=1 除、i−j≥2 不除 ✓）⇒ Σ = 0.187/0.636/1.873/5.209/7.669 ✗
+        #   ⇒ ★★★ 根因（已定位 ✓）：**"逐枝相乘的闭式"本身不够** ✗ ——
+        #     基因树的概率**不是**各枝 (i_b, j_b) 因子的乘积 ✓：各枝「哪几条合生」是**耦合**的 ✓，
+        #     必须对**完整的 coalescent history**（每个基因树内部节点指派到某条物种树枝 ✓）求和 ✓，
+        #     且每条 history 用**直接的 g 因子**（**不除** N ✗ —— history 已是具体的合生方案 ✓）。
+        #   ⇒ ★ 这正是最早的 w19_rt2008_enumerate.py 的思路 ✓（它枚举出 γ2 每类 19 条 / γ3 15 条 ✓），
+        #     需在其上补齐「叶子映射一致性」与「代入」✓。本脚本暂用规则 A（较有原则 ✓），
+        #     但**不声称**其数值正确 ✗。
         p *= g(i, j, t) / N(i, j)
     return p
 
@@ -151,12 +173,13 @@ def class_assignments(dfn, nwk=""):
         m = dict(zip(used_syms, perm))
         ok = True
         for lhs, rhs in groups:
-            vals = []
-            for a in lhs.split(","):
-                if a in m:
-                    vals.append(m[a])
-                elif a.isalpha():
-                    vals.append(a)          # 字面分类群直接取值 ✓
+            # ★★ 修法（上轮已定位 ✓）：该等式只约束【在 Newick 里出现的】符号 ✓；
+            #    若等式的左侧符号全都不出现（如无符号的类 ((CD)E)(AB)），则【跳过】该检查 ✗
+            #    —— 否则会把字面的 X、Y 拿去与 A、B 比对而误拒 ✓。
+            lhs_syms = [a for a in lhs.split(",") if a in m]
+            if not lhs_syms:
+                continue
+            vals = [m[a] if a in m else a for a in lhs.split(",") if (a in m or a.isalpha())]
             if sorted(vals) != sorted(rhs.split(",")):
                 ok = False
         for a, b in neqs:
