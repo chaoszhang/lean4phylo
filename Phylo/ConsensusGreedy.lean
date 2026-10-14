@@ -462,7 +462,36 @@ theorem greedyConsensus_gap_refuted : ¬ greedyConsensus_gap := by
 4. **只依赖树族**（对索引重标号不变；频率型规则的基本性质）。
 
 ⚠️ 这四条是**必要**而非**充分**：R\* 区别于严格/多数共识的**充分条款**
-（按频率次序的相容性封闭）**无法**在手文献中陈述。§6 末给出其**反空真**
+（按频率次序的相容性封闭）**无法**在手文献中陈述。
+
+★★ 2026-10-14 W19 更正（文献已入库 ⇒ 充分条款现在【可取】✓；依据＝读图实测 ✓）**：
+        Bryant 2003（`references/pdf/Bryant2003_ClassificationConsensusMethodsPhylogenetics.pdf`
+        ⇒ `img/…_p09.png` = 印刷 **171**、`_p10.png` = 印刷 **172**），§2.3.3 逐字：
+        > 印刷 171：「… the `Q*` and `R*` consensus methods construct trees with all quartets or rooted triples
+        > that are **contained within** a given set. … Let `f(ab|cd)` be the number of trees in `T` that have
+        > `ab|cd` in their quartet sets. Construct the set of quartets `ab|cd` such that `f(ab|cd) > f(ac|bd)`
+        > and `f(ab|cd) > f(ad|bc)` and denote this set by **`Q_maj`**.」
+        > 印刷 172：「We use … `Q_maj` as input to the `Q*` method of Berry and Gascuel [9]. This constructs the
+        > **maximum refined tree `T` such that `q(T) ⊆ Q_maj`**. We call this tree the **`Q*` consensus tree** for `T`.」
+        > 「The **`R*` consensus method for rooted trees** is defined in a similar fashion. Let **`R_maj` be the set of
+        > rooted triples `ab|c` that appear in more trees than their conflicting triples `ac|b` or `bc|a`**. The strong
+        > cluster algorithm of [8] can be used to construct the **maximum refined rooted tree `T` such that
+        > `r(T) ⊆ R_maj`**. We call this the **`R*` consensus tree** for `T`.」
+        > ＋ **THEOREM 2.14**：「Every split (cluster) in the **majority rule tree** for `T` and every split (cluster)
+        > in the **loose consensus tree** for `T` is in the `Q*` (`R*`) consensus tree for `T`.」
+
+        ⇒ ★ **判定（W19）：本 `def` 【不忠实】** ✗ —— 它是"`R*`-型规则必须满足的四条**必要条件**"寄存器 ✓，
+        **不是** Bryant 的 `R*` ✗（Bryant 的 `R*` 是**唯一确定**的树：`R_maj` ⇒ 满足 `r(T) ⊆ R_maj` 的**最大 refined 树** ✓）。
+        ★ **为何本轮不改 `def`**：忠实形态需要库里**没有**的器材 ✗ ——
+        **(i)** 「**根三元组集 `r(T)`**」层（库内只有**无根** `Cladogram`/`Split` ＋ `QuartetRes` 四点层 ✓）；
+        **(ii)** 「**maximum refined tree**」算子（"在 `q(T) ⊆ Q_maj` 下取最大精炼" ✓ —— 文献用 Berry–Gascuel [9]
+        与 strong cluster algorithm [8] ✓，两篇**均不在库** ✗）；
+        ⇒ ★ 依 W19 纪律（**不许造一个不能归纳的定义糊过去** ✗）：**命题保持为"必要条件"寄存器** ✓，
+        但**归属更正**为「本 `def` ＝ 必要条件的登记，而**非** Bryant 的 `R*`」✓，并把
+        「`R*` 的**真正剩余缺口** ＝ (i) ＋ (ii)」**逐条写清** ✓。
+        ★ **反例点（说明四条必要条件**确实**不充分 ✓）**：`R := lSplits 1`（"至少出现一次的 split"）满足
+        ①（当 `2·1 ≤ |ι|` 时由 `lSplits_greedyRun_eq` 保证相容 ✓）与 ②③④，但**不是** Bryant 的 `R*`
+        ⇒ 四条**无法**确定唯一规则 ✓。
 （`rStarConsensus_gap_strictSplits`：严格共识满足全部四条）与**结构障碍**
 （`no_compatible_family_containing_incompatible`：一旦越过 `2l > |ι|` 的阈值，
 `M_l` 已含不相容对，**任何**相容值规则都必须**丢弃**其中的 split ——
