@@ -830,7 +830,22 @@ theorem exDiss_fourPoint : exDiss.FourPoint := by
 (c) Lemma 10 的权重公式 `w_e`。
 
 **反空真**：★★ `exDiss_fourPoint` 给出前提可满足；★C `exDiss_argmin_isCherry`
-给出结论方向上 `n = 4` 的具体实例。 -/
+给出结论方向上 `n = 4` 的具体实例。
+
+**★★ 2026-10-14 W19 文献归属更正（留证 ✓；★ 命题本身未改 ✓）**：
+* **旧归属**：本 `def` 原被标为「Atteson **Lemma 11**（度量版可实现性）」✗；
+* **原文核验**：`references/md/Atteson1999_PerformanceNeighborJoiningAlgorithmica.md:1989-2009`
+  的 **LEMMA 11** 逐字是「若 `k, l ∈ L` **不是邻居**，则存在邻居对 `i, j ∈ L` 使
+  `S_{k,l} − S_{i,j} ≥ 3(n−4)·min_e l(e)`（且 `{i,j} ∩ {k,l} = ∅`）
+  或 `S_{k,l} − S_{i,j} ≥ 2(n−3)·min_e l(e)`（且 `|{i,j} ∩ {k,l}| = 1`）」✗
+  —— 那是**NJ 判据的间隙不等式**，**不是**本 `def`（`∃ δmin > 0, IsCherrySeparated δ δmin`）✗；
+* **新归属**：本 `def` 是 Atteson **Theorem 1**（同文件 `:868`）的**前提侧** ✓
+  —— 由「正边权二叉树实现的距离矩阵」得到**正的最短边长** `min_e l(e) > 0` ✓（原文 `:209` 亦以
+  “in multiples of the length of the **shortest edge**” 为尺度 ✓），即 Theorem 1 中**被假定**的那个 `δmin` ✓；
+* **为什么不改命题** ✓：它是 ★★★ `njCriterion_minimizer_is_cherry` 从条件定理变成「无条件 Atteson 安全半径定理」的
+  **唯一剩余前提** ✓ ⇒ 改成 Lemma 11 的间隙不等式会**破坏该用途** ✗（且库内 docstring 已列明其所缺的三件器材
+  (a)(b)(c) ✓）。故依 W19 护栏精神：**改归属 ＋ 留证** ✓，**不动命题** ✓；
+* **护栏③**：本处仅改 docstring ⇒ 仍需跑全库 build（**job 数应仍 3966** ✓）＋ `scripts/list_star_claims.sh` ✓。 -/
 def atteson_lemma11_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite → 4 ≤ Fintype.card X →
     ∃ δmin : ℝ, 0 < δmin ∧ δ.IsCherrySeparated δmin
