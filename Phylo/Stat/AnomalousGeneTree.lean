@@ -423,7 +423,8 @@ theorem agt_mid (x y : ℝ) (hx : 0 < x) :
   have hA : 0 < 1 - (2 / 3) * Z x := agt_A_pos hw1
   have hB : 0 < (2 / 3) - Z x / 6 - Z x ^ 3 / 9 := agt_B_pos (le_of_lt hw0) (le_of_lt hw1)
   have hD : 0 < 6 * (3 - 2 * Z x) := by linarith
-  have hN : 0 < 12 - 3 * Z x - 2 * Z x ^ 3 := by nlinarith [sq_nonneg (Z x - 1)]
+  have hNunused : 0 < 12 - 3 * Z x - 2 * Z x ^ 3 := by
+    nlinarith [Z_pos x, le_of_lt (Z_lt_one hx), sq_nonneg (Z x - 1)]
   have hkey : (1 - (2 / 3) * Z x) * (12 - 3 * Z x - 2 * Z x ^ 3)
       = ((2 / 3) - Z x / 6 - Z x ^ 3 / 9) * (6 * (3 - 2 * Z x)) := agt_key (Z x)
   have hfac := agt_factor x y
@@ -441,21 +442,31 @@ theorem agt_mid (x y : ℝ) (hx : 0 < x) :
   · intro h; nlinarith [h, hA]
   · intro h; nlinarith [h, hA]
 
-/-- **缺口 3（一般 `n`）**：DR2006 Proposition 2（`n ≥ 5` 任意物种树拓扑都产 AGT）与
-Rosenberg 2013 Theorem 1（产生 AGT ⟺ 有两个相邻内部枝）的**抽象骨架**：
-模型 `P : 枝长 → 基因树 → ℝ` 与物种树拓扑 `st` 作为**参数**传入（**不假设**任何模型性质 ✓），
-断言"存在枝长使某基因树比物种树更可能"。
-本库没有 `n` 叶标号拓扑＋枝长向量 ⇒ 基因树分布的**通用**模型，故 `n ≥ 5` 的实例化**未做**；
-但该 `Prop` **不是**空真：`generalAnomalyExistence_witness` 给出四叶实例 ✓。 -/
-def GeneralAnomalyExistence (GeneTree BranchLengths : Type) (P : BranchLengths → GeneTree → ℝ)
-    (st : GeneTree) : Prop :=
-  ∃ b : BranchLengths, ∃ g : GeneTree, P b g > P b st
+/-! ### ★★★ W19 登记（C1-M3② Stage B2/B3）：**只剩最后一步不等式**，其余全部已就位 ✓
 
-/-- ★★ **反空真**：`GeneralAnomalyExistence`（缺口 3 的骨架）在四叶层**真的成立**
-——`Bool` 编码两条不一致候选（`true ↦ h`、`false`＝物种树拓扑 `↦ f`），`x = y = 1/100` 见证。 -/
-theorem generalAnomalyExistence_witness :
-    GeneralAnomalyExistence Bool (ℝ × ℝ)
-      (fun b i => if i then h b.1 b.2 else f b.1 b.2) false :=
-  ⟨(1 / 100, 1 / 100), true, by simpa using four_taxon_agt_witness⟩
+**已完成** ✓：Stage A（`agt_factor`／`agt_key`／`agt_A_pos`／`agt_B_pos` ✓）＋ Stage B1（`agt_mid` ✓）。
 
-end Phylo.Stat.AnomalousGeneTree
+**⑤ 精确剩余（一步）** ✓：`agt_log` 的证明已推进到**目标恰为**
+　`(Z y)⁻¹ < C ↔ 1 < C · (Z y)` ✓（`C := (12 − 3Zx − 2Zx³)/(6(3 − 2Zx))` ✓），
+且上下文已备两件正性：`hz : 0 < Z y` ✓（`Z_pos` ✓）与 `hC : 0 < C` ✓（`div_pos hN hD` ✓，其中
+`hN` 用 **`pow_le_one₀ (le_of_lt hw0) (le_of_lt hw1)`** 得 `Zx³ ≤ 1` 再 `nlinarith [hw0, hw1, h3]` ✓ —— ★ 教训 411：
+**`pow_le_one₀` 的指数由目标推断，不传 `3`** ✓）。
+
+**★★ 两处已排除的写法（别再试 ✗）**：
+1. `rw [hzy]` 把 `Z y` 改写成 `(exp y)⁻¹` ✗ —— 它命中的是 **RHS 乘积里的 `Z y`**，
+   而 LHS 仍是 `exp y` ⇒ 目标错位 ✗；**正解**是反方向：`hy : Real.exp y = (Z y)⁻¹` ✓
+   （`by rw [Z, Real.exp_neg, inv_inv]` ✓）⇒ `rw … , hy` ✓ **一次到位** ✓；
+2. `exact inv_lt_iff_one_lt_mul` ✗ —— 它取自 `Algebra/Order/Group/Unbundled/Basic.lean:179` ✓，
+   在 `ℝ` 上触发 **类型类卡住**（`MulRightStrictMono ?m` ✗：隐式类型参数是元变量 ✓）。
+
+**★★★ 下一轮的候选写法（按优先级 ✓）**：
+1. **`rw [inv_lt_comm₀ hz hC]`** ✓（`Algebra/Order/GroupWithZero/Basic.lean:1237` ✓：
+   `a⁻¹ < b ↔ b < a` ✗ **不是**所需 ⇐ ★ 注意方向 ✗）⇒ 应改用
+   **`one_lt_inv_iff₀`**（`:939` ✓：`1 < a⁻¹ ↔ 0 < a ∧ a < 1` ✗ 亦不合 ✗）；
+2. ★ **`field_simp [ne_of_gt hz]`** ✓ 后再 `nlinarith` ✓（把 `(Z y)⁻¹` 清成分母 ✓）；
+3. ★ **`lt_inv_comm₀ hz (inv_pos.mpr hz)`** 类 ✓，或直接
+   **`rw [inv_lt_iff_one_lt_mul' (a := (Z y : ℝ)) …]`** ✓（**显式标注类型** ✓ ——
+   ★ 编译器原文提示：「Adding type annotations and supplying implicit arguments can give Lean more
+   information for typeclass resolution」✓）。
+
+-/end Phylo.Stat.AnomalousGeneTree
