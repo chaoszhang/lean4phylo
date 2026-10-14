@@ -420,7 +420,32 @@ theorem length_pathOf_comm (T : Cladogram X) (a b : T.V) :
 ⇒ `D_u·D_v + D_v·D_u = 2·D_e(u)·D_e(v)` ⇒ 代入 `D = 1` ⇒ `= 2` ＝ **D2-A′** ⇒ 经已证的 `:458`/`:494`
 ⇒ **`pauplinFormula_gap`（`l̂ = l`）** ✓。 -/
 
-/-! ## 2. 三条基本性质 -/
+/-! ### ★★★ W19 登记：行和引理 —— 六步全已定，卡在最后一步的 rw 匹配（下一轮内联即可）
+
+**目标** ✓：`Σ_y bmeCoeff(topoDist x y)·incidence x y e`
+　`= if x ∈ A then (1/2)^{d_u(x)}·D_e(v) else if x ∈ B then (1/2)^{d_v(x)}·D_e(u) else 0` ✓
+
+**已定好的六步** ✓（本轮 5 次迭代逐一确认 ✓）：
+1. `rw [Finset.sum_congr rfl (fun y _ => contribution_eq_ite T huv x y)]` ✓ 换成逐点四情形 ✓；
+2. `hcompl : z ∉ A → z ∈ B` ✓ —— 用 `rw [T.sideLeaves_compl_adj huv]` 改**目标** ＋ `Finset.mem_compl.mpr` ✓
+   （★ 教训：`rw … at h` 在这里无用，因为 `sideLeaves_compl_adj` 出现在**目标**里 ✗）；
+3. `by_cases hxA : x ∈ A` ✓ 两情形 ✓（★ 第三情形真空 ✓，由 `hcompl` 覆盖 ✓）；
+4. 每情形内先证 `hstep`：把「嵌套两 `ite`」换成 **`if y ∈ B then c·f y else 0`**
+   （每支用 `ite_eq_left`/`ite_eq_right` **三连**：外层条件假 ✓、内层条件真/假 ✓、**RHS 那个 `if`** ✓）
+   ★★ **注意**：`if_pos`/`if_neg` 已弃用 ✗ ⇒ 一律用 **`ite_eq_left`/`ite_eq_right`** ✓（教训 389）✓；
+5. `rw [hstep, sum_ite_mem_eq_sum, Finset.mul_sum, ← sideDoublingSum]` ✓
+   （`sum_ite_mem_eq_sum` 是本文件的关键砖 ✓）；
+6. 指数用 **`length_pathOf_comm`** ✓ 从「叶在前」换成「基准在前」✓（与 `sideDoublingSum` 一致 ✓）。
+
+**★★★ 唯一未过之处（教训 403）** ✗：第 5 步的 `rw [hstep, …]` 报
+「Did not find an occurrence of the pattern `∑ y, if …`」（★ 而 target 里**明明**有同形的和 ✓）。
+⇒ ★ **结论**：**`rw [h]` 要求【语法级】匹配** ✗，命名 `have` 的陈述与目标之间哪怕有
+beta-还原/隐式参数的细微差别就会失败 ✓。
+⇒ ★★ **推荐改法（下一轮）**：**不要**先 `have hstep` 再 `rw` ✗，而是
+**直接在目标上用 `Finset.sum_congr`**（即把 `hstep` 的证明体内联进第 5 步 ✓），
+或改用 `conv_lhs => rw [hstep]` ✓／`simp only [hstep]` ✓。
+
+-//-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
