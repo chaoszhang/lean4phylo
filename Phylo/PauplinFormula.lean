@@ -502,6 +502,57 @@ beta-还原/隐式参数的细微差别就会失败 ✓。
 （指示函数形式）【显式写出】，让两个分支各自的目标都是“指示形式 = 条件式”，再逐支化简。
 -/
 
+/-- ★★★ **行和引理（平铺版 A）** ✓：`x ∈ A`（`A = sideLeaves e u`）时
+
+　`Σ_y bmeCoeff(topoDist x y)·incidence x y e = (1/2)^{d_u(x)}·D_e(v)` ✓
+
+★ 用 `show … from …` **显式写出右端的指示函数形式** ✓（教训 406 后的修复路线 ✓：
+若让 `Finset.sum_congr` 自行推断 `g`，它会被**第一个分支**固定 ⇒ 第二支目标不可证 ✗）。 -/
+theorem row_sum_eq_of_mem_u (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) {x : X}
+    (hxA : x ∈ T.sideLeaves s(u, v) u) :
+    (∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+      = (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+        * sideDoublingSum T.toCladogram s(u, v) v := by
+  have hxB : x ∉ T.sideLeaves s(u, v) v := fun h => T.not_inSide_both huv
+    ⟨(T.mem_sideLeaves_iff_inSide).mp hxA, (T.mem_sideLeaves_iff_inSide).mp h⟩
+  rw [show (∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+        = ∑ y : X, (if y ∈ T.sideLeaves s(u, v) v then
+              (1 / 2) ^ (T.pathOf (T.leaf x) u).edges.length
+                * (1 / 2) ^ (T.pathOf v (T.leaf y)).edges.length
+            else 0) from
+      Finset.sum_congr rfl (fun y _ => by
+        by_cases hyB : y ∈ T.sideLeaves s(u, v) v
+        · rw [contribution_eq_ite T huv x y, ite_eq_left hyB,
+            ite_eq_right (fun hc => hxB hc.1), ite_eq_left ⟨hxA, hyB⟩]
+        · rw [contribution_eq_ite T huv x y, ite_eq_right hyB,
+            ite_eq_right (fun hc => hxB hc.1), ite_eq_right (fun hc => hyB hc.2)])]
+  rw [sum_ite_mem_eq_sum, ← Finset.mul_sum, sideDoublingSum,
+    length_pathOf_comm T.toCladogram (T.leaf x) u]
+
+/-- ★★★ **行和引理（平铺版 B）** ✓：`x ∈ B`（`B = sideLeaves e v`）时
+
+　`Σ_y bmeCoeff(topoDist x y)·incidence x y e = (1/2)^{d_v(x)}·D_e(u)` ✓ -/
+theorem row_sum_eq_of_mem_v (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) {x : X}
+    (hxv : x ∈ T.sideLeaves s(u, v) v) :
+    (∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+      = (1 / 2) ^ (T.pathOf v (T.leaf x)).edges.length
+        * sideDoublingSum T.toCladogram s(u, v) u := by
+  rw [show (∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+        = ∑ y : X, (if y ∈ T.sideLeaves s(u, v) u then
+              (1 / 2) ^ (T.pathOf (T.leaf x) v).edges.length
+                * (1 / 2) ^ (T.pathOf u (T.leaf y)).edges.length
+            else 0) from
+      Finset.sum_congr rfl (fun y _ => by
+        by_cases hyA : y ∈ T.sideLeaves s(u, v) u
+        · rw [contribution_eq_ite T huv x y, ite_eq_left hyA, ite_eq_left ⟨hxv, hyA⟩]
+        · rw [contribution_eq_ite T huv x y, ite_eq_right hyA,
+            ite_eq_right (fun hc => hyA hc.2),
+            ite_eq_right (fun hc => T.not_inSide_both huv
+              ⟨(T.mem_sideLeaves_iff_inSide).mp hc.1,
+                (T.mem_sideLeaves_iff_inSide).mp hxv⟩)])]
+  rw [sum_ite_mem_eq_sum, ← Finset.mul_sum, sideDoublingSum,
+    length_pathOf_comm T.toCladogram (T.leaf x) v]
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
