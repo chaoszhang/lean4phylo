@@ -191,35 +191,56 @@ theorem disjoint_support_pathOf_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
   exact (T.not_reachable_deleteEdges_of_adj huv)
     (hxv.trans (h1.trans h2.symm)).symm
 
-/-! **★★★ W19 登记（2026-10-14）：跨侧边数可加性 —— 路线已定，卡在 Mathlib 的 `Walk.support` 约定** ⬜
+/-! ### ★★★ W19：跨侧边数可加性（桥的「量值」那一半）
 
-目标 ✓：`x ∈ sideLeaves e v`、`y ∈ sideLeaves e u`（`e = s(u,v)`）⇒
+`x` 在 `e = s(u,v)` 的 `v` 侧、`y` 在 `u` 侧时
 
 　`topoDist T x y = |pathOf (leaf x) v| + 1 + |pathOf u (leaf y)|` ✓。
 
-**已备好的前置** ✓：`pathWalk = pathOf`（`pathWalk_eq_pathOf` ✓）·
-跨侧两段支撑集**不交**（`disjoint_support_pathOf_of_mem_sideLeaves` ✓）·
-两段路径都避开 `e` ✓（`mem_pathOf_edges_iff_not_inSide` ✓）。
+**路线（教训 391：Mathlib 无 `IsPath.append` 构造器 ⇒ 走「不交 ＋ 唯一性」）**：
+拼 `q := (pathOf (leaf x) v).append (cons huv.symm (pathOf u (leaf y)))` ✓
+⇒ 证 `q.IsPath`（`List.Nodup.append` ✓：两段各自 `IsPath` ✓、跨侧支撑集不交 ✓、`v ∉ 第二段支撑集` ✓）
+⇒ 由 `existsUnique_path` 的**唯一性** ⇒ `q = pathWalk T x y` ✓ ⇒ 取 `length` ✓。
 
-**路线（教训 391）** ✓：拼 `q := (pathOf (leaf x) v).append (cons huv.symm (pathOf u (leaf y)))` ✓；
-证 `q.IsPath` ⇒ 由 `existsUnique_path` 的**唯一性** ⇒ `q = pathWalk T x y` ✓ ⇒ 取 `length` ✓。
+★ 关键：`support_append` 给出 `p.support ++ p'.support.tail` ✓，而
+`(v :: p''.support).tail` **定义上就是** `p''.support` ✓（`support_cons` 后自动消去 ✓）。 -/
 
-**本轮卡点（如实登记 ✓）** ✗：
-1. `IsPath` 需按 Mathlib 的 `Walk.support` 约定展开，而 `Walk.support_cons` 的实际形状是
-   `(v :: p.support).tail` 而非 `v :: p.support` ⇒ 我按错形状写的 `List.nodup_append` 目标不匹配 ✗；
-2. `disjoint_support_pathOf_of_mem_sideLeaves` 的 `T` 形参是 **`Cladogram`** ✗，
-   传 `Phylogram` 的 `T` 需显式写 **`T.toCladogram`** ✓（隐式 coercion 不适用于显式实参 ✓）。
-⇒ 这两点都是**约定性**问题（非数学困难 ✓）：下一轮先 `grep` `Walk.support_cons`/`isPath_def` 的
-**确切陈述**（教训 362 ✓），再按真实形状拼 `List.nodup_append` ✓。
+/-- ★★★ **跨侧边数可加性** ✓（桥公式「量值」那一半 ✓）。 -/
+theorem topoDist_eq_add_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x y : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) (hy : y ∈ T.sideLeaves s(u, v) u) :
+    topoDist T x y = (T.pathOf (T.leaf x) v).edges.length + 1
+      + (T.pathOf u (T.leaf y)).edges.length := by
+  have hyu : T.inSide s(u, v) u (T.leaf y) := (T.mem_sideLeaves_iff_inSide).mp hy
+  have e2 : s(u, v) ∉ (T.pathOf u (T.leaf y)).edges := fun h =>
+    ((T.mem_pathOf_edges_iff_not_inSide (e := s(u, v)) (u := u) (v := T.leaf y)).mp h) hyu
+  -- `v` 不在第二段支撑集里
+  have hv_not : v ∉ (T.pathOf u (T.leaf y)).support := by
+    intro hv
+    exact (T.not_reachable_deleteEdges_of_adj huv)
+      (SimpleGraph.reachable_deleteEdges_of_notMem_edges _
+        (fun h => e2 (SimpleGraph.Walk.edges_takeUntil_subset_edges (T.pathOf u (T.leaf y)) hv h)))
+  -- 拼接走法是路径
+  have hpath : ((T.pathOf (T.leaf x) v).append
+      (SimpleGraph.Walk.cons huv.symm (T.pathOf u (T.leaf y)))).IsPath := by
+    rw [SimpleGraph.Walk.isPath_def, SimpleGraph.Walk.support_append, SimpleGraph.Walk.support_cons]
+    refine List.Nodup.append ?_ ?_ ?_
+    · rw [← SimpleGraph.Walk.isPath_def]; exact T.pathOf_isPath (T.leaf x) v
+    · rw [List.tail_cons, ← SimpleGraph.Walk.isPath_def]
+      exact T.pathOf_isPath u (T.leaf y)
+    · rw [List.disjoint_iff_ne]
+      intro a ha b hb hab
+      exact disjoint_support_pathOf_of_mem_sideLeaves T.toCladogram huv hx hy a ha (hab.symm ▸ hb)
+  -- 唯一性 ⇒ 就是 pathWalk
+  have heq : pathWalk T x y
+      = (T.pathOf (T.leaf x) v).append
+        (SimpleGraph.Walk.cons huv.symm (T.pathOf u (T.leaf y))) :=
+    (T.existsUnique_path (T.leaf x) (T.leaf y)).unique (pathWalk_isPath T x y) hpath
+  rw [topoDist, heq, SimpleGraph.Walk.length_append, SimpleGraph.Walk.length_cons,
+    SimpleGraph.Walk.length_edges, SimpleGraph.Walk.length_edges]
+  omega
 
-**★ 本轮已定名（下一轮直接用 ✓）**：`isPath_def : p.IsPath ↔ p.support.Nodup`（`Paths.lean:93` ✓）·
-`length_cons`（`Basic.lean:95` ✓）· `support_cons`（`Basic.lean:138` ✓）·
-★★ 拼接不交的引理真名是 **`List.nodup_append'`**（**带撇号** ✗，`Data/List/Nodup.lean:167` ✓）
-—— 我上一版写的 `List.nodup_append`（无撇号 ✗）**不存在** ✓，这正是 `rw` 找不到模式的真因 ✓。
-★ 另：`disjoint_support_pathOf_of_mem_sideLeaves` 的 `T` 是 **`Cladogram`** ✗ ⇒ 传 `Phylogram` 要写
-**`T.toCladogram`** ✓。
-
--//-! ## 2. 三条基本性质 -/
+/-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
