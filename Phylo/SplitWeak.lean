@@ -472,15 +472,39 @@ def canonicalSplitDecomposition_gap : Prop :=
       (∀ s ∈ F, 0 < c s) ∧ SplitPrime δ₀ ∧
         ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
 
-/-- ⬜ **缺口 3（强相容 ⟺ 树度量，539–544 行）**：两两相容 ⟺ `Σ` 恰是某个**满足四点条件**的
-`δ` 的 `d`-split 全体。
+/-- ⬜ **缺口 3（强相容 ⟺ 树度量，**Buneman 1974 Thm 2**，`SempleSteel2002:539–544`）**：
+两两相容 ⟺ `Σ` 恰是某个**满足四点条件**的 `δ` 的 `d`-split 全体。
 
 「⟸」方向由本文件的 ★★（强 ⟹ 弱）配合 `not_all_three_deficit_pos` 给出**弱**结论；
-完整刻画还需「四点条件 ⟹ 树度量（`Phylogram.dist`）」一侧（`Phylo/BunemanTree.lean` 的 F6/T-6 接口）。 -/
+完整刻画还需「四点条件 ⟹ 树度量（`Phylogram.dist`）」一侧（`Phylo/BunemanTree.lean` 的 F6/T-6 接口）。
+
+★★★ **2026-10-15 W20 任务 B-3 改命题（留证：旧形态 → 新形态 → 文献依据 → 理由）** ✓
+
+* **旧形态** ✗：右边写 `∃ δ : α → α → ℝ, **FourPoint** δ ∧ …` —— 用的是**本库** `def FourPoint` ✗；
+* **新形态** ✓：右边写 `∃ δ : α → α → ℝ, **FourPointStd** δ ∧ …` —— 用的是**文献形态** ✓
+  （`FourPointStd`，同文件 `:422`，三对和中**最大者至少取到两次** ✓）；
+* **文献依据** ✓：`references/md/Buneman1974_MetricPropertiesOfTrees.md` **THEOREM 1** `:33-36`
+  （**逐字**：「A graph is a tree iff it is connected, contains no triangles, and has graphical distance
+  satisfying **the four-point condition**」✓ —— 即标准四点条件 ✓）＋ **Thm 2** `:70-74` ✓；
+  对应 `SempleSteel2002:539–544`；★ 派单原引 `SempleSteel2002:539-544` 的**定位**已在 W19 更正为 Buneman ✓；
+* **理由（★D 先判真假，非措辞问题）** ✗：本库 `def FourPoint` 的**第三**合取项末项写的是
+  `δ a b + δ a' b`（两对**共享端点 `b`** ✗），而正确的三表达式之一是 `δ a b + δ a' b'` ✓
+  （详见同文件 `FourPointStd` 的 docstring `:402-421` ✓）。后果：**真实树度量几乎全都不满足本库形态** ✗ ——
+  随机树 + 随机正边权，`n = 4` 的 3000 个有效树度量里只有 **1** 个满足 ✓；`n = 5/6/7` 是 `0/3000` ✓；
+  独立机检 `scripts/msc/w12d_b2_b1_search.py`：两两相容 split 族上**标准形态违反 0 例**、
+  **本库形态违反 68/75 例** ✗；最小显式见证 = 4 叶平衡树 `((0,1),(2,3))` 全边权 `1`，
+  见 `BunemanIndexBridge.lean` 的 `Split.cexTreeVal_not_fourPoint` ✓。
+  ⇒ 用本库形态写的 `⟹` 半边（两两相容 ⟹ ∃ `δ` 满足它）**为假** ✗（自然候选 `δ` 正是树度量 ✓）；
+* ★ **这不是"借改之便改弱"** ✗（派单纪律③）：新形态**就是文献那条** ✓；旧形态是**另一个（错的）命题** ✗。
+  方向性说明（已证 ✓）：`Split.fourPointStd_of_fourPoint`（`BunemanIndexBridge.lean` ✓）给出
+  「本库形态 ⟹ 标准形态」✓，反向**不成立** ✗ ⇒ 两者**不等价** ✓；
+* **影响的下游声明**：本 `def` 是 `Prop` 缺口，**库内无人依赖** ✓（仅 docstring 互引 ✓）；
+  ★ 同源的 `fourPointOfSplitMetricSum_gap`（`:513`）W12k 已同样更正并登记
+  `fourPointOfSplitMetricSum_gap_correct_shape` ✓ ——**本处是同一根因的第二处修正** ✓。 -/
 def fourPointCharacterization_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) ↔
-      ∃ δ : α → α → ℝ, FourPoint δ ∧
+      ∃ δ : α → α → ℝ, FourPointStd δ ∧
         ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s
 
 /-! ## 7.1 瓶颈 (B1)/(B2)（W12k 登记为**有名有姓的题**；均由协调侧指定）
