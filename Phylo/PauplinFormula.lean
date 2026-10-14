@@ -599,7 +599,76 @@ theorem double_sum_eq_ite_sum (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u
 
 **收口** ✓：两块分别得 `D_e(u)·D_e(v)` 与 `D_e(v)·D_e(u)` ⇒ 相加 ⇒ `ring` 给 `2·D_e(u)·D_e(v)` ✓。
 
--//-! ## 2. 三条基本性质 -/
+-/omit [DecidableEq X] in
+/-- ★★ **`rfl` 桥引理（教训 409）**：把 `sideDoublingSum` 的定义在【显式求和】形式上重述 ✓
+
+　`sideDoublingSum T e u = Σ_{x ∈ sideLeaves e u} (1/2)^{|pathOf u (leaf x)|}` ✓
+
+★ 用途：定义作用在 **`Cladogram`** 上，而目标里常出现 `T.toCladogram` 的写法 ⇒
+直接 `rw [← sideDoublingSum]` 会报「Failed to rewrite using equation theorems」✗；
+改用它（`rfl` ✓）即可稳定匹配 ✓。 -/
+theorem sideDoublingSum_dfn (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
+    sideDoublingSum T e u
+      = ∑ x ∈ T.sideLeaves e u, (1 / 2) ^ ((T.pathOf u (T.leaf x)).edges.length) := rfl
+
+/-- ★★★ **最后拼装 ②：按侧拆和并因式分解** ✓
+
+　`Σ_x (if x ∈ A then (1/2)^{d_u(x)}·D_e(v) else (1/2)^{d_v(x)}·D_e(u)) = 2·D_e(u)·D_e(v)` ✓
+
+（`Finset.sum_add_sum_compl` 按 `A` 与其补拆开 ✓ ⇒ 两块各因式分解（`Finset.sum_mul` ✓ ＋
+`sideDoublingSum_dfn` ✓）⇒ `D_e(u)·D_e(v) + D_e(v)·D_e(u)` ⇒ `ring` ✓。） -/
+theorem ite_sum_eq (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) :
+    (∑ x : X, (if x ∈ T.sideLeaves s(u, v) u then
+          (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+            * sideDoublingSum T.toCladogram s(u, v) v
+        else
+          (1 / 2) ^ (T.pathOf v (T.leaf x)).edges.length
+            * sideDoublingSum T.toCladogram s(u, v) u))
+      = 2 * sideDoublingSum T.toCladogram s(u, v) u
+        * sideDoublingSum T.toCladogram s(u, v) v := by
+  rw [← Finset.sum_add_sum_compl (T.sideLeaves s(u, v) u)]
+  have hA : (∑ x ∈ T.sideLeaves s(u, v) u,
+        (if x ∈ T.sideLeaves s(u, v) u then
+            (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) v
+          else
+            (1 / 2) ^ (T.pathOf v (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) u))
+      = sideDoublingSum T.toCladogram s(u, v) u
+        * sideDoublingSum T.toCladogram s(u, v) v := by
+    rw [Finset.sum_congr rfl (fun x hx => ite_eq_left hx)]
+    rw [← Finset.sum_mul, ← sideDoublingSum_dfn]
+  have hB : (∑ x ∈ (T.sideLeaves s(u, v) u)ᶜ,
+        (if x ∈ T.sideLeaves s(u, v) u then
+            (1 / 2) ^ (T.pathOf u (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) v
+          else
+            (1 / 2) ^ (T.pathOf v (T.leaf x)).edges.length
+              * sideDoublingSum T.toCladogram s(u, v) u))
+      = sideDoublingSum T.toCladogram s(u, v) v
+        * sideDoublingSum T.toCladogram s(u, v) u := by
+    rw [Finset.sum_congr rfl (fun x hx => ite_eq_right (Finset.mem_compl.mp hx))]
+    rw [← Finset.sum_mul, ← T.sideLeaves_compl_adj huv, ← sideDoublingSum_dfn]
+  rw [hA, hB]
+  ring
+
+/-- ★★★ **桥公式（有序对版）** ✓ —— 本季 C1.5 的核心恒等式 ✓
+
+　`Σ_x Σ_y bmeCoeff(topoDist x y)·incidence x y e = 2·D_e(u)·D_e(v)` ✓
+
+（＝ 已证的 `double_sum_eq_ite_sum` ✓ 与 `ite_sum_eq` ✓ 的**复合** ✓。
+★ 因子 2 的来源：`Dissimilarity.plane` 是**有序对** ⇒ 两支（`x∈A,y∈B` 与 `x∈B,y∈A`）都要计 ✓；
+文献中按**无序对**叙述时同一恒等式右侧即为 `D_e(u)·D_e(v)` ✓。）
+
+★ 下一轮：对**二叉**树代入 `D_e(u) = D_e(v) = 1`（`sideDoublingSum_eq_one_of_isBinary` ✓）
+⇒ 和 `= 2` ＝ **D2-A′（式 (9)）** ⇒ 经已证的 `:458`/`:494` ⇒ `pauplinFormula_gap`（`l̂ = l`）✓。 -/
+theorem double_sum_eq_two (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) :
+    (∑ x : X, ∑ y : X, bmeCoeff (topoDist T x y) * incidence T x y s(u, v))
+      = 2 * sideDoublingSum T.toCladogram s(u, v) u
+        * sideDoublingSum T.toCladogram s(u, v) v :=
+  (double_sum_eq_ite_sum T huv).trans (ite_sum_eq T huv)
+
+/-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
