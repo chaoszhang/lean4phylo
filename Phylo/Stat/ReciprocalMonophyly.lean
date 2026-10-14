@@ -223,6 +223,46 @@ noncomputable def Rn (n a b : ℕ) : ℝ :=
   4 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1) * ((b : ℝ) + 1))
     * ((n.choose b : ℝ))⁻¹ * ((b.choose a : ℝ))⁻¹
 
+/-- **Theorem 4.5 的六情形级联（W19 任务 B：把文献的陈述结构逐字形式化）** ✓。
+
+文献（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md:452-475` ✓ 逐字）
+把「Yule 树上 `A`、`B` 同为 proper clade」的概率 `pn(A,B)` 按 **6 种情形**给出：
+
+```text
+        ⎧ pn(a),           if A = B                        [case 1] ;
+        ⎪ Rn(a, b),        if A ⊊ B                        [case 2] ;
+        ⎪ Rn(b, a),        if B ⊊ A                        [case 3] ;
+pn(A,B)=⎨ p̂n(a, n − a),    if A ∩ B = ∅, A ∪ B = Xn       [case 4] ;
+        ⎪ rn(a, b),        if A ∩ B = ∅, A ∪ B ⊊ Xn        [case 5] ;
+        ⎩ 0,               otherwise                       [case 6] ;
+```
+
+本 `def` 是这 6 行的**逐字转录**（用 `Finset (Fin n)` 的集合把情形判据写成可判定的形式 ✓）：
+`A ⊊ B` ↔ `A ⊂ B` ✓；`A ∪ B = Xn` ↔ `A ∪ B = Finset.univ` ✓；`A ∩ B = ∅` ↔ `A ∩ B = ∅` ✓。
+其中 `p̂n` 取 **Lemma 4.3**（**穷尽**情形 ✓），与 `qn`（`:229` ✓）的取法一致 ✓（见文件头 §3 的更正 ✓）。
+
+⚠️ **证明状态（如实登记 ✓）**：本 `def` 只把**陈述结构**落地 ✓；
+「它确实等于 YHK 律下 `A`、`B` 同成 clan 的**概率**」这一**概率层**仍未证 ✗ ——
+那需要**一般 `n` 的 YHK / Kingman 拓扑律** ✗（本库只有 `Fin 4` 的 `MSCFreq` 实例与一步合并的均匀性 ✓），
+即缺口 `YHKClanLawGap` / `TwoClanLawGap`（§6 ✓）。★ **不得**用本 `def` 冒充「Theorem 4.5 已证」✗。
+
+文本依据：`…arXiv1101.1311.md:452-475`（六情形本体 ✓）· `:479-503`（`Rn` ✓）· `:504-509`（`rn` ✓）·
+`:477`（`pn(a)` 取 Lemma 4.2 ✓、`p̂n(a, n−a)` 取 Lemma 4.3 ✓）。 -/
+noncomputable def pnPair {n : ℕ} (A B : Finset (Fin n)) : ℝ :=
+  if A = B then clanProb n A.card
+  else if A ⊂ B then Rn n A.card B.card
+  else if B ⊂ A then Rn n B.card A.card
+  else if A ∩ B = ∅ ∧ A ∪ B = Finset.univ then pnHatExh n A.card
+  else if A ∩ B = ∅ then rn n A.card B.card
+  else 0
+
+/-- **Theorem 4.5 情形 6 的锚点**：两集合**相交且互不包含**、又不同时为全集时，值为 `0`
+（文献 `:475` 的 "otherwise [case 6]" ✓）—— 用 `Fin 3` 上的 `{0}` 与 `{1}` 之外的显式例子验证级联**真的走到第 6 支** ✓。 -/
+theorem pnPair_case6_anchor :
+    pnPair ({0, 1} : Finset (Fin 3)) ({1, 2} : Finset (Fin 3)) = 0 := by
+  unfold pnPair
+  repeat' rw [ite_eq_right (by decide)]
+
 /-- **Theorem 6.3(ii)**（第 **1105–1110** 行，`a + b < n`）：
 `qn(a,b) = rn(a,b) + Rn(a, n−b) + Rn(b, n−a) − p̂n(b, n−b)p_{n−b}(a) − p̂n(a, n−a)p_{n−a}(b)`。
 ⚠️ 其中 `p̂n(·, n−·)` 取 **Lemma 4.3**（穷尽情形），不是 Lemma 4.4 —— 见文件头 §3。 -/
