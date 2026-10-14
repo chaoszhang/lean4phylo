@@ -240,6 +240,38 @@ theorem topoDist_eq_add_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
     SimpleGraph.Walk.length_edges, SimpleGraph.Walk.length_edges]
   omega
 
+/-- ★★★ **跨侧单对的【量值】** ✓（桥公式的代数内核 ✓）：
+`x` 在 `e = s(u,v)` 的 `v` 侧、`y` 在 `u` 侧时
+
+　`bmeCoeff (topoDist x y) = 2 · (1/2)^{d_u(x)} · (1/2)^{d_v(y)}` ✓
+（`d_u(x) = |pathOf (leaf x) v|`，`d_v(y) = |pathOf u (leaf y)|` ✓）。
+证：`bmeCoeff p = 2·(1/2)^p` ＋ 边数可加性 ＋ `pow_add`/`pow_one` ＋ `ring` ✓。 -/
+theorem bmeCoeff_topoDist_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x y : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) (hy : y ∈ T.sideLeaves s(u, v) u) :
+    bmeCoeff (topoDist T x y)
+      = (1 / 2) ^ ((T.pathOf (T.leaf x) v).edges.length)
+        * (1 / 2) ^ ((T.pathOf u (T.leaf y)).edges.length) := by
+  rw [bmeCoeff, topoDist_eq_add_of_mem_sideLeaves T huv hx hy, pow_add]
+  ring
+
+/-- ★★ **同侧单对的贡献为 `0`** ✓（`incidence = 0` ⇒ 乘任何系数都是 `0` ✓）。 -/
+theorem bmeCoeff_mul_incidence_eq_zero_of_same_side (T : Phylogram X) {e : Sym2 T.V} {u : T.V}
+    {x y : X} (hx : x ∈ T.sideLeaves e u) (hy : y ∈ T.sideLeaves e u) :
+    bmeCoeff (topoDist T x y) * incidence T x y e = 0 := by
+  rw [incidence_eq_zero_of_same_side T hx hy, mul_zero]
+
+/-- ★★★ **跨侧单对的【贡献】** ✓：`bmeCoeff · incidence = 2·(1/2)^{d_u(x)}·(1/2)^{d_v(y)}` ✓。 -/
+theorem bmeCoeff_mul_incidence_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
+    (huv : T.graph.Adj u v) {x y : X}
+    (hx : x ∈ T.sideLeaves s(u, v) v) (hy : y ∈ T.sideLeaves s(u, v) u) :
+    bmeCoeff (topoDist T x y) * incidence T x y s(u, v)
+      = (1 / 2) ^ ((T.pathOf (T.leaf x) v).edges.length)
+        * (1 / 2) ^ ((T.pathOf u (T.leaf y)).edges.length) := by
+  rw [bmeCoeff_topoDist_of_mem_sideLeaves T huv hx hy,
+    incidence_eq_one_of_mem_sideLeaves_of_adj T huv hx hy]
+  ring
+
 /-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
