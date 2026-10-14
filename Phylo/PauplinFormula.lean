@@ -191,7 +191,35 @@ theorem disjoint_support_pathOf_of_mem_sideLeaves (T : Cladogram X) {u v : T.V}
   exact (T.not_reachable_deleteEdges_of_adj huv)
     (hxv.trans (h1.trans h2.symm)).symm
 
-/-! ## 2. 三条基本性质 -/
+/-! **★★★ W19 登记（2026-10-14）：跨侧边数可加性 —— 路线已定，卡在 Mathlib 的 `Walk.support` 约定** ⬜
+
+目标 ✓：`x ∈ sideLeaves e v`、`y ∈ sideLeaves e u`（`e = s(u,v)`）⇒
+
+　`topoDist T x y = |pathOf (leaf x) v| + 1 + |pathOf u (leaf y)|` ✓。
+
+**已备好的前置** ✓：`pathWalk = pathOf`（`pathWalk_eq_pathOf` ✓）·
+跨侧两段支撑集**不交**（`disjoint_support_pathOf_of_mem_sideLeaves` ✓）·
+两段路径都避开 `e` ✓（`mem_pathOf_edges_iff_not_inSide` ✓）。
+
+**路线（教训 391）** ✓：拼 `q := (pathOf (leaf x) v).append (cons huv.symm (pathOf u (leaf y)))` ✓；
+证 `q.IsPath` ⇒ 由 `existsUnique_path` 的**唯一性** ⇒ `q = pathWalk T x y` ✓ ⇒ 取 `length` ✓。
+
+**本轮卡点（如实登记 ✓）** ✗：
+1. `IsPath` 需按 Mathlib 的 `Walk.support` 约定展开，而 `Walk.support_cons` 的实际形状是
+   `(v :: p.support).tail` 而非 `v :: p.support` ⇒ 我按错形状写的 `List.nodup_append` 目标不匹配 ✗；
+2. `disjoint_support_pathOf_of_mem_sideLeaves` 的 `T` 形参是 **`Cladogram`** ✗，
+   传 `Phylogram` 的 `T` 需显式写 **`T.toCladogram`** ✓（隐式 coercion 不适用于显式实参 ✓）。
+⇒ 这两点都是**约定性**问题（非数学困难 ✓）：下一轮先 `grep` `Walk.support_cons`/`isPath_def` 的
+**确切陈述**（教训 362 ✓），再按真实形状拼 `List.nodup_append` ✓。
+
+**★ 本轮已定名（下一轮直接用 ✓）**：`isPath_def : p.IsPath ↔ p.support.Nodup`（`Paths.lean:93` ✓）·
+`length_cons`（`Basic.lean:95` ✓）· `support_cons`（`Basic.lean:138` ✓）·
+★★ 拼接不交的引理真名是 **`List.nodup_append'`**（**带撇号** ✗，`Data/List/Nodup.lean:167` ✓）
+—— 我上一版写的 `List.nodup_append`（无撇号 ✗）**不存在** ✓，这正是 `rw` 找不到模式的真因 ✓。
+★ 另：`disjoint_support_pathOf_of_mem_sideLeaves` 的 `T` 是 **`Cladogram`** ✗ ⇒ 传 `Phylogram` 要写
+**`T.toCladogram`** ✓。
+
+-//-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
