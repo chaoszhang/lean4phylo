@@ -635,14 +635,31 @@ def TwoClanLawGap : Prop :=
           (fun ω => (tree ω).IsClade A ∧ (tree ω).IsClade B), prob ω)
         = if A.card + B.card = n then qnExhaustive A.card B.card else qn n A.card B.card
 
-/-- **缺口 G3（Theorem 6.4(i) 的概率层：三个 clan）**。
-互斥且穷尽的三组 `A1,A2,A3` 同时成 clan 的概率 = `qTriple`。 -/
+/-- **缺口 G3（Theorem 6.4(i) 的概率层：三个 clan）** —— ★ **2026-10-14 W19 按文献更正前提** ✓。
+
+**文献原话（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md:1171-1191`）**：
+> 「**Theorem 6.4.** Let `n = a₁ + a₂ + a₃`. Then: **(i)** `q(a₁,a₂,a₃) = 4a₁!a₂!a₃!/(n−1)! · Σ_{i=1}^{3} 1/((n−a_i)((n−a_i)²−1))`」
+其**证明首句**（同文件 `:1193-1196` ✓）明确限定事件为：
+> 「the event that `A₁, A₂` and `A₃` (**which partition `X`**) are clans of `T − ρ` …」
+⇒ 文献的 `A₁,A₂,A₃` 是 `X` 的**划分**（**两两不交** ＋ 并为全集 ✓）；
+
+**★ 改动留证（旧形态 → 新形态 → 文献依据 → 理由）**：
+* **旧形态** ✗：只要求 `A1 ∪ A2 ∪ A3 = Finset.univ`（**未要求两两不交** ✗）；
+* **新形态** ✓：`A1 ∪ A2 ∪ A3 = Finset.univ ∧ Disjoint A1 A2 ∧ Disjoint A1 A3 ∧ Disjoint A2 A3`
+  ＝「三者构成 `X` 的**划分**」✓（与文献 `partition` 逐字对应 ✓）；
+* **文献依据** ✓：同文件 `:1171-1191`（定理本体 ✓）＋ `:1193-1196`（证明首句的 "partition" ✓）；
+* **理由** ✓：旧形态**前提过宽** ✗ —— 三者可**重合**，此时等式**为假** ✗
+  （显式反例：取 `A1 = A2 = A3 = univ` ⇒ 左端「三者都是 clan」＝「`univ` 是 clan」的概率 `= 1` ✗，
+  而右端 `qTriple n n n` ✗ ≠ 1 ✓）⇒ 依老师 2026-10-14 令「命题不忠于文献就改命题」✓ 改为**等于文献那条** ✓。
+  ★ **未改弱** ✓：前提**加强**（加了三条 `Disjoint` ✓），结论不变 ✓；
+* **影响的下游声明**：无（本 `def` 是 `Prop` 缺口，库内无人依赖 ✓；同文件 `:146-147` 的对照表把「三个 clan 的概率」
+  列为 ❌ 未证 ✓，与本 `def` 一致 ✓）。 -/
 def TripleClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
     (tree : Ω → Cladogram.{0, 0} (Fin n)),
     ∀ A1 A2 A3 : Finset (Fin n),
-      (A1 ∪ A2 ∪ A3 = Finset.univ) →
+      (A1 ∪ A2 ∪ A3 = Finset.univ) → Disjoint A1 A2 → Disjoint A1 A3 → Disjoint A2 A3 →
       (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A1 ∧ (tree ω).IsClade A2
           ∧ (tree ω).IsClade A3), prob ω)
         = qTriple A1.card A2.card A3.card
