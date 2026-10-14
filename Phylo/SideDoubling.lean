@@ -330,4 +330,45 @@ theorem exists_adj_of_edges_pathOf (T : Cladogram X) {u z : T.V} (huz : u ≠ z)
   | cons hadj p =>
     exact ⟨_, hadj, by rw [SimpleGraph.Walk.edges_cons]; exact List.mem_cons_self⟩
 
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **取首边（打包邻接版）**：`u ≠ z` ⇒ 存在**邻接** `h : Adj u t` 与尾走法 `p : Walk t z`，
+使 `pathOf u z = cons h p` ✓（这样无需给 `cons` 的隐含顶点命名 ✓）。 -/
+theorem exists_cons_pathOf (T : Cladogram X) {u z : T.V} (huz : u ≠ z) :
+    ∃ (t : T.V) (h : T.graph.Adj u t) (p : T.graph.Walk t z),
+      T.pathOf u z = SimpleGraph.Walk.cons h p := by
+  cases hp : T.pathOf u z with
+  | nil => exact (huz rfl).elim
+  | cons hadj p => exact ⟨_, hadj, p, rfl⟩
+
+/-- ★★★ **(a) 的反向包含（第三块）** ✓：覆盖假设（`u` 的邻点只有 `y₀, v, w` ✓）下，
+`x ∈ sideLeaves e u`（`e = s(u,y₀)` ✓）⇒ `x` 落在 `v` 支或 `w` 支上 ✓。 -/
+theorem mem_union_sideLeaves_of_mem_sideLeaves (T : Cladogram X) {u v w y₀ : T.V} {e : Sym2 T.V}
+    (he : e = s(u, y₀))
+    (hcover : ∀ z : T.V, T.graph.Adj u z → z = y₀ ∨ z = v ∨ z = w)
+    {x : X} (hux : u ≠ T.leaf x) (hx : x ∈ T.sideLeaves e u) :
+    x ∈ T.sideLeaves s(u, v) v ∪ T.sideLeaves s(u, w) w := by
+  have hside : T.inSide e u (T.leaf x) := (T.mem_sideLeaves_iff_inSide).mp hx
+  have hnotmem : e ∉ (T.pathOf u (T.leaf x)).edges := fun h =>
+    ((T.mem_pathOf_edges_iff_not_inSide (e := e) (u := u) (v := T.leaf x)).mp h) hside
+  obtain ⟨t, hut, p, hp⟩ := exists_cons_pathOf T hux
+  have hhead : s(u, t) ≠ e := by
+    intro hc
+    exact hnotmem (by rw [hp, SimpleGraph.Walk.edges_cons]; exact hc ▸ List.mem_cons_self)
+  have hty : t ≠ y₀ := fun h => hhead (by rw [h, ← he])
+  have htail : s(u, t) ∉ p.edges := by
+    have h2 : (SimpleGraph.Walk.cons hut p).edges.Nodup := by
+      rw [← hp]; exact T.pathOf_edges_nodup u (T.leaf x)
+    rw [SimpleGraph.Walk.edges_cons] at h2
+    exact (List.nodup_cons.mp h2).1
+  have htail_reach : (T.graph.deleteEdges {s(u, t)}).Reachable t (T.leaf x) :=
+    SimpleGraph.reachable_deleteEdges_of_notMem_edges p htail
+  rcases hcover t hut with h | h | h
+  · exact absurd h hty
+  · exact Finset.mem_union_left _ (by
+      rw [h] at htail_reach
+      exact (T.mem_sideLeaves).mpr htail_reach.symm)
+  · exact Finset.mem_union_right _ (by
+      rw [h] at htail_reach
+      exact (T.mem_sideLeaves).mpr htail_reach.symm)
+
 end Phylo.SideDoubling
