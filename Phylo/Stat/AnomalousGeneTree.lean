@@ -410,6 +410,37 @@ theorem agt_B_pos {w : ℝ} (h0 : 0 ≤ w) (h1 : w ≤ 1) :
   have h3 : w ^ 3 ≤ 1 := pow_le_one₀ h0 h1
   linarith
 
+/-- ★★★ **Stage B1（`hmid`）**：`g > f` ↔ `1 < C(w)·(Z y)` ✓（`C(w) = (12 − 3w − 2w³)/(6(3 − 2w))` ✓）。
+
+证：`g − f = −A′ + B·z`（`agt_factor` ✓）⇒ `g > f ↔ A′ < B·z` ✓；
+再用 `agt_key`（`A′·N = B·D` ✓）把 `B` 换成 `A′·N/D` ✓，两边同除 `A′ > 0`（`agt_A_pos` ✓）、
+同乘 `D > 0` ✓ ⇒ `1 < (N/D)·z` ✓。 -/
+theorem agt_mid (x y : ℝ) (hx : 0 < x) :
+    (g x y > f x y)
+      ↔ 1 < ((12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x))) * Z y := by
+  have hw0 : 0 < Z x := Z_pos x
+  have hw1 : Z x < 1 := Z_lt_one hx
+  have hA : 0 < 1 - (2 / 3) * Z x := agt_A_pos hw1
+  have hB : 0 < (2 / 3) - Z x / 6 - Z x ^ 3 / 9 := agt_B_pos (le_of_lt hw0) (le_of_lt hw1)
+  have hD : 0 < 6 * (3 - 2 * Z x) := by linarith
+  have hN : 0 < 12 - 3 * Z x - 2 * Z x ^ 3 := by nlinarith [sq_nonneg (Z x - 1)]
+  have hkey : (1 - (2 / 3) * Z x) * (12 - 3 * Z x - 2 * Z x ^ 3)
+      = ((2 / 3) - Z x / 6 - Z x ^ 3 / 9) * (6 * (3 - 2 * Z x)) := agt_key (Z x)
+  have hfac := agt_factor x y
+  have hBz : ((2 / 3) - Z x / 6 - Z x ^ 3 / 9) * Z y
+      = ((1 - (2 / 3) * Z x) * (12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x))) * Z y := by
+    congr 1
+    rw [eq_div_iff (ne_of_gt hD)]
+    linarith [hkey]
+  rw [gt_iff_lt, (sub_pos).symm, hfac, hBz]
+  have hsplit : ((1 - (2 / 3) * Z x) * (12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x))) * Z y
+      = (1 - (2 / 3) * Z x) * (((12 - 3 * Z x - 2 * Z x ^ 3) / (6 * (3 - 2 * Z x))) * Z y) := by
+    ring
+  rw [hsplit]
+  constructor
+  · intro h; nlinarith [h, hA]
+  · intro h; nlinarith [h, hA]
+
 /-- **缺口 3（一般 `n`）**：DR2006 Proposition 2（`n ≥ 5` 任意物种树拓扑都产 AGT）与
 Rosenberg 2013 Theorem 1（产生 AGT ⟺ 有两个相邻内部枝）的**抽象骨架**：
 模型 `P : 枝长 → 基因树 → ℝ` 与物种树拓扑 `st` 作为**参数**传入（**不假设**任何模型性质 ✓），
