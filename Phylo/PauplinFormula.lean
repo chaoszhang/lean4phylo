@@ -467,6 +467,30 @@ beta-还原/隐式参数的细微差别就会失败 ✓。
 **六步证法照旧** ✓（见上一条登记 ✓，其中第 ⑤ 步若 `rw`/`conv_lhs` 仍不通，
 改用 **`simp only [hstep]`** 或**直接在平铺引理里做** ✓）。
 
+-//-! **★★★ W19 登记（第三轮）：行和引理的真因已收敛到【一个项】，建议改用 `@[simp]` ＋ `simp only`**
+
+**本轮决定性发现** ✓（三种框架、同一位置、同一症状 ✗）：
+我在**平铺**语句（各只含一层 `ite` ✓）下分别用三种写法：
+| 写法 | 结果 |
+|---|---|
+| `conv_lhs => rw [Finset.sum_congr rfl (fun y _ => contribution_eq_ite T huv x y)]` | ✗ 同一症状 |
+| `rw [Finset.sum_congr rfl (fun y _ => …)]` | ✗ 同一症状 |
+| `refine (Finset.sum_congr rfl (fun y _ => …)).trans ?_` | ✗ 同一症状 |
+症状**恒定**：报错在**该行同一列**（`unsolved goals` 把**整个定理目标**列出 ✓），
+紧接着一行报 **`unexpected token '<下一个 tactic 词>'; expected command`** ✗。
+
+⇒ ★★★ **结论**：问题**不在**语句的嵌套 `if` ✗（平铺版同样失败 ✓），也**不在** `conv_lhs`/`rw` 本身 ✗，
+而**收敛到那个【项】**：`Finset.sum_congr rfl (fun y _ => contribution_eq_ite T huv x y)` ✓
+—— 它在**作为 tactic 参数**时无法被 elaboration 消化 ✓（`g` 的推断 / `rfl` 的类型在此上下文里不成立 ✓）。
+
+**★★★ 建议的下一轮路线（避开这个项）** ✓：
+1. 给 **`contribution_eq_ite` 加 `@[simp]`** ✓（它无假设、是纯 `=` ✓），
+   然后用 **`simp only [contribution_eq_ite]`** 直接化简目标和 ✓ —— **完全不出现 `sum_congr`** ✓；
+2. 或者把行和引理的**被积项**改写为**指示函数形式**（用 `sum_ite_mem_eq_sum` 的逆 ✓）
+   使 `contribution_eq_ite` 的 RHS 与目标**逐点同形** ⇒ `simp only [contribution_eq_ite]` 即可 ✓；
+3. 亦可给 `contribution_eq_ite` 写一个 **`Finset.sum` 版**（即把 `sum_congr` 的结果**预先证成一条引理** ✓），
+   再把这条引理的**名字**用于 `rw` ✓（★ 教训 403 的反面用法：**先证成独立引理再 `rw`** ✓）。
+
 -//-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
