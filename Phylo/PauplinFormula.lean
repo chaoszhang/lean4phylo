@@ -283,32 +283,91 @@ theorem bmeCoeff_mul_incidence_of_mem_sideLeaves (T : Phylogram X) {u v : T.V}
 * 同侧的两种 ⇒ `incidence = 0` ⇒ 贡献 `0` ✓。
 ⇒ ★ **两行都非零** ✓（纠正见 MEMORY 377 批 ✓），合计 `D_u·D_v + D_v·D_u = 2·D_u·D_v` ✓。 -/
 
-/-! **★★★ W19 最后拼装 ①：逐点恒等式 —— 已精确定形，卡在三条【约定】（下一轮直接落）** ⬜
+/-! **★★★ W19 最后拼装 ①：逐点恒等式（四情形）** ✓
 
-**目标（逐点，四情形）** ✓：`A = sideLeaves e u`、`B = sideLeaves e v`、`e = s(u,v)` ✓
+`A = sideLeaves e u`、`B = sideLeaves e v`、`e = s(u,v)` ✓ ——
 
 　`bmeCoeff(topoDist x y)·incidence x y e`
 　`= if x ∈ B ∧ y ∈ A then (1/2)^{d_v(x)}·(1/2)^{d_u(y)}`
 　`  else if x ∈ A ∧ y ∈ B then (1/2)^{d_u(x)}·(1/2)^{d_v(y)} else 0` ✓
 
-**已尝试 5 轮，全部卡在【约定性】而非数学性** ✗ ⇒ 按铁律 5 撤回，登记三条约定：
+★ 三条约定（MEMORY 378 批 ✓）已全部用上：
+`ite_eq_right`/`ite_eq_left` 代替弃用的 `if_neg`/`if_pos` ✓；
+`ite` 条件非恒真 ⇒ 用 `not_inSide_both`（`Split.lean:750` ✓）证明其为假 ✓；
+`inSide e a b` 第二参是起点 ⇒ `inSide_or_inSide` 给【从叶出发】✗，需 `inSide_comm` 翻成【以基准为起点】✓。 -/
 
-1. ★★ **`if_neg` 已弃用** ✗ ⇒ 用 **`ite_eq_right`**（`(if c then a else b) = b`，给 `¬c` 的证明 ✓）
-   与 **`ite_eq_left`**（= `a`，给 `c` 的证明 ✓）；
-2. ★★★ **`ite` 的条件【不是命题逻辑恒真】** ✗ —— 从 `x ∈ A` 推不出 `x ∉ B` ✗，需
-   **`Cladogram.not_inSide_both`**（`Phylo/Split.lean:750` ✓：`¬(inSide e u y ∧ inSide e v y)` ✓）
-   或 `sideLeaves_compl_adj`（`:756` ✓）✓；
-3. ★★★ **`inSide e a b` 的第二个参数是【起点】** ✗（即 `inSide e u (leaf x)` ✓ 读作「从 `u` 到 `leaf x`」✓）
-   ⇒ `inSide_or_inSide huv (x := T.leaf x)` 给的是
-   `inSide e (leaf x) u ∨ inSide e (leaf x) v`（**从叶出发** ✗）
-   ⇒ 与 `not_inSide_both huv` 需要的 `inSide e u y ∧ inSide e v y`（**以基准为起点** ✓）**朝向相反** ✗
-   ⇒ ★ 必须用 **`T.inSide_comm`** 翻转（`(T.inSide_comm e (T.leaf x) u).mp hxA` ✓）✓。
+/-- ★★★ **逐点恒等式**（桥公式最后拼装的第①步 ✓）。 -/
+theorem contribution_eq_ite (T : Phylogram X) {u v : T.V} (huv : T.graph.Adj u v) (x y : X) :
+    bmeCoeff (topoDist T x y) * incidence T x y s(u, v)
+      = if x ∈ T.sideLeaves s(u, v) v ∧ y ∈ T.sideLeaves s(u, v) u then
+          (1 / 2) ^ (T.pathOf (T.leaf x) v).edges.length
+            * (1 / 2) ^ (T.pathOf u (T.leaf y)).edges.length
+        else if x ∈ T.sideLeaves s(u, v) u ∧ y ∈ T.sideLeaves s(u, v) v then
+          (1 / 2) ^ (T.pathOf (T.leaf x) u).edges.length
+            * (1 / 2) ^ (T.pathOf v (T.leaf y)).edges.length
+        else 0 := by
+  have hxu := T.inSide_or_inSide huv (x := T.leaf x)
+  have hyu := T.inSide_or_inSide huv (x := T.leaf y)
+  rcases hxu with hxA | hxB <;> rcases hyu with hyA | hyB
+  · -- 都在 u 侧：两个条件都假
+    have hxA' : x ∈ T.sideLeaves s(u, v) u :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf x) u).mp hxA)
+    have hyA' : y ∈ T.sideLeaves s(u, v) u :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf y) u).mp hyA)
+    have hxB' : x ∉ T.sideLeaves s(u, v) v := fun h => T.not_inSide_both huv
+      ⟨(T.inSide_comm s(u, v) (T.leaf x) u).mp hxA, (T.mem_sideLeaves_iff_inSide).mp h⟩
+    have hyB' : y ∉ T.sideLeaves s(u, v) v := fun h => T.not_inSide_both huv
+      ⟨(T.inSide_comm s(u, v) (T.leaf y) u).mp hyA, (T.mem_sideLeaves_iff_inSide).mp h⟩
+    rw [ite_eq_right (fun hc => hxB' hc.1), ite_eq_right (fun hc => hyB' hc.2)]
+    exact bmeCoeff_mul_incidence_eq_zero_of_same_side T hxA' hyA'
+  · -- x 在 u 侧、y 在 v 侧：第二个条件为真（镜像跨侧）
+    have hxA' : x ∈ T.sideLeaves s(u, v) u :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf x) u).mp hxA)
+    have hyB' : y ∈ T.sideLeaves s(u, v) v :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf y) v).mp hyB)
+    have hxB' : x ∉ T.sideLeaves s(u, v) v := fun h => T.not_inSide_both huv
+      ⟨(T.inSide_comm s(u, v) (T.leaf x) u).mp hxA, (T.mem_sideLeaves_iff_inSide).mp h⟩
+    have hm := bmeCoeff_mul_incidence_of_mem_sideLeaves T huv.symm
+      (show x ∈ T.sideLeaves s(v, u) u by rwa [Sym2.eq_swap])
+      (show y ∈ T.sideLeaves s(v, u) v by rwa [Sym2.eq_swap])
+    rw [Sym2.eq_swap] at hm
+    rw [ite_eq_right (fun hc => hxB' hc.1), ite_eq_left ⟨hxA', hyB'⟩]
+    exact hm
+  · -- x 在 v 侧、y 在 u 侧：第一个条件为真（跨侧）
+    have hxB' : x ∈ T.sideLeaves s(u, v) v :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf x) v).mp hxB)
+    have hyA' : y ∈ T.sideLeaves s(u, v) u :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf y) u).mp hyA)
+    rw [ite_eq_left ⟨hxB', hyA'⟩]
+    exact bmeCoeff_mul_incidence_of_mem_sideLeaves T huv hxB' hyA'
+  · -- 都在 v 侧：两个条件都假
+    have hxB' : x ∈ T.sideLeaves s(u, v) v :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf x) v).mp hxB)
+    have hyB' : y ∈ T.sideLeaves s(u, v) v :=
+      (T.mem_sideLeaves_iff_inSide).mpr ((T.inSide_comm s(u, v) (T.leaf y) v).mp hyB)
+    have hxA' : x ∉ T.sideLeaves s(u, v) u := fun h => T.not_inSide_both huv
+      ⟨(T.mem_sideLeaves_iff_inSide).mp h, (T.inSide_comm s(u, v) (T.leaf x) v).mp hxB⟩
+    have hyA' : y ∉ T.sideLeaves s(u, v) u := fun h => T.not_inSide_both huv
+      ⟨(T.mem_sideLeaves_iff_inSide).mp h, (T.inSide_comm s(u, v) (T.leaf y) v).mp hyB⟩
+    rw [ite_eq_right (fun hc => hyA' hc.2), ite_eq_right (fun hc => hxA' hc.1)]
+    exact bmeCoeff_mul_incidence_eq_zero_of_same_side T hxB' hyB'
 
-**建议的下一轮写法** ✓：`rcases` 四情形后，先在**每个分支**把 `hxA`/`hyA`/`hxB`/`hyB` 用
-`inSide_comm` 统一翻成「以基准为起点」的形式 ✓，再用 `ite_eq_right`/`ite_eq_left` ＋ `not_inSide_both`
-判两个条件 ✓，最后用三条逐对贡献引理（跨侧需 `huv.symm` ＋ `Sym2.eq_swap` 的镜像 ✓）。
+/-! ### ★★★ W19：子集和 = 指示函数和（最后拼装的**关键砖** ✓）
 
--//-! ## 2. 三条基本性质 -/
+`∑_{x ∈ s} f x = ∑_x (if x ∈ s then f x else 0)` ✓ ——
+由 **`Finset.sum_filter`**（真名已定 ✓：`DFinsupp/BigOperators.lean:305` 等处用它 ✓）
+与 `Finset.univ.filter (· ∈ s) = s` 归一 ✓。
+
+★ 这块砖的作用：把 `sideDoublingSum`（**子集和** ✓）与逐点 `ite` 形式（**`univ` 和** ✓）接起来 ✓，
+从而「逐点恒等式 ＋ 双重和」就能直接算出 `2·D_e(u)·D_e(v)` ✓。 -/
+
+/-- ★★★ **子集和 = 指示函数和** ✓（最后拼装的关键砖 ✓）。 -/
+theorem sum_ite_mem_eq_sum (s : Finset X) (f : X → ℝ) :
+    (∑ x : X, if x ∈ s then f x else 0) = ∑ x ∈ s, f x := by
+  rw [← Finset.sum_filter]
+  simp
+
+/-! ## 2. 三条基本性质 -/
 
 omit [Fintype X] [DecidableEq X] in
 /-- `n_xx = 0`（`x → x` 的唯一路径是平凡 walk）。 -/
