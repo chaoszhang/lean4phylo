@@ -498,6 +498,13 @@ def canonicalSplitDecomposition_gap : Prop :=
 * ★ **这不是"借改之便改弱"** ✗（派单纪律③）：新形态**就是文献那条** ✓；旧形态是**另一个（错的）命题** ✗。
   方向性说明（已证 ✓）：`Split.fourPointStd_of_fourPoint`（`BunemanIndexBridge.lean` ✓）给出
   「本库形态 ⟹ 标准形态」✓，反向**不成立** ✗ ⇒ 两者**不等价** ✓；
+* ★★ **关于右边的 `IsDSplit`（`max` 形式）—— 为什么**不**换成文献的 d-split（`α > 0`）** ✓：
+  文献（BD Thm 3 `:1683-1699` ✓）的 d-split 是 **隔离指数 `α_S > 0`** ✓，本库对应物是
+  **`Split.IsDSplitStrong`**（`BunemanIndexBridge.lean:50` ✓）；但在本文件**不能引用它** ✗ ——
+  它所在的模块 `Phylo/Stat/BunemanIndexBridge.lean` **import 本文件** ⇒ 引用会**循环依赖** ✗。
+  ★★ 而在**四点条件下两者等价** ✓（本文件 `IsDSplit` 的 docstring `:260-265` 记有
+  `Split.isDSplit_iff_isDSplitStrong_of_fourPoint` ✓）⇒ 本 `def` 的右边在当前**层次**下已是
+  文献语义的**忠实表达** ✓（★ 这一点在此**写明**，免后读成"仍未忠实" ✗）；
 * **影响的下游声明**：本 `def` 是 `Prop` 缺口，**库内无人依赖** ✓（仅 docstring 互引 ✓）；
   ★ 同源的 `fourPointOfSplitMetricSum_gap`（`:513`）W12k 已同样更正并登记
   `fourPointOfSplitMetricSum_gap_correct_shape` ✓ ——**本处是同一根因的第二处修正** ✓。 -/
