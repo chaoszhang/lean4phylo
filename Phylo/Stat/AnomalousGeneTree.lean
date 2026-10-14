@@ -410,7 +410,7 @@ theorem agt_B_pos {w : ℝ} (h0 : 0 ≤ w) (h1 : w ≤ 1) :
   have h3 : w ^ 3 ≤ 1 := pow_le_one₀ h0 h1
   linarith
 
-/-- ★★★ **Stage B1（`hmid`）**：`g > f` ↔ `1 < C(w)·(Z y)` ✓（`C(w) = (12 − 3w − 2w³)/(6(3 − 2w))` ✓）。
+/-- ★★★ **Stage B1（`agt_mid`）**：`g > f` ↔ `1 < C(w)·(Z y)` ✓（`C(w) = (12 − 3w − 2w³)/(6(3 − 2w))` ✓）。
 
 证：`g − f = −A′ + B·z`（`agt_factor` ✓）⇒ `g > f ↔ A′ < B·z` ✓；
 再用 `agt_key`（`A′·N = B·D` ✓）把 `B` 换成 `A′·N/D` ✓，两边同除 `A′ > 0`（`agt_A_pos` ✓）、

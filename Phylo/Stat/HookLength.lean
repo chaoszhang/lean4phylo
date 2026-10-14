@@ -61,7 +61,7 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | §6 ★★ | `multinomial_mul_prod_factorial` / `multinomial_children_factorial` | 计数恒等式 `multinomial(N-1; N_B)·∏N_B! = (N-1)!` |
 | §8 ★★ | `LE`（**自造**）＋ `LE_eq` ＋ `LE_eq_one_of_card_le_one` ＋ `hook_lt_of_mem_children` | 线性扩展数的**递推定义**与定义方程 |
 | §9 ★★ | `LE_induction`（**自造归纳原理**）＋ `attach_prod_LE`（`attach.prod` ↔ `Finset.prod` 桥接）＋ `two_le_card_of_child` | 闭形式归纳所需的**两件基础设施**（第七轮落地） |
-| §9.1/§9.2 ★B/★D | `Tcex` / `Thgood` + 4 条 `example` | 「孩子不一定 ≥2」「`hgood` 一般不成立」的**已核反例** |
+| §9.2 ★D | `Thgood` ＋ `example` | 「`hgood` 一般不成立」的**已核反例**。★ **2026-10-15 W20 任务 C 更正**：本行原写「§9.1/§9.2 ｜ `Tcex` / `Thgood` + 4 条 `example`」，但经核（依据 = 本文件内 `grep -nE 'def T[a-zA-Z]+'` 与 `grep -n '§9.1'`）**全库不存在名为 `Tcex` 的声明**、**也不存在 §9.1 这一节**，故删去该虚指项并把节号改准 ✓ |
 | **§10 ★★★** | **`LE_mul_prod_hook_eq_factorial`** ＋ `internalBelow_eq_empty_of_card_le_one` ＋ `laminarFamily_Tcat/_Tbal` | **hook-length 公式本体：`LE · ∏s = N!`**（第八轮落地，(i) **收口**） |
 | §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |

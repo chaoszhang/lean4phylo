@@ -845,7 +845,7 @@ theorem exDiss_fourPoint : exDiss.FourPoint := by
 * **为什么不改命题** ✓：它是 ★★★ `njCriterion_minimizer_is_cherry` 从条件定理变成「无条件 Atteson 安全半径定理」的
   **唯一剩余前提** ✓ ⇒ 改成 Lemma 11 的间隙不等式会**破坏该用途** ✗（且库内 docstring 已列明其所缺的三件器材
   (a)(b)(c) ✓）。故依 W19 护栏精神：**改归属 ＋ 留证** ✓，**不动命题** ✓；
-* **护栏③**：本处仅改 docstring ⇒ 仍需跑全库 build（**job 数应仍 3966** ✓）＋ `scripts/list_star_claims.sh` ✓。 -/
+* **护栏③**：本处仅改 docstring ⇒ 仍需跑全库 build（**job 数以当批实测为准** ✓ —— 原文写的「应仍 3966」是 W19 开跑前的旧基线，★ **2026-10-15 W20 任务 C 更正**：W20 起点实测为 **3968**，本批新增模块后为 **3972**）＋ `scripts/list_star_claims.sh` ✓。 -/
 def atteson_lemma11_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite → 4 ≤ Fintype.card X →
     ∃ δmin : ℝ, 0 < δmin ∧ δ.IsCherrySeparated δmin
