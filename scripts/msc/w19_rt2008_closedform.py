@@ -39,9 +39,19 @@ def g(i, j, t):
 
 
 def N(i, j):
-    """i → j 的合生方案数 = i! / (2^{i−j} (i−j)! (2j−i)!)。"""
-    k = i - j
-    return math.factorial(i) // (2 ** k * math.factorial(k) * math.factorial(2 * j - i))
+    """i → j 的**有序**合生方案数 ✓（推导，非猜测 ✓）。
+
+    单枝上由 i 降到 j 需 k = i−j 次合生 ✓：第 r 步时有 m = i−r+1 条谱系 ✓，
+    任选一对合生 ⇒ C(m,2) 种 ✓。故
+        N(i,j) = Π_{m=j+1}^{i} C(m,2)  =  Π_{m=j+1}^{i} m(m−1)/2  ✓
+    校验：N(2,1)=1 ✓ · N(3,2)=3 ✓ · N(3,1)=3·1=3 ✓ · **N(4,2)=6·3=18** ✓
+      （★ 先前我把 N(4,2) 误写为 3 ✗ —— 那是"无序配对"的数，不是"有序合生序列"的数 ✓）。
+    ★ 每条序列概率相同（速率结构对称 ⇒ 积分相同 ✓）⇒ 具体方案概率 = g_{ij}/N(i,j) ✓。
+    """
+    num = 1
+    for m in range(j + 1, i + 1):
+        num *= m * (m - 1) // 2
+    return num
 
 
 def clades_of(nwk_children, root):
@@ -117,23 +127,40 @@ def subst(nwk, mapping):
     return out
 
 
-def class_assignments(dfn):
-    """由 class 的定义字符串生成全部满足约束的双射（V,W,X,Y,Z → A..E）。"""
-    syms = ["V", "W", "X", "Y", "Z"]
+def class_assignments(dfn, nwk=""):
+    """由 class 的定义生成全部满足约束的赋值（★ 只变【该 class 实际用到的符号】✓）。
+
+    ★★★ 记号模型（本轮厘清 ✓）：
+      · 通用 schema 是五个符号 V,W,X,Y,Z ✓，但**每个 class 只用其中一部分** ✓；
+      · 变动的符号 = **在该 class 的 Newick 里实际出现**的那些 ✓；
+      · 它们取遍「{A..E} 减去该 Newick 里**字面出现**的分类群」的**排列** ✓；
+      · 并满足定义里的 `{X,Y}={A,B}` 类等式与 `X≠D` 类不等式 ✓。
+      ★ 校验锚：γ₂ class 1 `((XE)Y)(ZD)`，定义 `{X,Y,Z}={A,B,C}` ✓
+        ⇒ 符号 {X,Y,Z} 取遍 {A,B,C} 的 3! = 6 种 ✓ ＝ **Table 3 的计数 6** ✓ ✓。
+    """
+    syms = set("VWXYZ")
+    used_syms = sorted({c for c in nwk if c in syms})
+    literals = {c for c in nwk if c.isalpha() and c not in syms}
+    free = [t for t in LEAVES if t not in literals]
     groups = re.findall(r"\{([A-Z,]+)\}=\{([A-Z,]+)\}", dfn)
     neqs = re.findall(r"([A-Z])≠([A-Z])", dfn)
     res = []
-    for perm in itertools.permutations(LEAVES, 5):
-        m = dict(zip(syms, perm))
+    if len(used_syms) > len(free):
+        return res
+    for perm in itertools.permutations(free, len(used_syms)):
+        m = dict(zip(used_syms, perm))
         ok = True
         for lhs, rhs in groups:
-            if {m[a] for a in lhs.split(",")} != set(rhs.split(",")):
+            vals = []
+            for a in lhs.split(","):
+                if a in m:
+                    vals.append(m[a])
+                elif a.isalpha():
+                    vals.append(a)          # 字面分类群直接取值 ✓
+            if sorted(vals) != sorted(rhs.split(",")):
                 ok = False
         for a, b in neqs:
-            # ★ 右侧可能是分类群本身（如 X≠D）⇒ 非符号时直接比较字面 ✓
-            va = m.get(a, a)
-            vb = m.get(b, b)
-            if va == vb:
+            if m.get(a, a) == m.get(b, b):
                 ok = False
         if ok:
             res.append(m)
@@ -168,7 +195,7 @@ def main():
     for (g_, k, nwk, dfn, cnt) in PSI1:
         if (g_, k) not in t9:
             continue
-        assigns = class_assignments(dfn)
+        assigns = class_assignments(dfn, nwk)
         sigs = {}
         for m in assigns:
             s = signature(subst(nwk, m))
@@ -179,9 +206,22 @@ def main():
               % (g_[1], k, nwk, len(assigns), len(sigs), p0))
 
     print("=" * 90)
-    print("③ ★ 正确的总检验（文献 :785 第 (1) 条）：全部 105 个有标号拓扑的概率【求和 = 1】")
-    print("   （★ 早前我误把判据写成「T=0 只有物种树拓扑非零」✗ —— 实际上 T=0 时匹配拓扑概率→0，")
-    print("     这正是 AGT 现象的成因 ✓；正确判据是 105 项求和 = 1 ✓。）")
+    print("③ ★ 总检验（文献 :785 第 (1) 条）：Σ_classes (Table 3 的计数) × P(该 class 的签名) = 1")
+    print("   （★ 论文 :609-611 明说：同一 history class 内所有基因树【概率相同】✓ ⇒ 可这样求和 ✓。）")
+    tot = 0.0
+    for T in (0.05, 0.1, 0.2, 0.5, 1.0):
+        tot_T = 0.0
+        for (g_, k, nwk, dfn, cnt) in PSI1:
+            assigns = class_assignments(dfn, nwk)
+            sigs = {}
+            for m in assigns:
+                sg = signature(subst(nwk, m))
+                sigs[sg] = sigs.get(sg, 0) + 1
+            # 每类一个签名 ⇒ 该类总概率 = cnt × P(签名)
+            for sg in sigs:
+                tot_T += cnt * prob_sig(sg, T, T, T)
+        print("   T2=T3=T4=%.2f ： Σ = %.6f %s" % (T, tot_T, "✓" if abs(tot_T - 1) < 1e-9 else "✗（差 %.6f）" % (tot_T - 1)))
+    print("   ★ 若全部为 1 ⇒ 闭式正确 ✓；若有偏差 ⇒ 说明还有未计的类或漏项（如实报告 ✓）")
     print("=" * 90)
     print("④ 下一步：若 ③ 通过 ⇒ 用闭式解 Equation 1（与 P(H=ψ1) 比）⇒ 与 Table 9 的 T_min 对拍")
 
