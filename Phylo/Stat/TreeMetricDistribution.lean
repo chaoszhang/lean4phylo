@@ -687,13 +687,29 @@ def maxQuartetDistance_gap : Prop :=
   ∀ (X : Type) [Fintype X] [DecidableEq X] (r r' : QuartetRes X),
     15 * quartetDistFull r r' ≤ 28 * Fintype.card {A : Finset X // A.card = 4}
 
-/-- **缺口 4**（Steel & Penny 1993 **第 456–458 行**）：两棵**不同** n 叶树的 `d_q` 最小值 `= n − 3`
-（脚本对 `n = 4…7` 穷举核对通过；本库没有 `Cladogram` 的「n 叶 + binary」计数层，
-故只登记为 `Prop`：对任意两张**不同**的表，`quartetDistFull ≥ 2(n − 3)`，
-即归一化后 `≥ n − 3`）。 -/
+/-- **缺口 4**（Steel & Penny 1993 **第 456–458 行**）—— ★ **2026-10-14 W19 按文献更正命题** ✓。
+
+**文献原话（`references/md/SteelPenny1993_DistributionsTreeComparisonMetrics.md:456-458`，逐字）**：
+> "At the other end of the distribution, **the minimal possible value of `d_q` on two distinct trees with `n`
+> taxa is `n − 3`** (this may be shown by a simple inductive argument)."
+
+**★ 改动留证（旧形态 → 新形态 → 文献依据 → 理由）**：
+* **旧形态**：`∀ r ≠ r', 2 * (card X - 3) ≤ quartetDistFull r r'` —— 只写了**下界** ✗；
+* **新形态**：`4 ≤ card X → (下界) ∧ (∃ r ≠ r', quartetDistFull r r' = 2 * (card X - 3))` ✓
+  ＝ 「**最小值恰为** `n − 3`」✓（含**达到性** ✓），并显式补上 `4 ≤ card X`（文献谈的是「有 `n` 个 taxa 的树」，
+  `n < 4` 时 `QuartetRes` 可为单点、`∃ r ≠ r'` 不成立 ⇒ 该情形**不在文献论断内** ✓）；
+* **文献依据**：`SteelPenny1993_…md:456-458` ✓（原文 "is `n − 3`" ＝ **等式**，非仅下界 ✓）；
+* **理由**：库内旧形态比文献**弱** ✗（丢掉了"达到"这一半 ✓）⇒ 依老师 2026-10-14 令「命题不忠于文献就改命题」✓
+  改为**等于文献那条** ✓。★ 未改弱 ✓（新形态**强于**旧形态 ✓）。
+* 归一化说明：本库 `quartetDistFull` 每个不同 quartet 计 `2`（见上方 `:679-680` 与文献 `d_q` 的关系 ✓），
+  故文献的 `d_q = n − 3` 在本库写作 `quartetDistFull = 2 * (card X - 3)` ✓；
+* **影响的下游声明**：无 —— 本 `def` 是 `Prop` 缺口，**库内无人依赖** ✓（见 `GAPS_AND_UNDISPATCHED.md` §七）；
+* 数值佐证（既有 ✓）：`scripts/msc/tree_metric_distribution.py` 对 `n = 4…7` 穷举，
+  逐档 `[OK] n=… 最小 qd（不同树）= n-3` ✓（本轮复跑 `VERDICT: PASS` ✓）。 -/
 def quartetMinDistance_gap : Prop :=
-  ∀ (X : Type) [Fintype X] [DecidableEq X] (r r' : QuartetRes X), r ≠ r' →
-    2 * (Fintype.card X - 3) ≤ quartetDistFull r r'
+  ∀ (X : Type) [Fintype X] [DecidableEq X], 4 ≤ Fintype.card X →
+    (∀ (r r' : QuartetRes X), r ≠ r' → 2 * (Fintype.card X - 3) ≤ quartetDistFull r r') ∧
+    ∃ (r r' : QuartetRes X), r ≠ r' ∧ quartetDistFull r r' = 2 * (Fintype.card X - 3)
 
 
 /-! ## §6 W12d：§5 缺口的**反例检查**（★B；教训 90：显式缺口记号常掩盖「命题本身为假」）
