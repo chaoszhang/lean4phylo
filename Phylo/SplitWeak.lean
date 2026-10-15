@@ -390,9 +390,53 @@ def SplitMetric (s : Split α) (x y : α) : ℝ :=
 且库内形态（补齐非空侧后）⟹ 忠实形态（`splitPrimeStd_of_splitPrimeNE`）。 -/
 def SplitPrime (δ : α → α → ℝ) : Prop := ∀ A B : Finset α, ¬ IsDSplit δ A B
 
-/-- **四点条件**（文献 503–509 行）：三个表达式中**最大者至少取到两次**。
+/-- ⛔ **四点条件（本库形态）—— 一个已被证伪的错定义；请用同文件的 `FourPointStd`（`:422`）。**
 
-即 `d(a,a')+d(b,b')`、`d(a,b)+d(a',b')`、`d(a,b')+d(a',b)` 中最大者不唯一。 -/
+⚠️⚠️ **本 `def` 的第三合取项末项写错**：写的是 `δ a b + δ a' b`（两对**共享端点 `b`**），
+而三个应比较的和是 `P₁ = δ a a' + δ b b'`、`P₂ = δ a b + δ a' b'`、`P₃ = δ a b' + δ a' b`
+⇒ 第三式的右端应为 `max P₁ P₂`，本定义却写成 `max P₁ (δ a b + δ a' b)`（**既非 P₂ 亦非 P₃**）。
+
+## ★D 复核（W20–W21，逐字符核实）
+
+* **缺陷成立**：与同文件 `FourPointStd`（`:422`）逐字符比对，**唯一差异**就是这个 `b'`；
+* **不等价**：`Split.fourPointStd_of_fourPoint`（`BunemanIndexBridge.lean:367`）给「本库 ⟹ 标准」；
+  反向**不成立**（`Split.not_fourPointStd_imp_fourPoint`，`:443`，与 `cexTreeVal_not_fourPoint` 同反例）；
+* **严重性**：真实树度量**几乎全不满足**本形态（`n = 4` 随机 3000 例中仅 **1** 例；`n = 5/6/7` 为 `0/3000`；
+  独立机检：标准形态违反 `0/75`、本库形态违反 `68/75`）⇒ 以本形态为**前提**的定理把真实对象类排除在外；
+* 最小显式见证：`Split.cexTreeVal_not_fourPoint`（`BunemanIndexBridge.lean:431`）。
+
+## 为何 W21 **不改本体**（任务 C / C4 的裁定；D1 允许「如实说明并只做标注」）
+
+派单 D1 称「下游只有 2 个 Prop 缺口，**库内无人依赖** ⇒ 改本体是安全的」——
+★★ **W21 实测：该描述不成立**。本定义有 **5 处**库内依赖，其中 **3 条是以错形态为真的定理**，
+改本体会使它们**真值反转**：
+
+| 依赖（位置） | 改本体后的后果 |
+|---|---|
+| `Split.fourPointStd_of_fourPoint`（`BunemanIndexBridge.lean:367`） | 退化为 `P → P`：证明失效，须改写 |
+| `Split.cexTreeVal_not_fourPoint`（`:431`） | 变**假**（该度量满足标准形态，见 `cexTreeVal_fourPointStd` `:424`） |
+| `Split.not_fourPointStd_imp_fourPoint`（`:443`） | 变**假**（「标准 ⟹ 标准」恒真） |
+| `Split.pairwiseCompatible_of_exists_symm_fourPoint_isDSplit`（`:335`） | 前提变**弱** ⇒ 陈述变**强**，证明须重核 |
+| `fourPointOfSplitMetricSum_gap`（本文件 `:547`） | 与 `…_gap_correct_shape`（`:518`）**变成同一条陈述** ⇒ W12k「该 `Prop` 为假」的登记失真 |
+
+⇒ 彻底收干净须**同时**做三件超出「只改本体」的动作：
+**(i)** 把 3 条历史反例定理**改名**（如 `…_fourPointLegacy`）—— 即**动既有定理名**；
+**(ii)** 改 `fourPointOfSplitMetricSum_gap` 的语义并作废「已判为假」的登记；
+**(iii)** 走 `@[deprecated]` **亦不可行**：它会在上述使用点触发警告 ⇒ 违反「单文件门 stdout 0 字节」，
+除非先做 (i)。
+
+★ 故本批依 D1 例外条款 **只做标注**，并**逐条写出解除条件**：
+「是否允许把 3 条历史反例定理改名到 `…Legacy`」**需老师裁定**（超出本批授权边界）。
+★★ **全库唯一的「错定义仍在库内」隐患即此一处**，已在此**永久登记**。
+
+## 留证（四要素；本体未改 ⇒ 记「为何不改」）
+
+* **旧形态**（= 现状，逐字未动）：第三合取项末项 `δ a b + δ a' b`；
+* **文献形态**：三对和的最大者**至少取到两次** —— **`Buneman1974_MetricPropertiesOfTrees.md`
+  THEOREM 1（`:33-36`）＋ THEOREM 2（`:70-74`）**；库内对应物 = `FourPointStd`（`:422`）；
+* **理由**：见上表（改本体会使 3 条既有定理真值反转 ＋ 1 条 gap 语义漂移 ＋ deprecate 违反门禁）；
+* **影响的下游**：`B-3`（`fourPointCharacterization_gap`）已于 W20 改用 `FourPointStd` ✓；
+  ★ **本批未放弃该修正**，只是把「改名 + 语义迁移 + 报告同步」打包留给老师裁定。 -/
 def FourPoint (δ : α → α → ℝ) : Prop :=
   ∀ a a' b b' : α,
     δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) ∧
