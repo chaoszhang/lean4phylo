@@ -905,4 +905,70 @@ theorem univ_mem_cladesOf {n : ℕ} (hn : 1 ≤ n) {f : Fin (n - 1) → Fin n ×
   simp only [Finset.mem_filter, Finset.mem_univ, true_and, iff_true]
   exact hconst z ⟨0, hn⟩
 
+
+open Phylo.Stat.RankedGeneTree
+
+/-- ★★★★ **(O1) ＋ (O2) ⇒ `rankedFiberCount_gap`（`n ≥ 2` 的归约定理，W23）** ✓
+
+把缺口化为**两件组合实体**（此前只是 docstring 里的说法，现在是定理）：
+
+* **(O1)** 双射「纤维 = 线性扩展数」：
+  `((mergeHistories n).filter (cladesOf · = cladesOf f)).card = LE (cladesOf n f) univ`；
+* **(O2)** 钩长计数：`hook (cladesOf n f) C = C.card − 1`（`2 ≤ C.card`）。
+
+**拼装**（全部步骤已证，无隐藏件）：
+`LE_mul_prod_hook_eq_factorial`（§10，`C := univ`，`internalBelow T univ = {D ∈ T : 2 ≤ |D|}`）
+⇒ `LE · ∏(C.card−1) = (hook univ)!`；(O2) 在 `C = univ` 给出 `hook univ = n − 1`
+⇒ `LE · ∏(C.card−1) = (n−1)!` ⇒ 右除即闭形式（分母正，`Nat.mul_div_right`）。
+
+⚠️ **诚实边界**：本定理**不证** (O1)/(O2)，只证「它们足够」；且只覆盖 `2 ≤ n`
+（`n ≤ 1` 是退化情形：`cladesOf` 只有单点簇 ⇒ 分母为 `1`、纤维为单点，纯计算可核，
+本轮未形式化，见 `rankedFiberCount_gap` 的 docstring）。 -/
+theorem rankedFiberCount_gap_of_LE_and_hook {n : ℕ} (hn : 2 ≤ n)
+    (h : ∀ (f : Fin (n - 1) → Fin n × Fin n) (hf : IsMergeHistory n f),
+        ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+            = LE (cladesOf n f) Finset.univ (univ_mem_cladesOf (by omega) hf)
+          ∧ (∀ C ∈ cladesOf n f, 2 ≤ C.card → hook (cladesOf n f) C = C.card - 1)) :
+    ∀ (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
+      ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+        = (n - 1).factorial
+          / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+  intro f hf
+  have hn1 : 1 ≤ n := by omega
+  have hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f := univ_mem_cladesOf hn1 hf
+  obtain ⟨hLE, hhook⟩ := h f hf
+  have hcard : 2 ≤ (Finset.univ : Finset (Fin n)).card := by
+    rw [Finset.card_univ, Fintype.card_fin]; omega
+  -- 分母集合：`internalBelow T univ` 就是「`2 ≤ |C|` 的 clade」
+  have hset : internalBelow (cladesOf n f) Finset.univ
+      = (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+    ext D
+    simp only [internalBelow, Finset.mem_filter]
+    constructor
+    · rintro ⟨h1, h2, -⟩; exact ⟨h1, h2⟩
+    · rintro ⟨h1, h2⟩; exact ⟨h1, h2, Finset.subset_univ D⟩
+  -- 钩长公式（`C = univ`）
+  have hform := LE_mul_prod_hook_eq_factorial (T := cladesOf n f)
+    (laminarFamily_cladesOf f) Finset.univ hU hcard hU
+  rw [hset] at hform
+  have hden : ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), hook (cladesOf n f) C
+      = ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+    refine Finset.prod_congr rfl ?_
+    intro C hC
+    exact hhook C (Finset.mem_filter.mp hC).1 (Finset.mem_filter.mp hC).2
+  rw [hden] at hform
+  have htop : hook (cladesOf n f) Finset.univ = n - 1 := by
+    rw [hhook Finset.univ hU hcard, Finset.card_univ, Fintype.card_fin]
+  rw [htop] at hform
+  -- 收尾：`LE · P = (n−1)!` ⇒ `LE = (n−1)! / P`
+  have hpos : 0 < ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+    refine Finset.prod_pos ?_
+    intro C hC
+    have h2 := (Finset.mem_filter.mp hC).2
+    omega
+  rw [hLE]
+  refine Nat.mul_right_cancel hpos ?_
+  rw [Nat.div_mul_cancel ⟨LE (cladesOf n f) Finset.univ hU, by rw [mul_comm]; exact hform.symm⟩]
+  exact hform
+
 end Phylo.Stat.HookLength
