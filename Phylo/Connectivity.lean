@@ -62,3 +62,21 @@ theorem isConnectedSet_empty (T : Cladogram.{u, u} X) :
     IsConnectedSet T.graph (∅ : Set T.V) := by
   intro u hu
   exact absurd hu (Set.notMem_empty u)
+
+/-- ★★ **一条边的**一侧**连通**：`{v | inSide e u v}`（删去 `e` 后 `u` 的可达类）在**原图**中连通。
+
+这是 `⟸` 半的最后一件器材（`BinaryConnectedEqualsSideGap`）：
+`IsConnectedSet` 要的是「u′ 到 v′ 存在 walk 且 **support 全在该侧**」。
+
+**证明**（抄库内 `inSide_deleteEdges_of_inSide` 的 API 用法，`Split.lean`）：
+`u′ ↔ u ↔ v′` 在 `T - e` 中可达 ⇒ 由 `Reachable.trans` 直接得 `T - e` 中 `u′ → v′` 的 walk `r`；
+把它用 `Walk.mapLe (deleteEdges_le {e})` **提升**回 `T`，`support_mapLe_eq_support` 说 support **不变**；
+最后 `reachable_of_mem_support r hw` 给「`u′` 可达 `w`」，与 `hu′` 拼出 `u` 可达 `w` ⇒ `w` 在该侧 ✓。 -/
+theorem inSide_isConnectedSet (T : Cladogram.{u, u} X) (e : Sym2 T.V) (u : T.V) :
+    IsConnectedSet T.graph {v | T.inSide e u v} := by
+  intro u' hu' v' hv'
+  obtain ⟨r⟩ := ((T.inSide_comm e u u').mp hu').trans hv'
+  refine ⟨r.mapLe (SimpleGraph.deleteEdges_le {e}), ?_⟩
+  rw [SimpleGraph.Walk.support_mapLe_eq_support]
+  intro w hw
+  exact hu'.trans (SimpleGraph.reachable_of_mem_support r hw)
