@@ -37,6 +37,9 @@ references/
 # 任何多层目录下的同名 agent 文件一并忽略
 **/MEMORY.md
 **/HANDOVER.md
+# 归档件与备份件同属 agent 文件（W23 新增：防止 `git add -A` 把它们扫进来）
+**/HANDOVER_ARCHIVE.md
+**/HANDOVER*.bak
 
 # 报废件（移出仓库视线的历史产物，见 W12 ★E）
 _retired/
