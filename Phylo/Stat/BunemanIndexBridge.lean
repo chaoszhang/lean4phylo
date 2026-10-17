@@ -1299,4 +1299,74 @@ theorem fourPointCharacterization_gap_reverse {F : Finset (Split X)}
   exact pairwiseCompatible_of_exists_symm_fourPoint_isDSplit
     ⟨δ, fun x y => fourPoint_symm hfp x y, hfp, hδ⟩
 
+/-! ## 12.2 ★★★ W22 任务 B-③：`⟹` 半边的**第三件** —— 「成员是 `d`-split」
+
+★ **上一轮记的错路线已排除**：想由「每个 `SplitMetric` 逐项满足四条点不等式」推出
+`Σ w_u·M_u ≤ max(Σ w_u·X_u, Σ w_u·Y_u)` 是**错的**（反例 `X₁=1,Y₁=0,X₂=0,Y₂=1,w≡1`：
+`Σ M = 2 > max(ΣX,ΣY) = 1`）⇒ 必须走库内 `bPair*` **计数**路线（§10.2/§10.4）。
+
+★ **本轮读通的 `bPair*` 语义**（此前按字面猜过一次，猜错）：
+| 判据 | 含义 |
+|---|---|
+| `PairW u a a' b b'` | `u` **分离 `{a,a'} | {b,b'}`**（两对内部同侧、`a` 与 `b` 异侧） |
+| `PairP u a a' b b'` | `u` 分离 `{a,b} | {a',b'}` |
+| `PairX u a a' b b'` | `u` 分离 `{a,b'} | {a',b}` |
+
+（★ 注意 `PairW` 对应的是 `{a,a'}|{b,b'}`，**不是** `{a,b'}|{a',b}` —— 这就是上一轮算例对不上的原因。） -/
+
+/-- ★★★ **「成员是 `d`-split」（W22 B-③ `⟹` 半的第三件）**：`F` 两两相容、`w` 在 `F` 上正、
+`t ∈ F` 时，`t` 的两侧是 `δ := Σ_{u∈F} w_u·δ_u` 的 `d`-split（`IsDSplit`，`max` 形式）。
+
+**证明**（★★ 纯**计数**，不做逐项 `max` 求和）：取 `a,a' ∈ t.sideA`、`b,b' ∈ t.sideB`，记
+`X := δaa' + δbb'`、`P := δab + δa'b'`、`W := δab' + δa'b`。§10.2 的两条差分恒等式给出
+`W − X = 2c_W − 2c_X` 与 `W − P = 2c_P − 2c_X`（`c_• := Σ_{u∈F.filter bPair•} w_u`）。
+由取法，`t` 满足 `bPairW`（两对都在 `t` 内部同侧、`a` 与 `b` 异侧）⇒ `c_W > 0`；
+由两两相容的**互斥性**（`not_PairW_and_PairX` / `not_PairW_and_PairP`）⇒ `c_X = c_P = 0`
+⇒ `W = P` 且 `W − X = 2c_W > 0` ⇒ `X < P ≤ max P W` ✓ **严格**。 -/
+theorem isDSplit_splitMetricSum_of_mem {F : Finset (Split X)} {w : Split X → ℝ}
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t) (hw : ∀ s ∈ F, 0 < w s)
+    {t : Split X} (ht : t ∈ F) :
+    IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  intro a ha a' ha' b hb b' hb'
+  have hba : b ∉ t.sideA := (mem_sideB_iff t b).mp hb
+  have hb'a : b' ∉ t.sideA := (mem_sideB_iff t b').mp hb'
+  have hPairW : bPairW t a a' b b' = true := by
+    simp [bPairW, bSep, ha, ha', hba, hb'a]
+  have hexX : F.filter (fun u => bPairX u a a' b b' = true) = ∅ := by
+    rw [← Finset.not_nonempty_iff_eq_empty]
+    rintro ⟨v, hv⟩
+    obtain ⟨hvF, hvX⟩ := Finset.mem_filter.mp hv
+    exact not_PairW_and_PairX hF
+      ⟨⟨t, ht, (bPairW_eq_true_iff t a a' b b').mp hPairW⟩,
+        ⟨v, hvF, (bPairX_eq_true_iff v a a' b b').mp hvX⟩⟩
+  have hexP : F.filter (fun u => bPairP u a a' b b' = true) = ∅ := by
+    rw [← Finset.not_nonempty_iff_eq_empty]
+    rintro ⟨v, hv⟩
+    obtain ⟨hvF, hvP⟩ := Finset.mem_filter.mp hv
+    exact not_PairW_and_PairP hF
+      ⟨⟨t, ht, (bPairW_eq_true_iff t a a' b b').mp hPairW⟩,
+        ⟨v, hvF, (bPairP_eq_true_iff v a a' b b').mp hvP⟩⟩
+  have hcW : 0 < ∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u := by
+    have hle : ∀ u ∈ F.filter (fun u => bPairW u a a' b b' = true), 0 ≤ w u :=
+      fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have h1 : w t ≤ ∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u :=
+      Finset.single_le_sum hle (Finset.mem_filter.mpr ⟨ht, hPairW⟩)
+    linarith [hw t ht]
+  set Xv : ℝ := (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+    with hXv
+  set Pv : ℝ := (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+    with hPv
+  set Wv : ℝ := (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+    with hWv
+  have hXW := splitMetricSum_diff_W F w a a' b b'
+  have hXP := splitMetricSum_diff_P F w a a' b b'
+  rw [hexX] at hXW hXP
+  rw [hexP] at hXP
+  simp only [Finset.sum_empty, mul_zero, sub_zero] at hXW hXP
+  have hWgt : Xv < Wv := by linarith
+  have hPeq : Wv = Pv := by linarith
+  calc Xv < Wv := hWgt
+    _ = Pv := hPeq
+    _ ≤ max Pv Wv := le_max_left _ _
+
 end Split
