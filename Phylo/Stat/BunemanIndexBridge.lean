@@ -1369,4 +1369,48 @@ theorem isDSplit_splitMetricSum_of_mem {F : Finset (Split X)} {w : Split X → �
     _ = Pv := hPeq
     _ ≤ max Pv Wv := le_max_left _ _
 
+/-! ## 12.3 ★★★★ `fourPointCharacterization_gap` 的**条件收口**（(B2) 以外的件已全部到手） -/
+
+/-- ★★★★ **`fourPointCharacterization_gap` 的收口形态（条件版，W22 B-③）**：
+由 (★′) `noWRealizer_exists_gap` **即得**注册形态 `fourPointCharacterization_gap`
+（原 `def` **逐字保留** ✓，真值状态由本定理 + (★′) 共同决定）。
+
+* **`⟸` 半**：**无条件**已证 —— `fourPointCharacterization_gap_reverse`（`c71d5fd`）；
+* **`⟹` 半**：三件**已全备** ——
+  **(B1)** `fourPointOfSplitMetricSum_gap`（W22 收口：结论是四点条件）；
+  **成员件** `isDSplit_splitMetricSum_of_mem`（`dc4cd8d`：`t ∈ F` ⇒ `t` 两侧是 d-split）；
+  **(B2)** `notIsDSplit_of_splitMetricSum_gap_proof`（由 (★′)：非成员**不是** d-split）。
+  取 `w ≡ 1`、`δ := Σ_{u∈F} δ_u`；`swap` 那一支由 `isDSplit_comm`（对称性由
+  `splitMetricSum_comm` 提供）＋ `Split.swap_sideA/swap_sideB` 搬过来。
+
+★★ **命名说明（重要）**：本定理**故意不叫** `…_gap_proof` / `…_gap_holds` ——
+它带一个**未证**假设 (★′)。若叫 `_proof`，`scripts/list_gaps.sh` **口径 B** 会把它
+误记为 `[已收口]`；这正是 `notIsDSplit_of_splitMetricSum_gap` **现在被误记**的原因
+（其收口定理 `notIsDSplit_of_splitMetricSum_gap_proof` 带 `(h : noWRealizer_exists_gap)`）。
+⇒ 登记为【口径 B 已知漏洞】待修（`HANDOVER.md` 的 W22 块有记）。 -/
+theorem fourPointCharacterization_gap_of_noWRealizer (h : noWRealizer_exists_gap.{0}) :
+    fourPointCharacterization_gap.{0} := by
+  intro α _ _ F
+  constructor
+  · intro hF
+    refine ⟨fun x y => ∑ u ∈ F, (1 : ℝ) * SplitMetric u x y, ?_, ?_⟩
+    · exact fourPointOfSplitMetricSum_gap_proof F (fun _ => 1) hF (fun _ _ => one_pos)
+    · intro s
+      constructor
+      · intro hs
+        by_contra hne
+        have hall : ∀ t ∈ F, t ≠ s ∧ t.swap ≠ s := by
+          intro t ht
+          exact ⟨fun h1 => hne ⟨t, ht, Or.inl h1⟩, fun h2 => hne ⟨t, ht, Or.inr h2⟩⟩
+        exact (notIsDSplit_of_splitMetricSum_gap_proof h F (fun _ => 1) hF
+          (fun _ _ => one_pos) s hall) hs
+      · rintro ⟨t, ht, hts | hts⟩
+        · rw [← hts]
+          exact isDSplit_splitMetricSum_of_mem hF (fun _ _ => one_pos) ht
+        · rw [← hts, Split.swap_sideA, Split.swap_sideB]
+          exact (isDSplit_comm (fun x y => splitMetricSum_comm F (fun _ => 1) x y)).mpr
+            (isDSplit_splitMetricSum_of_mem hF (fun _ _ => one_pos) ht)
+  · rintro ⟨δ, hfp, hδ⟩
+    exact fourPointCharacterization_gap_reverse ⟨δ, hfp, hδ⟩
+
 end Split
