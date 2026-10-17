@@ -17,6 +17,14 @@
 #                     （W22 任务 A 引入，如 `fourPointOfSplitMetricSum_gap_legacy`），
 #                     **不是待证的缺口**，**不计入开放**（★ W22 新增规则）；
 #            [开放]   其余。
+#    ⚠️ **口径 B 的已知局限（W22 发现，尚未修，判据待老师定）**：
+#       「[已收口]」只检查**有没有同名** `…_holds`/`…_proof`，**不检查它是否带假设** ⇒
+#       **条件收口会被误记成已收口**。现存实例：
+#         `notIsDSplit_of_splitMetricSum_gap` 的收口定理是
+#         `theorem notIsDSplit_of_splitMetricSum_gap_proof (h : noWRealizer_exists_gap.{0}) : …`
+#         —— 带**未证**假设，属**条件收口**，却被记为 [已收口]。
+#       ⇒ 读「已收口 = N」时**必须**回看该行的 `↳` 指向的定理是否吃假设。
+#       修法不能只看「有没有括号参数」（隐式/实例参数也是括号）⇒ 判据需老师定。
 #    口径 C（陈述形状）：带参数的 `def … (args) : Prop` 是**谓词**，不是闭命题 ——
 #            对它写 `theorem NAME_holds : NAME` **不合法**（`NAME` 还不是 `Prop`），
 #            收口必须写成 `theorem NAME_holds : ∀ args, NAME args` 或对具体 `args` 陈述。
@@ -66,6 +74,8 @@ for line in "${DEFS[@]}"; do
   fi
 done
 echo "  口径 B：开放 = ${open} · 已收口 = ${closed} · 追溯 = ${trace} · 合计 = $((open+closed+trace))"
+echo "  ⚠️ 口径 B 已知局限：「已收口」不检查收口定理是否带假设 ⇒ 条件收口会被误记（见脚本头；"
+echo "     现存实例 notIsDSplit_of_splitMetricSum_gap，其 _proof 吃 (h : noWRealizer_exists_gap)）"
 
 echo
 echo "=== 口径 C：陈述形状（带参数 = 谓词，收口需 ∀ 形式） ==="
