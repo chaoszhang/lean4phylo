@@ -409,7 +409,18 @@ def IsCircularDist {n : ℕ} (f : α ≃ Fin n) (d : α → α → ℝ) : Prop :
 未落原因：这需要 Bandelt–Dress (1992) 的孤立指数/分裂分解理论（本库 `Phylo/SplitWeak.lean`
 只做到「d-split 全体弱相容」），以及「环形 ⟹ `A` 列满秩（`b ↦ Ab` 单射）」
 ——后者又需要本文件的 `IsCyclicArc` 与「每个 split 的分裂指标独立性」。
-**这是本库离「Neighbor-Net 一致性」最近的一块未铺路段。** -/
+**这是本库离「Neighbor-Net 一致性」最近的一块未铺路段。**
+
+★★ **2026-10-17 W22 任务 B-⑫：本原形态已被证伪 —— ⛔ 不要证它，只需与修复形态并存** ✓
+
+* **反例（已形式化）**：`circularDistanceRealization_gap_false_at_fin3`（本文件）。成因：`IsCircularDist`
+  只约束**上三角**（`i ≤ j ≤ k ≤ l` 的四元组），既不要求 `d` 对称、也不要求零对角；而结论里的
+  `phyleticDist` **恒对称**、对角为 `0` ⇒ 取「`d 1 0 = 1`、其余全 `0`」即**前提真、结论假** ✗。
+* **修复形态（正确目标）**：`circularDistanceRealization_gap_corrected`（本文件）—— 补**对称 ＋ 零对角**
+  并已给出**非空见证** ✓；一般 `n` 仍缺 Bandelt–Dress 的**分裂分解**器材（`n ≤ 5` 已证 ✓）。
+* **本 `def` 的处置（W22 裁定）**：**逐字保留**（「已证伪的原形态」登记，供追溯），**不**删除、
+  **不**改成 `theorem`；★ 真正的缺口是 `_corrected`。⇒ `scripts/list_gaps.sh` 口径 B 把它计入
+  「开放」是**已知盲点**（它已证伪、不会去证），与 `*_legacy` 同类。 -/
 def circularDistanceRealization_gap : Prop :=
   ∀ {X : Type*} [Fintype X] [DecidableEq X] (d : X → X → ℝ),
     (∃ n : ℕ, ∃ f : X ≃ Fin n, IsCircularDist f d) →
