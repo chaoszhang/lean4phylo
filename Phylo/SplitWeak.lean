@@ -603,7 +603,18 @@ def canonicalSplitDecomposition_gap : Prop :=
   文献语义的**忠实表达** ✓（★ 这一点在此**写明**，免后读成"仍未忠实" ✗）；
 * **影响的下游声明**：本 `def` 是 `Prop` 缺口，**库内无人依赖** ✓（仅 docstring 互引 ✓）；
   ★ 同源的 `fourPointOfSplitMetricSum_gap`（`:513`）W12k 已同样更正并登记
-  `fourPointOfSplitMetricSum_gap_correct_shape` ✓ ——**本处是同一根因的第二处修正** ✓。 -/
+  `fourPointOfSplitMetricSum_gap_correct_shape` ✓ ——**本处是同一根因的第二处修正** ✓。
+*
+* ★★★ **2026-10-17 W23：本缺口**已收口 ✅**（`def` 本体逐字未动 ✓；收口定理在
+  `Phylo/Stat/BunemanIndexBridge.lean`，两半均**无条件**）：
+  **`⟸` 半** = `Split.fourPointCharacterization_gap_reverse`（W22）✓
+  —— 靠 `Split.fourPoint_symm`（对称性由三条不等式**强制**推出，非第四要素 ✓）；
+  **`⟹` 半** 三件齐备：(B1) `fourPointOfSplitMetricSum_gap_proof`（W22）·
+  成员件 `isDSplit_splitMetricSum_of_mem`（W22）· (B2) `notIsDSplit_of_splitMetricSum_gap_holds`
+  （W23，**(`★′`) 已证 ⇒ 无条件**）；
+  **拼装** = `Split.fourPointCharacterization_gap_proof`（W23）✓ —— 与本 `def` **同陈述** ✓。
+  ⇒ **(`★′`) `noWRealizer_exists_gap` 已在 W23 证成**（`Split.noWRealizer_exists_gap_proof`）✓，
+  路线见同文件 §11.10。 -/
 def fourPointCharacterization_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) ↔

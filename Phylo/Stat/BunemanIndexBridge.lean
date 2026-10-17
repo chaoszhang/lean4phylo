@@ -1052,7 +1052,17 @@ theorem not_isDSplit_of_no_W_realizer (F : Finset (Split X)) (w : Split X → �
   ⇒ (F1) 说明「`u*` 吞掉整个 `S.sideA`」时它一定也碰到 `S.sideB`，因此可以取 `b ∈ u* ∩ S.sideB` 让
   `{a,a'}`、`{b,b}` 同在 `u*` 内（同侧 ✓）；**卡点**：这个 `b` 依赖 `u`，而四元组 `(a,a',b,b')`
   必须**同时**对所有 `u ∈ F` 生效 —— 需要层析族上的极小性/归纳把 `b` 选成「对所有 `u` 同时可用」的那个。
-  ⇒ 建议下一轮顺序：**(F1) → 层析极小元 → 一次选出 `b,b'`**。 -/
+  ⇒ 建议下一轮顺序：**(F1) → 层析极小元 → 一次选出 `b,b'`**。
+★★★ **2026-10-17 W23：本缺口已证成 ✅**（`def` 本体逐字未动 ✓）。
+上面列的两条已作废路线与 (R1)/(R2) 只是当时的探路记录；**真正成功的路线在 §11.10**
+（`Split.noWRealizer_core`，零新增公理）。要点：**(i)** `pairW_sideNotMem`（若 `u` 在
+`(a,a',ρ,b)` 上实现 `W`，则 `a,a'` 同在 `u* = sideNotMem u ρ` 内、`b` 在外）⇒ 取
+`b := b' := ρ` 可先杀掉第二个析取项；**(ii)** `laminar_sideNotMem`（`{u*}` 两两嵌嵌）
+⇒ 含定点的 cluster 构成**链**，小心取最小元就够，**不需要**已被证伪的「极小 cluster」
+命题 (★″) `minimalCluster_exists_gap` ✗；**(iii)** 分两情形（存在无公共 cluster 的对 / 每对都有），
+后者用「含 `a₀` 与 `p` 的 cluster 的**最小基数**」在 `S.sideA` 上取最大者逐步嵌嵌定位
+（`S.sideA ⊆ u₁*`、`u₁* ∩ S.sideB ≠ ∅`、最后一步用基数推相等）✓。
+⇒ 既得 `theorem noWRealizer_exists_gap_proof : noWRealizer_exists_gap.{0}` ✓（零 `sorry` / 零 `axiom`）。 -/
 def noWRealizer_exists_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
@@ -1412,5 +1422,245 @@ theorem fourPointCharacterization_gap_of_noWRealizer (h : noWRealizer_exists_gap
             (isDSplit_splitMetricSum_of_mem hF (fun _ _ => one_pos) ht)
   · rintro ⟨δ, hfp, hδ⟩
     exact fourPointCharacterization_gap_reverse ⟨δ, hfp, hδ⟩
+
+
+/-! ### 11.10 ★★★★ W23：**(★′) `noWRealizer_exists_gap` 收口**
+
+★ **命题**（逐字即 `def noWRealizer_exists_gap`）：`F` 两两相容、`w` 在 `F` 上正、
+`S ∉ F ± swap` ⇒ 存在 `a,a' ∈ S.sideA`、`b,b' ∈ S.sideB`，使 **没有** `u ∈ F` 在
+`(a,a',b,b')` 上实现 `W`（即 `c_W = 0`）。
+
+★★ **证明路线（W23 新路线，与已作废的「极小 cluster」路线无关）**：
+
+固定 `ρ ∈ S.sideB`，对 `u ∈ F` 记 `u* := sideNotMem u ρ`（`u` 的**不含 `ρ`** 那一侧
+= `u.cluster ρ`）。两条关键事实：
+
+1. **`W`-配对的读法**（`pairW_sideNotMem`）：若 `u` 在 `(a,a',ρ,b)` 上实现 `W`，
+   则 `a,a'` 同在 `u*` 内、`b` 在 `u*` 外 ✓。
+   ⇒ **只要 `b' := ρ`（即 `b = b' = ρ`）**，实现 `W` 就**等价于** `{a,a'} ⊆ u*` ✓
+   （第二个析取项要求 `ρ ∈ u` 的**另一侧**，而 `ρ ∉ u*` 恒成立 ✓）。
+2. **镶嵌性**（`laminar_sideNotMem`，由库内 `laminar_of_compatible_clusters` 立得）：
+   `{u* : u ∈ F}` 两两「包含或相离」✓。
+   ⇒ 含**给定点**的 cluster 构成**链** ⇒ **最小元存在** ✓（不需要 (★″) 那条已被证伪的
+   「被所有咬 `S.sideA` 者包含的极小元」命题 ✗）。
+
+**分情形（对 `ρ` 固定、`b := ρ` 固定）**：
+
+* **情形 ①**：存在 `a,a' ∈ S.sideA`，**没有** `u ∈ F` 使 `a,a'` 同在 `u*` 内。
+  取 `b := b' := ρ`：由 (1)，任何实现 `W` 的 `u` 都会给出 `{a,a'} ⊆ u*` ⇒ 没有 ⇒ `c_W = 0` ✓。
+* **情形 ②**：每个 `a,a' ∈ S.sideA` 都有公共的 `u*`。取
+  `cardMin p :=` 含 `a₀` 与 `p` 的 cluster 的**最小基数**（`p` 取遍 `S.sideA`，`a₀ ∈ S.sideA` 固定），
+  在 `S.sideA` 上取**达到最大** `cardMin` 的 `p₁`，`u₁` 为实现 `cardMin p₁` 的 cluster。则
+  1. `S.sideA ⊆ u₁*`（否则 `a` 的最小 cluster `w` 与 `u₁*` 镶嵌 ⇒ 要么 `a ∈ u₁*` ✗，要么
+     `|w| > |u₁*|` 与 `cardMin` 最大性矛盾 ✗）；
+  2. `u₁* ∩ S.sideB ≠ ∅`（否则 `u₁* ⊆ S.sideA` 且 `≠ S.sideA`（否则 `u₁ = S` 或 `S.swap` ✗）
+     ⇒ 取 `a₃ ∈ S.sideA \ u₁*`，其最小 cluster `w` 与 `u₁*` 镶嵌 ⇒ 同样两种矛盾 ✗）；
+  3. 取 `b₁ ∈ u₁* ∩ S.sideB`。对**任何**含 `a₀` 与 `p₁` 的 `u ∈ F`：`u*` 与 `u₁*` 镶嵌
+     ⇒ `u₁* ⊆ u*`（反向用基数推相等）⇒ `b₁ ∈ u*` ✓。
+     ⇒ 由 (1)，任何实现 `W` 的 `u`（它必含 `a₀,p₁`）都使 `b₁ ∈ u*`，与 `b₁` 在 `u*` 外矛盾 ✓
+     ⇒ `c_W = 0` ✓。
+
+⇒ 两种情形都给出 `∃ a ∈ S.sideA, ∃ a' ∈ S.sideA, ∃ b ∈ S.sideB, ∃ b' ∈ S.sideB, c_W = 0` ✓。 -/
+
+/-- **(11.10-a) `W`-配对在 `ρ`-侧上的读法**：若 `u` 在 `(a,a',ρ,b)` 上实现 `W`，
+则 `a, a'` 同在 `u` 的**不含 `ρ`** 的那一侧 `u* = sideNotMem u ρ` 内，而 `b` 在 `u*` 之外 ✓。 -/
+theorem pairW_sideNotMem {u : Split X} {ρ a a' b : X} (hW : PairW u a a' ρ b) :
+    a ∈ sideNotMem u ρ ∧ a' ∈ sideNotMem u ρ ∧ b ∉ sideNotMem u ρ := by
+  have hAB : ∀ x : X, x ∈ u.sideB → x ∉ u.sideA := fun x h => (mem_sideB_iff u x).mp h
+  have hBA : ∀ x : X, x ∈ u.sideA → x ∉ u.sideB := fun x h hb => (mem_sideB_iff u x).mp hb h
+  by_cases hρ : ρ ∈ u.sideA
+  · have hK : sideNotMem u ρ = u.sideB := by simp only [sideNotMem, hρ, ite_true]
+    rcases hW with ⟨ha, ha', hρB, hb⟩ | ⟨ha, ha', hρA, hb⟩
+    · exact absurd hρ (hAB ρ hρB)
+    · exact ⟨by rw [hK]; exact ha, by rw [hK]; exact ha', by rw [hK]; exact hBA b hb⟩
+  · have hK : sideNotMem u ρ = u.sideA := by simp only [sideNotMem, hρ, ite_false]
+    rcases hW with ⟨ha, ha', hρB, hb⟩ | ⟨ha, ha', hρA, hb⟩
+    · exact ⟨by rw [hK]; exact ha, by rw [hK]; exact ha', by rw [hK]; exact hAB b hb⟩
+    · exact absurd hρA hρ
+
+/-- **(11.10-b) 相容族里「不含 `ρ` 的那一侧」两两镶嵌** ✓（`laminar_of_compatible_clusters` 的直接实例）。 -/
+theorem laminar_sideNotMem {F : Finset (Split X)} {ρ : X}
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t)
+    {u v : Split X} (hu : u ∈ F) (hv : v ∈ F) :
+    sideNotMem u ρ ⊆ sideNotMem v ρ ∨ sideNotMem v ρ ⊆ sideNotMem u ρ ∨
+      Disjoint (sideNotMem u ρ) (sideNotMem v ρ) :=
+  laminar_of_compatible_clusters (s := u) (t := v) (ρ := ρ) (hF u hu v hv)
+    (sideNotMem_eq_cluster u ρ) (sideNotMem_eq_cluster v ρ)
+
+/-- **(11.10-c) `cluster` 判据下的 `c_W = 0` 充分条件**（情形 ① 与情形 ② 共用的收尾）：
+若对每个 `u ∈ F`，`a, a'` 同在 `u*` 内就迫使 `b₁ ∈ u*`，则四元组 `(a,a',ρ,b₁)` 的 `c_W = 0` ✓。 -/
+theorem sum_bPairW_eq_zero_of_cluster {F : Finset (Split X)} {w : Split X → ℝ}
+    {ρ b₁ a a' : X}
+    (h : ∀ u ∈ F, a ∈ sideNotMem u ρ → a' ∈ sideNotMem u ρ → b₁ ∈ sideNotMem u ρ) :
+    (∑ u ∈ F.filter (fun u => bPairW u a a' ρ b₁ = true), w u) = 0 := by
+  have hne : ¬ (F.filter (fun u => bPairW u a a' ρ b₁ = true)).Nonempty := by
+    rintro ⟨v, hv⟩
+    obtain ⟨hvF, hbw⟩ := Finset.mem_filter.mp hv
+    obtain ⟨h1, h2, h3⟩ := pairW_sideNotMem ((bPairW_eq_true_iff v a a' ρ b₁).mp hbw)
+    exact h3 (h v hvF h1 h2)
+  rw [Finset.not_nonempty_iff_eq_empty.mp hne, Finset.sum_empty]
+
+/-- **(11.10-d)**：若 `u` 的 `ρ`-侧恰是 `S.sideA`，则 `u` 就是 `S` 或 `S.swap` ✓。 -/
+theorem eq_or_swap_eq_of_sideNotMem_eq_sideA {u S : Split X} {ρ : X}
+    (h : sideNotMem u ρ = S.sideA) : u = S ∨ u.swap = S := by
+  have key : ∀ v : Split X, v.sideA = S.sideA → v = S := by
+    intro v hv
+    refine (KPartition.eq_iff_parts v S).mpr ?_
+    funext i
+    fin_cases i
+    · show v.sideA = S.sideA
+      exact hv
+    · show v.sideB = S.sideB
+      rw [v.sideB_eq_compl, S.sideB_eq_compl, hv]
+  by_cases hρ : ρ ∈ u.sideA
+  · have hK : sideNotMem u ρ = u.sideB := by simp only [sideNotMem, hρ, ite_true]
+    right
+    refine key u.swap ?_
+    rw [swap_sideA]
+    rw [hK] at h
+    exact h
+  · have hK : sideNotMem u ρ = u.sideA := by simp only [sideNotMem, hρ, ite_false]
+    left
+    rw [hK] at h
+    exact key u h
+
+/-- ★★★★ **(11.10-e) (★′) 的核心**：`noWRealizer_exists_gap` 的证明主体。 -/
+theorem noWRealizer_core (F : Finset (Split X)) (w : Split X → ℝ) (S : Split X)
+    (hF : ∀ s ∈ F, ∀ t ∈ F, s.Compatible t)
+    (hS : ∀ t ∈ F, t ≠ S ∧ t.swap ≠ S) :
+    ∃ a ∈ S.sideA, ∃ a' ∈ S.sideA, ∃ b ∈ S.sideB, ∃ b' ∈ S.sideB,
+      (∑ u ∈ F.filter (fun u => bPairW u a a' b b' = true), w u) = 0 := by
+  classical
+  obtain ⟨ρ, hρ⟩ := S.nonempty 1
+  obtain ⟨a₀, ha₀⟩ := S.nonempty 0
+  by_cases hcase1 : ∃ a ∈ S.sideA, ∃ a' ∈ S.sideA,
+      ∀ u ∈ F, ¬ (a ∈ sideNotMem u ρ ∧ a' ∈ sideNotMem u ρ)
+  · obtain ⟨a, ha, a', ha', hno⟩ := hcase1
+    exact ⟨a, ha, a', ha', ρ, hρ, ρ, hρ,
+      sum_bPairW_eq_zero_of_cluster (fun u hu h1 h2 => absurd ⟨h1, h2⟩ (hno u hu))⟩
+  · have hshare : ∀ a ∈ S.sideA, ∀ a' ∈ S.sideA,
+        ∃ u ∈ F, a ∈ sideNotMem u ρ ∧ a' ∈ sideNotMem u ρ := by
+      intro a ha a' ha'
+      by_contra hcon
+      exact hcase1 ⟨a, ha, a', ha', fun u hu h => hcon ⟨u, hu, h⟩⟩
+    set T : Finset (Split X) := F.filter (fun u => a₀ ∈ sideNotMem u ρ) with hT
+    have hTF : ∀ u ∈ T, u ∈ F := fun u hu => (Finset.mem_filter.mp hu).1
+    have hTa₀ : ∀ u ∈ T, a₀ ∈ sideNotMem u ρ := fun u hu => (Finset.mem_filter.mp hu).2
+    have hTne : ∀ p : {x // x ∈ S.sideA}, (T.filter (fun u => p.1 ∈ sideNotMem u ρ)).Nonempty := by
+      intro p
+      obtain ⟨u, huF, hu1, hu2⟩ := hshare a₀ ha₀ p.1 p.2
+      exact ⟨u, Finset.mem_filter.mpr ⟨Finset.mem_filter.mpr ⟨huF, hu1⟩, hu2⟩⟩
+    let cardMin : {x // x ∈ S.sideA} → ℕ := fun p =>
+      ((T.filter (fun u => p.1 ∈ sideNotMem u ρ)).image (fun u => (sideNotMem u ρ).card)).min'
+        ((hTne p).image (fun u => (sideNotMem u ρ).card))
+    -- 取含 a₀ 与 a 的最小 cluster（存在性；`cardMin` 的取值者）
+    have hmin_wit : ∀ (a : X) (ha : a ∈ S.sideA), ∃ u ∈ T, a ∈ sideNotMem u ρ ∧
+        (sideNotMem u ρ).card = cardMin ⟨a, ha⟩ := by
+      intro a ha
+      have hmem := Finset.min'_mem
+        ((T.filter (fun u => a ∈ sideNotMem u ρ)).image (fun u => (sideNotMem u ρ).card))
+        ((hTne ⟨a, ha⟩).image (fun u => (sideNotMem u ρ).card))
+      obtain ⟨u, humem, hucard⟩ := Finset.mem_image.mp hmem
+      exact ⟨u, (Finset.mem_filter.mp humem).1, (Finset.mem_filter.mp humem).2, hucard⟩
+    obtain ⟨p₁, -, hmax⟩ := Finset.exists_max_image
+      (Finset.univ : Finset {x // x ∈ S.sideA}) cardMin
+      ⟨⟨a₀, ha₀⟩, Finset.mem_univ _⟩
+    obtain ⟨u₁, hu₁T, hu₁p₁, hu₁card⟩ := hmin_wit p₁.1 p₁.2
+    have hu₁F : u₁ ∈ F := hTF u₁ hu₁T
+    -- (1) `S.sideA ⊆ u₁*`
+    have hAsub : S.sideA ⊆ sideNotMem u₁ ρ := by
+      intro a ha
+      by_contra hna
+      obtain ⟨w, hwT, hwa, hwcard⟩ := hmin_wit a ha
+      have hle : (sideNotMem w ρ).card ≤ (sideNotMem u₁ ρ).card := by
+        rw [hu₁card, hwcard]
+        exact hmax ⟨a, ha⟩ (Finset.mem_univ _)
+      have hl := laminar_sideNotMem (F := F) (ρ := ρ) hF (hTF w hwT) hu₁F
+      have ha₀u : a₀ ∈ sideNotMem u₁ ρ := hTa₀ u₁ hu₁T
+      have ha₀w : a₀ ∈ sideNotMem w ρ := hTa₀ w hwT
+      rcases hl with h1 | h1 | h1
+      · exact hna (h1 hwa)
+      · have heq : sideNotMem u₁ ρ = sideNotMem w ρ :=
+          Finset.eq_of_subset_of_card_le h1 hle
+        exact hna (heq.symm ▸ hwa)
+      · exact absurd ha₀w (Finset.disjoint_right.mp h1 ha₀u)
+    -- (2) `u₁* ∩ S.sideB ≠ ∅`
+    have hB : (sideNotMem u₁ ρ ∩ S.sideB).Nonempty := by
+      by_contra hemp
+      have hemp' : sideNotMem u₁ ρ ∩ S.sideB = ∅ := Finset.not_nonempty_iff_eq_empty.mp hemp
+      have hKsub : sideNotMem u₁ ρ ⊆ S.sideA := by
+        intro x hx
+        have hxu : x ∈ S.sideA ∪ S.sideB := by rw [S.union_sides]; exact Finset.mem_univ x
+        rcases Finset.mem_union.mp hxu with h | h
+        · exact h
+        · exact absurd (Finset.mem_inter.mpr ⟨hx, h⟩) (by rw [hemp']; exact Finset.notMem_empty x)
+      have hKne : sideNotMem u₁ ρ ≠ S.sideA := by
+        intro hEq
+        rcases eq_or_swap_eq_of_sideNotMem_eq_sideA hEq with h1 | h1
+        · exact (hS u₁ hu₁F).1 h1
+        · exact (hS u₁ hu₁F).2 h1
+      have hex : ∃ x ∈ S.sideA, x ∉ sideNotMem u₁ ρ := by
+        by_contra hcon
+        refine hKne (Finset.Subset.antisymm hKsub ?_)
+        intro x hx
+        by_contra hxK
+        exact hcon ⟨x, hx, hxK⟩
+      obtain ⟨a₃, ha₃A, ha₃K⟩ := hex
+      obtain ⟨w, hwT, hwa, hwcard⟩ := hmin_wit a₃ ha₃A
+      have hle : (sideNotMem w ρ).card ≤ (sideNotMem u₁ ρ).card := by
+        rw [hu₁card, hwcard]
+        exact hmax ⟨a₃, ha₃A⟩ (Finset.mem_univ _)
+      have hl := laminar_sideNotMem (F := F) (ρ := ρ) hF (hTF w hwT) hu₁F
+      have ha₀u : a₀ ∈ sideNotMem u₁ ρ := hTa₀ u₁ hu₁T
+      have ha₀w : a₀ ∈ sideNotMem w ρ := hTa₀ w hwT
+      rcases hl with h1 | h1 | h1
+      · exact ha₃K (h1 hwa)
+      · have hlt : (sideNotMem u₁ ρ).card < (sideNotMem w ρ).card :=
+          Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨h1, fun heq => ha₃K (heq.symm ▸ hwa)⟩)
+        omega
+      · exact absurd ha₀w (Finset.disjoint_right.mp h1 ha₀u)
+    obtain ⟨b₁, hb₁⟩ := hB
+    obtain ⟨hb₁K, hb₁B⟩ := Finset.mem_inter.mp hb₁
+    -- (3) 收尾：任何含 `a₀` 与 `p₁` 的 `u` 都含 `b₁`
+    refine ⟨a₀, ha₀, p₁.1, p₁.2, ρ, hρ, b₁, hb₁B, sum_bPairW_eq_zero_of_cluster ?_⟩
+    intro u huF hua₀ hua₁
+    have huT : u ∈ T := Finset.mem_filter.mpr ⟨huF, hua₀⟩
+    have hle : (sideNotMem u₁ ρ).card ≤ (sideNotMem u ρ).card := by
+      rw [hu₁card]
+      exact Finset.min'_le _ _ (Finset.mem_image.mpr
+        ⟨u, Finset.mem_filter.mpr ⟨huT, hua₁⟩, rfl⟩)
+    have hl := laminar_sideNotMem (F := F) (ρ := ρ) hF hu₁F huF
+    rcases hl with h1 | h1 | h1
+    · exact h1 hb₁K
+    · have heq : sideNotMem u ρ = sideNotMem u₁ ρ :=
+        Finset.eq_of_subset_of_card_le h1 hle
+      exact heq.symm ▸ hb₁K
+    · have hmem : a₀ ∈ sideNotMem u₁ ρ ∩ sideNotMem u ρ :=
+        Finset.mem_inter.mpr ⟨hTa₀ u₁ hu₁T, hTa₀ u huT⟩
+      rw [Finset.disjoint_iff_inter_eq_empty.mp h1] at hmem
+      exact absurd hmem (Finset.notMem_empty a₀)
+
+/-- ★★★★ **(★′) `noWRealizer_exists_gap` —— 已证（W23）** ✓
+
+这是 W22 记下的 **B-③ 唯一剩余件**（W12p / W12q / W12r 三轮未证成）。
+`#print axioms` 与全库其它定理同一基础（无新增公理）。 -/
+theorem noWRealizer_exists_gap_proof : noWRealizer_exists_gap.{0} := by
+  intro α _ _ F w hF _hw S hS
+  exact noWRealizer_core F w S hF hS
+
+/-- ★★★★ **(B2) 的无条件收口**：`notIsDSplit_of_splitMetricSum_gap` 现为**定理** ✓
+
+（此前只有带 `(h : noWRealizer_exists_gap)` 的条件版 `…_gap_proof`；现在 (★′) 已证，
+⇒ 条件收口升为**无条件收口** ⇒ `list_gaps.sh` 口径 B 的「条件收口」漏洞在**这一条**上消除 ✓。） -/
+theorem notIsDSplit_of_splitMetricSum_gap_holds : notIsDSplit_of_splitMetricSum_gap.{0} :=
+  notIsDSplit_of_splitMetricSum_gap_proof noWRealizer_exists_gap_proof
+
+/-- ★★★★★ **`fourPointCharacterization_gap` —— 已收口（W23）** ✓✓
+
+`⟸` 半：`fourPointCharacterization_gap_reverse`（W22，**无条件**，靠 `fourPoint_symm`）；
+`⟹` 半：`fourPointCharacterization_gap_of_noWRealizer` ＋ 本轮的 **(★′)** 证明。
+⇒ 两半皆无条件 ⇒ 注册形态 `def fourPointCharacterization_gap` 现为**定理**（`def` 逐字未动 ✓）。 -/
+theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} :=
+  fourPointCharacterization_gap_of_noWRealizer noWRealizer_exists_gap_proof
 
 end Split
