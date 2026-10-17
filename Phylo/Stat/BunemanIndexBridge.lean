@@ -1264,4 +1264,39 @@ theorem not_isDSplit_of_never_separated (F : Finset (Split X)) (w : Split X → 
 theorem fourPointOfSplitMetricSum_gap_proof : fourPointOfSplitMetricSum_gap :=
   fourPointOfSplitMetricSum_gap_correct_shape_proof
 
+/-! ## 12.1 ★★★ W22 任务 B-③：`fourPointCharacterization_gap` 的 `⟸` 半边**无条件**收口
+
+★ **关键发现**：本库 `def FourPoint` 只写三条 `max` 不等式，**没有**把「对称」写进定义
+（文献的 `d` 恒对称 —— BdD 的 setting）。因此本文件此前的
+`pairwiseCompatible_of_exists_symm_fourPoint_isDSplit` 只能证明
+「**对称** ＋ 四点 ⇒ 两两相容」，`symmetric` 是**额外假设** ✗ —— 而
+`fourPointCharacterization_gap` 的右边**只写 `FourPointStd δ`**，
+拿不到 `hsym` ✗ ⇒ 该 `⟸` 半边此前只能算「有条件版」✗。
+
+★ 但**对称性其实是被三条不等式强制出来的**（见 `Split.fourPoint_symm`，本批新增）：
+两次实例化 `(a,a',b,b') = (x,y,x,x)` 与 `(y,x,y,y)` 的**第一合取项**，
+`max` 的两个槽是**同一表达式**（退化）⇒ 直接得 `δ x y ≤ δ y x` 与反向 ⇒ 相等 ✓。
+⇒ 「`δ` 对称」**不是**第四要素，`def FourPoint` 的形态**无需再改** ✓。 -/
+
+/-- ★★★ **`fourPointCharacterization_gap` 的 `⟸` 半边（无条件版，W22 B-③）**：
+
+「存在 `δ`：`FourPointStd δ`（= `FourPoint δ`）且其 d-split 集**恰为** `F`（商掉 `swap`）」
+⟹ `F` **两两相容**。
+
+★ 与 W12k 的 `pairwiseCompatible_of_exists_symm_fourPoint_isDSplit` 的区别：
+**去掉了 `symm` 额外假设**（由 `Split.fourPoint_symm` 从 `FourPoint` 本身得到）⇒
+本定理的前提**逐字**就是 `Split.fourPointCharacterization_gap` 的右半句 ✓。
+
+★ 诚实说明：这只是**半边**。另一半（`⟹`：两两相容 ⟹ 存在这样的 `δ`）仍**未证**，
+其剩余件 = (B1) ✅（W22 收口，`fourPointOfSplitMetricSum_gap_proof`）
+＋「成员是 d-split」（未证）＋「非成员不是 d-split」= (B2)，而 (B2) 已被 §11.2 归约到
+纯组合命题 (★′) `noWRealizer_exists_gap`，后者 W12p–W12r 未证成。 -/
+theorem fourPointCharacterization_gap_reverse {F : Finset (Split X)}
+    (h : ∃ δ : X → X → ℝ, FourPoint δ ∧
+      ∀ s : Split X, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s) :
+    ∀ s ∈ F, ∀ t ∈ F, s.Compatible t := by
+  obtain ⟨δ, hfp, hδ⟩ := h
+  exact pairwiseCompatible_of_exists_symm_fourPoint_isDSplit
+    ⟨δ, fun x y => fourPoint_symm hfp x y, hfp, hδ⟩
+
 end Split

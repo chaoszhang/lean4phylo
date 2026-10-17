@@ -498,6 +498,29 @@ W22 把 `FourPoint` 本体改对之后两者同义，故收成 `abbrev`
 `def FourPoint` 的 docstring，此处不重复。 -/
 abbrev FourPointStd (δ : α → α → ℝ) : Prop := FourPoint δ
 
+omit [Fintype α] [DecidableEq α] in
+/-- ★★ **四点条件 ⟹ 对称**（W22 任务 B-③ 的器材）：三条 `max` 不等式**强制** `δ x y = δ y x`。
+
+★ 这条**不是**琐碎改写：本库 `FourPoint` 的形态里**没有**「对称」「零对角」两要素，
+而 `Phylo/Stat/BunemanIndexBridge.lean` 的 `compatible_of_fourPoint_isDSplit` 把 `symm`
+当作**额外假设**传入 ⇒ 该文件此前只能证「对称 ＋ 四点 ⇒ …」。本定理把那条假设**去掉**，
+使 `fourPointCharacterization_gap` 的 `⟸` 半边得以按**原陈述**证明
+（`Split.fourPointCharacterization_gap_reverse`）。
+
+**证明**：取 `a = x`、`a' = y`、`b = b' = x`，第一合取项为
+`δ x y + δ x x ≤ max (δ x x + δ y x) (δ x x + δ y x)` —— 两个 `max` 槽是**同一表达式**
+⇒ `max` 退化（`max_self`）⇒ `δ x y ≤ δ y x`；再把 `x ↔ y` 做一次得反向不等式。 -/
+theorem fourPoint_symm {δ : α → α → ℝ} (h : FourPoint δ) (x y : α) : δ x y = δ y x := by
+  have h1 : δ x y ≤ δ y x := by
+    have h' := (h x y x x).1
+    rw [max_self] at h'
+    linarith
+  have h2 : δ y x ≤ δ x y := by
+    have h' := (h y x y y).1
+    rw [max_self] at h'
+    linarith
+  linarith
+
 /-- ⬜ **缺口 1（Theorem 3 的逆，1683–1699 行）**：弱相容 ⟹ `Σ` 恰是某个对称 `δ` 的
 `d`-split 全体（取 `δ := Σ_{S∈Σ} λ_S δ_S`，`λ_S > 0`，且隔离指数 `α_S = λ_S`）。
 
