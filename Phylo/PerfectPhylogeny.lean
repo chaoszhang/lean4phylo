@@ -468,9 +468,17 @@ def DisplaysMultiState {St : Type v} (T : Cladogram X) (χ : X → St) : Prop :=
   ∃ ℓ : T.V → St, (∀ x : X, ℓ (T.leaf x) = χ x) ∧
     ∀ s : St, IsConnectedSet T.graph {v | ℓ v = s}
 
-/-- **缺口 G1（未证）**：Gusfield 条件 (3) 的「连通子树」语义对 **r = 2** 与库内
+/-- **缺口 G1 —— ✅ 2026-10-17 W22 已收口**（`Phylo.Connectivity` 的
+`BinaryConnectedEqualsSideGap_holds`；本 `def` 按纪律**逐字保留**作登记，
+故 `scripts/list_gaps.sh` 口径 B 会把它判为「已收口」）。
+Gusfield 条件 (3) 的「连通子树」语义对 **r = 2** 与库内
 `Cladogram.IsSideOf`（边侧）**一致** —— 即「两个状态类都连通 ⟺ 1-类是某条边的叶侧」。
-**缺什么**：`IsConnectedSet` 与 `IsSideOf` 之间的树连通性引理（需 `T - e` 的分量分析）。
+**缺什么**：~~`IsConnectedSet` 与 `IsSideOf` 之间的树连通性引理（需 `T - e` 的分量分析）~~
+⇒ **已补**（W22）：`SimpleGraph.exists_adj_crossing`（跨界 walk 必有跨界边）·
+`inSide_of_walk_edges_notMem`（避开 `e` 的 walk ⟹ 同侧）· `compl_inSide`/`compl_inSide'`
+（`e` 一侧的补 = 另一端点一侧）· `inSide_iff_of_isConnectedSet`（`⟹` 半引擎）。
+★ 实测**不需要**「割边唯一」／圈论证：二分性 `inSide_or_inSide` ＋ 互斥性 `not_inSide_both`
+＋「边是桥」`not_reachable_deleteEdges_of_adj` 已足够，全程不出现「圈」。
 **为什么**：库内只有「边侧」，而条件 (3) 用的是「连通」，二者的差别正是多状态反例的所在。 -/
 def BinaryConnectedEqualsSideGap : Prop :=
   ∀ (T : Cladogram.{u, u} X) (A : Finset X),
