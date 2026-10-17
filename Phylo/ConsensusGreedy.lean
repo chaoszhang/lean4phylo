@@ -495,7 +495,20 @@ theorem greedyConsensus_gap_refuted : ¬ greedyConsensus_gap := by
 （`rStarConsensus_gap_strictSplits`：严格共识满足全部四条）与**结构障碍**
 （`no_compatible_family_containing_incompatible`：一旦越过 `2l > |ι|` 的阈值，
 `M_l` 已含不相容对，**任何**相容值规则都必须**丢弃**其中的 split ——
-「按什么规范丢」正是 R\* / Bryant 2003 要回答、而在手文献答不出的那一条）。 -/
+「按什么规范丢」正是 R\* / Bryant 2003 要回答、而在手文献答不出的那一条）。
+★★ **2026-10-17 W23 处置裁定（师父派单 A-10 已授权）：本 `def` 记「判定完成」 ✅** ——
+理由两条，缺一不可：
+1. **结构上不可「收口」** ✗：它是**谓词**（`R : (ι → Cladogram X) → Finset (Split X)` 的
+   必要条件寄存器），**不是一条 `Prop`** ⇒ 没有 `_holds` 形态可证（`scripts/list_gaps.sh`
+   **口径 C** 机械确认它在「谓词式」桶里 ✓）；
+2. **忠实性已判「不忠实」**（W19，见上）：忠实形态需 **(i)** 根三元组集 `r(T)` 层 ＋
+   **(ii)** maximum refined tree 算子，两者库内与在手文献均无 ⇒ 属于「**器材缺口**」，
+   不是「证明缺口」。
+⇒ **处置**：`def` 本体**逐字保留** ✓（作为「不忠实原形态」的登记，与 ⑫
+`circularDistanceRealization_gap`、⑬ `weakCompatibilityRealization_gap` 同一模式 ✓）；
+**不再作为证明任务派发** ✗；忠实的 `R*` 若将来要做，应**另立新名**
+（需先补 (i)(ii) 两层器材）。
+★ **反空真已备**：`rStarConsensus_gap_strictSplits`（严格共识满足全部四条）✓。 -/
 def rStarConsensus_gap {X : Type u} [Fintype X] [DecidableEq X]
     {ι : Type*} [Fintype ι] [DecidableEq ι]
     (R : (ι → Cladogram X) → Finset (Split X)) : Prop :=
