@@ -870,4 +870,39 @@ example : LE Tbal Finset.univ (by decide) = 2 := by
     simpa using h'
   exact Nat.mul_right_cancel (by norm_num : 0 < 3) h
 
+
+/-! ## §12 ★★★ W23 任务 B-1（MSC 主线入口）：`rankedFiberCount_gap` 的**路障定位**
+
+★ **本轮的诊断更正**（W23 派单把 B-1 记作「缺 hook-length 层」—— **那层已在库 ✓**）：
+* **hook-length 公式本体已证** ✓：§10 `LE_mul_prod_hook_eq_factorial`
+  （`LE T C · ∏_{D ∈ internalBelow T C} hook T D = (hook T C)!`）；
+* **`T = cladesOf n f` 的镶嵌性已证** ✓：`laminarFamily_cladesOf`（`RankedGeneTree.lean:271`）
+  ⇒ 上式的 `LaminarFamily` 假设**已兑现** ✓；
+* ⇒ **真正剩下的只有两件**（都是**组合实体**，不是器材）：
+  **(O1)** 双射「纤维 = `LE`」：
+  ```text
+  ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+    = LE (cladesOf n f) Finset.univ hU
+  ```
+  （「`cladesOf` 的 clade 包含偏序的**线性扩展** ⟺ 合并史的 **ranking**」）；
+  **(O2)** 钩长计数 `hook (cladesOf n f) C = C.card − 1`（`2 ≤ C.card`）——
+  即「二叉树的子树内部结点数 = 叶数 − 1」在 `cladesOf` 上的兑现。
+  ⇒ 有了 (O1)(O2)，`LE_mul_prod_hook_eq_factorial` 在 `C = univ`（`hook = n−1`、
+  分母 = `∏(C.card−1)`）就直接给出 `rankedFiberCount_gap` 的右端 ✓。
+
+★ **本节只交付 (O1) 的**陈述前提**：`univ ∈ cladesOf n f`（不证它就无法陈述 (O1)）✓。 -/
+
+open Phylo.Stat.RankedGeneTree in
+/-- ★★ **`univ` 是合并史的 clade**（`(O1)` 陈述的必要前提）：`IsMergeHistory n f` 的第二个合取项
+正是「`chainMap n f (n−1)` 常值」⇒ 该层的唯一块是全体 ⇒ `univ ∈ cladesOf n f` ✓。 -/
+theorem univ_mem_cladesOf {n : ℕ} (hn : 1 ≤ n) {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f := by
+  have hlt : n - 1 < n := by omega
+  have hconst : ∀ w w' : Fin n, chainMap n f (n - 1) w = chainMap n f (n - 1) w' := hf.2
+  refine Finset.mem_biUnion.mpr ⟨n - 1, Finset.mem_range.mpr hlt, ?_⟩
+  refine Finset.mem_image.mpr ⟨⟨0, hn⟩, Finset.mem_univ _, ?_⟩
+  ext z
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, iff_true]
+  exact hconst z ⟨0, hn⟩
+
 end Phylo.Stat.HookLength
