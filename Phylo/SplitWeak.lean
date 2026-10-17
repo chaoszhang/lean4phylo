@@ -390,7 +390,12 @@ def SplitMetric (s : Split α) (x y : α) : ℝ :=
 且库内形态（补齐非空侧后）⟹ 忠实形态（`splitPrimeStd_of_splitPrimeNE`）。 -/
 def SplitPrime (δ : α → α → ℝ) : Prop := ∀ A B : Finset α, ¬ IsDSplit δ A B
 
-/-- ⛔ **四点条件（本库形态）—— 一个已被证伪的错定义；请用同文件的 `FourPointStd`（`:422`）。**
+/-- ⛔ **四点条件（旧 / 错形态）—— 已被证伪；本名保留为 `FourPointLegacy`，仅供追溯，勿引用。**
+
+★★ **2026-10-17 W22（老师原话「**允许**」）**：本体**已改对** —— `def FourPoint` 现为标准形态
+（见下方下一个 `def`）；本定义**改名 `FourPointLegacy`**，留存为「旧形态的反例登记」。
+⇒ ★ **下面「为何 W21 不改本体」那一节是当时的记录，现已作废**（保留仅为追溯）；
+它列的 5 处依赖**逐处处置**见 `def FourPoint` 的 docstring 里的改名清单 ✓。
 
 ⚠️⚠️ **本 `def` 的第三合取项末项写错**：写的是 `δ a b + δ a' b`（两对**共享端点 `b`**），
 而三个应比较的和是 `P₁ = δ a a' + δ b b'`、`P₂ = δ a b + δ a' b'`、`P₃ = δ a b' + δ a' b`
@@ -437,37 +442,61 @@ def SplitPrime (δ : α → α → ℝ) : Prop := ∀ A B : Finset α, ¬ IsDSpl
 * **理由**：见上表（改本体会使 3 条既有定理真值反转 ＋ 1 条 gap 语义漂移 ＋ deprecate 违反门禁）；
 * **影响的下游**：`B-3`（`fourPointCharacterization_gap`）已于 W20 改用 `FourPointStd` ✓；
   ★ **本批未放弃该修正**，只是把「改名 + 语义迁移 + 报告同步」打包留给老师裁定。 -/
-def FourPoint (δ : α → α → ℝ) : Prop :=
+def FourPointLegacy (δ : α → α → ℝ) : Prop :=
   ∀ a a' b b' : α,
     δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) ∧
       δ a b + δ a' b' ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) ∧
         δ a b' + δ a' b ≤ max (δ a a' + δ b b') (δ a b + δ a' b)
 
-/-- **标准四点条件**（文献形态；W12k 新增，与本文件 `def FourPoint` **并存**）：
+/-- ★★★ **四点条件**（文献形态，**标准**）：三对和
+`P₁ = δ a a' + δ b b'`、`P₂ = δ a b + δ a' b'`、`P₃ = δ a b' + δ a' b` 中**最大者至少取到两次**
+（等价写法：每个 `≤` 其余两者的 `max`）。
 
-三对和 `d(a,a')+d(b,b')`、`d(a,b)+d(a',b')`、`d(a,b')+d(a',b)` 中**最大者至少取到两次**
-（等价写法：每个 ≤ 其余两者的 `max`）。
+★★★ **2026-10-17 W22 任务 A：本体修正（老师已批准「允许」）—— 四要素留证** ✓
 
-⚠️ **与 `def FourPoint` 的确切差异**（★D，W12k）：
+* **旧形态** ✗（现名 `FourPointLegacy`，同文件上方）：第三合取项末项写 `δ a b + δ a' b`
+  （两对**共享端点 `b`**，**既非 `P₂` 亦非 `P₃`**）；
+* **新形态** ✓：第三合取项末项 `δ a b + δ a' b'`；三个 `max` 约束**合起来**恰是
+  「三对和的最大者至少出现两次」；
+* **文献依据** ✓：`references/md/Buneman1974_MetricPropertiesOfTrees.md` **THEOREM 1**（`:33-36`，
+  逐字「…distance satisfying **the four-point condition**」）＋ **THEOREM 2**（`:70-74`）；
+  对应 `SempleSteel2002:539–544` ✓（与 W12k 给 `FourPointStd` 的文献依据**同一处**）；
+* **理由（★D 先判真假，非措辞）** ✗：**真实树度量几乎全不满足旧形态** —— `n = 4` 的 3000 个
+  随机树度量里仅 **1** 个满足、`n = 5/6/7` 为 **0/3000**；独立机检 `scripts/msc/w12d_b2_b1_search.py`：
+  两两相容族上**标准形态违反 0 例**、**旧形态违反 68/75 例** ✗。
+  ⇒ 凡以旧形态为**前提**的定理都把真实对象类排除在外。最小显式见证 = 4 叶平衡树
+  `((0,1),(2,3))` 全边权 `1`（即 `Split.cexTreeVal_fourPointStd` 的那个度量）。
 
-* 本文件 `def FourPoint` 的**第三**合取项末项写的是 `δ a b + δ a' b`（两对**共享端点 `b`**，
-  不是三个表达式之一）；本定义末项是正确的 `δ a b + δ a' b'`。
-* **方向**（穷举：`n = 3` 网格、`n = 4` 网格、`n = 5` 随机 20000）：**仅本库形态真** = `0`，
-  **仅标准形态真** = `6 / 65 / 25` ⇒ 「本库 `FourPoint` ⟹ `FourPointStd`」（见
-  `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.fourPointStd_of_fourPoint`），反向**不成立**。
-* **严重性**：**真实树度量几乎全都不满足本库形态** —— 随机树 + 随机正边权，`n = 4` 的 3000 个
-  有效树度量里只有 **1** 个满足；`n = 5/6/7` 是 **0/3000**。本仓 `scripts/msc/w12d_b2_b1_search.py`
-  独立复核：`n = 4/5` 的两两相容 split 族（= 树度量）上，**标准形态违反 0 例**，
-  **本库形态违反 68/75 例**。
-* ⇒ 「本库 `FourPoint`」把**树度量这一真实对象类几乎整体排除在外** ✗；凡以它为**前提**的定理
-  在标准前提下**不能**直接用（需先补 `fourPointStd_of_fourPoint` 那条桥的**反方向**，而那不成立）。
-  最小显式见证（4 叶平衡树 `((0,1),(2,3))`、全部边权 `1`，即本库 `SplitMetric` 之和）见
-  `BunemanIndexBridge.lean` 的 `Split.cexTreeVal_not_fourPoint`。 -/
-def FourPointStd (δ : α → α → ℝ) : Prop :=
+### ★ 改名 / 处置清单（旧 → 新 → 理由；除注明者外都在 `Phylo/Stat/BunemanIndexBridge.lean`）
+
+| # | 旧 | 新 | 理由 |
+|---|---|---|---|
+| 1 | `cexTreeVal_not_fourPoint` | **`cexTreeVal_not_fourPointLegacy`** | 改本体后该陈述**变假**（`cexTreeVal_fourPointStd` 给标准形态成立）⇒ 只能对 `FourPointLegacy` 陈述 |
+| 2 | `not_fourPointStd_imp_fourPoint` | **`not_fourPointLegacy_of_fourPoint`** | 同理：改本体后「标准 ⟹ 标准」恒真 ⇒ 真内容变成「标准 ⟹ **旧形态**」**不成立** |
+| 3 | `fourPointStd_of_fourPoint` | **`fourPoint_of_fourPointLegacy`** | 改本体后退化为 `P → P`（无内容）⇒ ★ **改锚到旧形态**，保住**非平凡**内容「旧 ⟹ 标准」（比「保留为 rfl 级」更有价值） |
+| 4 | `not_fourPointOfSplitMetricSum` | **`not_fourPointOfSplitMetricSum_legacy`** | 同 #1：改本体后 (B1) 变**真**（见 #5）⇒ 反驳只能对旧形态陈述 |
+| 5 | `fourPointOfSplitMetricSum_gap` | **名字不变**，但已**收口可证** | 改本体后它与 `fourPointOfSplitMetricSum_gap_correct_shape`（`BunemanIndexBridge.lean`，W12k 已收口）**成为同一条陈述** ⇒ 由 `fourPointOfSplitMetricSum_gap_proof` 收口 ✓ |
+| 6 | `compatible_of_fourPoint_isDSplit` · `pairwiseCompatible_of_exists_symm_fourPoint_isDSplit` | **名字不变** | 两者证明**只用第一合取项**（两形态共享）⇒ 改本体后陈述**变强**且**仍真** ✓ |
+
+★ **`FourPointStd` 的去向**：两 `def` 现**定义相同** ⇒ 收成**别名**
+`abbrev FourPointStd (δ) := FourPoint δ`（保留名字，使 W12k–W21 全部既有引用**无需改动**）。
+
+★ **影响的下游**：`B-3`（`fourPointCharacterization_gap`）W20 已改用 `FourPointStd`
+⇒ 现与 `FourPoint` **同义** ✓；且第 3 条（派单 B-③）的 `⟹` 半边因此**重新可做**（见下批）。 -/
+def FourPoint (δ : α → α → ℝ) : Prop :=
   ∀ a a' b b' : α,
     δ a a' + δ b b' ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) ∧
       δ a b + δ a' b' ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) ∧
         δ a b' + δ a' b ≤ max (δ a a' + δ b b') (δ a b + δ a' b')
+
+/-- **`FourPointStd` —— 别名**（W22 起）：与 `def FourPoint`（同文件上方）**定义上相同**。
+
+W12k 曾把「标准形态」另立此名并在其 docstring 里记录与旧形态的逐字符差异；
+W22 把 `FourPoint` 本体改对之后两者同义，故收成 `abbrev`
+（★ 保留此名，使 W12k–W21 的全部既有引用**无需改动**）。
+★ 原 W12k docstring 的**实质内容**（差异、方向性、严重性、文献依据）已**整体并入**
+`def FourPoint` 的 docstring，此处不重复。 -/
+abbrev FourPointStd (δ : α → α → ℝ) : Prop := FourPoint δ
 
 /-- ⬜ **缺口 1（Theorem 3 的逆，1683–1699 行）**：弱相容 ⟹ `Σ` 恰是某个对称 `δ` 的
 `d`-split 全体（取 `δ := Σ_{S∈Σ} λ_S δ_S`，`λ_S > 0`，且隔离指数 `α_S = λ_S`）。

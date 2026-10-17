@@ -356,15 +356,15 @@ theorem pairwiseCompatible_of_exists_symm_fourPoint_isDSplit {F : Finset (Split 
 （`§6.2` 给出 `⟸` 半的逐字搬运版）。 -/
 
 omit [Fintype X] [DecidableEq X] in
-/-- ★★★ **库内 `FourPoint` ⟹ 标准 `FourPointStd`**（W12k 最有用的那条桥）。
+/-- ★★★ **旧形态 `FourPointLegacy` ⟹ 标准 `FourPoint`**（W12k 最有用的那条桥；**W22 改锚**）。
 
 证明只用一次对称性与 `add_comm`：把库内条件的**第二**合取项用在**前两个参数对调**后的元组
 `(a',a,b,b')` 上 —— 那里的「平行和」`δ a' b + δ a b'` 恰是标准第三式左端、
 「两内和」`δ a' a + δ b b'` 与「交叉和」`δ a' b' + δ a b` 恰是标准第三式的两个 `max` 参数。
 
 ⚠️ 需要 `δ` **对称**（库内条件对非对称 `δ` 也定义，但标准形态是给对称函数用的）。 -/
-theorem fourPointStd_of_fourPoint {δ : X → X → ℝ} (hsym : ∀ x y, δ x y = δ y x)
-    (h : FourPoint δ) : FourPointStd δ := by
+theorem fourPoint_of_fourPointLegacy {δ : X → X → ℝ} (hsym : ∀ x y, δ x y = δ y x)
+    (h : FourPointLegacy δ) : FourPoint δ := by
   intro a a' b b'
   refine ⟨(h a a' b b').1, (h a a' b b').2.1, ?_⟩
   have h0 := (h a' a b b').2.1
@@ -426,9 +426,10 @@ theorem cexTreeVal_fourPointStd : FourPointStd cexTreeVal := by
   fin_cases a <;> fin_cases a' <;> fin_cases b <;> fin_cases b' <;>
     norm_num [cexTreeVal, max_def]
 
-/-- ★★★ **库内 `FourPoint` 不成立**：见证四元组 `(a,a',b,b') = (0,0,1,2)`，
-库内第三式给出 `3 ≤ max (1) (2) = 2` ✗。 -/
-theorem cexTreeVal_not_fourPoint : ¬ FourPoint cexTreeVal := by
+/-- ★★★ **旧形态 `FourPointLegacy` 不成立**（★ **W22 改名**：本条只对**旧形态**成立 ——
+对标准形态它**是假的**，见同文件的 `cexTreeVal_fourPointStd`）：
+见证四元组 `(a,a',b,b') = (0,0,1,2)`，旧形态第三式给出 `3 ≤ max (1) (2) = 2` ✗。 -/
+theorem cexTreeVal_not_fourPointLegacy : ¬ FourPointLegacy cexTreeVal := by
   intro h
   have h3 := (h 0 0 1 2).2.2
   norm_num [cexTreeVal, max_def] at h3
@@ -438,11 +439,14 @@ theorem cexTreeVal_symm : ∀ x y, cexTreeVal x y = cexTreeVal y x := by
   intro x y
   fin_cases x <;> fin_cases y <;> norm_num [cexTreeVal]
 
-/-- ★★★ **「标准 ⟹ 库内」是假命题**（同一个树度量即反例）⇒ 库内形态**严格更强**。 -/
-theorem not_fourPointStd_imp_fourPoint :
-    ¬ (∀ (δ : Fin 4 → Fin 4 → ℝ), (∀ x y, δ x y = δ y x) → FourPointStd δ → FourPoint δ) := by
+/-- ★★★ **「标准 ⟹ 旧形态」是假命题**（同一个树度量即反例）⇒ 旧形态**严格更强**。
+
+★ **W22 改名 + 改锚**：旧名 `not_fourPointStd_imp_fourPoint`（当时含义 =「标准 ⟹ 库内错形态」
+不成立）；含义不变，只是把右端从 `FourPoint`（错形态）换成 `FourPointLegacy`、左端换成 `FourPoint`。 -/
+theorem not_fourPointLegacy_of_fourPoint :
+    ¬ (∀ (δ : Fin 4 → Fin 4 → ℝ), (∀ x y, δ x y = δ y x) → FourPoint δ → FourPointLegacy δ) := by
   intro h
-  exact cexTreeVal_not_fourPoint (h cexTreeVal cexTreeVal_symm cexTreeVal_fourPointStd)
+  exact cexTreeVal_not_fourPointLegacy (h cexTreeVal cexTreeVal_symm cexTreeVal_fourPointStd)
 
 /-! ### 6.2 `⟸` 半在 `FourPointStd` 上的重述（逐字搬运：证明只用第一合取项 + 对称性） -/
 
@@ -499,14 +503,27 @@ theorem cexF2_compat : ∀ s ∈ cexF2, ∀ t ∈ cexF2, s.Compatible t := by
       fin_cases x <;> simp_all [cexS0, cexS01, Split.ofSideA_sideA])
   · exact compatible_self cexS01
 
-/-- ★B ★★★ **瓶颈 (B1) 是假命题**（`def` 原文未改）。 -/
-theorem not_fourPointOfSplitMetricSum : ¬ fourPointOfSplitMetricSum_gap.{0} := by
+/-- **旧形态的 (B1) 缺口**（★ **W22 新增**）：把 `Split.fourPointOfSplitMetricSum_gap` 的结论
+换成**旧形态** `FourPointLegacy`。★ **只在追溯时用** —— W22 已把 `FourPoint` 本体改对，
+故 `Split.fourPointOfSplitMetricSum_gap` 现在是**标准形态、且已可证**（见 `…_gap_proof`）；
+**真正为假的是本 `Prop`** ✓。 -/
+def fourPointOfSplitMetricSum_gap_legacy : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
+      FourPointLegacy (fun x y => ∑ s ∈ F, w s * SplitMetric s x y)
+
+/-- ★B ★★★ **（旧形态的）瓶颈 (B1) 是假命题**。
+
+★ **W22 改名 + 改锚**：原名 `not_fourPointOfSplitMetricSum`（当时反的是
+`fourPointOfSplitMetricSum_gap`，因其结论用的是错形态）；改本体后那个 `Prop` 已为**真**，
+故本反驳**改锚**到 `fourPointOfSplitMetricSum_gap_legacy` 上（真内容不变）。 -/
+theorem not_fourPointOfSplitMetricSum_legacy : ¬ fourPointOfSplitMetricSum_gap_legacy.{0} := by
   intro h
-  have hfp : FourPoint (fun x y : Fin 4 => ∑ s ∈ cexF2, cexW s * SplitMetric s x y) :=
+  have hfp : FourPointLegacy (fun x y : Fin 4 => ∑ s ∈ cexF2, cexW s * SplitMetric s x y) :=
     h (α := Fin 4) cexF2 cexW cexF2_compat (by intro s _; norm_num [cexW])
   rw [show (fun x y : Fin 4 => ∑ s ∈ cexF2, cexW s * SplitMetric s x y) = cexT from rfl,
     cexT_eq_cexTreeVal] at hfp
-  exact cexTreeVal_not_fourPoint hfp
+  exact cexTreeVal_not_fourPointLegacy hfp
 
 /-- ⬜ **瓶颈 (B1) 的正确形态（W12k 登记；未证）**：结论换成**标准**四点条件 `FourPointStd`。
 
@@ -1230,5 +1247,21 @@ theorem not_isDSplit_of_never_separated (F : Finset (Split X)) (w : Split X → 
 ⚠️ 但**仍需逐 `v`** 检查**所有** `v' ∈ F`（勿重犯 W20「逐 `u` 当全 `F`」✗），
 且此方向**尚未校验** ✗ —— 建议 W24 先按 ★D 用见证校验（例如 `F = { {0,1,2}|{3} }`、`S = {0,1}|{2,3}`，
 看"取 `a'` 跨分量"能否真的给出 `c_W = 0` 的四元组 ✓/✗）再开证 ✓。 -/
+
+/-! ## 12. ★★★★ W22 任务 A：瓶颈 (B1) **收口**
+
+`Split.fourPointOfSplitMetricSum_gap` 的结论在 W22 改本体后变成**标准**四点条件
+⇒ 它与 W12k 早已收口的 `fourPointOfSplitMetricSum_gap_correct_shape` **成为同一条陈述**
+⇒ 直接复用其证明即可。★ 真正为假的是**旧形态**的那条（`…_gap_legacy`，见 §7）。 -/
+
+/-- ★★★★ **瓶颈 (B1) 收口**（W22）：`fourPointOfSplitMetricSum_gap` 已成定理。
+
+★ **留证**（HANDOVER【命题改动表】）：**旧形态**（结论用错形态）**为假** ——
+形式化反驳 = `not_fourPointOfSplitMetricSum_legacy`；**新形态**（结论用标准形态）**为真** ——
+本定理（复用 W12k 的 `fourPointOfSplitMetricSum_gap_correct_shape_proof`，两者改本体后**同陈述**）。
+**文献依据** = `Buneman1974` Thm 1（`:33-36`）＋ Thm 2（`:70-74`）；**理由** = ★D 判真假（旧形态把真实
+树度量排除在外，见 `def FourPoint` 的 docstring）。 -/
+theorem fourPointOfSplitMetricSum_gap_proof : fourPointOfSplitMetricSum_gap :=
+  fourPointOfSplitMetricSum_gap_correct_shape_proof
 
 end Split
