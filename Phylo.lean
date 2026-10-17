@@ -24,6 +24,7 @@ import Phylo.BunemanTree
 import Phylo.CherryQuartet
 import Phylo.CladogramBuild
 import Phylo.Compatibility
+import Phylo.Connectivity
 import Phylo.Consensus
 import Phylo.ConsensusAxioms
 import Phylo.ConsensusExtra
