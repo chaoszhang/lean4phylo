@@ -87,6 +87,19 @@ FORM_OVERRIDE = {
 # `{p | Factorizable p}` —— 只覆盖「正确取法」这一族 `Model`，一般 `Model` **未覆盖**
 # （docstring 自己写明：「修复形态在「`Model` = 因子分解点集」这一正确取法下是真的」）。
 # ⇒ 记 `[条件收口]`，欠的是「一般 `Model` 全称版」（这不是 `(h : P)`，是**特化**，故单列说明）。
+# ===== 「空转缺口」标注（W25 人工判定）=====
+# 收口定理**存在且无假设**，但被证的 `Prop` **不承载它名字所指的数学内容** ——
+# `def` 把本应是**常量/已定义对象**的规则做成了**存在量词绑定的自由变量**，
+# 于是取退化数据即满足（例：`consistent := fun _ => True`、`minimallyDense := fun _ => False`）。
+# ⇒ 机制上记 `[已收口]`（真值已定），但必须挂 ⚠：**真缺口要改命题才可陈述**。
+VACUOUS = {
+    "quarnetRules_level1_gap":
+        "空转：四条规则（consistent/minimallyDense/cyclative/saturated）是存在量词绑定的自由变量，"
+        "取退化数据即真；真缺口缺「允许环的网络载体 ＋ N|A 限制算子 ＋ quarnet 类型学」",
+    "level1QuartetSystem_gap":
+        "空转：`QuartetSystem`/`multiplicity` 同样被存在量词绑定；真缺口同 `quarnetRules_level1_gap`",
+}
+
 SPEC_OVERRIDE = {
     "edgeInvariants_suffice_gap_correct_shape":
         "特化：`Model` 固定为 `{p | Factorizable p}`（一般 `Model` 未覆盖）",
@@ -227,14 +240,24 @@ def main():
         if d[2] in ("theorem", "lemma"):
             by_short.setdefault(d[3].split(".")[-1], []).append(d)
 
+    by_lower = {}
+    for k, v in by_short.items():
+        by_lower.setdefault(k.lower(), []).extend(v)
+
     def find(*names):
+        # ★ 大小写不敏感（Lean 习惯：`def TreeMarkovFactorGap` 的收口定理常写成
+        #   `treeMarkovFactorGap_holds`，首字母小写）—— 先精确匹配，再按小写匹配。
         for nm in names:
             hit = by_short.get(nm)
             if hit:
                 return sorted(hit, key=lambda d: (d[0], d[1]))[0]
+        for nm in names:
+            hit = by_lower.get(nm.lower())
+            if hit:
+                return sorted(hit, key=lambda d: (d[0], d[1]))[0]
         return None
 
-    CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof"]
+    CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof", "_degenerate"]
     buckets = {k: [] for k in ("refuted", "closed", "cond", "trace", "judged", "open")}
 
     for (rel, ln, kind, name, sig) in gaps:
@@ -287,7 +310,7 @@ def main():
                 note.append("特化（%s）：`def` 的参数没有被全称覆盖" % spec)
             buckets["cond"].append((rel, ln, name, "；".join(note), cl))
         else:
-            buckets["closed"].append((rel, ln, name, "", cl))
+            buckets["closed"].append((rel, ln, name, VACUOUS.get(name, ""), cl))
 
     total = sum(len(v) for v in buckets.values())
     names = [d[3] for d in gaps]
