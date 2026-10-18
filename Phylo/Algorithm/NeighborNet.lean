@@ -1278,7 +1278,12 @@ theorem circularDistanceRealization_gap_false_at_fin3 :
   norm_num at h10
 
 /-- ⬜ **修复形态（W12g）**：环形距离的实现 —— 加**对称 + 零对角**（否则见
-`circularDistanceRealization_gap_false`）。一般 `n` 仍缺 Bandelt–Dress 分裂分解。 -/
+`circularDistanceRealization_gap_false`）。一般 `n` 仍缺 Bandelt–Dress 分裂分解。
+
+★ **2026-10-19 W25-a：本 `def` 已证** —— `circularDistanceRealization_gap_corrected_holds`（§12）。
+BdD 分裂分解**不再需要**：一般 `n` 的责任已由 §10–§11 的线性代数路线
+（`Alm`/`Mlm` 互逆）承担，§12 只补沿等价 `f : X ≃ Fin n` 的搬运。
+⇒ 上面「仍缺」一句**已过期**（`def` 本体逐字未改）。 -/
 def circularDistanceRealization_gap_corrected : Prop :=
   ∀ {X : Type*} [Fintype X] [DecidableEq X] (d : X → X → ℝ),
     (∀ x : X, d x x = 0) → (∀ x y : X, d x y = d y x) →
@@ -2980,5 +2985,238 @@ theorem circularWeights_realization_gap_proved (n : ℕ) : circularWeights_reali
 end FunctionalMaterial
 
 end WeightAlgebra
+
+/-! ## 12. 缺口 1 修复形态收口（W25-a）：`circularDistanceRealization_gap_corrected` **已证**
+
+`circularWeights_realization_gap_proved`（§11.12）已给**任意 `n`** 的实现，但只覆盖
+`X = Fin n` 且环序为 `Equiv.refl`。`_corrected` 与它的唯一差别是 **`X` 任意、环序由假设
+`f : X ≃ Fin n` 给出**。故本节只补**沿等价 `f` 的搬运**（纯接口工作，无新数学）：
+
+* `splitComap f`：`s ↦ (sideA.image f.symm, sideB.image f.symm)`，`splitComap_injective`
+  ⇒ `Finset.sum_image` 可用（权重沿 `weightComap f` 拉回，`weightComap_splitComap` 给原像取值）；
+* `cycArc_trans` / `image_compl_eq` / `isCyclicArc_image`：弧及其余集沿 `f` 搬运
+  ⇒ `Circular` 搬运，环序取 `f.trans g`（`circular_image_comap`）；
+* `mem_splitComap_sideA/B` ⇒ `ite_sep_splitComap` ⇒ `phyleticDist_splitComap_image`；
+* `isCircularDist_comap`：`IsCircularDist f d ⇒ IsCircularDist refl (d ∘ f.symm × f.symm)`。
+
+⇒ `circularDistanceRealization_gap_corrected_holds`：**无任何数学假设**。
+一般 `n` 的困难一半（权重由 `d` 唯一确定 + 非负性）已在 §10–§11 落地，本节不再需要
+Bandelt–Dress 的孤立指数。
+
+文献依据：Bryant–Moulton 2004 md **1058–1062 行** ——
+「A distance matrix is circular (also called Kalmanson) if it equals the phyletic distances
+for a circular collection of splits with positive weights」；
+本定理即此等价（权重非负、环序由 `f` 给出）的**一般 `X`** 形态。 -/
+
+/-- **split 沿等价拉回**：`sideA`/`sideB` 都取 `f.symm` 的像。
+不交 / 并全 / 非空三件事都由 `f.symm` 的双射性直接搬运。 -/
+noncomputable def splitComap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) : Split X where
+  parts := fun i => (s.parts i).image f.symm
+  pairwise_disjoint := by
+    intro i j hij
+    refine Finset.disjoint_left.mpr ?_
+    intro x hx hy
+    obtain ⟨a, ha, rfl⟩ := Finset.mem_image.mp hx
+    obtain ⟨b, hb, hb'⟩ := Finset.mem_image.mp hy
+    have hba : b = a := f.symm.injective hb'
+    rw [hba] at hb
+    exact Finset.disjoint_left.mp (s.pairwise_disjoint i j hij) ha hb
+  union_eq_univ := by
+    ext x
+    constructor
+    · intro _; exact Finset.mem_univ x
+    · intro _
+      have hx : f x ∈ Finset.univ.biUnion s.parts := by
+        rw [s.union_eq_univ]
+        exact Finset.mem_univ (f x)
+      obtain ⟨i, -, hi⟩ := Finset.mem_biUnion.mp hx
+      exact Finset.mem_biUnion.mpr
+        ⟨i, Finset.mem_univ i, Finset.mem_image.mpr ⟨f x, hi, f.symm_apply_apply x⟩⟩
+  nonempty := fun i => Finset.image_nonempty.mpr (s.nonempty i)
+
+theorem splitComap_sideA {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) :
+    (splitComap f s).sideA = s.sideA.image f.symm := rfl
+
+theorem splitComap_sideB {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) :
+    (splitComap f s).sideB = s.sideB.image f.symm := rfl
+
+theorem mem_splitComap_sideA {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) (x : X) :
+    x ∈ (splitComap f s).sideA ↔ f x ∈ s.sideA := by
+  rw [splitComap_sideA, Finset.mem_image]
+  constructor
+  · rintro ⟨a, ha, rfl⟩
+    simpa using ha
+  · intro h
+    exact ⟨f x, h, f.symm_apply_apply x⟩
+
+theorem mem_splitComap_sideB {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) (x : X) :
+    x ∈ (splitComap f s).sideB ↔ f x ∈ s.sideB := by
+  rw [splitComap_sideB, Finset.mem_image]
+  constructor
+  · rintro ⟨a, ha, rfl⟩
+    simpa using ha
+  · intro h
+    exact ⟨f x, h, f.symm_apply_apply x⟩
+
+theorem sideA_eq_of_splitComap_eq {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) {s t : Split (Fin n)} (h : splitComap f s = splitComap f t) :
+    s.sideA = t.sideA := by
+  ext a
+  have h' : f.symm a ∈ (splitComap f s).sideA ↔ f.symm a ∈ (splitComap f t).sideA := by
+    rw [h]
+  rw [mem_splitComap_sideA, mem_splitComap_sideA] at h'
+  simpa using h'
+
+/-- **`splitComap` 单射**（两侧相等 + `sideB = sideAᶜ`）。 -/
+theorem splitComap_injective {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) : Function.Injective (splitComap f) := by
+  intro s t h
+  have hA : s.sideA = t.sideA := sideA_eq_of_splitComap_eq f h
+  refine (eq_iff_sides s t).mpr ⟨hA, ?_⟩
+  rw [sideB_eq_compl, sideB_eq_compl, hA]
+
+/-- **分离指示沿 `f` 的搬运**（`phyleticDist` 的求和项逐项用）。 -/
+theorem ite_sep_splitComap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) (x y : X) :
+    (if (x ∈ (splitComap f s).sideA ∧ y ∈ (splitComap f s).sideB) ∨
+        (x ∈ (splitComap f s).sideB ∧ y ∈ (splitComap f s).sideA) then (1 : ℝ) else 0) =
+      (if (f x ∈ s.sideA ∧ f y ∈ s.sideB) ∨ (f x ∈ s.sideB ∧ f y ∈ s.sideA)
+        then (1 : ℝ) else 0) := by
+  by_cases h : (x ∈ (splitComap f s).sideA ∧ y ∈ (splitComap f s).sideB) ∨
+      (x ∈ (splitComap f s).sideB ∧ y ∈ (splitComap f s).sideA)
+  · have h' : (f x ∈ s.sideA ∧ f y ∈ s.sideB) ∨ (f x ∈ s.sideB ∧ f y ∈ s.sideA) := by
+      rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+      · exact Or.inl ⟨(mem_splitComap_sideA f s x).mp h1, (mem_splitComap_sideB f s y).mp h2⟩
+      · exact Or.inr ⟨(mem_splitComap_sideB f s x).mp h1, (mem_splitComap_sideA f s y).mp h2⟩
+    rw [ite_eq_left h, ite_eq_left h']
+  · have h' : ¬ ((f x ∈ s.sideA ∧ f y ∈ s.sideB) ∨ (f x ∈ s.sideB ∧ f y ∈ s.sideA)) := by
+      rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact h (Or.inl
+          ⟨(mem_splitComap_sideA f s x).mpr h1, (mem_splitComap_sideB f s y).mpr h2⟩)
+      · exact h (Or.inr
+          ⟨(mem_splitComap_sideB f s x).mpr h1, (mem_splitComap_sideA f s y).mpr h2⟩)
+    rw [ite_eq_right h, ite_eq_right h']
+
+/-- **`sepInd` 沿 `f` 的搬运**（`ite_sep_splitComap` 的 `sepInd` 版本）。 -/
+theorem sepInd_splitComap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (s : Split (Fin n)) (x y : X) :
+    sepInd (splitComap f s) x y = sepInd s (f x) (f y) := by
+  unfold sepInd
+  exact ite_sep_splitComap f s x y
+
+/-- **`phyleticDist` 沿 `f` 的搬运**：拉回族 `F.image (splitComap f)` 上、权重为
+`W`（满足 `W (splitComap f s) = w s`）时的距离 = 原族在 `(f x, f y)` 处的距离。 -/
+theorem phyleticDist_splitComap_image {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (F : Finset (Split (Fin n))) (w : Split (Fin n) → ℝ)
+    (W : Split X → ℝ) (hW : ∀ s ∈ F, W (splitComap f s) = w s) (x y : X) :
+    phyleticDist (F.image (splitComap f)) W x y = phyleticDist F w (f x) (f y) := by
+  unfold phyleticDist
+  rw [Finset.sum_image (fun a _ b _ hab => splitComap_injective f hab)]
+  refine Finset.sum_congr rfl fun s hs => ?_
+  rw [hW s hs, ite_sep_splitComap f s x y]
+
+/-- **权重沿 `f` 拉回**：`s` 有原像 `splitComap f s'` 时取 `w s'`，否则 `0`。 -/
+noncomputable def weightComap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (w : Split (Fin n) → ℝ) : Split X → ℝ :=
+  fun s => if h : ∃ s' : Split (Fin n), splitComap f s' = s then w h.choose else 0
+
+/-- **拉回权重在原像处取值正确**（唯一性来自 `splitComap_injective`）。 -/
+theorem weightComap_splitComap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (w : Split (Fin n) → ℝ) (s : Split (Fin n)) :
+    weightComap f w (splitComap f s) = w s := by
+  have h : ∃ s' : Split (Fin n), splitComap f s' = splitComap f s := ⟨s, rfl⟩
+  unfold weightComap
+  rw [dite_eq_left h]
+  exact congrArg w (splitComap_injective f (Classical.choose_spec h))
+
+/-- **环形弧沿 `f` 搬运**：`f.trans g` 下的 `cycArc` 正是 `f.symm` 的像。 -/
+theorem cycArc_trans {X : Type*} [Fintype X] [DecidableEq X] {n m : ℕ}
+    (f : X ≃ Fin n) (g : Fin n ≃ Fin m) (i j : Fin m) :
+    cycArc (f.trans g) i j = (cycArc g i j).image f.symm := by
+  ext x
+  simp only [cycArc, Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
+  constructor
+  · intro h
+    exact ⟨f x, h, f.symm_apply_apply x⟩
+  · rintro ⟨y, hy, rfl⟩
+    simpa using hy
+
+/-- **余集沿 `f` 搬运**（`f.symm` 是双射，故 `Aᶜ.image f.symm = (A.image f.symm)ᶜ`）。 -/
+theorem image_compl_eq {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (A : Finset (Fin n)) : (Aᶜ).image f.symm = (A.image f.symm)ᶜ := by
+  ext x
+  simp only [Finset.mem_compl, Finset.mem_image]
+  constructor
+  · rintro ⟨y, hy, rfl⟩ ⟨z, hz, hz'⟩
+    exact hy (f.symm.injective hz' ▸ hz)
+  · intro hx
+    exact ⟨f x, fun hfx => hx ⟨f x, hfx, f.symm_apply_apply x⟩, f.symm_apply_apply x⟩
+
+/-- **环形弧沿 `f` 搬运**（弧与其余集两种形态分别处理）。 -/
+theorem isCyclicArc_image {X : Type*} [Fintype X] [DecidableEq X] {n m : ℕ}
+    (f : X ≃ Fin n) (g : Fin n ≃ Fin m) {A : Finset (Fin n)}
+    (h : IsCyclicArc g A) : IsCyclicArc (f.trans g) (A.image f.symm) := by
+  obtain ⟨i, j, hij, hA | hA⟩ := h
+  · exact ⟨i, j, hij, Or.inl (by rw [hA, cycArc_trans])⟩
+  · exact ⟨i, j, hij, Or.inr (by rw [hA, image_compl_eq, cycArc_trans])⟩
+
+/-- **环形族沿 `f` 搬运**：环序取 `f.trans g`。 -/
+theorem circular_image_comap {X : Type*} [Fintype X] [DecidableEq X] {n : ℕ}
+    (f : X ≃ Fin n) (F : Finset (Split (Fin n)))
+    (h : Circular (↑F : Set (Split (Fin n)))) :
+    Circular (↑(F.image (splitComap f)) : Set (Split X)) := by
+  obtain ⟨m, g, hg⟩ := h
+  refine ⟨m, f.trans g, fun s hs => ?_⟩
+  obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp (by simpa using hs)
+  rcases hg s' (by simpa using hs') with h' | h'
+  · refine Or.inl ?_
+    rw [splitComap_sideA]
+    exact isCyclicArc_image f g h'
+  · refine Or.inr ?_
+    rw [splitComap_sideB]
+    exact isCyclicArc_image f g h'
+
+/-- **`IsCircularDist` 沿 `f` 拉回**（环序退化为 `Equiv.refl`）。 -/
+theorem isCircularDist_comap {X : Type*} {n : ℕ} (f : X ≃ Fin n) (d : X → X → ℝ)
+    (h : IsCircularDist f d) :
+    IsCircularDist (Equiv.refl (Fin n)) (fun a b : Fin n => d (f.symm a) (f.symm b)) := by
+  intro i j k l hij hjk hkl
+  simpa only [Equiv.refl_symm, Equiv.refl_apply] using h i j k l hij hjk hkl
+
+/-- ★★★ **缺口 1 修复形态收口**：`circularDistanceRealization_gap_corrected`
+（陈述逐字不变）**已证**，且**不带任何数学假设**。
+
+路线：假设 `f : X ≃ Fin n` 把 `d` 拉回成 `d' : Fin n → Fin n → ℝ`（`isCircularDist_comap`），
+用 `circularWeights_realization_gap_proved n d'` 取 `(F', w')`，再沿 `f` 把族与权重搬回：
+`F := F'.image (splitComap f)`、`w := weightComap f w'`。 -/
+theorem circularDistanceRealization_gap_corrected_holds :
+    circularDistanceRealization_gap_corrected := by
+  intro X _ _ d hdiag hsym hcirc
+  obtain ⟨n, f, hf⟩ := hcirc
+  set d' : Fin n → Fin n → ℝ := fun a b => d (f.symm a) (f.symm b) with hd'def
+  have hdiag' : ∀ a : Fin n, d' a a = 0 := fun a => hdiag (f.symm a)
+  have hsym' : ∀ a b : Fin n, d' a b = d' b a := fun a b => hsym (f.symm a) (f.symm b)
+  have hcirc' : IsCircularDist (Equiv.refl (Fin n)) d' := isCircularDist_comap f d hf
+  obtain ⟨F', w', hcircF, hnn, hident⟩ :=
+    circularWeights_realization_gap_proved n d' hdiag' hsym' hcirc'
+  refine ⟨F'.image (splitComap f), weightComap f w',
+    circular_image_comap f F' hcircF, ?_, ?_⟩
+  · intro s hs
+    obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+    rw [weightComap_splitComap]
+    exact hnn s' hs'
+  · intro x y hxy
+    rw [phyleticDist_splitComap_image f F' w' (weightComap f w')
+      (fun s _ => weightComap_splitComap f w' s) x y]
+    have h1 : d' (f x) (f y) = d x y := by
+      rw [hd'def]
+      simp
+    rw [← h1]
+    exact hident (f x) (f y) (fun h => hxy (f.injective h))
 
 end NeighborNet
