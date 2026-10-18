@@ -646,6 +646,64 @@ theorem disjoint_compl_of_subset {A B : Finset X} (h : A ⊆ B) : Disjoint A B�
   intro x hA hB
   exact (Finset.mem_compl.mp hB) (h hA)
 
+/-! ### 5.1 缺口 `TwoClanLawGap` 的一个**无条件**切片
+
+`TwoClanLawGap`（§6）要求「互斥的 `A`、`B` 同成 clan」的概率等于闭形式。本节证明：
+当 `B` 是**单点集**（`A = X \ {x}`，故 `a + b = n`）时，缺口的等式对**任意**概率空间、
+**任意**树映射都无条件成立 —— 左端是**必然事件**，右端是纯算术。
+这**不是**缺口的证明（见该 `def` docstring 的缺件清单），而是它在这一角落的**实例**。 -/
+
+/-- ★★ **缺口 `TwoClanLawGap` 在 `A = X \ {x}`、`B = {x}` 这一族的无条件实例**。
+
+结论里的 `if` **逐字**是缺口的 RHS（`if a + b = n then qnExhaustive a b else qn n a b`），
+且 `A`、`B` 满足缺口的全部前提（`Disjoint`、两侧非空、`a + b ≤ n`），故本定理是缺口的**实例**，
+不是新命题。
+
+* **左端恒 `= 1`**：单点集恒是 clade（★ `Cladogram.exists_isSplitOf_singleton`），
+  其补集由 ★ `isClade_compl` 也是 ⇒「`A`、`B` 都是 clan」是**必然事件**，只需 `∑ ω, prob ω = 1`。
+  **不需要** YHK 律；连缺口的 `0 ≤ prob` 前提也不需要（本定理因此比缺口的那一侧更强）。
+* **右端 `= 1`**：`(n − 1) + 1 = n` ⇒ 走 `qnExhaustive` 支，而
+  `qnExhaustive (n − 1) 1 = 1`（★ `qnExhaustive_one_right`，纯算术）。
+
+⚠️ **边界（不得夸大）**：只覆盖 `a + b = n` 且 `min(a, b) = 1` 的角落。一般 `a, b ≥ 2` 的
+穷尽情形要 `qnExhaustive a b = clanProb n a` 的**概率层**（Lemma 6.2 = 缺口 `YHKClanLawGap`）；
+`a + b < n` 要 Theorem 6.3(ii) 的三事件分解与 Theorem 4.5 的概率层。两者都需要一般 `n` 的
+YHK 律（缺件清单见 `TwoClanLawGap` 的 docstring）。**不得**用本定理冒充 `TwoClanLawGap` 已证。 -/
+theorem twoClan_exhaustive_singleton_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} [Fintype Ω]
+    (prob : Ω → ℝ) (hsum : ∑ ω, prob ω = 1)
+    (tree : Ω → Cladogram.{0, 0} (Fin n)) (x : Fin n) :
+    (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade (Finset.univ \ {x})
+        ∧ (tree ω).IsClade ({x} : Finset (Fin n))), prob ω)
+      = (if (Finset.univ \ {x} : Finset (Fin n)).card
+              + ({x} : Finset (Fin n)).card = n
+          then qnExhaustive (Finset.univ \ {x} : Finset (Fin n)).card
+            ({x} : Finset (Fin n)).card
+          else qn n (Finset.univ \ {x} : Finset (Fin n)).card
+            ({x} : Finset (Fin n)).card) := by
+  have : Nontrivial (Fin n) :=
+    ⟨⟨0, by omega⟩, ⟨1, by omega⟩, by
+      intro h
+      have h' := Fin.mk.inj h
+      omega⟩
+  have hx : ∀ ω, (tree ω).IsClade ({x} : Finset (Fin n)) := fun ω =>
+    Cladogram.exists_isSplitOf_singleton (tree ω) x
+  have hc : ∀ ω, (tree ω).IsClade (Finset.univ \ {x} : Finset (Fin n)) := by
+    intro ω
+    rw [← Finset.compl_eq_univ_sdiff]
+    exact (isClade_compl (tree ω) {x}).mpr (hx ω)
+  have hcardA : (Finset.univ \ {x} : Finset (Fin n)).card = n - 1 := by
+    rw [← Finset.compl_eq_univ_sdiff, Finset.card_compl, Finset.card_singleton,
+      Fintype.card_fin]
+  have hcardB : ({x} : Finset (Fin n)).card = 1 := Finset.card_singleton x
+  have hfilter : (Finset.univ.filter (fun ω => (tree ω).IsClade (Finset.univ \ {x})
+      ∧ (tree ω).IsClade ({x} : Finset (Fin n)))) = Finset.univ :=
+    Finset.filter_true_of_mem (fun ω _ => ⟨hc ω, hx ω⟩)
+  rw [hfilter, hcardA, hcardB]
+  split_ifs with h
+  · rw [qnExhaustive_one_right (by omega : 1 ≤ n - 1)]
+    simpa using hsum
+  · exact absurd h (by omega)
+
 /-! ## 6. 显式缺口（**未证**，也不被任何已证定理使用）
 
 以下三条 `def … : Prop` 是本文件**没有**做到的部分的可引用形式。
@@ -665,7 +723,41 @@ def YHKClanLawGap : Prop :=
         = clanProb n A.card
 
 /-- **缺口 G2（Theorem 6.3 的概率层：两个 clan）**。
-互斥的两组 `A`、`B` 同时成 clan 的概率 = `qnExhaustive`（`a + b = n`）或 `qn`（`a + b < n`）。 -/
+互斥的两组 `A`、`B` 同时成 clan 的概率 = `qnExhaustive`（`a + b = n`）或 `qn`（`a + b < n`）。
+
+★ **W25 泳道 b 判定（2026-10-19）：【收档 · 真缺口，非空转】** —— **命题一字未改** ✓。
+
+* **忠实性 ✓**：RHS 的 `if` 与文献 Theorem 6.3 的两支**逐字**对应 ——
+  `a + b = n` → Theorem 6.3(i) = `qnExhaustive`（`:1079-1103` ✓）；
+  `a + b < n` → Theorem 6.3(ii) = `qn`（`:1105-1110` ✓）。前提 `Disjoint A B` ＋ 两侧非空 ＋
+  `a + b ≤ n` 与文献「Now consider two disjoint subsets `A` and `B` of `X`」（`:1046-1050` ✓）一致；
+  本库 `IsClade` 恰是文献的 **clan**（`A|X−A` 是 split，`:985-988` ✓；见文件头 §2 的术语提示）。
+* **不是「空转缺口」✗（关键）**：`∃ Ω, prob, tree` 虽是自由槽，但 RHS 会取到 `7/225`
+  （文献 `q₆(2,2) = 7/225`，`:1051` ✓）这类**非 0/1** 值 ⇒ 退化分布（单点树 / 星形树 /
+  `prob` 取 0-1 原子）**拿不到**这些值 ⇒ 槽位**不能**被平凡填掉。这与泳道 a 的 `∃ Step` 型
+  **空转缺口**（`∃` 槽一退化则输入与算法一起消失）**不同类**。
+* **可证伪否 ✗**：`scripts/msc/zds2011_monophyly.py`（精确有理数、无随机数）在 `n ∈ {4,5,6}`
+  上把 `qn` 与 YHK 分布**穷举**逐条对齐（`:271-318` ✓），并在 `n ≤ 11` 上核
+  `q_n(1) = q_n(n−1) = 1` 等恒等式（`:337-341` ✓），末行 `总判定：ALL OK` ⇒ 命题为**真**，
+  **没有**形式化反例。故本缺口是「**真而缺器材**」，不是「假而待反例」。
+* **可证成否 ✗（本库内）**：缺**四件具名器材** ——
+  ① **`MSCTreeLaw n`**：一般 `n` 的 YHK/Kingman **无根拓扑律**（有限概率空间 ＋
+     `tree : Ω → Cladogram (Fin n)` ＋ 权重 = 文献 `:191-218` 的 YHK 生成过程 /
+     `:996-1006` 的无根版描述）。库内最近的是 `MSCKingman.root_topology_class_prob`（仅 `Fin 4`）、
+     `MSCProof.mscFreqFin4`、`Coalescent.mergePairsFinset`（一步合并均匀）—— 都**不是**一般 `n` 的律。
+  ② **去根载体桥 `rootedToCladogram`**：YHK 是**有根**过程，文献的 clan 是 `T − ρ` 的 split；
+     本库 `Cladogram` 无 root 概念且带 `no_degree_two`，文件头 §5 已登记
+     「有根树 clade 的库内对象 ❌ 不存在」。
+  ③ **Lemma 6.1 的概率层**（`:991-992` ✓；证明即 `:1038-1044` ✓ 的包含-排除
+     `qn(A) = pn(A) + pn(X−A) − pn(A, X−A)`）：本文件只有**树层**件（`isClade_compl`、
+     `isClade_and_compl_iff` 等），缺「`clade(T)` ↔ `clan(T−ρ)`」的概率桥。
+  ④ **(EP) 的群作用实现**（`:230-231` ✓）：leaf 重标号作用在 `Cladogram` 上 ＋ 律的等变性，
+     用来把 `qn` 的依赖化归到 `(a, b)`；以及 Theorem 4.5 情形 2/5（`Rn` / `rn`）的**概率层**
+     —— 正是 `a + b < n` 的三事件分解（`:1112-1145` ✓）所需的三个概率。
+* **已交付的无条件切片**：`twoClan_exhaustive_singleton_slice`（§5.1，本文件 `:672` ✓）——
+  `A = X \ {x}`、`B = {x}` 这一族上缺口等式**无条件成立**（左端恒 `1`、右端
+  `qnExhaustive (n−1) 1 = 1`）。它**不是** `TwoClanLawGap` 的证明，只是 `min(a,b) = 1`
+  且穷尽那一角落的实例。 -/
 def TwoClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
