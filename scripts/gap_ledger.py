@@ -1,0 +1,332 @@
+#!/usr/bin/env python3
+# ============================================================================
+# gap_ledger.py —— 口径 B：缺口「六桶」收口台账（W25-B 重写，取代旧的机械四桶）
+#
+#  ★ 为什么要重写（W25 派单 B 的四条理由，逐条对应）：
+#   (1) 旧判据只认 `_holds` / `_proof` ⇒ **10 条 `_proved` 收口被误记成 `[开放]`**；
+#   (2) 旧判据不检查收口定理是否吃假设 ⇒ 条件收口混进「已收口」，也无法单列；
+#   (3) 旧台账没有「已证伪」桶 ⇒ 12 条**已有形式化反例**的缺口一直挂在「开放 50」里；
+#   (4) `_false` / `_refuted` / `not_*` 三种反例命名要统一识别。
+#
+#  ★ 判定规则（写死在此，不再漂移）：
+#   一条「缺口」= 名字里含 gap/Gap **且** 用 `def` 落盘的声明（口径 A）。
+#   对每个缺口 N，按下表**依次**判，命中即停：
+#
+#   | 顺序 | 桶 | 判据 |
+#   | - | - | - |
+#   | 1 | `[追溯]` | 名字以 `_legacy` 结尾（已证伪旧形态的追溯登记，W22 起） |
+#   | 2 | `[判定收档]` | 在 `ARCHIVED_JUDGED` 白名单（老师明文认可"任务完成"，见下） |
+#   | 3 | `[已证伪]` | 库内存在 `not_N` / `N_refuted` / `N_false*` / `N_not_universal` |
+#   | 4 | `[条件收口]` | 收口定理：(a) 比 `def` **多吃显式假设**，或 (b) 把 `def` 的某参数**特化** |
+#   | 5 | `[已收口]` | 存在**无条件、无特化**的收口定理 |
+#   | 6 | `[真开放]` | 其余 |
+#
+#   ★ 收口定理的命名后缀（**按此顺序匹配，取第一条命中**）：
+#     `_holds` → `_proved` → `_true` → `_of_isBinary` → `_proof`
+#     （`_of_isBinary` 是为谓词式缺口准备的**无条件**变体，如
+#      `pauplinFormula_gap_of_isBinary (T) : pauplinFormula_gap T`。）
+#     ⚠️ 同族里还有**带假设**的变体（`pauplinFormula_gap_of_correct_shape (T) (h : …)`），
+#     它们**不算收口** —— 脚本按下面的"假设判据"机械区分，不靠名字。
+#
+#   ★ 假设判据（老师 W25 B′-1 的原文口径）：
+#     收口定理的**显式** `(…)` 绑定中，凡**名字不在 `def` 自己的绑定里**的，即为**假设**；
+#     `{…}` 隐式绑定与 `[…]` 类型类绑定**一律不算假设**；量化变量 / 数据参数 / 类型类 / 数据约束不算。
+#     ★ `section` 里 `variable (… )` 声明的名字（如 `ind`）**算 `def` 自己的绑定**
+#       （Lean 会把它自动加进 `def` 的隐式参数表）。
+#     例：`variance_empFreq_gap_proved (ind) (m) (μ) [IsProbabilityMeasure μ] (S) (hS : S.card = 4) (q)`
+#     里 `(hS : S.card = 4)` 与 `(ind)` **都不算假设** —— 前者是 `def` 的参数，后者是 section 变量。
+#     ★ 若本脚本判错，**以人工核对为准**（老师：★D 我的验证优先）；脚本对每条都会打印完整签名供核。
+#
+#   ★ 「特化判据」：收口定理的类型把 `def` 应用到**非变量实参**（如 `{p | Factorizable p}`、字面量）
+#     ⇒ 只覆盖了一部分 `def` 的参数取值 ⇒ 记 `[条件收口]` 并写明「特化」。
+#     （现有实例：`edgeInvariants_suffice_gap_correct_shape_holds` 把 `Model` 固定成因子分解点集。）
+#
+#   ★ 「已证伪」的三种**形态**（B′-2 要求写精确，不许笼统）：
+#     `闭命题` ／ `全称闭包为假` ／ `某实例` ／ `谓词式（逐点为假）` ／ `谓词式（反例附加数据条件）`。
+#     其中 12 条的形态经**人工逐条核对**（W25-B，见 FORM_OVERRIDE），脚本只做兜底推断。
+#
+#  ★ 诚实声明：本脚本只做**机械扫描 ＋ 一张人工核对表**，不判忠实性、不判卡点；
+#    忠实性以各 `def` 的 docstring 与文献为准（口径 B 不管这件事）。
+#
+#  用法：cd lean4phylo && python3 scripts/gap_ledger.py
+# ============================================================================
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PHYLO = os.path.join(ROOT, "Phylo")
+
+# ===== 判定收档白名单（W24 新增；老师 2026-10-17 认可「任务完成」）=====
+# 加入条件（三条全须满足）：
+#   (a) 没有可证内容 —— 谓词式 或 已被判不忠实；
+#   (b) 库内已有反空真见证；
+#   (c) 老师明文认可「判定完成 / 任务完成」（不是 dsh 自己说了算）。
+# 现值：rStarConsensus_gap —— (a) 谓词式 ＋ W19 判不忠实；(b) rStarConsensus_gap_strictSplits；
+#       (c) W24 派单「A-10 任务完成，代码归档」。
+ARCHIVED_JUDGED = ["rStarConsensus_gap"]
+
+# ===== 已证伪条目的形态（W25-B 人工逐条核对 2026-10-19；脚本推断只作兜底）=====
+FORM_OVERRIDE = {
+    "nniDistance_exact_gap": "某实例（`4` 叶树、`∅` 分裂集、`{exS₀}`）＋ 另有 `_not_universal`",
+    "circularDistanceRealization_gap": "某实例（`Fin 3`，反例族 `_false_at_fin3`）",
+    "atteson_reduction_gap": "某实例（`X := Fin 4`）",
+    "arrowTreeQuasiOrder_gap": "闭命题（`¬ gap.{u}`）",
+    "greedyConsensus_gap": "闭命题（`¬ gap`）",
+    "pauplinEdgeCoeff_gap": "谓词式（反例附加数据条件：binary `T` ＋ 边 `e ∉ graph`）",
+    "greedy_gap": "谓词式（逐点为假：`∀ T, ¬ greedy_gap T`）",
+    "canonicalSplitDecomposition_gap": "闭命题（`¬ gap.{0}`）",
+    "edgeInvariants_suffice_gap": "全称闭包为假（`¬ ∀ U Model, …`）",
+    "generalModelIdentifiability_gap": "全称闭包为假（`¬ ∀ Θ …,`）",
+    "rfPoissonAsymptotic_gap": "闭命题（`¬ gap`）",
+    "maxQuartetDistance_gap": "闭命题（`¬ gap`）",
+}
+
+# ===== 收口定理「只有特化、没有全称」的条目（人工核对；W25-B）=====
+# 现有唯一实例：`edgeInvariants_suffice_gap_correct_shape_holds` 把 `Model` 固定成
+# `{p | Factorizable p}` —— 只覆盖「正确取法」这一族 `Model`，一般 `Model` **未覆盖**
+# （docstring 自己写明：「修复形态在「`Model` = 因子分解点集」这一正确取法下是真的」）。
+# ⇒ 记 `[条件收口]`，欠的是「一般 `Model` 全称版」（这不是 `(h : P)`，是**特化**，故单列说明）。
+SPEC_OVERRIDE = {
+    "edgeInvariants_suffice_gap_correct_shape":
+        "特化：`Model` 固定为 `{p | Factorizable p}`（一般 `Model` 未覆盖）",
+}
+
+DECL_RE = re.compile(r"^(?:@\[[^\]]*\]\s*)?(?:protected\s+|private\s+|noncomputable\s+)*"
+                     r"(theorem|lemma|def|abbrev)\s+([A-Za-z0-9_'.’]+)")
+VAR_RE = re.compile(r"^variable\s+\{?(.*)$")
+GAP_RE = re.compile(r"(gap|Gap)")
+
+
+def read_lines(path):
+    with open(path, "rb") as f:
+        return f.read().decode("utf-8").replace("\r\n", "\n").split("\n")
+
+
+def cut_assign(text):
+    """Cut at the first `:=` at paren/bracket depth 0."""
+    depth = 0
+    i = 0
+    while i < len(text) - 1:
+        c = text[i]
+        if c in "({[⦃":
+            depth += 1
+        elif c in ")}]⦄":
+            depth = max(0, depth - 1)
+        elif depth == 0 and text[i:i + 2] == ":=":
+            return text[:i]
+        i += 1
+    return text
+
+
+def sig_of(lines, i):
+    """i = 0-based index of the decl line; signature up to (excl.) a top-level `:=`."""
+    buf = []
+    for j in range(i, min(i + 60, len(lines))):
+        buf.append(lines[j])
+        joined = " ".join(buf)
+        if cut_assign(joined) != joined:
+            return cut_assign(joined)
+    return cut_assign(" ".join(buf))
+
+
+def parse_binders(sig, name):
+    """Top-level binder groups after `name`; returns (binders, type_text)."""
+    k = sig.find(name)
+    if k < 0:
+        return [], ""
+    s = sig[k + len(name):]
+    out = []
+    i, n = 0, len(s)
+    pairs = {"(": ")", "{": "}", "[": "]", "⦃": "⦄"}
+    stop = None
+    while i < n:
+        c = s[i]
+        if c == ":":
+            stop = i
+            break
+        if c in pairs:
+            close = pairs[c]
+            depth, j = 0, i
+            while j < n:
+                if s[j] == c:
+                    depth += 1
+                elif s[j] == close:
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            text = s[i:j + 1]
+            kind = {"{": "implicit", "⦃": "implicit", "[": "inst"}.get(c, "explicit")
+            inner = s[i + 1:j]
+            names = []
+            if ":" in inner:
+                left = inner.split(":", 1)[0]
+                names = [t for t in re.split(r"[\s(){}]+", left) if t]
+            out.append((kind, names, text))
+            i = j + 1
+        else:
+            i += 1
+    type_text = s[stop + 1:] if stop is not None else ""
+    return out, type_text
+
+
+def binder_names(binders):
+    ns = set()
+    for kind, names, _ in binders:
+        for t in names:
+            ns.add(t)
+    return ns
+
+
+def section_var_names(lines):
+    """Names declared by `variable (…)` / `variable {…}` in this file (per-file, coarse but sound)."""
+    names = set()
+    for ln in lines:
+        m = re.match(r"^\s*variable\b(.*)$", ln)
+        if not m:
+            continue
+        body = m.group(1)
+        for grp in re.findall(r"[\(\{⦃]([^)\}⦄]*)[\)\}⦄]", body):
+            if ":" in grp:
+                left = grp.split(":", 1)[0]
+                for t in re.split(r"[\s]+", left):
+                    if re.match(r"^[A-Za-z_][A-Za-z0-9_']*$", t):
+                        names.add(t)
+    return names
+
+
+def scan_files():
+    files = []
+    for dirpath, _, fnames in os.walk(PHYLO):
+        for fn in sorted(fnames):
+            if fn.endswith(".lean"):
+                files.append(os.path.join(dirpath, fn))
+    files.sort()
+    decls = []
+    secvars = {}
+    for p in files:
+        lines = read_lines(p)
+        rel = os.path.relpath(p, ROOT).replace(os.sep, "/")
+        secvars[rel] = section_var_names(lines)
+        for i, ln in enumerate(lines):
+            m = DECL_RE.match(ln)
+            if not m:
+                continue
+            decls.append((rel, i + 1, m.group(1), m.group(2), sig_of(lines, i)))
+    return decls, secvars
+
+
+def main():
+    decls, secvars = scan_files()
+    gaps = [d for d in decls if d[2] == "def" and GAP_RE.search(d[3])]
+    gaps.sort(key=lambda d: (d[0], d[1]))
+
+    by_short = {}
+    for d in decls:
+        if d[2] in ("theorem", "lemma"):
+            by_short.setdefault(d[3].split(".")[-1], []).append(d)
+
+    def find(*names):
+        for nm in names:
+            hit = by_short.get(nm)
+            if hit:
+                return sorted(hit, key=lambda d: (d[0], d[1]))[0]
+        return None
+
+    CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof"]
+    buckets = {k: [] for k in ("refuted", "closed", "cond", "trace", "judged", "open")}
+
+    for (rel, ln, kind, name, sig) in gaps:
+        if name.endswith("_legacy"):
+            buckets["trace"].append((rel, ln, name, "名字以 `_legacy` 结尾 ⇒ 已证伪旧形态的追溯登记", None))
+            continue
+        if name in ARCHIVED_JUDGED:
+            buckets["judged"].append((rel, ln, name, "在白名单 ARCHIVED_JUDGED 内（老师认可「任务完成」）", None))
+            continue
+
+        # ---- 3) 已证伪 ----
+        ref = find("not_" + name, name + "_refuted", name + "_false", name + "_not_universal")
+        if ref is None:
+            cands = [d for k, v in by_short.items() for d in v if k.startswith(name + "_false")]
+            if cands:
+                ref = sorted(cands, key=lambda d: (d[0], d[1]))[0]
+        if ref is not None:
+            form = FORM_OVERRIDE.get(name) or "形态待人工核 ⚠"
+            buckets["refuted"].append((rel, ln, name, form, ref))
+            continue
+
+        # ---- 4/5) 收口 ----
+        cl = None
+        for suf in CLOSURE_SUFFIXES:
+            cl = find(name + suf)
+            if cl is not None:
+                break
+        if cl is None:
+            buckets["open"].append((rel, ln, name, "", None))
+            continue
+
+        crel, cln, ckind, cname, csig = cl
+        dbind, _ = parse_binders(sig, name)
+        cbind, ctype = parse_binders(csig, cname)
+        have = binder_names(dbind) | secvars.get(rel, set())
+        extra = [t for (k, ns, txt) in cbind if k == "explicit" and any(n not in have for n in ns)
+                 for t in [txt]]
+        # 特化判据：类型里把 def 应用到**集合构造**（`{p | …}`）这类非变量实参。
+        # （`(X := X)` / `.{0}` / 把 def 应用回自己的参数，都**不算**特化 —— 那些是恒等实例化。）
+        spec = ""
+        if re.search(r"\{[^{}]*\|", ctype):
+            spec = "集合构造实参（如 `{p | Factorizable p}`）"
+        if name in SPEC_OVERRIDE:
+            spec = SPEC_OVERRIDE[name]
+        if extra or spec:
+            note = []
+            if extra:
+                note.append("多吃的假设：" + " ".join(extra))
+            if spec:
+                note.append("特化（%s）：`def` 的参数没有被全称覆盖" % spec)
+            buckets["cond"].append((rel, ln, name, "；".join(note), cl))
+        else:
+            buckets["closed"].append((rel, ln, name, "", cl))
+
+    total = sum(len(v) for v in buckets.values())
+    names = [d[3] for d in gaps]
+    uniq = len(set(names))
+    dup = sorted({n for n in names if names.count(n) > 1})
+
+    def show(tag, key):
+        print("  【%s】%d 条" % (tag, len(buckets[key])))
+        for (rel, ln, name, note, d) in buckets[key]:
+            print("    %-52s %s:%d" % (name, rel, ln))
+            if d is not None:
+                drel, dln, dkind, dname, dsig = d
+                print("      ↳ %s  %s:%d" % (dname, drel, dln))
+                t = dsig.strip()
+                print("        %s" % (t if len(t) <= 200 else t[:197] + "…"))
+            if note:
+                print("        · %s" % note)
+        print("")
+
+    print("=== 口径 B：六桶（已证伪 / 已收口 / 条件收口 / 追溯 / 判定收档 / 真开放）===")
+    show("已证伪", "refuted")
+    show("已收口", "closed")
+    show("条件收口", "cond")
+    show("追溯", "trace")
+    show("判定收档", "judged")
+    show("真开放", "open")
+
+    print("  口径 B 合计 = %d 行（%d 个不同名）" % (total, uniq))
+    if dup:
+        print("  ⚠️ 同名重复定义（**不去重**，故行数 > 名字数）：%s" % ", ".join(dup))
+    print("  口径 B：真开放 = %d · 已收口 = %d · 条件收口 = %d · 已证伪 = %d · 追溯 = %d · 判定收档 = %d"
+          % (len(buckets["open"]), len(buckets["closed"]), len(buckets["cond"]),
+             len(buckets["refuted"]), len(buckets["trace"]), len(buckets["judged"])))
+    print("  ✓ 六桶加总 = %d = 口径 A 条数 %d" % (total, len(gaps)))
+    if total != len(gaps):
+        print("  ✗ 加总不守恒！", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
