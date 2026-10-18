@@ -1496,7 +1496,12 @@ theorem sideA_subset_cluster_meets (S u : Split X) (ρ : X)
 
 ⇒ 配合**已入库**的 (F1)（`Split.sideA_subset_cluster_meets` ✓：`u*` 吞掉 `S.sideA` 时必咬到 `S.sideB`）
 即可**一次**选定 `b, b'`（⚠️ **固定 `ρ`** 不换 ✓）⇒ `c_W = 0` 的四元组 ⇒ **(★′)** `noWRealizer_exists_gap` ✓
-⇒ 已入库 `notIsDSplit_of_splitMetricSum_gap_proof` ⇒ **(B2)** ✓。 -/
+⇒ 已入库 `notIsDSplit_of_splitMetricSum_gap_proof` ⇒ **(B2)** ✓。
+
+★ **W25-a 已形式化**（此前只有下面的散文反例）：§11.7.1 的
+`minimalCluster_exists_gap_false : ¬ minimalCluster_exists_gap.{0}`（全称闭包为假）
+＋ 实例形态 `mce_conclusion_false`（三条前提与见证全部成立，结论本身为假）✓。
+本 `def` 原文**逐字未改**，此处仅加登记指针。 -/
 def minimalCluster_exists_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (S : Split α) (ρ : α),
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) →
@@ -1522,7 +1527,158 @@ def minimalCluster_exists_gap : Prop :=
 `a, a' ∈ S.sideA` 为**被不同 `u` 咬到**的两点、并用库内 `laminar_of_compatible_clusters`
 保证的"嵌套或相离"做二分：若存在同时咬 `S.sideA` 的**嵌套对**则取内层，否则（全相离）直接取
 `a = a'` 于某一 `u.cluster ρ`、`b, b' ∈ S.sideB` 用 (F1) `sideA_subset_cluster_meets` 的补集形式 ✓ ——
-⚠️ 此路线**尚未验证**，落地前必须先按 ★D 用见证校验 ✗。 -/
+⚠️ 此路线**尚未验证**，落地前必须先按 ★D 用见证校验 ✗。
+
+★ **W25-a 已把本节散文反例形式化**：见 §11.7.1 的 `minimalCluster_exists_gap_false`
+（`¬ minimalCluster_exists_gap.{0}`）与实例形态 `mce_conclusion_false` ✓ —— 零假设、零 `sorry`。 -/
+
+/-! ### 11.7.1 ★D：`minimalCluster_exists_gap` 的**形式化反例**（W25-a 落地）
+
+§11.7 的论证此前**只有散文**（故台账把该缺口记「真开放」而非「已证伪」）。本节把它做成定理
+`minimalCluster_exists_gap_false : ¬ minimalCluster_exists_gap.{0}`（**全称闭包为假**），
+`def` 原文**逐字未改**。
+
+装置（`α = Fin 5`、`ρ = 4`）：
+* `mceU1 = {0,1} | {2,3,4}`、`mceU2 = {2,3} | {0,1,4}` —— 两条 split **相离**（故两两相容 ✓）；
+* `mceS = {0,2} | {1,3,4}` —— 与 `mceU1`/`mceU2` **及其对换**都不同，且 `ρ = 4 ∈ mceS.sideB` ✓；
+* `mceU1.cluster 4 = {0,1}`、`mceU2.cluster 4 = {2,3}`（都避开 `ρ`），
+  两者都咬 `mceS.sideA = {0,2}`（分别咬到 `0` 与 `2`）却**互不包含** ⇒ 结论中的 `u₀` 不存在 ✗。
+
+⇒ 命题为假；极小性路线（(★″) ⇒ (★′)）**不能再依赖"取唯一极小 cluster"** ✗。 -/
+
+/-- 反例的第一个 split：`{0,1} | {2,3,4}`（`α = Fin 5`）。 -/
+def mceU1 : Split (Fin 5) := ofSideA {0, 1} (by decide) (by decide)
+
+/-- 反例的第二个 split：`{2,3} | {0,1,4}`（与 `mceU1` **相离**）。 -/
+def mceU2 : Split (Fin 5) := ofSideA {2, 3} (by decide) (by decide)
+
+/-- 反例的目标 split：`{0,2} | {1,3,4}`（`ρ = 4 ∈ sideB`）。 -/
+def mceS : Split (Fin 5) := ofSideA {0, 2} (by decide) (by decide)
+
+/-- `mceS.sideA = {0,2}`。 -/
+theorem mceS_sideA : mceS.sideA = ({0, 2} : Finset (Fin 5)) := by
+  simp only [mceS, ofSideA_sideA]
+
+/-- `ρ = 4 ∈ mceS.sideB`。 -/
+theorem mceS_mem_sideB : (4 : Fin 5) ∈ mceS.sideB := by
+  simp only [mceS, ofSideA_sideB, Finset.mem_compl]
+  decide
+
+/-- `mceU1.cluster 4 = {0,1}`（`4 ∉ mceU1.sideA`）。 -/
+theorem mceU1_cluster : mceU1.cluster (4 : Fin 5) = ({0, 1} : Finset (Fin 5)) := by
+  unfold Split.cluster
+  split_ifs with h4
+  · exact absurd h4 (by simp only [mceU1, ofSideA_sideA]; decide)
+  · simp only [mceU1, ofSideA_sideA]
+
+/-- `mceU2.cluster 4 = {2,3}`（`4 ∉ mceU2.sideA`）。 -/
+theorem mceU2_cluster : mceU2.cluster (4 : Fin 5) = ({2, 3} : Finset (Fin 5)) := by
+  unfold Split.cluster
+  split_ifs with h4
+  · exact absurd h4 (by simp only [mceU2, ofSideA_sideA]; decide)
+  · simp only [mceU2, ofSideA_sideA]
+
+/-- 反例族 `F = {mceU1, mceU2}` **两两相容**（两者相离，自相容由 `disjoint_sides` 给出）。 -/
+theorem mce_compatible : ∀ s ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))),
+    ∀ t ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))), s.Compatible t := by
+  intro s hs t ht
+  simp only [Finset.mem_insert, Finset.mem_singleton] at hs ht
+  rcases hs with rfl | rfl <;> rcases ht with rfl | rfl
+  · exact Or.inr (Or.inl (disjoint_sides mceU1))
+  · refine Or.inl ?_
+    simp only [mceU1, mceU2, ofSideA_sideA]
+    decide
+  · refine Or.inl ?_
+    simp only [mceU1, mceU2, ofSideA_sideA]
+    decide
+  · exact Or.inr (Or.inl (disjoint_sides mceU2))
+
+/-- `mceS` **既不是** `mceU1`/`mceU2`，**也不是**它们的对换（`(★″)` 的第二条假设）。 -/
+theorem mce_ne : ∀ t ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))), t ≠ mceS ∧ t.swap ≠ mceS := by
+  intro t ht
+  simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+  rcases ht with rfl | rfl
+  · refine ⟨fun heq => ?_, fun heq => ?_⟩
+    · have h' := congrArg (fun s : Split (Fin 5) => s.sideA) heq
+      simp only [mceU1, mceS, ofSideA_sideA] at h'
+      have h1 : (1 : Fin 5) ∈ ({0, 1} : Finset (Fin 5)) := by decide
+      rw [h'] at h1
+      exact absurd h1 (by decide)
+    · have h' := congrArg (fun s : Split (Fin 5) => s.sideA) heq
+      simp only [mceU1, mceS, swap_sideA, ofSideA_sideB, ofSideA_sideA] at h'
+      have h4 : (4 : Fin 5) ∈ ({0, 1}ᶜ : Finset (Fin 5)) := by decide
+      rw [h'] at h4
+      exact absurd h4 (by decide)
+  · refine ⟨fun heq => ?_, fun heq => ?_⟩
+    · have h' := congrArg (fun s : Split (Fin 5) => s.sideA) heq
+      simp only [mceU2, mceS, ofSideA_sideA] at h'
+      have h3 : (3 : Fin 5) ∈ ({2, 3} : Finset (Fin 5)) := by decide
+      rw [h'] at h3
+      exact absurd h3 (by decide)
+    · have h' := congrArg (fun s : Split (Fin 5) => s.sideA) heq
+      simp only [mceU2, mceS, swap_sideA, ofSideA_sideB, ofSideA_sideA] at h'
+      have h4 : (4 : Fin 5) ∈ ({2, 3}ᶜ : Finset (Fin 5)) := by decide
+      rw [h'] at h4
+      exact absurd h4 (by decide)
+
+/-- 假设里的存在项：`mceU1 ∈ F` 且 `mceU1.cluster 4` **咬到** `mceS.sideA`。 -/
+theorem mce_witness : ∃ u ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))),
+    (u.cluster (4 : Fin 5) ∩ mceS.sideA).Nonempty := by
+  refine ⟨mceU1, by simp, ?_⟩
+  rw [mceU1_cluster, mceS_sideA]
+  exact ⟨0, Finset.mem_inter.mpr ⟨by decide, by decide⟩⟩
+
+/-- ★D **核心矛盾**：`mceU1.cluster 4 = {0,1}` 与 `mceU2.cluster 4 = {2,3}` **互不包含**。 -/
+theorem not_subset_mce_clusters :
+    ¬ (mceU1.cluster (4 : Fin 5) ⊆ mceU2.cluster (4 : Fin 5)) ∧
+      ¬ (mceU2.cluster (4 : Fin 5) ⊆ mceU1.cluster (4 : Fin 5)) := by
+  constructor
+  · intro hsub
+    rw [mceU1_cluster, mceU2_cluster] at hsub
+    have h0 : (0 : Fin 5) ∈ ({0, 1} : Finset (Fin 5)) := by decide
+    exact absurd (hsub h0) (by decide)
+  · intro hsub
+    rw [mceU1_cluster, mceU2_cluster] at hsub
+    have h2 : (2 : Fin 5) ∈ ({2, 3} : Finset (Fin 5)) := by decide
+    exact absurd (hsub h2) (by decide)
+
+/-- **某实例形态**：`mceU2`（或 `mceU1`）的 cluster 都咬 `mceS.sideA`。 -/
+theorem mce_meet (u : Split (Fin 5)) (hu : u ∈ ({mceU1, mceU2} : Finset (Split (Fin 5)))) :
+    (u.cluster (4 : Fin 5) ∩ mceS.sideA).Nonempty := by
+  simp only [Finset.mem_insert, Finset.mem_singleton] at hu
+  rcases hu with rfl | rfl
+  · exact ⟨0, by
+      rw [mceU1_cluster, mceS_sideA]
+      exact Finset.mem_inter.mpr ⟨by decide, by decide⟩⟩
+  · exact ⟨2, by
+      rw [mceU2_cluster, mceS_sideA]
+      exact Finset.mem_inter.mpr ⟨by decide, by decide⟩⟩
+
+/-- ★D **实例形态（谓词为假）**：在 `F = {mceU1, mceU2}`、`S = mceS`、`ρ = 4` 处，
+`(★″)` 的**结论本身**为假 —— 而三条前提（`mce_compatible`、`mce_ne`、`mceS_mem_sideB`）
+与见证 `mce_witness` **全部成立** ✓ ⇒ 反例不是「前提不可满足」的空真 ✗。 -/
+theorem mce_conclusion_false :
+    ¬ ∃ u₀ ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))),
+        (u₀.cluster (4 : Fin 5) ∩ mceS.sideA).Nonempty ∧
+          ∀ u ∈ ({mceU1, mceU2} : Finset (Split (Fin 5))),
+            (u.cluster (4 : Fin 5) ∩ mceS.sideA).Nonempty →
+              u₀.cluster (4 : Fin 5) ⊆ u.cluster (4 : Fin 5) := by
+  rintro ⟨u₀, hu₀, -, hmin⟩
+  have hsub1 := not_subset_mce_clusters.1
+  have hsub2 := not_subset_mce_clusters.2
+  simp only [Finset.mem_insert, Finset.mem_singleton] at hu₀
+  rcases hu₀ with rfl | rfl
+  · exact hsub1 (hmin mceU2 (by simp) (mce_meet mceU2 (by simp)))
+  · exact hsub2 (hmin mceU1 (by simp) (mce_meet mceU1 (by simp)))
+
+/-- ★D **`minimalCluster_exists_gap` 是假命题**（**全称闭包为假**：`α = Fin 5`、
+`F = {mceU1, mceU2}`、`S = mceS`、`ρ = 4` 处结论不成立）。
+
+`def` 原文**逐字未改**；§11.7 的散文反例首次形式化（W25-a），
+矛盾落在实例形态的 `mce_conclusion_false` 上。 -/
+theorem minimalCluster_exists_gap_false : ¬ minimalCluster_exists_gap.{0} :=
+  fun h => mce_conclusion_false
+    (h ({mceU1, mceU2}) mceS 4 mce_compatible mce_ne mceS_mem_sideB mce_witness)
 
 /-! ### 11.8 (iii)：`c_W = 0` 的**充分条件**（逐 `u`、不依赖极小性/统一性 ✓） -/
 
