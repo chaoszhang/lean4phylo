@@ -87,6 +87,11 @@ import Phylo.Stat.Parsimony
     `numChanges_assign`（`numChanges σ (assign σ) = ∑_v minExtra (childSets v)`），
     再合上桥 2（`fitchCostGen_eq_sum_minExtra`）。
   ⇒ **一般分支数（polytomy）也成立**，不需要二叉假设。
+* ★★★ **4 元集桥 `fitchCostGen_quartet`**（本批补齐上一轮的缺口）：在 7 顶点树
+  `quartetTree`（`((x0,x1),(x2,x3))`）上，`fitchCostGen σ = Pattern.fitchCost 0 σ` 对一切
+  `σ : Fin 4 → Bool` 成立 ⇒ `QuartetBridgeGap_holds : QuartetBridgeGap`。
+  这把本文件的一般 Fitch 递推与 `Phylo/Stat/Parsimony.lean:61` 的 4 元集 `decide` 枚举版
+  **接上了**（两套独立定义的数值一致性）。
 
 ## ⚠️ 树层的一处更正（多分叉）：`F v s = c_v + [s ∉ S_v]` **不成立**
 
@@ -104,33 +109,22 @@ import Phylo.Stat.Parsimony
 （结点层那条 `minExtra_add` 是**单个集合 / 单个孩子**的版本，本身仍然为真；
 假的是把它**按孩子求和**之后的形态 ✗。）
 
-## 🟡 尚未做（**不得含糊**）
+## ✅ 本批补齐的桥 + 🟡 仍未做（**不得含糊**）
 
-* **与库内 4 元集版的桥 `fitchCostGen_quartet_eq_fitchCost` 尚未证**（显式缺口见文件末
-  `QuartetBridgeGap`）。目标：在 4 叶二叉树 `12|34` 上，`fitchCostGen σ = Pattern.fitchCost 0 σ`
-  （`Phylo/Stat/Parsimony.lean:61`，`decide` 枚举 48 情形的那个）。
-  **卡点（精确）**：
-  1. `fitchSet` / `fitchCost` 是 `WellFounded.fix` 定义的**不可计算**项 ⇒ `decide` 不能直接算；
-     必须先证并注册足够的展开引理（已有 `fitchCost_eq_leaf` / `fitchCost_eq_internal'` /
-     `minExtra_pair` / `best_pair`），这一层**已经想清楚**（本轮还另外试出了
-     `finset_min'_congr` / `minExtra_congr` / `best_congr` / `fitchSet_nonempty` /
-     `extra_childSets_pair` / `minExtra_childSets_pair` / `fitchSet_eq_pair` / `fitchCost_eq_pair`
-     这一整套「恰有两个孩子」的引理，均已证明通过——只是没有落进本文件，避免留下未用的声明）；
-  2. **真正的卡点**：具体实例 `V := Fin 7` 时，`quartetTree.V` 只在 `.default` 透明度下才与
-     `Fin 7` 相等；而 `rw` 用 `.implicit` 透明度匹配、`open Classical` 又使 `decide` 的类型类搜索
-     优先取到 `Classical.propDecidable`（阶跃到 `choice` 而卡住）、去掉它之后
-     `DecidableEq (Finset quartetTree.V)` 又推不出来。于是「用 `decide` 枚举 `Fin 7` 上的
-     `children v = {u1,u2}`」这一步反复失败（试过：`decide`、`attribute [-instance]
-     Classical.propDecidable in`、`ext + fin_cases + decide`）。**不是数学问题，是具体实例的
-     defeq/实例搜索工程问题。**
-  **建议的下一条路**（优先级从高到低）：
-  * 把桥写成**抽象形态**：假设 `T.children r = {i₁, i₂}`、`T.children i₁ = {a,b}`、
-    `T.children i₂ = {c,d}`、四个叶的 `fitchSet` 与其代价，然后用上面那套「恰有两个孩子」的引理
-    + `minExtra_pair` / `best_pair` + `Bool` 上的 `pair = Pattern.fitchSet` 收尾 —— **完全不需要
-    构造具体实例、也不需要 `decide` 枚举 `Fin 7`**（风险最低）；
-  * 或给具体实例补一个**可约的顶点类型别名**（`abbrev QuartetV := Fin 7`）+ 显式
-    `DecidableEq` 实例，再走 `decide`。
-  ⇒ 未证者不标 ★（纪律 12），且**没有留 `sorry`**（桥只以 `QuartetBridgeGap : Prop` 的形式存在）。
+* ✅ **与库内 4 元集版的桥 `fitchCostGen_quartet`：已证**（文件末 `QuartetBridgeGap_holds`）。
+  在 4 叶二叉树 `((x0,x1),(x2,x3))`（拓扑 `12|34`）上，对**任意** `σ : Fin 4 → Bool` 有
+  `fitchCostGen σ = Pattern.fitchCost 0 σ`（`Phylo/Stat/Parsimony.lean:61`）。
+  **上一轮记的「卡点」本轮核查为误判** —— 两条真障碍都不是数学问题：
+  1. 树若写成 `def quartetTree : GenTree (Fin 7)`，`quartetTree.V` 在 `implicit` 透明度下不展开，
+     `rw` / `decide` 全部失配 ⇒ 把树写成 `abbrev`（可约）即可；
+  2. 顶点若直接用 `Fin 7`，`Finset.univ.filter` 的 `DecidablePred` 与 `Fin` 字面量推断互相绊住
+     ⇒ 改用 7 构造子的**归纳类型** `QuartetV`（`deriving DecidableEq` + 手写 `Fintype`），
+     `children` 的每条等式都可由 `decide` 当场算出（`decide` 在本文件作用域内可用，见
+     `star_aabb_minExtra`）。
+  证明路线：`fitchCost_eq_internal'` + 「恰有两个孩子」的下标和 `sum_subtype_pair`
+  + `minExtra_congr` / `best_congr`（把 `childSets` 转到 `pairSets`）+ `minExtra_pair` / `best_pair`
+  + `pair_singletons`（`Bool` 上 `pair {a} {b} = Pattern.fitchSet a b`）。
+  ⇒ **不需要** `decide` 枚举 `Fin 7`，也不需要把桥弱化成「抽象形态」。
 * **Sankoff（任意代价矩阵）本批不做** —— **Sankoff 1975**
   （*Minimum mutation trees of sequences*, SIAM J. Appl. Math. 28:35–42）
   **不在** `references/md/`（见 `references/README.md:248`、`:282` 缺失清单）。
@@ -1145,15 +1139,271 @@ theorem fitchCostGen_eq_minChanges (T : GenTree X) (σ : X → α) :
           T.numChanges_assign σ
       _ = T.fitchCostGen σ := (T.fitchCostGen_eq_sum_minExtra σ).symm
 
-/-! ### 显式缺口：与库内 4 元集版的桥（**未证**，纪律 12） -/
+/-! ### 与库内 4 元集版的桥（**已证**：`QuartetBridgeGap_holds`） -/
 
-/-- **未完成的缺口（4 元集桥）**：4 叶二叉树 `12|34` 上的 Fitch 代价 = 库内
+/-- **4 元集桥（陈述）**：4 叶二叉树 `12|34` 上的 Fitch 代价 = 库内
 `Pattern.fitchCost 0`（`Phylo/Stat/Parsimony.lean:61`）。
 
 即：存在 `T : GenTree (Fin 4)`，对一切 `σ : Fin 4 → Bool`，`T.fitchCostGen σ = Pattern.fitchCost 0 σ`。
-本文件**没有证明**它（也**没有**定义那棵具体的树）；精确卡点与建议路线见文件头「🟡 尚未做」。 -/
+**已证**：见下面的 `quartetTree` 与 `QuartetBridgeGap_holds`。 -/
 def QuartetBridgeGap : Prop :=
   ∃ T : GenTree (Fin 4), ∀ σ : Fin 4 → Bool, T.fitchCostGen σ = Pattern.fitchCost 0 σ
+
+/-! ### 具体实例：7 顶点 quartet 树 `((x0,x1),(x2,x3))` -/
+
+inductive QuartetV where
+  | x0 | x1 | x2 | x3 | i0 | i1 | r
+  deriving DecidableEq
+
+instance : Fintype QuartetV where
+  elems := {.x0, .x1, .x2, .x3, .i0, .i1, .r}
+  complete := by intro x; cases x <;> simp
+
+def quartetParent : QuartetV → Option QuartetV
+  | .x0 => some .i0
+  | .x1 => some .i0
+  | .x2 => some .i1
+  | .x3 => some .i1
+  | .i0 => some .r
+  | .i1 => some .r
+  | .r => none
+
+def quartetDepth : QuartetV → ℕ
+  | .x0 | .x1 | .x2 | .x3 => 0
+  | .i0 | .i1 => 1
+  | .r => 2
+
+def quartetLabel : QuartetV → Fin 4
+  | .x0 => 0
+  | .x1 => 1
+  | .x2 => 2
+  | .x3 => 3
+  | _ => 0
+
+abbrev quartetTree : GenTree (Fin 4) where
+  V := QuartetV
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  root := .r
+  parent := quartetParent
+  depth := quartetDepth
+  label := quartetLabel
+  parent_root := rfl
+  depth_parent := by
+    rintro a b h
+    cases a <;> cases b <;> simp_all [quartetParent, quartetDepth]
+  reachable := by
+    intro w
+    cases w
+    · exact ⟨2, by decide⟩
+    · exact ⟨2, by decide⟩
+    · exact ⟨2, by decide⟩
+    · exact ⟨2, by decide⟩
+    · exact ⟨1, by decide⟩
+    · exact ⟨1, by decide⟩
+    · exact ⟨0, by decide⟩
+
+theorem quartet_children_x0 : quartetTree.children .x0 = ∅ := by decide
+theorem quartet_children_x1 : quartetTree.children .x1 = ∅ := by decide
+theorem quartet_children_x2 : quartetTree.children .x2 = ∅ := by decide
+theorem quartet_children_x3 : quartetTree.children .x3 = ∅ := by decide
+theorem quartet_children_i0 : quartetTree.children .i0 = ({.x0, .x1} : Finset QuartetV) := by decide
+theorem quartet_children_i1 : quartetTree.children .i1 = ({.x2, .x3} : Finset QuartetV) := by decide
+theorem quartet_children_r : quartetTree.children .r = ({.i0, .i1} : Finset QuartetV) := by decide
+
+set_option linter.unusedVariables false in
+/-- `minExtra` 的「只依赖 `extra`」形态（`minExtra` 定义体的换名副本）。 -/
+def minExtraOf (f : α → ℕ) : ℕ :=
+  if h : (Finset.univ : Finset α).Nonempty then
+    ((Finset.univ : Finset α).image f).min' (h.image f) else 0
+
+theorem minExtra_eq_minExtraOf (sets : ι → Finset α) :
+    minExtra sets = minExtraOf (fun s => extra sets s) := rfl
+
+theorem minExtra_congr {ι' : Type*} [Fintype ι'] (sets : ι → Finset α) (sets' : ι' → Finset α)
+    (h : ∀ s, extra sets s = extra sets' s) : minExtra sets = minExtra sets' := by
+  rw [minExtra_eq_minExtraOf sets, minExtra_eq_minExtraOf sets']
+  exact congrArg minExtraOf (funext h)
+
+theorem best_congr {ι' : Type*} [Fintype ι'] (sets : ι → Finset α) (sets' : ι' → Finset α)
+    (h : ∀ s, extra sets s = extra sets' s) : best sets = best sets' := by
+  simp only [best]
+  rw [minExtra_congr sets sets' h]
+  exact Finset.filter_congr fun a _ => by rw [h a]
+
+/-- 单点集的交非空 ⟺ 两点相等。 -/
+theorem singleton_inter_nonempty_iff {a b : Bool} :
+    (({a} : Finset Bool) ∩ {b}).Nonempty ↔ a = b := by
+  cases a <;> cases b <;> simp
+
+/-- `Fitch.pair` 作用在两个单点集上就是 `Pattern.fitchSet`。 -/
+theorem pair_singletons (a b : Bool) :
+    pair ({a} : Finset Bool) {b} = Pattern.fitchSet a b := by
+  cases a <;> cases b <;> decide
+
+theorem pattern_fitchSet_nonempty (a b : Bool) : (Pattern.fitchSet a b).Nonempty := by
+  by_cases h : a = b
+  · simp [Pattern.fitchSet, h]
+  · simp [Pattern.fitchSet, h]
+
+/-- 恰有两个孩子的下标和拆成两项。 -/
+theorem sum_subtype_pair {β : Type*} [DecidableEq β] {s : Finset β} {b1 b2 : β}
+    (hs : s = {b1, b2}) (h : b1 ≠ b2) (g : β → ℕ) :
+    (∑ i : {u // u ∈ s}, g i) = g b1 + g b2 := by
+  rw [Finset.sum_coe_sort, hs, Finset.sum_pair h]
+
+/-! ## 逐结点的计算 -/
+
+variable (σ : Fin 4 → Bool)
+
+theorem quartet_fitchSet_x0 : quartetTree.fitchSet σ .x0 = ({σ 0} : Finset Bool) :=
+  quartetTree.fitchSet_eq_leaf quartet_children_x0
+
+theorem quartet_fitchSet_x1 : quartetTree.fitchSet σ .x1 = ({σ 1} : Finset Bool) :=
+  quartetTree.fitchSet_eq_leaf quartet_children_x1
+
+theorem quartet_fitchSet_x2 : quartetTree.fitchSet σ .x2 = ({σ 2} : Finset Bool) :=
+  quartetTree.fitchSet_eq_leaf quartet_children_x2
+
+theorem quartet_fitchSet_x3 : quartetTree.fitchSet σ .x3 = ({σ 3} : Finset Bool) :=
+  quartetTree.fitchSet_eq_leaf quartet_children_x3
+
+theorem quartet_cost_x0 : quartetTree.fitchCost σ .x0 = 0 :=
+  quartetTree.fitchCost_eq_leaf quartet_children_x0
+
+theorem quartet_cost_x1 : quartetTree.fitchCost σ .x1 = 0 :=
+  quartetTree.fitchCost_eq_leaf quartet_children_x1
+
+theorem quartet_cost_x2 : quartetTree.fitchCost σ .x2 = 0 :=
+  quartetTree.fitchCost_eq_leaf quartet_children_x2
+
+theorem quartet_cost_x3 : quartetTree.fitchCost σ .x3 = 0 :=
+  quartetTree.fitchCost_eq_leaf quartet_children_x3
+
+theorem quartet_extra_i0 (s : Bool) :
+    extra (quartetTree.childSets σ .i0) s
+      = (if s ∈ ({σ 0} : Finset Bool) then 0 else 1)
+        + (if s ∈ ({σ 1} : Finset Bool) then 0 else 1) := by
+  have hsum : extra (quartetTree.childSets σ .i0) s
+      = ∑ i : ↥(quartetTree.children .i0),
+          (if s ∈ quartetTree.fitchSet σ (i : QuartetV) then 0 else 1) := by
+    rw [extra]
+    exact Finset.sum_congr rfl fun i _ => by
+      by_cases h : s ∈ quartetTree.fitchSet σ (i : QuartetV)
+      · simp [GenTree.childSets, h]
+      · simp [GenTree.childSets, h]
+  rw [hsum, Finset.sum_coe_sort (s := quartetTree.children .i0)
+    (f := fun u : QuartetV => if s ∈ quartetTree.fitchSet σ u then 0 else 1)]
+  rw [quartet_children_i0, Finset.sum_pair (by decide)]
+  rw [quartet_fitchSet_x0, quartet_fitchSet_x1]
+
+theorem quartet_extra_i1 (s : Bool) :
+    extra (quartetTree.childSets σ .i1) s
+      = (if s ∈ ({σ 2} : Finset Bool) then 0 else 1)
+        + (if s ∈ ({σ 3} : Finset Bool) then 0 else 1) := by
+  have hsum : extra (quartetTree.childSets σ .i1) s
+      = ∑ i : ↥(quartetTree.children .i1),
+          (if s ∈ quartetTree.fitchSet σ (i : QuartetV) then 0 else 1) := by
+    rw [extra]
+    exact Finset.sum_congr rfl fun i _ => by
+      by_cases h : s ∈ quartetTree.fitchSet σ (i : QuartetV)
+      · simp [GenTree.childSets, h]
+      · simp [GenTree.childSets, h]
+  rw [hsum, Finset.sum_coe_sort (s := quartetTree.children .i1)
+    (f := fun u : QuartetV => if s ∈ quartetTree.fitchSet σ u then 0 else 1)]
+  rw [quartet_children_i1, Finset.sum_pair (by decide)]
+  rw [quartet_fitchSet_x2, quartet_fitchSet_x3]
+
+theorem quartet_extra_r (s : Bool) :
+    extra (quartetTree.childSets σ .r) s
+      = (if s ∈ quartetTree.fitchSet σ .i0 then 0 else 1)
+        + (if s ∈ quartetTree.fitchSet σ .i1 then 0 else 1) := by
+  have hsum : extra (quartetTree.childSets σ .r) s
+      = ∑ i : ↥(quartetTree.children .r),
+          (if s ∈ quartetTree.fitchSet σ (i : QuartetV) then 0 else 1) := by
+    rw [extra]
+    exact Finset.sum_congr rfl fun i _ => by
+      by_cases h : s ∈ quartetTree.fitchSet σ (i : QuartetV)
+      · simp [GenTree.childSets, h]
+      · simp [GenTree.childSets, h]
+  rw [hsum, Finset.sum_coe_sort (s := quartetTree.children .r)
+    (f := fun u : QuartetV => if s ∈ quartetTree.fitchSet σ u then 0 else 1)]
+  rw [quartet_children_r, Finset.sum_pair (by decide)]
+
+theorem quartet_minExtra_i0 :
+    minExtra (quartetTree.childSets σ .i0) = (if σ 0 = σ 1 then 0 else 1) := by
+  rw [minExtra_congr (quartetTree.childSets σ .i0)
+    (pairSets ({σ 0} : Finset Bool) ({σ 1})) (fun s => by rw [quartet_extra_i0, extra_pair])]
+  rw [minExtra_pair (S := ({σ 0} : Finset Bool)) (U := {σ 1}) ⟨σ 0, by simp⟩]
+  simp only [singleton_inter_nonempty_iff]
+
+theorem quartet_minExtra_i1 :
+    minExtra (quartetTree.childSets σ .i1) = (if σ 2 = σ 3 then 0 else 1) := by
+  rw [minExtra_congr (quartetTree.childSets σ .i1)
+    (pairSets ({σ 2} : Finset Bool) ({σ 3})) (fun s => by rw [quartet_extra_i1, extra_pair])]
+  rw [minExtra_pair (S := ({σ 2} : Finset Bool)) (U := {σ 3}) ⟨σ 2, by simp⟩]
+  simp only [singleton_inter_nonempty_iff]
+
+theorem quartet_fitchSet_i0 :
+    quartetTree.fitchSet σ .i0 = Pattern.fitchSet (σ 0) (σ 1) := by
+  rw [GenTree.fitchSet_eq_internal (T := quartetTree) (σ := σ) (v := .i0)
+    (by rw [quartet_children_i0]; simp)]
+  rw [best_congr (quartetTree.childSets σ .i0)
+    (pairSets ({σ 0} : Finset Bool) ({σ 1})) (fun s => by rw [quartet_extra_i0, extra_pair])]
+  rw [best_pair (S := ({σ 0} : Finset Bool)) (U := {σ 1}) ⟨σ 0, by simp⟩]
+  exact pair_singletons (σ 0) (σ 1)
+
+theorem quartet_fitchSet_i1 :
+    quartetTree.fitchSet σ .i1 = Pattern.fitchSet (σ 2) (σ 3) := by
+  rw [GenTree.fitchSet_eq_internal (T := quartetTree) (σ := σ) (v := .i1)
+    (by rw [quartet_children_i1]; simp)]
+  rw [best_congr (quartetTree.childSets σ .i1)
+    (pairSets ({σ 2} : Finset Bool) ({σ 3})) (fun s => by rw [quartet_extra_i1, extra_pair])]
+  rw [best_pair (S := ({σ 2} : Finset Bool)) (U := {σ 3}) ⟨σ 2, by simp⟩]
+  exact pair_singletons (σ 2) (σ 3)
+
+theorem quartet_minExtra_r :
+    minExtra (quartetTree.childSets σ .r)
+      = (if (Pattern.fitchSet (σ 0) (σ 1) ∩ Pattern.fitchSet (σ 2) (σ 3)).Nonempty
+          then 0 else 1) := by
+  have hne : (quartetTree.fitchSet σ .i0).Nonempty := by
+    rw [quartet_fitchSet_i0]
+    exact pattern_fitchSet_nonempty (σ 0) (σ 1)
+  rw [minExtra_congr (quartetTree.childSets σ .r)
+    (pairSets (quartetTree.fitchSet σ .i0) (quartetTree.fitchSet σ .i1))
+    (fun s => by rw [quartet_extra_r, extra_pair])]
+  rw [minExtra_pair hne, quartet_fitchSet_i0, quartet_fitchSet_i1]
+
+theorem quartet_cost_i0 : quartetTree.fitchCost σ .i0 = (if σ 0 = σ 1 then 0 else 1) := by
+  rw [GenTree.fitchCost_eq_internal' (T := quartetTree) (σ := σ) (v := .i0)
+    (by rw [quartet_children_i0]; simp)]
+  rw [sum_subtype_pair quartet_children_i0 (by decide) (fun u => quartetTree.fitchCost σ u)]
+  rw [quartet_cost_x0, quartet_cost_x1, quartet_minExtra_i0]
+  omega
+
+theorem quartet_cost_i1 : quartetTree.fitchCost σ .i1 = (if σ 2 = σ 3 then 0 else 1) := by
+  rw [GenTree.fitchCost_eq_internal' (T := quartetTree) (σ := σ) (v := .i1)
+    (by rw [quartet_children_i1]; simp)]
+  rw [sum_subtype_pair quartet_children_i1 (by decide) (fun u => quartetTree.fitchCost σ u)]
+  rw [quartet_cost_x2, quartet_cost_x3, quartet_minExtra_i1]
+  omega
+
+theorem fitchCostGen_quartet :
+    quartetTree.fitchCostGen σ = Pattern.fitchCost 0 σ := by
+  have hroot : quartetTree.fitchCostGen σ
+      = (quartetTree.fitchCost σ .i0 + quartetTree.fitchCost σ .i1)
+        + minExtra (quartetTree.childSets σ .r) := by
+    rw [GenTree.fitchCostGen, GenTree.fitchCost_eq_internal' (T := quartetTree) (σ := σ)
+      (v := .r) (by rw [quartet_children_r]; simp)]
+    rw [sum_subtype_pair quartet_children_r (by decide)
+      (fun u => quartetTree.fitchCost σ u)]
+  rw [hroot, quartet_cost_i0, quartet_cost_i1, quartet_minExtra_r, Pattern.fitchCost,
+    ite_eq_left rfl]
+  simp only [Pattern.costTopo]
+
+/-- ★★★ **4 元集桥**：QuartetBridgeGap 成立（见证 = quartetTree，拓扑 12|34）。 -/
+theorem QuartetBridgeGap_holds : QuartetBridgeGap :=
+  ⟨quartetTree, fun σ => fitchCostGen_quartet σ⟩
 
 end
 
