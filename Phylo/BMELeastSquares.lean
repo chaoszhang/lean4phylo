@@ -347,7 +347,7 @@ theorem ex4_nonempty :
 
 /-- ★★★ **缺口 1：一般树的 Pauplin 归一化 + 路径关联表示**（式 (9)，`:2027`）。
 
-**陈述**：对每个可加、正定的相异度 `δ`（⇒ 由 `Phylo/Buneman.lean:589` 的
+**陈述**：对每个可加、正定的相异度 `δ`（⇒ 由 `Phylo/Buneman.lean:563` 的
 `ExistsRealizingPhylogram` 存在**正边权**实现树），存在
 
 * 有限边集 `E`、路径关联 `S : X → X → E → ℝ`（`S_ij(e) = 1` 当且仅当 `e ∈ P_ij`）、
@@ -368,7 +368,14 @@ theorem ex4_nonempty :
 且 `bmeLength` 恰等于真树长 `15`（★★★ `ex4_bmeLength`）。
 
 **一旦补上**，★ ★★★ `bme_length_eq_true_length` 立即给出一般树的
-`l̂(T) = l(T)`（DesperGascuel2004 Theorem 1 之 (2) 与 Theorem 2 的等式半）。 -/
+`l̂(T) = l(T)`（DesperGascuel2004 Theorem 1 之 (2) 与 Theorem 2 的等式半）。
+
+**现状（W25-B 更正）**：上面「为什么未证」一段已**过期**——「树上的 `e ∈ P_ij`」接口
+**已**在本库落地（`Cladogram.pathOf` ＋ `Phylogram` 边权），§9 的
+★★★ `bme_pauplin_identity_gap_of_normalization` 已把本缺口**归约**到
+`BmePauplinNormalization T`（§7）。⇒ 剩下的唯一数学内容 = `BmePauplinNormalization`
+（§10 的逐边倍增和 `D_e = 1`），**且它必须配 `T.IsBinary`**：
+多分叉时该命题**为假**（4 叶星形树 plane 和 `= 3 ≠ 2`，见 §12）。 -/
 def bme_pauplin_identity_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite →
     ∃ (E : Type) (_ : Fintype E) (S : X → X → E → ℝ) (l : E → ℝ) (p : X → X → ℕ),
@@ -436,7 +443,13 @@ theorem bme_statistical_consistency_gap_satisfiable (D : Dissimilarity X) :
 　`Σ_{(i,j) ∈ plane} 2^{1−p_ij} · [e ∈ P_ij] = 2`，
 
 其中 `p_ij` 是树上唯一路径 `P_ij` 的**边数**（拓扑距离）、`[·]` 是 0/1 指示。
-（`plane` 是**有序对**含对角；对角项 `S i i e = 0`，故等价于无序版 `Σ_{i<j} 2^{1−p_ij} = 1` ✓。） -/
+（`plane` 是**有序对**含对角；对角项 `S i i e = 0`，故等价于无序版 `Σ_{i<j} 2^{1−p_ij} = 1` ✓。）
+
+⚠ **W25-B 忠实性更正**：本条**只对二叉树**（`T.IsBinary`，内部顶点度恰 3，
+`Phylo/Core.lean:93`）成立。`no_degree_two`（`Phylo/Core.lean:46`）只排除度 2、
+**允许**多分叉；度 `k ≥ 4` 的星形树中心 `c` 上 `D_e(c) = (k−1)/2 ≠ 1` ⇒
+每条挂边的 plane 和 `= k−1 ≠ 2`（★ `star4_plane_sum`，§12）。
+故 §9 的归约定理**不能**对任意实现树使用，须先有二叉实现（§12 器材 2）。 -/
 def BmePauplinNormalization (T : Phylogram X) : Prop :=
   ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
     ∑ x ∈ plane, bmeCoeff ((T.pathOf (T.leaf x.1) (T.leaf x.2)).edges.length)
@@ -597,6 +610,12 @@ theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Ph
 
 ⇒ **(d) ⟺ 每条边两侧的倍增和都等于 1**（这就是接下来要证的组合命题）。
 
+⚠ **W25-B 忠实性更正**：`D_e(u) = 1` **要求二叉**（内部顶点度恰 3）。星形树中心 `c`（度 `k`）
+上 `D_e(c) = (k−1)/2`，plane 和 `= 2·1·(k−1)/2 = k−1`：`k = 3`（二叉）⇒ `2` ✓，
+`k = 4`（多分叉）⇒ `3 ≠ 2` ✗（★ `star4_plane_sum`，§12）。下面的 ★D 穷举由**叶插入法**
+生成，**只含二叉拓扑**，从未测过多分叉 ⇒ 本轮把 (d) 的正确形态钉为
+`T.IsBinary → D_e = 1`。
+
 ★D 穷举证据（`scripts/msc/w12e_bme_check.py`，n ≤ 6 全部标号无根二叉拓扑、**1068 次边检查**、
 精确有理数）：对每条边的**两侧**都有 `D = 1`，**0 反例** ✓（该检查本轮新增，脚本 md5 `e8f59914…` ✓）。
 
@@ -610,6 +629,8 @@ theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Ph
 
 ★D 穷举（`scripts/msc/w12e_bme_check.py`：n ≤ 6 全部标号无根二叉拓扑、**1068 次边检查**）实测：
 对**每条边** `e = s(a,b)` 的两侧都有 `D_e(a) = 1`、`D_e(b) = 1`（**0 反例** ✓）。
+⚠ 该枚举用**叶插入法**生成，**只覆盖二叉拓扑** ⇒ 这 1068 次检查**不含**多分叉的证据；
+多分叉时 `D_e(u) = (deg(u)−1)/2 ≠ 1`（`Phylo/Core.lean:46` 只排除度 2），见 §12。
 而 (d) 的 `plane` 和等于 `2·D_e(a)·D_e(b)`（交叉对 `i ∈ A, j ∈ B` 满足
 `2^{1−p_ij} = 2^{−d_a(i)}·2^{−d_b(j)}` ✓）⇒
 
@@ -659,6 +680,62 @@ theorem sideDoublingSum_leaf_edge (T : Cladogram X) {b : T.V} {x : X}
   rw [sideDoublingSum, Cladogram.sideLeaves_leaf_edge T h, Finset.sum_singleton,
     pathOf_self_edges_eq_zero T (T.leaf x)]
   simp
+
+/-! ## 12. ⚠ W25-B 忠实性更正：`BmePauplinNormalization` 缺 `T.IsBinary`（缺口本体仍未证）
+
+§7 把缺口归约到 `BmePauplinNormalization T`（= (d)），§10 再把它归约为「每条边两侧的
+倍增和 `D_e(u) = 1`」。**本轮（W25-B）发现：这条归约目标按现状为假。**
+
+* `e = s(a,b)`、`i ∈ A`、`j ∈ B` ⇒ `p_ij = d_a(i) + 1 + d_b(j)`
+  ⇒ plane 和 `= 2·D_e(a)·D_e(b)`（只用 `pathOf` 的边可分解性，**不需要**二叉假设）；
+* 若 `u` 的每个「非 e 向」分支侧都满足 `D = 1`，则
+  `D_e(u) = (分支数)/2 = (deg(u)−1)/2` —— 这是**递归**形态（§11 已注：分支分划的
+  Finset 记账未完成 ✗）。`(deg−1)/2 = 1` **当且仅当** `deg = 3`（二叉，
+  `Phylo/Core.lean:93` 的 `IsBinary`）。
+
+⭐ **一叶知秋的算术反例（已机器核查）**：`k` 叶**星形**树（唯一内部顶点度 `= k`、`p_ij = 2`）
+的每条挂边上，plane 和 `= 2(k−1)·2^{1−2} = k−1`：
+
+* `k = 3`（`deg = 3`，**二叉**）⇒ `= 2` ✓ —— §7 的命题**恰好**在二叉树上成立；
+* `k = 4`（`deg = 4`，**多分叉**）⇒ `= 3 ≠ 2` ✗（★★ `star4_plane_sum`、
+  ★★ `star4_plane_sum_ne_two`）。
+
+`Cladogram` 的 `no_degree_two`（`Phylo/Core.lean:46`）**只排除度 2**，度 4 的星形树是**合法**的
+`Cladogram (Fin 4)` ⇒ 对这样的 `T`，`BmePauplinNormalization T` 为**假**，
+§9 的 `bme_pauplin_identity_gap_of_normalization` **不可**对任意实现树实例化。
+
+⇒ **缺的具名器材（下一步，按成本排序）**：
+
+1. `BmePauplinNormalization` **加 `T.IsBinary` 前提**（`Phylo/Core.lean:93`）——一句话修正；
+2. **二叉实现**：`δ.ExistsRealizingPhylogram`（`Phylo/Buneman.lean:563` 的
+   `exists_phylogram_of_fourPoint`，`:601`）产出的树是否二叉**未被告知**；若不是，需要
+   **零长边细化**（把度 `≥ 4` 顶点拆成二叉，`w = 0` 仍满足 `w_nonneg`）——
+   即缺引理 `exists_binary_realizing_phylogram`（库内**无** ✗）；
+3. **分支分划递归** `D_e(u) = Σ_{v ∈ N(u) ∖ e-向} (1/2)·D_{s(u,v)}(v)`
+   （Finset 记账：用 `T.graph.neighborFinset u` 上的 `biUnion` 分划 `sideLeaves e u`，
+   再用 `sideLeafCount_lt_card_of_adj`（`Phylo/AttesonRadius.lean:1286`）做**良基归纳**
+   ⇒ 二叉树上 `D_e(u) = 1`）。
+
+⚠ 本节**不**声称缺口已证或已证伪：`bme_pauplin_identity_gap` 本体（以及证伪所需的
+「星形树是合法 `Cladogram` 实例」的形式化）本轮**未**落地。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **3 叶星形**（中心度 3 = 二叉）每条挂边的 plane 和 `= 2·(3−1)·2^{1−2} = 2` ✓
+—— §7 的 Pauplin 归一化在二叉树上成立。 -/
+theorem star3_plane_sum : (2 * (3 - 1) : ℝ) * bmeCoeff 2 = 2 := by
+  norm_num [bmeCoeff]
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **4 叶星形**（中心度 4 = 多分叉）每条挂边的 plane 和 `= 2·(4−1)·2^{1−2} = 3` ✗
+—— 多分叉树上 `BmePauplinNormalization` 为假（§12 的忠实性更正）。 -/
+theorem star4_plane_sum : (2 * (4 - 1) : ℝ) * bmeCoeff 2 = 3 := by
+  norm_num [bmeCoeff]
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **反例判定**：4 叶星形的 plane 和 `3 ≠ 2` ⇒ 该树上 §7 的 `BmePauplinNormalization`
+不可能成立（而这样的星形树是**合法** `Cladogram`：`no_degree_two` 只排除度 2）。 -/
+theorem star4_plane_sum_ne_two : (2 * (4 - 1) : ℝ) * bmeCoeff 2 ≠ 2 := by
+  norm_num [bmeCoeff]
 
 end Dissimilarity
 
