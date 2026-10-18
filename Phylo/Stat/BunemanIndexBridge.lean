@@ -905,6 +905,140 @@ def canonicalSplitDecomposition_gap_faithful : Prop :=
         (∀ x y, 0 ≤ δ₀ x y) ∧
           ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
 
+/-! ## 8.3 ★★★ BdD 的**隔离指数** `α_{A,B}`（实值）—— 器材落地（W25-d）
+
+### 文献
+* `references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:438-440`：`A|B` 是 **d-split**
+  ⟺ 隔离指数 `α_{A,B} > 0`；
+* `:446-454`：`α_{A,B} := min{ max{d(a,b)+d(a',b'), d(a,b')+d(a',b), d(a,a')+d(b,b')}
+  − d(a,a') − d(b,b') }`（`a,a' ∈ A`、`b,b' ∈ B`，`min` 取遍**可退化**四元组）；
+* `:673-684`：split-prime ⟺ **每个** `A|B` 的隔离指数为 `0`。
+
+### 形态约定（为何本节能直接用 `pairDeficit`）
+被 `min` 的量是 `pairDeficit δ a a' b b' = max{δ a b + δ a' b', δ a b' + δ a' b} − (δ a a' + δ b b')`
+（`Phylo/SplitWeak.lean:251`）；把它写成 BdD 的「`max` 里含第三项」只差一个恒等式
+`max{max{P,Q}, I} − I = max{max{P,Q} − I, 0}`，故「`max` 里含 `I`」与「取 `pairDeficit` 再截断
+到 `0`」是**同一个数**。★ 关键结论（本节的桥）：`0 < α_{A,B} ⟺ IsDSplit δ A B`（`max` 形），
+这正是 `IsDSplit` 忠实性的**定义级证明**，也把 `canonicalSplitDecomposition_gap_faithful` 缺的
+第 ② 件器材（系数 `c s = α_{s.sideA, s.sideB}`）落成了库内**可命名**的对象。 -/
+
+/-- 隔离指数取 `inf'` 的**四元组集** `A × A × B × B`（含退化四元组：允许 `a = a'`、`b = b'`）。 -/
+abbrev isoQuadruples {α : Type*} (A B : Finset α) : Finset ((α × α) × (α × α)) :=
+  (A ×ˢ A) ×ˢ (B ×ˢ B)
+
+/-- `A`、`B` 都非空 ⇒ 四元组集非空（`Finset.inf'` 的前提）。 -/
+theorem isoQuadruples_nonempty {α : Type*} {A B : Finset α}
+    (hA : A.Nonempty) (hB : B.Nonempty) : (isoQuadruples A B).Nonempty :=
+  (hA.product hA).product (hB.product hB)
+
+/-- ★★★ **隔离指数** `α_{A,B}`（BdD md `:446-454`，**实值**）：遍历四元组
+`(a,a',b,b') ∈ A×A×B×B` 取 `pairDeficit` 的 `min`。空侧情形记为 `0`（与 `IsDSplit` 的空真相容）。 -/
+noncomputable def isolationIndex {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (A B : Finset α) : ℝ :=
+  if h : (isoQuadruples A B).Nonempty then
+    (isoQuadruples A B).inf' h (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+  else 0
+
+/-- 两侧非空时 `isolationIndex` 的展开式（`inf'` 形态）。 -/
+theorem isolationIndex_eq_inf' {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) {A B : Finset α} (hA : A.Nonempty) (hB : B.Nonempty) :
+    isolationIndex δ A B
+      = (isoQuadruples A B).inf' (isoQuadruples_nonempty hA hB)
+          (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2) := by
+  unfold isolationIndex
+  split_ifs with h
+  · rfl
+  · exact absurd (isoQuadruples_nonempty hA hB) h
+
+/-- 四元组 `(a,a',b,b')` 属于 `isoQuadruples A B` 的展开。 -/
+theorem mem_isoQuadruples {α : Type*} {A B : Finset α} {a a' b b' : α} :
+    ((a, a'), (b, b')) ∈ isoQuadruples A B ↔ a ∈ A ∧ a' ∈ A ∧ b ∈ B ∧ b' ∈ B := by
+  simp only [isoQuadruples, Finset.mem_product]
+  constructor
+  · rintro ⟨⟨h1, h2⟩, h3, h4⟩
+    exact ⟨h1, h2, h3, h4⟩
+  · rintro ⟨ha, ha', hb, hb'⟩
+    exact ⟨⟨ha, ha'⟩, hb, hb'⟩
+
+/-- ★★★ **`0 < α_{A,B} ⟺ IsDSplit δ A B`**（BdD md `:438-440` 的**忠实形式化**）：
+「隔离指数为正」恰好是「逐四元组 `max{P,Q} > I`」，即库内 `max` 形的 `IsDSplit`。 -/
+theorem isolationIndex_pos_iff_isDSplit {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) {A B : Finset α} (hA : A.Nonempty) (hB : B.Nonempty) :
+    0 < isolationIndex δ A B ↔ IsDSplit δ A B := by
+  rw [isolationIndex_eq_inf' δ hA hB]
+  have key : (0 : ℝ) < (isoQuadruples A B).inf' (isoQuadruples_nonempty hA hB)
+        (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+      ↔ ∀ q ∈ isoQuadruples A B, 0 < pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2 :=
+    Finset.lt_inf'_iff (isoQuadruples_nonempty hA hB)
+  rw [key]
+  constructor
+  · intro h a ha a' ha' b hb b' hb'
+    have hq := (mem_isoQuadruples (A := A) (B := B) (a := a) (a' := a')
+      (b := b) (b' := b')).mpr ⟨ha, ha', hb, hb'⟩
+    have hpos := h _ hq
+    simp only [pairDeficit, sub_pos] at hpos
+    exact hpos
+  · intro h q hq
+    obtain ⟨⟨a, a'⟩, b, b'⟩ := q
+    obtain ⟨ha, ha', hb, hb'⟩ := (mem_isoQuadruples (A := A) (B := B)).mp hq
+    show 0 < pairDeficit δ a a' b b'
+    simp only [pairDeficit, sub_pos]
+    exact h a ha a' ha' b hb b' hb'
+
+/-- ★★ **任一四元组给出隔离指数的上界**：`α_{A,B} ≤ pairDeficit δ a a' b b'`。 -/
+theorem isolationIndex_le_pairDeficit {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) {A B : Finset α} (hA : A.Nonempty) (hB : B.Nonempty)
+    {a a' b b' : α} (ha : a ∈ A) (ha' : a' ∈ A) (hb : b ∈ B) (hb' : b' ∈ B) :
+    isolationIndex δ A B ≤ pairDeficit δ a a' b b' := by
+  have hq := (mem_isoQuadruples (A := A) (B := B) (a := a) (a' := a')
+    (b := b) (b' := b')).mpr ⟨ha, ha', hb, hb'⟩
+  have h : (isoQuadruples A B).inf' (isoQuadruples_nonempty hA hB)
+        (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+      ≤ pairDeficit δ a a' b b' := by
+    by_contra hcon
+    rw [not_le] at hcon
+    have hlt := (Finset.lt_inf'_iff (H := isoQuadruples_nonempty hA hB)
+      (f := fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)).mp hcon
+    exact absurd (hlt _ hq) (lt_irrefl _)
+  rw [isolationIndex_eq_inf' δ hA hB]
+  exact h
+
+/-- ★★★ **split-prime 的隔离指数形态**（BdD md `:673-684`）：`SplitPrimeFaithful δ` ⟺
+**每个**非空 `A`、`B` 的隔离指数 `≤ 0`（截断形态下 `α ≥ 0`，故等价于「`= 0`」）。 -/
+theorem splitPrimeFaithful_iff_isolationIndex_nonpos {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) :
+    SplitPrimeFaithful δ ↔
+      ∀ (A B : Finset α), A.Nonempty → B.Nonempty → isolationIndex δ A B ≤ 0 := by
+  constructor
+  · intro h A B hA hB
+    by_contra hcon
+    rw [not_le] at hcon
+    exact h A B hA hB ((isolationIndex_pos_iff_isDSplit δ hA hB).mp hcon)
+  · intro h A B hA hB hds
+    exact absurd (h A B hA hB)
+      (not_le.mpr ((isolationIndex_pos_iff_isDSplit δ hA hB).mpr hds))
+
+/-- ★★ **为何 `§8.2` 的 ①（残差仍在 `M(X)` 里）不可省**：只要残差非负、系数非负，
+就有逐点 `δ₀ ≤ δ`。故 `§8.1` 的「取全体 split、系数 `M := 2S+1` 把非对角压成负数」构造
+**在 ① 下不可能**（那里 `δ₀` 非对角元为负，越界于 `M(X)`）—— 这正是
+`……_gap_correct_shape`（无 ①，真空转）与 `……_gap_faithful`（有 ①，非空转）的分水岭。
+
+（本定理只用到 `SplitMetric ≥ 0` 与「和的分拆」，不需要 `δ` 的任何度量性质。） -/
+theorem residue_le_of_nonneg {α : Type*} [Fintype α] [DecidableEq α]
+    {δ δ₀ : α → α → ℝ} {F : Finset (Split α)} {c : Split α → ℝ}
+    (hc : ∀ s ∈ F, 0 ≤ c s)
+    (heq : ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y) :
+    ∀ x y, δ₀ x y ≤ δ x y := by
+  have hmetric : ∀ (s : Split α) (x y : α), 0 ≤ SplitMetric s x y := by
+    intro s x y
+    unfold SplitMetric
+    split_ifs <;> norm_num
+  intro x y
+  have hnn : 0 ≤ ∑ s ∈ F, c s * SplitMetric s x y :=
+    Finset.sum_nonneg fun s hs => mul_nonneg (hc s hs) (hmetric s x y)
+  rw [heq x y]
+  linarith
+
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
 **目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
