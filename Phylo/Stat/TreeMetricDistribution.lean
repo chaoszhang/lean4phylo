@@ -798,6 +798,87 @@ theorem not_maxQuartetDistance_gap : ¬ maxQuartetDistance_gap := by
   rw [hqd, hcard] at h15
   omega
 
+/-- ★B **反例器材**：`cexResL` 的**逐点互补表** —— 在每个 4-子集上把小侧换成它的补
+（即 `Split.swap` 的 quartet 版本）。因本库 `QuartetRes` 用**有向**的「小侧」表示配对
+（见 `:578-580`），`cexResL` 与 `cexResLc` 是**两张不同的表**，却代表**同一棵树**。 -/
+def cexResLc : QuartetRes (Fin 4) := fun A =>
+  ⟨(cexResL A).1ᶜ, by
+    have h2 : (cexResL A).1.card = 2 := (cexResL A).2
+    have hc : Fintype.card ↥A.1 = 4 := by
+      rw [Fintype.card_coe]
+      exact A.2
+    rw [Finset.card_compl]
+    omega⟩
+
+/-- `cexResLc ≠ cexResL`：在唯一的 4-子集 `cexA` 上分别是 `{2,3}` 与 `{0,1}`。 -/
+theorem cexResLc_ne : cexResLc ≠ cexResL := by
+  intro h
+  have h0L : (⟨0, cexH0 cexA⟩ : ↥cexA.1) ∈ (cexResL cexA).1 := by
+    simp only [cexResL, Finset.mem_insert, Finset.mem_singleton]
+    trivial
+  have h0Lc : (⟨0, cexH0 cexA⟩ : ↥cexA.1) ∉ (cexResLc cexA).1 := by
+    show (⟨0, cexH0 cexA⟩ : ↥cexA.1) ∉ (cexResL cexA).1ᶜ
+    simp only [Finset.mem_compl, not_not]
+    exact h0L
+  have hne : (cexResLc cexA).1 ≠ (cexResL cexA).1 := fun h' => h0Lc (h' ▸ h0L)
+  exact hne (congrArg (fun f : QuartetRes (Fin 4) => (f cexA).1) h)
+
+/-- `cexResL` 与 `cexResLc` 的 quartet 距离是 `0`（每个 4-子集上「相同**或互补**」都记 `0`）。 -/
+theorem cexDistLc : quartetDistFull cexResL cexResLc = 0 := by
+  rw [quartetDistFull]
+  refine Finset.sum_eq_zero ?_
+  intro A _
+  have hc : (cexResLc A).1 = (cexResL A).1ᶜ := rfl
+  rw [hc]
+  simp
+
+/-- ★B **反例检查**：`quartetMinDistance_gap` **是假命题**（其 `def` 原文**未改**）。
+
+`X = Fin 4`（`Fintype.card X = 4` ⇒ 阈值 `2·(4−3) = 2`）。取 `r = cexResL`、
+`r' = cexResLc`（`r` 的**逐点互补表**，即 `Split.swap` 意义下的**同一棵树**）：
+* `r ≠ r'`（`{0,1}` 对 `{2,3}`，见 `cexResLc_ne`）；
+* `quartetDistFull r r' = 0`（每个 4-子集上「相同**或互补**」都记 `0`，见 `cexDistLc`），
+  而 `0 < 2 = 2·(4−3)` ⇒ 第 1 个合取项（下界）**为假** ⇒ 整个 `∧` 为假。
+
+**文献并未错**：`SteelPenny1993_…md:456-458` 说的是**两棵不同的树**（"two distinct trees
+with `n` taxa"）的最小 `d_q = n − 3`；而本库 `QuartetRes` 用**有向**小侧表示配对（`:578-580`），
+一棵树对应**两张表** `r` 与 `r` 的逐点补，二者距离 `0`。
+⇒ 下界必须**先把「逐点补」商掉**（要求 `r' ≠ r` **且** `r'` 不是 `r` 的逐点补）；
+该修正版在 `n = 4` 上已证：`quartetMinDistance_card4_of_not_compl`。
+
+⚠️ 还有**第二个独立的**失败原因（本文件**未**形式化，仅是论证）：对**任意** `QuartetRes` 表
+（不要求来自树），`n ≥ 5` 时两张表可以只在**一个** 4-子集上不同且不互补，
+距离 `= 2 < 2·(n−3)`。⇒ 文献的 `n − 3` 真正需要的两个前提是「表**来自 `n` 叶 binary 树**」
+＋「按 `Split.swap` 商掉」；本库缺 `n` 叶树枚举层（同 `maxQuartetDistance_gap` 的结论）。 -/
+theorem not_quartetMinDistance_gap : ¬ quartetMinDistance_gap := by
+  intro h
+  have hc4 : Fintype.card (Fin 4) = 4 := by simp
+  obtain ⟨hlow, _⟩ := h (Fin 4) (by simp)
+  have hb := hlow cexResL cexResLc (Ne.symm cexResLc_ne)
+  rw [hc4, cexDistLc] at hb
+  omega
+
+/-- ★B **修正版（`n = 4`，把「逐点补 = 同一棵树」商掉后文献下界成立）**：
+`SteelPenny1993_…md:456-458` 的 `d_q = n − 3`（本库写 `quartetDistFull = 2·(n−3)`）
+在 `n = 4` 上对**真正不同**的两棵树成立 —— `r ≠ r'` 且 `r'` **不是** `r` 的逐点补 ⇒ 距离 `= 2`。
+
+这正是 `not_quartetMinDistance_gap` 缺的那条前提（见其 docstring）。 -/
+theorem quartetMinDistance_card4_of_not_compl
+    (r r' : QuartetRes (Fin 4)) (hne : r ≠ r')
+    (hnc : ∀ A, (r' A).1 ≠ (r A).1ᶜ) :
+    quartetDistFull r r' = 2 * (Fintype.card (Fin 4) - 3) := by
+  have huniq : ∀ A : {A : Finset (Fin 4) // A.card = 4}, A = cexA := fun A =>
+    Subtype.ext (Finset.eq_univ_of_card A.1 (by simpa using A.2))
+  have hcond : ¬ ((r cexA).1 = (r' cexA).1 ∨ (r cexA).1 = (r' cexA).1ᶜ) := by
+    rintro (h' | h')
+    · exact hne (funext fun A => by rw [huniq A]; exact Subtype.ext h')
+    · exact hnc cexA (by rw [h']; simp)
+  rw [quartetDistFull]
+  rw [Finset.sum_eq_single_of_mem cexA (Finset.mem_univ _)]
+  · simp [hcond]
+  · intro b _ hb
+    exact absurd (huniq b) hb
+
 /-- ★B **反例用的两点分布族**（`{0 ↦ 1/2, 1 ↦ 1/2}`；`n = 0` 行单独取 `1` 使行和恒为 `1`）。 -/
 def rfPoissonCex (n k : ℕ) : ℚ :=
   if k = 0 then (if n = 0 then 1 else 1 / 2) else if k = 1 then (if n = 0 then 0 else 1 / 2) else 0
