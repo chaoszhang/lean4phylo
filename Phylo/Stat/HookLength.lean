@@ -1468,4 +1468,237 @@ theorem rankedFiberCount_gap_of_LE {n : ℕ} (hn : 2 ≤ n)
   rankedFiberCount_gap_of_LE_and_hook hn
     (fun f hf => ⟨hO1 f hf, hook_cladesOf_eq_card_sub_one f hf⟩)
 
+/-! ## §14 ★★★ W25 泳道 D：`cladesOf` 的**二叉性**（(O1) 的偏序侧器材）
+
+**(O1)**（见 §12 的定位与 §13 末尾的 `rankedFiberCount_gap_of_LE`）要证的是
+
+```text
+|{g ∈ mergeHistories n : cladesOf n g = cladesOf n f}| = LE (cladesOf n f) univ
+```
+
+即「纤维 ↔ clade 包含偏序的**线性扩展**（`LE` 数的那一族对象）」之间的**显式双射**。
+
+本节交付这条双射的**偏序侧第一件器材**：`cladesOf n f` 的包含偏序**就是二叉树的结点偏序**。
+它在 clade 集上的精确内容是
+
+> 每个非单点 clade 在 `cladesOf n f` 中恰有 **2 个**极大真子簇（`children`）。
+
+（对比：`LE` 的递归对任意孩子数都有定义（`Nat.multinomial`）；而 `cladesOf n f` 实际只有
+两个孩子 —— 这正是「合并史每步恰把**两块**并成一块」。）
+
+证明（对层数 `L` 强归纳，用 §13 的 `fiberOf_stepMap` ＋ `chainMap_mono`）：
+第 `L'+1` 层的非单点纤维要么是**上一步刚合并出的新块** `A ∪ B`，要么是第 `L'` 层原封不动
+的纤维。前者：孩子恰是 `A`、`B` —— 更细层（`j ≤ L'`）的块落在 `A` 或 `B` 内，
+更粗层（`j > L'`）的块若含于 `A ∪ B` 则只能整体等于它。后者：用归纳假设。
+
+⚠️ **这仍是器材，不是 (O1) 本体**：双射本身见 §14.1 的诚实边界。 -/
+
+/-- 第 `L` 层任一**非单点**纤维在 `cladesOf n f` 里恰有 `2` 个孩子。 -/
+theorem children_fiberOf_chainMap_card_two {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) :
+    ∀ L < n, ∀ v : Fin n, 2 ≤ (fiberOf (chainMap n f L) v).card →
+      (children (cladesOf n f) (fiberOf (chainMap n f L) v)).card = 2 := by
+  intro L
+  refine Nat.strongRecOn L (motive := fun k => k < n → ∀ v : Fin n,
+    2 ≤ (fiberOf (chainMap n f k) v).card →
+      (children (cladesOf n f) (fiberOf (chainMap n f k) v)).card = 2) ?_
+  intro L ih hLn v hv
+  rcases L with _ | L'
+  · have h0 : chainMap n f 0 = (id : Fin n → Fin n) := rfl
+    have hsing : fiberOf (chainMap n f 0) v = {v} := by
+      rw [h0]
+      ext z
+      rw [mem_fiberOf]
+      simp
+    rw [hsing, Finset.card_singleton] at hv
+    omega
+  · have hL'n : L' < n := by omega
+    have hL' : L' < n - 1 := by omega
+    set x : Fin n := (f ⟨L', hL'⟩).1 with hxdef
+    set y : Fin n := (f ⟨L', hL'⟩).2 with hydef
+    have hpair : f ⟨L', hL'⟩ = (x, y) := by rw [hxdef, hydef]
+    have hstep := hf.1 ⟨L', hL'⟩
+    have hx : chainMap n f L' x = x := by rw [hxdef]; exact hstep.1
+    have hy : chainMap n f L' y = y := by rw [hydef]; exact hstep.2.1
+    have hxy : x ≠ y := by rw [hxdef, hydef]; exact ne_of_lt hstep.2.2
+    have hsucc : chainMap n f (L' + 1) = stepMap (chainMap n f L') x y := by
+      rw [chainMap_succ, dite_eq_left hL', hpair]
+    have hCv : ∀ w : Fin n, fiberOf (chainMap n f (L' + 1)) w
+        = if w = x then fiberOf (chainMap n f L') x ∪ fiberOf (chainMap n f L') y
+          else if w = y then ∅ else fiberOf (chainMap n f L') w := by
+      intro w
+      rw [hsucc, fiberOf_stepMap]
+    rw [hCv v] at hv ⊢
+    by_cases hvx : v = x
+    · rw [ite_eq_left hvx] at hv ⊢
+      set A : Finset (Fin n) := fiberOf (chainMap n f L') x with hA
+      set B : Finset (Fin n) := fiberOf (chainMap n f L') y with hB
+      have hCx : fiberOf (chainMap n f (L' + 1)) x = A ∪ B := by
+        rw [hCv x, ite_eq_left rfl]
+      have hAT : A ∈ cladesOf n f := by
+        rw [hA]
+        exact mem_cladesOf.mpr ⟨L', hL'n, hx ▸ fiberOf_mem_blocksOf (chainMap n f L') x⟩
+      have hBT : B ∈ cladesOf n f := by
+        rw [hB]
+        exact mem_cladesOf.mpr ⟨L', hL'n, hy ▸ fiberOf_mem_blocksOf (chainMap n f L') y⟩
+      have hxInA : x ∈ A := by rw [hA]; exact mem_fiberOf.mpr hx
+      have hyInB : y ∈ B := by rw [hB]; exact mem_fiberOf.mpr hy
+      have hAneB : A ≠ B := by
+        intro heq
+        have h1 : x ∈ B := heq ▸ hxInA
+        rw [hB, mem_fiberOf] at h1
+        exact hxy (hx.symm.trans h1)
+      have hyNotA : y ∉ A := by
+        intro h
+        rw [hA, mem_fiberOf] at h
+        exact hxy (h.symm.trans hy)
+      have hxNotB : x ∉ B := by
+        intro h
+        rw [hB, mem_fiberOf] at h
+        exact hxy (hx.symm.trans h)
+      have hAproper : A ⊂ A ∪ B := by
+        refine Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_union_left, ?_⟩
+        intro heq
+        have h1 : y ∈ A ∪ B := Finset.mem_union_right A hyInB
+        rw [← heq] at h1
+        exact hyNotA h1
+      have hBproper : B ⊂ A ∪ B := by
+        refine Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_union_right, ?_⟩
+        intro heq
+        have h1 : x ∈ A ∪ B := Finset.mem_union_left B hxInA
+        rw [← heq] at h1
+        exact hxNotB h1
+      have hclassify : ∀ D ∈ cladesOf n f, D ⊆ A ∪ B → D ⊆ A ∨ D ⊆ B ∨ D = A ∪ B := by
+        intro D hDT hDsub
+        obtain ⟨j, hj, hDj⟩ := mem_cladesOf.mp hDT
+        obtain ⟨a0, ha0⟩ := nonempty_of_mem_blocksOf hDj
+        have hDeq : D = fiberOf (chainMap n f j) (chainMap n f j a0) :=
+          eq_fiberOf_of_mem_blocksOf hDj ha0
+        have ha0C : a0 ∈ A ∪ B := hDsub ha0
+        by_cases hle : j ≤ L'
+        · have hmono : D ⊆ fiberOf (chainMap n f L') (chainMap n f L' a0) := by
+            rw [hDeq]
+            exact fiberOf_chainMap_mono f hle a0
+          rcases Finset.mem_union.mp ha0C with h | h
+          · left
+            have hxa : chainMap n f L' a0 = x := mem_fiberOf.mp (hA ▸ h)
+            have hfe : fiberOf (chainMap n f L') (chainMap n f L' a0) = A := by
+              rw [hxa, ← hA]
+            rwa [hfe] at hmono
+          · right; left
+            have hya : chainMap n f L' a0 = y := mem_fiberOf.mp (hB ▸ h)
+            have hfe : fiberOf (chainMap n f L') (chainMap n f L' a0) = B := by
+              rw [hya, ← hB]
+            rwa [hfe] at hmono
+        · right; right
+          have hle' : L' + 1 ≤ j := by omega
+          have hmono : fiberOf (chainMap n f (L' + 1)) (chainMap n f (L' + 1) a0) ⊆ D := by
+            rw [hDeq]
+            exact fiberOf_chainMap_mono f hle' a0
+          have hxval : chainMap n f (L' + 1) a0 = x := by
+            have h1 : a0 ∈ fiberOf (chainMap n f (L' + 1)) x := by
+              rw [hCx]
+              exact ha0C
+            exact mem_fiberOf.mp h1
+          have hsub : A ∪ B ⊆ D := by
+            rw [← hCx, ← hxval]
+            exact hmono
+          exact Finset.Subset.antisymm hDsub hsub
+      have hAmax : ∀ D ∈ cladesOf n f, A ⊂ D → D ⊂ A ∪ B → False := by
+        intro D hDT hAD hDC
+        rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+        · have h1 := Finset.card_lt_card hAD
+          have h2 := Finset.card_le_card hsub
+          omega
+        · have h1 : x ∈ D := hAD.1 hxInA
+          have h2 : x ∈ B := hsub h1
+          rw [hB, mem_fiberOf] at h2
+          exact hxy (hx.symm.trans h2)
+        · exact hDC.2 (heq ▸ Finset.Subset.refl D)
+      have hBmax : ∀ D ∈ cladesOf n f, B ⊂ D → D ⊂ A ∪ B → False := by
+        intro D hDT hBD hDC
+        rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+        · have h1 : y ∈ D := hBD.1 hyInB
+          have h2 : y ∈ A := hsub h1
+          rw [hA, mem_fiberOf] at h2
+          exact hxy (h2.symm.trans hy)
+        · have h1 := Finset.card_lt_card hBD
+          have h2 := Finset.card_le_card hsub
+          omega
+        · exact hDC.2 (heq ▸ Finset.Subset.refl D)
+      have hAchild : A ∈ children (cladesOf n f) (A ∪ B) :=
+        mem_children.mpr ⟨hAT, hAproper, hAmax⟩
+      have hBchild : B ∈ children (cladesOf n f) (A ∪ B) :=
+        mem_children.mpr ⟨hBT, hBproper, hBmax⟩
+      have hchildren : children (cladesOf n f) (A ∪ B) = {A, B} := by
+        ext D
+        rw [Finset.mem_insert, Finset.mem_singleton]
+        constructor
+        · intro hD
+          obtain ⟨hDT, hDC, -⟩ := mem_children.mp hD
+          rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+          · by_cases hDA : D = A
+            · exact Or.inl hDA
+            · exfalso
+              exact (children_maximal hD hAT
+                (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hDA⟩)) hAproper
+          · by_cases hDB : D = B
+            · exact Or.inr hDB
+            · exfalso
+              exact (children_maximal hD hBT
+                (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hDB⟩)) hBproper
+          · exact absurd (heq ▸ Finset.Subset.refl D) hDC.2
+        · rintro (rfl | rfl)
+          · exact hAchild
+          · exact hBchild
+      rw [hchildren, Finset.card_insert_of_notMem (by simp [hAneB]), Finset.card_singleton]
+    · rw [ite_eq_right hvx] at hv ⊢
+      by_cases hvy : v = y
+      · rw [ite_eq_left hvy] at hv ⊢
+        rw [Finset.card_empty] at hv
+        omega
+      · rw [ite_eq_right hvy] at hv ⊢
+        exact ih L' (by omega) hL'n v hv
+
+/-- ★★★ **`cladesOf n f` 的二叉性**（(O1) 的偏序侧器材）：每个非单点 clade
+恰有 `2` 个极大真子簇。
+
+这是「`cladesOf` 的包含偏序 = 二叉树的结点偏序」的**定量**内容；
+`LE` 一侧的线性扩展数正是在这个偏序上数的。 -/
+theorem children_cladesOf_card_two {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f)
+    (h2 : 2 ≤ C.card) :
+    (children (cladesOf n f) C).card = 2 := by
+  obtain ⟨j, hj, hCj⟩ := mem_cladesOf.mp hC
+  obtain ⟨w, hw⟩ := nonempty_of_mem_blocksOf hCj
+  have hCw : C = fiberOf (chainMap n f j) (chainMap n f j w) :=
+    eq_fiberOf_of_mem_blocksOf hCj hw
+  rw [hCw]
+  exact children_fiberOf_chainMap_card_two hf j hj (chainMap n f j w) (hCw ▸ h2)
+
+/-! ### §14.1 (O1) 的**诚实边界**（本节**没有**做的事，逐件具名）
+
+`children_cladesOf_card_two` 把 (O1) 双射**两端对象的形状**对齐了
+（纤维一侧是「二叉树上的合并序」，`LE` 一侧是「二叉树偏序上的线性扩展」），
+但双射本身**未给出**。剩余内容精确地是**两件**：
+
+1. ★ **`cladesOf` 的层分解无重**：`C ∈ cladesOf n f`（`2 ≤ |C|`）**唯一**确定一个
+   「创建步」`k_C < n - 1`（`C` 首次成为块的层），且 `children (cladesOf n f) C` 恰是
+   第 `k_C` 步合并前的那两块。由此「合并史 `g`（同 clade 集）」↔「非单点 clade 的
+   **创建序** `Fin (n-1) ≃ {C ∈ cladesOf n f : 2 ≤ |C|}`（保持孩子先于父）」。
+   **缺的具名器材**：`existsUnique_creation_level`
+   （现在只有 `upto_succ_union` 的**逐步**版本：每步恰添一个新块；缺「每个非单点 clade
+   只被创建一次」的**全局**版本，即 `cladesOf n f` 与「各层新块」之间的无重并）。
+2. ★ **`LE` = 线性扩展数**：`LE`（§8）现在是**多项式系数递推**。要把它认成「创建序的个数」，
+   需要自造线性扩展计数 `LinExt`（`internalBelow T C` 上按 `⊊` 的线性扩展数）
+   ＋ **交错引理** `LinExt C = multinomial(hook 孩子) · ∏ LinExt 孩子`
+   （孩子子树的线性扩展在**块间插空**）。
+   **缺的具名器材**：`LinExt` ＋ `LinExt_eq`（交错引理）。
+   ⚠️ Mathlib **没有**线性扩展的**计数**（`Mathlib/Order/Extension/Linear.lean` 只有
+   `LinearExtension` 类型别名与存在性 `extend_partialOrder`，见 §8 的三次 grep）
+   ⇒ 这件必须自造，且交错引理是**真正的组合作业**（`Finset`/`Multiset` 层面的洗牌双射）。
+
+⇒ `rankedFiberCount_gap` **仍开着**（(O1) 未证）；本轮的可复用增量是 §14 的二叉性定理。
+-/
+
 end Phylo.Stat.HookLength
