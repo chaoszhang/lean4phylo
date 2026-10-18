@@ -502,3 +502,83 @@ def MultiStatePairwiseInsufficiencyGap : Prop :=
       ∃ T : Cladogram.{0, 0} (Fin 5),
         DisplaysMultiState T (M i) ∧ DisplaysMultiState T (M j)) ∧
     ¬ (∃ T : Cladogram.{0, 0} (Fin 5), ∀ i : Fin 3, DisplaysMultiState T (M i))
+/-! ### G2 的**反例候选**（`Fitch–Meacham F₃`）与「整体不可解」的**组合内核**
+
+⚠️ 本节**不证明** `MultiStatePairwiseInsufficiencyGap`（缺口本体仍开）。只补两件**器材**：
+① 把文献里的 `r = 3` 反例落成具体矩阵 `fitchMeachamF3`；
+② 把「整体不可解」中**与树无关**的纯组合内核证掉，好让后续补上唯一缺的那条树引理后一段收口。
+
+文献（`references/md/LamGusfieldSridhar2009_PerfectPhylogenyThreeStateCharactersarXiv0905.1417.md`）：
+
+* **131–136 行**：Fitch 1975 的例子 —— 每**一对**字符都有完美系统发生，整集没有；
+* **1256–1273 行**：`F_r` 统一构造（`r + 2` 条序列 × `r` 个字符 × `r` 个状态）；
+* **1263–1266 行**：两端团 `EC1`、`EC2`；
+* **1283 行**：`r = 3` 时 `EC1 = {a0, b2, c1}`、`EC2 = {a1, b0, c0}`；
+* **1290–1292 行**：**Theorem 7.1** —— 任意 `r − 1` 个字符可解、整体不可解。
+
+`r = 3` 的矩阵（**行 = taxon `t₀…t₄`，列 = 字符 `a, b, c`**；由 `EC1`/`EC2` 与三个 tower-clique 读出）：
+
+```
+        a  b  c
+  t₀    0  2  1
+  t₁    1  0  0
+  t₂    0  0  2
+  t₃    2  2  0
+  t₄    1  1  1
+```
+
+★ **为什么这个实例可行（分析记录，供补上树引理后收口）**：
+5 taxa / 3 状态用鸽笼 ⇒ 每个字符必有一个**单元状态类**（本例三者均为 `(2, 2, 1)` 型）。
+于是「`T` 展示该字符」⟺「`T` 的某条边以某个**二元状态类**为叶侧」：
+
+* (⟸) 剪「该二元类为叶侧」的边 ＋ 剪单元类叶子的悬挂边 ⇒ 三个分量恰为三个状态类；
+* (⟹) 状态类把 `T.V` 剖成 3 个**连通**块 ⇒ 跨块边数 `= 2`（商图是树）⇒ 三块中**两个**是某条
+  边的叶侧 ⇒ 至少一个二元状态类是叶侧。**这一步（商树计数）是本文件尚未形式化的树引理。**
+
+逐字符的候选叶侧（2-元集）：`a: {0,2} / {1,4}`、`b: {1,2} / {0,3}`、`c: {1,3} / {0,4}`。
+「两两可解」⟺ 每对字符都能选到一对**不交**候选；「整体不可解」⟺ 无法从每字符选一个候选做到
+三三不交 —— 这条纯组合事实正是下面两条定理证掉的东西（配合「`Fin 5` 上两个相交且相异的二元集
+`¬ SidesCompatible`」这条一步引理即可收口）。 -/
+def fitchMeachamF3 (i : Fin 3) (x : Fin 5) : Fin 3 :=
+  if i = 0 then
+    (if x = 0 then 0 else if x = 1 then 1 else if x = 2 then 0 else if x = 3 then 2 else 1)
+  else if i = 1 then
+    (if x = 0 then 2 else if x = 1 then 0 else if x = 2 then 0 else if x = 3 then 2 else 1)
+  else
+    (if x = 0 then 1 else if x = 1 then 0 else if x = 2 then 2 else if x = 3 then 0 else 1)
+
+/-- **`F₃` 的九个状态类**：确认每个字符恰是 `(2, 2, 1)` 型，且两个二元类就是上面列的候选叶侧
+（这是「5 taxa / 3 状态 ⇒ 必有一个单元类」在具体矩阵上的体现）。 -/
+theorem fitchMeachamF3_stateClasses :
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 0 x = 0)) = ({0, 2} : Finset (Fin 5)) ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 0 x = 1)) = {1, 4} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 0 x = 2)) = {3} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 1 x = 0)) = {1, 2} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 1 x = 1)) = {4} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 1 x = 2)) = {0, 3} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 2 x = 0)) = {1, 3} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 2 x = 1)) = {0, 4} ∧
+    (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 2 x = 2)) = {2} := by
+  decide
+
+/-- **「整体不可解」的组合内核**（与树无关）：从 `F₃` 三个字符的候选叶侧里各取一个，
+必有一对**相交**；而 `Fin 5` 上两个相交且相异的二元集**不相容**（`SidesCompatible` 的四个析取支
+逐一排除：`{0,2} ⊄ {1,2}`、`{1,2} ⊄ {0,2}`、不交为假、并集只有 3 元 `≠ univ`），
+故不存在三条边能同时给出这三条叶侧。 -/
+theorem fitchMeachamF3_options_meet (A B C : Finset (Fin 5))
+    (hA : A = {0, 2} ∨ A = {1, 4}) (hB : B = {1, 2} ∨ B = {0, 3})
+    (hC : C = {1, 3} ∨ C = {0, 4}) :
+    A ∩ B ≠ ∅ ∨ A ∩ C ≠ ∅ ∨ B ∩ C ≠ ∅ := by
+  rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> rcases hC with rfl | rfl <;> decide
+
+/-- 上一条的否定形（**两两不交不可能**）：`MultiStatePairwiseInsufficiencyGap` 的「整体不可解」
+那一半，在树引理补上之后，唯一剩下的组合障碍就是这条。 -/
+theorem fitchMeachamF3_no_pairwise_disjoint (A B C : Finset (Fin 5))
+    (hA : A = {0, 2} ∨ A = {1, 4}) (hB : B = {1, 2} ∨ B = {0, 3})
+    (hC : C = {1, 3} ∨ C = {0, 4}) :
+    ¬ (A ∩ B = ∅ ∧ A ∩ C = ∅ ∧ B ∩ C = ∅) := by
+  rintro ⟨h1, h2, h3⟩
+  rcases fitchMeachamF3_options_meet A B C hA hB hC with h | h | h
+  · exact h h1
+  · exact h h2
+  · exact h h3
