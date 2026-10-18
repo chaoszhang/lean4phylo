@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.Algorithm.NJ
+import Phylo.Algorithm.NJHardCore
 import Phylo.Buneman
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 import Mathlib.Tactic.NormNum
@@ -849,6 +850,173 @@ theorem exDiss_fourPoint : exDiss.FourPoint := by
 def atteson_lemma11_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite → 4 ≤ Fintype.card X →
     ∃ δmin : ℝ, 0 < δmin ∧ δ.IsCherrySeparated δmin
+
+/-! ### 8.1 ★★★ 缺口 1 **已证成**：`atteson_lemma11_gap` 是定理（W25 泳道 b）
+
+结论 ★★★ `atteson_lemma11_gap_holds`：`atteson_lemma11_gap` **不需要任何数学假设**即成立；
+且证明**连 `PositiveDefinite` 都不需要**（只用 `FourPoint` 与 `4 ≤ |X|`）。
+
+**路线（不走树层，(a)(b)(c) 三件器材全部绕过）**：§8 原诊断认为本缺口要实现树 + Lemma 10 的
+权重公式 `w_e`。关键观察是 —— 本 `def` 里 `δmin` 是 **`∃` 约束的自由参数**，可以取任意小，
+故只需「**每个非樱桃对都有严格更小的 `Q` 的樱桃对**」：
+
+1. ★★★ `Dissimilarity.maxZCherryCore`（`Phylo/Algorithm/NJHardCore.lean:308`，**无条件定理**）
+   ＋ ★★ `Dissimilarity.nj_cherry`（`Phylo/Algorithm/NJ.lean:351`）
+   ⇒ **`Q` 的全局最小点必是樱桃**（有限集上必取到最小值）；
+2. 若非樱桃对 `(k,l)` 也取到 `Q` 的全局最小值，则同一条 `nj_cherry` 说它也是樱桃 —— 矛盾
+   ⇒ 对全局最小樱桃 `(a,b)` 有 **`Q(a,b) < Q(k,l)`**（严格，这正是 n ≥ 5 时需要的）；
+3. ★★★ `disjointPairs_or_sharesOneLabel_of_isCherry`：任意樱桃对任意非樱桃对**形态总是合格**
+   （不交或恰交一标签）⇒ **同一个**固定樱桃 `(a,b)` 就能为**所有**非樱桃对作证，
+   不需要逐对挑证人；
+4. 取 `δmin := (min_{非樱桃 (k,l)} (Q(k,l) − Q(a,b))) / (3·n) > 0`，系数比较
+   `3(n−4) ≤ 3n`、`2(n−3) ≤ 3n` 即得两条间隙不等式（n = 4 时 `3(n−4) = 0` 自动成立）。
+
+**诚实边界**：本证明**不用** Atteson Lemma 11 的间隙不等式本身（原文 `:1989–2009`），也不用
+Lemma 10 的权重公式（`:1774–1804`）；得到的 `δmin` 是**抽象正数**，**不**声称等于实现树的最短边长
+（本 `def` 只要求 `∃ δmin > 0`，故够用 —— 这与 §8 docstring 的 W19 归属更正不冲突：那里说的是
+「本 `def` 在 Atteson Theorem 1 里扮演 `min_e l(e) > 0` 的角色」，本定理只证**存在性**）。
+
+**★D 命题核查**（`scripts/msc/w25_lemma11_gap_check.py`）：`∃ δmin > 0, IsCherrySeparated δ δmin`
+在 n = 4 全枚举（六距离取值 0–5，3025 个 `FourPoint ∧ PositiveDefinite` 度量）、
+n = 5（取值 0–2）以及 n = 4…10 的随机树度量（**含 0 权边 / 零长悬挂边**，共 128 918 个）上
+**0 反例** ⇒ 与「该命题为真」一致（故本批**不**走证伪路线）。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **`IsCherry` 的标签交换对称性**：`IsCherry i j → IsCherry j i`。 -/
+theorem IsCherry.swap {δ : Dissimilarity X} {i j : X} (h : δ.IsCherry i j) :
+    δ.IsCherry j i := by
+  obtain ⟨hij, hrest⟩ := h
+  refine ⟨hij.symm, ?_⟩
+  intro k l hkj hki hlj hli
+  obtain ⟨h1, h2⟩ := hrest k l hki hkj hli hlj
+  constructor
+  · rw [δ.symm j i]; linarith
+  · rw [δ.symm j i]; linarith
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **形态引理**：**任意**樱桃对**任意**非樱桃对都「形态合格」——
+二者要么不交（`DisjointPairs`），要么恰交一个标签（`SharesOneLabel`）。
+
+⇒ ★★ `IsCherrySeparated` 的两条分支合起来覆盖**所有**樱桃，其形态前提**永不落空**；
+这也是 ★★★ `atteson_lemma11_gap_holds` 能用**同一个**樱桃为所有非樱桃对作证的原因。 -/
+theorem disjointPairs_or_sharesOneLabel_of_isCherry {δ : Dissimilarity X} {i j k l : X}
+    (hch : δ.IsCherry i j) (hnc : ¬ δ.IsCherry k l) :
+    DisjointPairs i j k l ∨ SharesOneLabel i j k l := by
+  -- 若 `i, j` 都在 `{k,l}` 里，则 `{i,j} = {k,l}`，与 `¬IsCherry k l` 矛盾
+  have hkey : ¬ ((i = k ∨ i = l) ∧ (j = k ∨ j = l)) := by
+    rintro ⟨hi, hj⟩
+    apply hnc
+    rcases hi with rfl | rfl <;> rcases hj with rfl | rfl
+    · exact absurd rfl hch.1
+    · exact hch
+    · exact IsCherry.swap hch
+    · exact absurd rfl hch.1
+  have hsplit : ¬ (i = k ∨ i = l) ∨ ¬ (j = k ∨ j = l) := by
+    rcases Classical.em (i = k ∨ i = l) with hi | hi
+    · exact Or.inr (fun hj => hkey ⟨hi, hj⟩)
+    · exact Or.inl hi
+  rcases hsplit with hi | hj
+  · have hik : i ≠ k := fun h => hi (Or.inl h)
+    have hil : i ≠ l := fun h => hi (Or.inr h)
+    rcases Classical.em (j = k) with hjk | hjk
+    · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨hjk, hik, hil⟩)))
+    rcases Classical.em (j = l) with hjl | hjl
+    · exact Or.inr (Or.inr (Or.inr (Or.inr ⟨hjl, hik, hil⟩)))
+    · exact Or.inl ⟨hik, hil, hjk, hjl⟩
+  · have hjk : j ≠ k := fun h => hj (Or.inl h)
+    have hjl : j ≠ l := fun h => hj (Or.inr h)
+    rcases Classical.em (i = k) with hik | hik
+    · exact Or.inr (Or.inl ⟨hik, hjk, hjl⟩)
+    rcases Classical.em (i = l) with hil | hil
+    · exact Or.inr (Or.inr (Or.inl ⟨hil, hjk, hjl⟩))
+    · exact Or.inl ⟨hik, hil, hjk, hjl⟩
+
+omit [DecidableEq X] in
+/-- ★★★ **缺口 1 已证成**：`atteson_lemma11_gap` 是**定理**（无任何数学假设）。
+
+证明路线与「诚实边界」见本节抬头（`### 8.1`）：`Q`-最小点必为樱桃
+（`maxZCherryCore` + `nj_cherry`）⇒ 非樱桃对的 `Q` 严格更大 ⇒ 形态引理给出统一证人
+⇒ `δmin := gap / (3n)`。**不用**实现树层与 Lemma 10 的权重公式。 -/
+theorem atteson_lemma11_gap_holds (δ : Dissimilarity X) : atteson_lemma11_gap δ := by
+  classical
+  intro hfp _hpd hcard
+  -- ① `4 ≤ |X|` 给出互异两点
+  have hc1 : 1 < Fintype.card X := by omega
+  obtain ⟨a0⟩ : Nonempty X := Fintype.card_pos_iff.mp (by omega)
+  obtain ⟨b0, hb0⟩ := Fintype.exists_ne_of_one_lt_card hc1 a0
+  -- ② `Q` 的全局最小点（有限集上取最小）
+  have hne2 : ((Finset.univ : Finset (X × X)).filter (fun p => p.1 ≠ p.2)).Nonempty :=
+    ⟨(a0, b0), Finset.mem_filter.mpr ⟨Finset.mem_univ _, hb0.symm⟩⟩
+  obtain ⟨⟨a, b⟩, hpab, hmin'⟩ :=
+    Finset.exists_min_image ((Finset.univ : Finset (X × X)).filter (fun p => p.1 ≠ p.2))
+      (fun p : X × X => δ.Q p.1 p.2) hne2
+  have hab : a ≠ b := (Finset.mem_filter.mp hpab).2
+  have hmin : ∀ i j : X, i ≠ j → δ.Q a b ≤ δ.Q i j := fun i j hij =>
+    hmin' (i, j) (Finset.mem_filter.mpr ⟨Finset.mem_univ _, hij⟩)
+  -- ③ 最小点是樱桃
+  have hch : δ.IsCherry a b := nj_cherry δ (maxZCherryCore δ) hfp a b hab hmin
+  -- ④ 非樱桃对的 `Q` **严格**更大
+  have hstrict : ∀ k l : X, k ≠ l → ¬ δ.IsCherry k l → δ.Q a b < δ.Q k l := by
+    intro k l hkl hnc
+    rcases lt_or_eq_of_le (hmin k l hkl) with h | h
+    · exact h
+    · exfalso
+      exact hnc (nj_cherry δ (maxZCherryCore δ) hfp k l hkl
+        (fun i j hij => by rw [← h]; exact hmin i j hij))
+  -- ⑤ 非樱桃对的集合
+  set P : Finset (X × X) :=
+    (Finset.univ : Finset (X × X)).filter (fun p => p.1 ≠ p.2 ∧ ¬ δ.IsCherry p.1 p.2)
+    with hP
+  by_cases hPne : P.Nonempty
+  · -- ⑥ 非平凡情形：取最小间隙
+    obtain ⟨w, hw⟩ := hPne
+    set G : Finset ℝ := P.image (fun p : X × X => δ.Q p.1 p.2 - δ.Q a b) with hG
+    have hGne : G.Nonempty := by
+      rw [hG]
+      exact ⟨_, Finset.mem_image.mpr ⟨w, hw, rfl⟩⟩
+    set gap : ℝ := G.min' hGne with hgap
+    have hgappos : 0 < gap := by
+      have hmem : gap ∈ G := by rw [hgap]; exact Finset.min'_mem G hGne
+      rw [hG] at hmem
+      obtain ⟨p, hp, hpv⟩ := Finset.mem_image.mp hmem
+      have hpne : p.1 ≠ p.2 := (Finset.mem_filter.mp hp).2.1
+      have hpnc : ¬ δ.IsCherry p.1 p.2 := (Finset.mem_filter.mp hp).2.2
+      have hs := hstrict p.1 p.2 hpne hpnc
+      linarith [hpv, hgap]
+    have hnpos : (0 : ℝ) < (Fintype.card X : ℝ) := by
+      have h4 : (4 : ℝ) ≤ (Fintype.card X : ℝ) := by exact_mod_cast hcard
+      linarith
+    set δmin : ℝ := gap / (3 * (Fintype.card X : ℝ)) with hδmin
+    have hδminpos : 0 < δmin := by
+      rw [hδmin]; exact div_pos hgappos (by linarith)
+    have hgapdiv : 3 * (Fintype.card X : ℝ) * δmin = gap := by
+      rw [hδmin]; field_simp
+    refine ⟨δmin, hδminpos, ?_⟩
+    intro k l hkl hnc
+    have hmemP : (k, l) ∈ P := by
+      rw [hP]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hkl, hnc⟩
+    have hmemG : δ.Q k l - δ.Q a b ∈ G := by
+      rw [hG]; exact Finset.mem_image.mpr ⟨(k, l), hmemP, rfl⟩
+    have hgaple : gap ≤ δ.Q k l - δ.Q a b := by
+      rw [hgap]; exact Finset.min'_le G _ hmemG
+    refine ⟨a, b, hch, ?_⟩
+    rcases disjointPairs_or_sharesOneLabel_of_isCherry (k := k) (l := l) hch hnc with
+      hdis | hsh
+    · refine Or.inl ⟨hdis, ?_⟩
+      have hcoef : 3 * ((Fintype.card X : ℝ) - 4) ≤ 3 * (Fintype.card X : ℝ) := by linarith
+      have hmul := mul_le_mul_of_nonneg_right hcoef (le_of_lt hδminpos)
+      linarith [hmul, hgapdiv, hgaple]
+    · refine Or.inr ⟨hsh, ?_⟩
+      have hcoef : 2 * ((Fintype.card X : ℝ) - 3) ≤ 3 * (Fintype.card X : ℝ) := by linarith
+      have hmul := mul_le_mul_of_nonneg_right hcoef (le_of_lt hδminpos)
+      linarith [hmul, hgapdiv, hgaple]
+  · -- ⑦ 空真情形：所有互异对都是樱桃
+    refine ⟨1, one_pos, ?_⟩
+    intro k l hkl hnc
+    have hmemP : (k, l) ∈ P := by
+      rw [hP]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hkl, hnc⟩
+    exact absurd ⟨(k, l), hmemP⟩ hPne
+
 
 /-- ★★★ **缺口 2：Atteson Lemma 6 的归约步**（`:677–694` 边权公式 (7)），
 即 Theorem 1（`:868–916`）归纳不变量 (a)(b) 的递推。
