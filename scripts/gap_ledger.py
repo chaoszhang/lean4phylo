@@ -98,6 +98,12 @@ VACUOUS = {
         "取退化数据即真；真缺口缺「允许环的网络载体 ＋ N|A 限制算子 ＋ quarnet 类型学」",
     "level1QuartetSystem_gap":
         "空转：`QuartetSystem`/`multiplicity` 同样被存在量词绑定；真缺口同 `quarnetRules_level1_gap`",
+    "neighborNetAgglomeration_gap":
+        "空转：`∃ Step` 是自由槽 ⇒ 输入 `d` 与算法都消失；残量 `_iff_star` 把它钉成「每个 X 上存在星形族」。"
+        "真缺件四件：Cluster 载体 / 簇距离与极小化选择 / 约化式 / 反演展开（md:453–465 等）",
+    "canonicalSplitDecomposition_gap_correct_shape":
+        "空转：只需「∃ 某个分解」，取退化 δ₀ = δ − M·Σδ_s 即可（非对角任意负）。"
+        "真 BdD Thm 2 还要求 ① 残差仍在 M(X)（δxx=0/非负/三角）② 系数 = 隔离指数 α_s ③ 唯一性",
 }
 
 SPEC_OVERRIDE = {
