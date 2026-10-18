@@ -104,6 +104,9 @@ VACUOUS = {
     "canonicalSplitDecomposition_gap_correct_shape":
         "空转：只需「∃ 某个分解」，取退化 δ₀ = δ − M·Σδ_s 即可（非对角任意负）。"
         "真 BdD Thm 2 还要求 ① 残差仍在 M(X)（δxx=0/非负/三角）② 系数 = 隔离指数 α_s ③ 唯一性",
+    "bootstrap_confidence_gap":
+        "空转（假设槽）：`∃ Ω TrueSplit p` 三个都是自由槽 —— 取 `Ω := Empty` 则三条 `∀ ω` 全空真 ⇒ `↔ True`（连一个 Split 都不需要）。"
+        "真缺件三件：① `p` 与 `bootstrapSupport` 的桥（重抽样树族上的 pushforward）② 弱收敛（bootstrap→抽样分布）③ 估计量相容性",
 }
 
 SPEC_OVERRIDE = {
