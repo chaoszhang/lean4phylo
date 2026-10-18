@@ -238,8 +238,14 @@ theorem isDSplit_iff_isDSplitStrong_of_fourPoint (δ : NJ.Dissimilarity X) {A B 
 
 故「正确形态」如下（用库内 `bunemanIndex` 表达隔离指数；`Dissimilarity` = 对称 + 零对角）。 -/
 
-/-- ⬜ **正确形态（W12j 登记；未证）**：`Σ` 弱相容 ⟹ 存在**对称零对角** `δ`，使 `Σ` 恰是
-其**正隔离指数**的 split 集，且**隔离指数就是给定权重 `w`**、非成员的隔离指数为 `0`。 -/
+/-- ⬜ **正确形态（W12j 登记）**：`Σ` 弱相容 ⟹ 存在**对称零对角** `δ`，使 `Σ` 恰是
+其**正隔离指数**的 split 集，且**隔离指数就是给定权重 `w`**、非成员的隔离指数为 `0`。
+
+⚠️ **W25-a：本形态是假命题** ✗（本 `def` 原文**逐字未改**）—— 形式化反例见 §4.1 的
+`weakCompatibilityRealization_gap_correct_shape_refuted`。病根：`bunemanIndex` 是 `μ`（`min` 形），
+「`μ_t = 0`（非成员）」强迫 `t` 的**每个**四元组取值 `≥ 0`，与「`μ_s = w_s > 0`（成员）」在
+对角四元组上互斥（`Fin 4`：`{0,1}|{2,3}` 与 `{0,2}|{1,3}`）。忠实形态须改用 `max` 形的
+隔离指数 `α`（即 `IsDSplit` 一侧），不是 `bunemanIndex`。 -/
 def weakCompatibilityRealization_gap_correct_shape : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
@@ -255,6 +261,105 @@ theorem not_isDSplit_implies_bunemanIndex_pos :
   intro h
   have h1 := h cexDelta cexSplit cex_isDSplit
   linarith [cex_bunemanIndex_neg]
+
+
+/-! ## 4.1 ★B **`weakCompatibilityRealization_gap_correct_shape` 是假命题**（W25-a 形式化反例）
+
+§4 的「正确形态」把 BdD 的隔离指数 `α` 换成了库内 `bunemanIndex` —— 而 ★D 校正已认定后者是
+**Buneman 1971 的 `μ_σ`（`min` 形）**，与 `α` 的关键差别：`μ` 是 `inf'`。于是
+
+* 「`μ_s = w_s > 0`」（成员）⟹ `s` 的每个四元组取值 `> 0`；
+* 「`μ_t = 0`」（非成员）⟹ `t` 的**每个**四元组取值都 `≥ 0`。
+
+取 `s = {0,1}|{2,3}`（成员，权重 `1`）与 `t = {0,2}|{1,3}`（非成员，非其对换），则
+
+```text
+quad_s(((0,1),(2,3))) = δ(0,2) + δ(1,3) − δ(0,1) − δ(2,3)     -- 需 ≥ 2·μ_s = 2
+quad_t(((0,2),(1,3))) = δ(0,1) + δ(2,3) − δ(0,2) − δ(1,3)     -- 需 ≥ 2·μ_t = 0
+```
+
+两者**互为相反数** ⇒ `0 ≥ 2`，矛盾。注意本反例**只用**了 `_correct_shape` 的第 2、3 个合取项，
+**完全没碰**第 1 个合取项 ⇒ 把 `IsDSplitStrong` 换成 `IsDSplit`（或任何别的 d-split 谓词）
+**同样为假**：病根在 `bunemanIndex`（`μ`）身上的那两条**等式**，不在 d-split 谓词的形态。
+
+（对照：忠实形态应把这两条换成 `max` 形的隔离指数 `α` —— `α_t = 0` 只要求**某个**四元组的
+两个交叉配对都 `≤` 内部配对，正是 BdD Thm 3 的取零机制，与成员的 `α_s > 0` 不冲突。） -/
+
+/-- 反例用的第二个 split：`{0,2} | {1,3}`（与 `cexSplit = {0,1}|{2,3}` 及其对换都不同）。 -/
+def cexSplit2 : Split (Fin 4) := ofSideA {0, 2} (by decide) (by decide)
+
+/-- `cexSplit2` **不是**成员 `cexSplit`（比 `sideA = {0,2}` 与 `{0,1}`）。 -/
+theorem cexSplit2_ne_cexSplit : cexSplit2 ≠ cexSplit := by
+  intro h
+  have h' := congrArg (fun s : Split (Fin 4) => s.sideA) h
+  simp only [cexSplit2, cexSplit, ofSideA_sideA] at h'
+  exact absurd h' (by decide)
+
+/-- `cexSplit2.swap` 也**不是**成员 `cexSplit`（3 在 `cexSplit2.swap.sideA` 而 3 ∉ `cexSplit.sideA`）。 -/
+theorem cexSplit2_swap_ne_cexSplit : cexSplit2.swap ≠ cexSplit := by
+  intro h
+  have h3 : (3 : Fin 4) ∈ cexSplit2.swap.sideA := by
+    simp only [cexSplit2, swap_sideA, ofSideA_sideB]
+    decide
+  rw [h] at h3
+  simp only [cexSplit, ofSideA_sideA] at h3
+  exact absurd h3 (by decide)
+
+/-- 单元族 `{cexSplit}` **弱相容**（冲突四点需要同一 `split` 在同一四点上诱导两个 2|2 split，
+被 `Separates.exclusive` 禁止）。 -/
+theorem weaklyCompatible_cexSplit :
+    WeaklyCompatible (↑({cexSplit} : Finset (Split (Fin 4))) : Set (Split (Fin 4))) := by
+  rintro ⟨a, b, c, e, ⟨u, hu, h1⟩, ⟨v, hv, h2⟩, _⟩
+  have hu' : u = cexSplit := by simpa using hu
+  have hv' : v = cexSplit := by simpa using hv
+  rw [hu'] at h1
+  rw [hv'] at h2
+  exact Separates.exclusive h1 (Or.inl h2)
+
+/-- ★B **核心矛盾**：`Fin 4` 上不存在相异度同时满足「`μ_{01|23} = 1`」与「`μ_{02|13} = 0`」。
+
+两个四元组 `((0,1),(2,3))`、`((0,2),(1,3))` 的 `bunemanQuad` 取值**互为相反数**，而 `inf'` 的
+上界性质（`bunemanIndex_le_quad`）把它们分别钉在 `≥ 2` 与 `≥ 0`。 -/
+theorem no_bunemanIndex_pair (δ : NJ.Dissimilarity (Fin 4))
+    (h1 : δ.bunemanIndex cexSplit = 1) (h2 : δ.bunemanIndex cexSplit2 = 0) : False := by
+  have hq1 : (((0, 1) : Fin 4 × Fin 4), ((2, 3) : Fin 4 × Fin 4))
+      ∈ NJ.Dissimilarity.bunemanQuadruples cexSplit := by
+    simp only [NJ.Dissimilarity.bunemanQuadruples, Finset.mem_product, cexSplit,
+      ofSideA_sideA, ofSideA_sideB, Finset.mem_insert, Finset.mem_singleton, Finset.mem_compl]
+    decide
+  have hq2 : (((0, 2) : Fin 4 × Fin 4), ((1, 3) : Fin 4 × Fin 4))
+      ∈ NJ.Dissimilarity.bunemanQuadruples cexSplit2 := by
+    simp only [NJ.Dissimilarity.bunemanQuadruples, Finset.mem_product, cexSplit2,
+      ofSideA_sideA, ofSideA_sideB, Finset.mem_insert, Finset.mem_singleton, Finset.mem_compl]
+    decide
+  have hb1 := δ.bunemanIndex_le_quad cexSplit hq1
+  have hb2 := δ.bunemanIndex_le_quad cexSplit2 hq2
+  have hv1 : δ.bunemanQuad (((0, 1), (2, 3)))
+      = δ.val 0 2 + δ.val 1 3 - δ.val 0 1 - δ.val 2 3 := by
+    simp only [NJ.Dissimilarity.bunemanQuad]
+  have hv2 : δ.bunemanQuad (((0, 2), (1, 3)))
+      = δ.val 0 1 + δ.val 2 3 - δ.val 0 2 - δ.val 1 3 := by
+    simp only [NJ.Dissimilarity.bunemanQuad]
+  rw [h1, hv1] at hb1
+  rw [h2, hv2] at hb2
+  linarith
+
+/-- ★B **`weakCompatibilityRealization_gap_correct_shape` 是假命题**（全称闭包为假：
+`α = Fin 4`、`F = {{0,1}|{2,3}}`、`w ≡ 1` 处不存在实现的 `δ`）。
+
+`def` 原文**逐字未改**；本定理只新增反例，核心矛盾在 `no_bunemanIndex_pair`。 -/
+theorem weakCompatibilityRealization_gap_correct_shape_refuted :
+    ¬ weakCompatibilityRealization_gap_correct_shape.{0} := by
+  intro h
+  obtain ⟨δ, _, hw, hz⟩ :=
+    h (F := {cexSplit}) (w := fun _ => 1) weaklyCompatible_cexSplit
+      (by intro _ _; norm_num)
+  have h1 : δ.bunemanIndex cexSplit = 1 := by
+    simpa using hw cexSplit (by simp)
+  have h2 : δ.bunemanIndex cexSplit2 = 0 :=
+    hz cexSplit2 (by simpa using cexSplit2_ne_cexSplit)
+      (by simpa using cexSplit2_swap_ne_cexSplit)
+  exact no_bunemanIndex_pair δ h1 h2
 
 
 /-! ## 5. ★★★ `fourPointCharacterization_gap` 的 **`⟸` 一半**（本轮已证）
