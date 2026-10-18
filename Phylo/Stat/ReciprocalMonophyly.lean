@@ -991,7 +991,21 @@ def TwoClanLawGap : Prop :=
   而右端 `qTriple n n n` ✗ ≠ 1 ✓）⇒ 依老师 2026-10-14 令「命题不忠于文献就改命题」✓ 改为**等于文献那条** ✓。
   ★ **未改弱** ✓：前提**加强**（加了三条 `Disjoint` ✓），结论不变 ✓；
 * **影响的下游声明**：无（本 `def` 是 `Prop` 缺口，库内无人依赖 ✓；同文件 `:146-147` 的对照表把「三个 clan 的概率」
-  列为 ❌ 未证 ✓，与本 `def` 一致 ✓）。 -/
+  列为 ❌ 未证 ✓，与本 `def` 一致 ✓）。
+*
+* ★ **W25 泳道 b 判定（2026-10-19）：【证伪 · 命题为假 —— 缺「非空」前提】** —— 本 `def` **一字未改** ✓，
+  但**不成立** ✗：★★★ `tripleClanLawGap_false : ¬ TripleClanLawGap`（§7）。
+  **反例**：`n = 3`、`A₁ = ∅`、`A₂ = {0}`、`A₃ = {1,2}`（合法划分：并为 `univ`、两两不交）⇒
+  左端**恒** `0`（`∅` **永远不是** clan：★★ `not_isClade_empty` —— clan 的见证是某条 split 的 `sideA`，
+  而 `Split = KPartition α 2` 的每块**非空**），右端 `qTriple 0 1 2 = 5/6 ≠ 0`（★★ `qTriple_zero_one_two`）。
+  左端与 `prob`、`tree` **无关** ⇒ `∃ Ω, prob, tree` 的三个槽位**无**任何见证可救 ✗。
+  **根因**：文献 `aᵢ ≥ 1` ＋ "partition"（`…arXiv1101.1311.md:1171-1196` ✓）被丢掉了 ——
+  本 `def` 只写 `∪ = univ` ＋ 两两 `Disjoint`，**漏了** `Aᵢ.Nonempty`（姊妹缺口
+  `YHKClanLawGap` / `TwoClanLawGap` 都有 ✓）。
+  **修法（四要素）**：**旧形态** = 现形态；**新形态** = 再加 `A1.Nonempty`、`A2.Nonempty`、`A3.Nonempty`；
+  **文献** = 同上 `:1154` ＋ `:1171-1196`；**理由** = 不加则**命题为假**（★ 反例），加后与另两条缺口同形。
+  ★ **只加强前提、不动结论** ✓。修后 `n = 3` 的整条**无障碍**（★★★ `tripleClanLawGap_nonempty_three_slice`）。
+  ★ **结论边界（不得夸大）**：被否证的是**本 `def` 的措辞**，**不是**文献 Theorem 6.4 ✓。 -/
 def TripleClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
@@ -1001,5 +1015,125 @@ def TripleClanLawGap : Prop :=
       (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A1 ∧ (tree ω).IsClade A2
           ∧ (tree ω).IsClade A3), prob ω)
         = qTriple A1.card A2.card A3.card
+
+/-! ### 7. 缺口 G3（`TripleClanLawGap`）的判定：**命题为假** —— 缺「非空」前提
+
+`TripleClanLawGap`（§6）的前提写的是「`A₁, A₂, A₃` 构成 `X` 的**划分**」：
+`A1 ∪ A2 ∪ A3 = univ` ＋ 两两 `Disjoint`，但**没有**要求三者非空。
+这与文献**不符**：Theorem 6.4 的 `n = a₁ + a₂ + a₃` 中每个 `aᵢ ≥ 1`，
+证明首句的事件是「`A₁, A₂` and `A₃` (which **partition** `X`) are clans of `T − ρ`」
+（`…arXiv1101.1311.md:1154`「Suppose `A1, A2, . . . , Ak` **partition** `X`」＋ `:1171` 的 `n = a1+a2+a3`＋ `:1193` 的 "which partition X"，即三块**非空**）；
+也与同文件另两条缺口**不一致** —— `YHKClanLawGap` 有 `A.Nonempty`、
+`TwoClanLawGap` 有 `A.Nonempty` 与 `B.Nonempty`。
+
+后果不是「前提略松」，而是**命题为假**。取 `n = 3` 与合法划分
+`A₁ = ∅`、`A₂ = {0}`、`A₃ = {1,2}`：
+
+* **左端恒 `0`**：`∅` **永远不是** clan —— clan 的见证是某条 split 的 `sideA`，
+  而 `KPartition` 的每块**非空**（★★ `not_isClade_empty`）。故 `ω` 上取交的集合**空**，
+  概率和 `= 0`，与 `prob`、`tree` **无关**；
+* **右端 `= qTriple 0 1 2 = 5/6 ≠ 0`**（★★ `qTriple_zero_one_two`）。
+
+`Ω`、`prob`、`tree` 都是缺口的 `∃` 自由槽，但左端恒 `0` ⇒ **无任何见证可救**
+⇒ ★★★ `tripleClanLawGap_false : ¬ TripleClanLawGap`（本节给出）。
+
+★ **修法（四要素留证）**：**旧形态** = 只要求划分（现 §6 的 `def`）；
+**新形态** = 再加 `A1.Nonempty`、`A2.Nonempty`、`A3.Nonempty` 三条前提；
+**文献** = `…arXiv1101.1311.md:1154`（"partition `X`"）+ `:1171`（`n = a₁+a₂+a₃`）+ `:1193`（"which partition `X`"）；
+**理由** = 不加则**命题为假**（本节的反例），加后与另两条缺口同形。
+★ **未改弱结论**（只**加强前提**，RHS 一字未改），且 `def` 本体**未动** —— 修法留给老师裁决。
+修好之后 `n = 3` 的整条**无障碍**（★★★ `tripleClanLawGap_nonempty_three_slice`）。 -/
+
+/-- ★★ **`∅` 永远不是 clan**：`IsClade A` 的见证是某条 split 的 `sideA`，
+而 `KPartition`（`Split = KPartition α 2`）的每块**非空**。
+（`TripleClanLawGap` 的反例全靠它：左端因此**恒** `0`。） -/
+theorem not_isClade_empty {X : Type} [Fintype X] [DecidableEq X] (T : Cladogram X) :
+    ¬ T.IsClade (∅ : Finset X) := by
+  rintro ⟨s, -, hs⟩
+  have h := s.nonempty (0 : Fin 2)
+  have hside : (s.parts 0 : Finset X) = (∅ : Finset X) := hs
+  rw [hside] at h
+  simp at h
+
+/-- ★★ **缺口 RHS 在 `(0, 1, 2)` 上的值**：`qTriple 0 1 2 = 5 / 6 ≠ 0`。
+
+`qTriple` 的定义对 `aᵢ = 0` 仍**算得出**一个正数（`1/((a₁+a₂)((a₁+a₂)²−1))` 那项
+在 `a₁ + a₂ = 1` 处是 `1/0 = 0`，另两项不为零）⇒ 与左端的 `0` **必然**不等。 -/
+theorem qTriple_zero_one_two : qTriple 0 1 2 = 5 / 6 := by
+  unfold qTriple
+  norm_num
+
+/-- ★★★ **缺口 `TripleClanLawGap` 为假**（形式化反例，`n = 3`）。
+
+划分取 `A₁ = ∅`、`A₂ = {0}`、`A₃ = {1,2}`（合法：并为 `univ`、两两不交）。
+`∅` 不是 clan ⇒ 左端 `= 0`；右端 `= qTriple 0 1 2 = 5/6`。矛盾。
+★ 结论是**闭命题的否定**（不是「某实例」）：`∃ Ω, prob, tree` 的槽位**无法**填
+—— 左端恒 `0`、与见证无关。
+
+⚠️ **这否证的是 §6 里那条 `def`（缺「非空」前提），不是文献 Theorem 6.4**：
+加上 `Aᵢ.Nonempty` 后 `n = 3` 是**真**的（★★★ `tripleClanLawGap_nonempty_three_slice`）。 -/
+theorem tripleClanLawGap_false : ¬ TripleClanLawGap := by
+  rintro h
+  obtain ⟨Ω, hΩ, prob, hprob, hsum, tree, hpart⟩ := h 3 (by norm_num)
+  have hunion : (∅ : Finset (Fin 3)) ∪ ({0} : Finset (Fin 3)) ∪ ({1, 2} : Finset (Fin 3))
+      = Finset.univ := by decide
+  have hd12 : Disjoint (∅ : Finset (Fin 3)) ({0} : Finset (Fin 3)) := by simp
+  have hd13 : Disjoint (∅ : Finset (Fin 3)) ({1, 2} : Finset (Fin 3)) := by simp
+  have hd23 : Disjoint ({0} : Finset (Fin 3)) ({1, 2} : Finset (Fin 3)) := by decide
+  have key := hpart (∅ : Finset (Fin 3)) ({0} : Finset (Fin 3)) ({1, 2} : Finset (Fin 3))
+    hunion hd12 hd13 hd23
+  have hempty : (Finset.univ.filter (fun ω => (tree ω).IsClade (∅ : Finset (Fin 3))
+      ∧ (tree ω).IsClade ({0} : Finset (Fin 3))
+      ∧ (tree ω).IsClade ({1, 2} : Finset (Fin 3)))) = ∅ :=
+    Finset.filter_false_of_mem (fun ω _ h => not_isClade_empty (tree ω) h.1)
+  rw [hempty, Finset.card_empty, Finset.card_singleton,
+    Finset.card_pair (by decide : (1 : Fin 3) ≠ 2)] at key
+  simp only [Finset.sum_empty] at key
+  rw [qTriple_zero_one_two] at key
+  norm_num at key
+
+/-- ★★★ **加回「非空」前提后，缺口 G3 在 `n = 3` 上**完整成立**（无条件）。
+
+见证：`Ω = PUnit`、`prob ≡ 1`、`tree ≡ starTree3`（★ 其实**任意**树都行）。
+`Fin 3` 的**非空**三分划只有一种形状 —— 三块 `card ≥ 1` 且**和为 `3`** ⇒ 各 `card = 1`
+⇒ 三块都是单点集 ⇒ 三者**恒**是 clan ⇒ 左端 `= ∑ prob = 1`；
+右端 `= qTriple 1 1 1 = 1`（★★ `qTriple_one_one_one`）。
+
+⚠️ 这是**加前提后**那条命题的实例（**不是** §6 那条 `def` 的证明 —— 那条为假，
+见 ★★★ `tripleClanLawGap_false`）。`n ≥ 4` 时 `aᵢ ≥ 2` 的分划仍要 `MSCTreeLaw n`。 -/
+theorem tripleClanLawGap_nonempty_three_slice :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 3)),
+      ∀ A1 A2 A3 : Finset (Fin 3),
+        (A1 ∪ A2 ∪ A3 = Finset.univ) → Disjoint A1 A2 → Disjoint A1 A3 → Disjoint A2 A3 →
+        A1.Nonempty → A2.Nonempty → A3.Nonempty →
+        (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A1 ∧ (tree ω).IsClade A2
+            ∧ (tree ω).IsClade A3), prob ω)
+          = qTriple A1.card A2.card A3.card := by
+  refine ⟨PUnit, inferInstance, fun _ => 1, fun _ => by norm_num, by simp,
+    fun _ => starTree3, ?_⟩
+  intro A1 A2 A3 hunion h12 h13 h23 hne1 hne2 hne3
+  have hc : (A1 ∪ A2 ∪ A3).card = A1.card + A2.card + A3.card := by
+    rw [Finset.card_union_of_disjoint (Finset.disjoint_union_left.mpr ⟨h13, h23⟩),
+      Finset.card_union_of_disjoint h12]
+  rw [hunion, Finset.card_univ, Fintype.card_fin] at hc
+  have h1 : 1 ≤ A1.card := Finset.card_pos.mpr hne1
+  have h2 : 1 ≤ A2.card := Finset.card_pos.mpr hne2
+  have h3 : 1 ≤ A3.card := Finset.card_pos.mpr hne3
+  have e1 : A1.card = 1 := by omega
+  have e2 : A2.card = 1 := by omega
+  have e3 : A3.card = 1 := by omega
+  have hclade : ∀ (A : Finset (Fin 3)) (T : Cladogram.{0, 0} (Fin 3)),
+      A.Nonempty → A.card = 1 → T.IsClade A := by
+    intro A T hA hcard
+    obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp hcard
+    exact Cladogram.exists_isSplitOf_singleton T x
+  have hpred : ∀ ω : PUnit, ((fun _ : PUnit => starTree3) ω).IsClade A1
+      ∧ ((fun _ : PUnit => starTree3) ω).IsClade A2
+      ∧ ((fun _ : PUnit => starTree3) ω).IsClade A3 := fun _ =>
+    ⟨hclade A1 starTree3 hne1 e1, hclade A2 starTree3 hne2 e2,
+      hclade A3 starTree3 hne3 e3⟩
+  rw [Finset.filter_true_of_mem (fun ω _ => hpred ω), e1, e2, e3, qTriple_one_one_one]
+  simp
 
 end Phylo.Stat.ReciprocalMonophyly
