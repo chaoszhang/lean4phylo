@@ -615,7 +615,9 @@ theorem ContinuousPriorPosteriorConsistencyGap_false :
   ★ 这正是**文献里当然成立的隐含前提**（真模型的似然不会恒为 `0` ✓）—— 补上它后命题才与
   Heled–Drummond (2010) / Rannala–Yang (2003) 的**后验集中**陈述相符 ✓；
 * **影响的下游声明**：本文件**无人使用**该 `def` ✓（§5 只登记 ✓）；本次改动**只是补假设** ✓，
-  **未改弱结论** ✓（新命题**强于**旧命题 ✓：前提更多 ✓）。 -/
+  **未改弱结论** ✓（新命题**强于**旧命题 ✓：前提更多 ✓）。 
+**★★ W25-b（2026-10-19）判定：本条已【证成】（无数学假设）** —— 机器证明 `MultiLocusPosteriorConcentrationGap_holds`（见下）；本 `def` **无** `∃` 假自由度（结论是直接的 `Tendsto … (𝓝 1)`，前提全是真前提），**非空转**（见证 `ι = Fin 2`、`prior ≡ 1/2`、`perLocus 1 n = e^{−n}`）。**`def` 陈述逐字未动** ✓。
+-/
 def MultiLocusPosteriorConcentrationGap : Prop :=
   ∀ {ι : Type*} [Fintype ι] [DecidableEq ι] (i₀ : ι) (prior : ι → ℝ),
     (∀ i, 0 ≤ prior i) → (∑ i, prior i = 1) → 0 < prior i₀ →
@@ -626,6 +628,116 @@ def MultiLocusPosteriorConcentrationGap : Prop :=
           Tendsto (fun n : ℕ =>
             perLocus i₀ n * prior i₀ / ∑ i, perLocus i n * prior i) atTop (𝓝 1)
 
+/-- ★★★ **W25-b（2026-10-19）判定：`MultiLocusPosteriorConcentrationGap` 为真** ⇒ 登记
+`[已证成]`（**无任何数学假设**，`def` 陈述**逐字未动**）。
+
+**★ 先判真假（★D）：本条的槽不是假自由度。** 与同节 `ContinuousPriorPosteriorConsistencyGap`
+（`∃ post` 被下一条等式**钉死** ⇒ 全称闭包为假）**不同**，本 `def` **没有** `∃` 槽可被钉：
+结论是**直接**一条 `Tendsto … (𝓝 1)`，三个前提（先验是概率向量且 `prior i₀ > 0`、真似然
+`perLocus i₀ n` 最终严格为正、每个非真树的似然比**指数衰减**）**全是真前提**，不是「把结论
+塞进假设」。故命题**可证**，且**非空转** —— 见证：`ι := Fin 2`、`i₀ := 0`、`prior ≡ 1/2`、
+`perLocus 0 n ≡ 1`、`perLocus 1 n := e^{−n}`（`c = 1`）时各前提成立，后验
+`1·(1/2) / (1·(1/2) + e^{−n}·(1/2)) = 1/(1+e^{−n}) → 1` ✓。
+
+**★ 机器证明的骨架**（三段，纯 `ℝ` 的序/域层，**不用**测度论）：
+1. 令 `Aₙ := perLocus i₀ n · prior i₀`、`Bₙ := ∑_{i≠i₀} perLocus i n · prior i`，则
+   `∑ᵢ perLocus i n · prior i = Aₙ + Bₙ`（`Finset.insert_erase` 拆和）；
+2. 每个 `i ≠ i₀`：`Bₙ` 的第 `i` 项除以 `Aₙ` 后 `≤ e^{−cᵢ n} · (prior i / prior i₀)`，而
+   `e^{−cᵢ n} → 0`（`tendsto_pow_atTop_nhds_zero_of_abs_lt_one` ＋ `Real.exp_nat_mul`）；
+   有限和仍 `→ 0`（`tendsto_finsetSum` ＋ `squeeze_zero'`）⇒ 相对比 `rₙ := Bₙ/Aₙ → 0`；
+3. 故 `Aₙ/(Aₙ+Bₙ) = (1 + rₙ)⁻¹ → 1`（`Tendsto.inv₀`，因 `1 + rₙ ≥ 1 > 0`）。
+
+**★ 文献定位（行号已核）**：这正是 Heled–Drummond (2010)
+`references/md/HeledDrummond2010_BayesianSpeciesTreesMultilocus.md` **496–510** 的 (1) 式、
+Rannala–Yang (2003) `references/md/RannalaYang2003_BayesSpeciesDivergenceTimesAncestralPopulationSizes.md`
+**355–370** 的 (4)(5) 式里「`n` 个**独立**位点 ⇒ 后验集中到真树」的**纯代数内核**：把文献里
+「多位点独立 ⇒ 似然取乘积 ＋ 似然比指数衰减」抽象成前提 `hdecay`，结论即后验 `→ 1`。
+
+**★ 边界（不许夸大）**：本定理**不**补 §5 所列三条具名器材（一般连续先验 `ρ` / MCMC 核 /
+后验一致性的 Schwartz–Doob 型定理）；它证的只是**有限树空间 + 给定指数衰减**这一层。
+同节 `ContinuousPriorPosteriorConsistencyGap` **仍然为假**（`_false`，另一条，互不影响）。
+
+**★ 门**：`EXIT=0`、`STDOUT_BYTES=0`（无 warning）；`#print axioms` 仅 `propext` /
+`Classical.choice` / `Quot.sound`。 -/
+theorem MultiLocusPosteriorConcentrationGap_holds : MultiLocusPosteriorConcentrationGap := by
+  intro ι _ _ i₀ prior hnn _hsum hpos perLocus hLnn hLpos hdecay
+  classical
+  let S : ℕ → ℝ := fun n => ∑ i, perLocus i n * prior i
+  let A : ℕ → ℝ := fun n => perLocus i₀ n * prior i₀
+  let B : ℕ → ℝ := fun n => ∑ i ∈ Finset.univ.erase i₀, perLocus i n * prior i
+  let r : ℕ → ℝ := fun n => B n / A n
+  have hAnn : ∀ n, 0 ≤ A n := fun n => mul_nonneg (hLnn i₀ n) hpos.le
+  have hBnn : ∀ n, 0 ≤ B n := fun n =>
+    Finset.sum_nonneg (fun i _ => mul_nonneg (hLnn i n) (hnn i))
+  have hApos : ∀ᶠ n in atTop, 0 < A n := by
+    filter_upwards [hLpos] with n hn
+    exact mul_pos hn hpos
+  have hins : (Finset.univ : Finset ι) = insert i₀ (Finset.univ.erase i₀) := by
+    rw [Finset.insert_erase (Finset.mem_univ i₀)]
+  have hsplit : ∀ n, S n = A n + B n := by
+    intro n
+    calc S n = ∑ i, perLocus i n * prior i := rfl
+      _ = perLocus i₀ n * prior i₀ + ∑ i ∈ Finset.univ.erase i₀, perLocus i n * prior i := by
+            conv_lhs => rw [hins]
+            rw [Finset.sum_insert (by simp)]
+      _ = A n + B n := rfl
+  have hterm : ∀ i ∈ Finset.univ.erase i₀,
+      Tendsto (fun n : ℕ => perLocus i n * prior i / A n) atTop (𝓝 0) := by
+    intro i hi
+    have hex : i ≠ i₀ := (Finset.mem_erase.mp hi).1
+    obtain ⟨c, hc, hb⟩ := hdecay i hex
+    have hbase : Tendsto (fun n : ℕ => Real.exp (-c) ^ n) atTop (𝓝 0) := by
+      refine tendsto_pow_atTop_nhds_zero_of_abs_lt_one ?_
+      rw [abs_of_pos (Real.exp_pos _), Real.exp_lt_one_iff]
+      linarith
+    have hexp : Tendsto (fun n : ℕ => Real.exp (-c * n)) atTop (𝓝 0) := by
+      refine Tendsto.congr (fun n => ?_) hbase
+      rw [← Real.exp_nat_mul]
+      congr 1
+      ring
+    have hbound : Tendsto (fun n : ℕ => Real.exp (-c * n) * (prior i / prior i₀))
+        atTop (𝓝 0) := by
+      simpa using hexp.mul_const (prior i / prior i₀)
+    refine squeeze_zero' ?_ ?_ hbound
+    · filter_upwards [hLpos] with n _
+      exact div_nonneg (mul_nonneg (hLnn i n) (hnn i)) (hAnn n)
+    · filter_upwards [hLpos, hb] with n hn hbn
+      have hA : 0 < A n := mul_pos hn hpos
+      rw [div_le_iff₀ hA]
+      calc perLocus i n * prior i
+          ≤ (Real.exp (-c * n) * perLocus i₀ n) * prior i :=
+            mul_le_mul_of_nonneg_right hbn (hnn i)
+        _ = Real.exp (-c * n) * (prior i / prior i₀) * A n := by
+            dsimp only [A]
+            field_simp
+  have hr : Tendsto r atTop (𝓝 0) := by
+    have hsum0 : Tendsto (fun n : ℕ => ∑ i ∈ Finset.univ.erase i₀,
+        perLocus i n * prior i / A n) atTop
+        (𝓝 (∑ i ∈ Finset.univ.erase i₀, (0 : ℝ))) :=
+      tendsto_finsetSum (Finset.univ.erase i₀) hterm
+    have hfun : (fun n : ℕ => ∑ i ∈ Finset.univ.erase i₀, perLocus i n * prior i / A n)
+        = fun n => r n := by
+      funext n
+      dsimp only [r, B]
+      rw [Finset.sum_div]
+    rw [hfun] at hsum0
+    simpa using hsum0
+  have hr1 : Tendsto (fun n : ℕ => 1 + r n) atTop (𝓝 1) := by
+    simpa using tendsto_const_nhds.add hr
+  have hinv : Tendsto (fun n : ℕ => (1 + r n)⁻¹) atTop (𝓝 1) := by
+    have := hr1.inv₀ (by norm_num : (1 : ℝ) ≠ 0)
+    simpa using this
+  refine Tendsto.congr' ?_ hinv
+  filter_upwards [hApos] with n hn
+  have hAne : A n ≠ 0 := ne_of_gt hn
+  have hrnn : 0 ≤ r n := div_nonneg (hBnn n) (hAnn n)
+  have hb1 : (0 : ℝ) < 1 + r n := by linarith
+  change (1 + r n)⁻¹ = A n / S n
+  rw [hsplit n]
+  have step1 : (1 + r n) = (A n + B n) / A n := by
+    dsimp only [r]
+    field_simp
+  rw [step1, inv_div]
 end Phylo.Stat.MSCBayes
 
 end
