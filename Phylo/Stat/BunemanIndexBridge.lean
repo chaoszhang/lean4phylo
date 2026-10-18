@@ -25,9 +25,27 @@ import Phylo.BunemanTree
 「逐对全为正」若指 `max > 0`（即 `IsDSplit` 本身），则该等价**不成立**（见本文件反例）；
 它成立的对象是**两个配对都为正**的强形式（`IsDSplitStrong`）。
 
+★★★ **W25-b ★D 校正（四要素；推翻上面的「`IsDSplit` 不忠实」判断）**
+
+* **旧判断（作废）**：BdD 的 d-split（= 隔离指数 `α_{A,B} > 0`）是 `min` 形 ⇒ `IsDSplit`（`max` 形）
+  **不忠实**，`IsDSplitStrong` 才是 `α > 0`；
+* **新判断**：BdD 的 `α := min{max{d(a,b)+d(a',b'), d(a,b')+d(a',b), d(a,a')+d(b,b')} − d(a,a') − d(b,b')}`
+  的 `max` **含内部项** ⇒ `α_{A,B} = max(min{max{P,Q} − I}, 0)` ⇒
+  `α_{A,B} > 0 ⟺ ∀ 四元组 max{P,Q} > I` ⟺ **`IsDSplit`（`max` 形）** ✓ ⇒ **`IsDSplit` 是忠实的**；
+  `IsDSplitStrong` ≡ `bunemanIndex` = **Buneman 1971 p. 390 的 `μ_σ`**（两项 `min`），**不是** BdD 的 `α`；
+* **文献行号**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:438-440`（d-split ⟺ 隔离指数为正）
+  ＋ `:446-454`（三项 `max` 的 `α` 定义，第三项 `d(a,a')+d(b,b')` **在 `max` 内**）
+  ＋ `:673-684`（split-prime = 隔离指数**恰为 `0`**）；
+* **理由（真假判据，非措辞）**：两项 `min` 形可取**负值** ⇒ `:673-684` 的「isolation index `0`」
+  无法刻画 split-prime；且 `:438-440` 会与 `:446` 的三项 `max` 自相矛盾。
+  ⇒ **本节结论不变**（字面桥 `IsDSplit ↔ 0 < bunemanIndex` 仍**为假**，但原因是
+  `bunemanIndex` 是 `μ` 而非 `α`，**不是** `IsDSplit` 不忠实）；连带：
+  `SplitPrimeStd` 是**弱化**的 split-prime，忠实形态登记为 `§8.1` 的 `SplitPrimeFaithful`。
+
 ## 交付（零未证占位符、零新公理）
 
-1. `Split.IsDSplitStrong` —— BdD 隔离指数 `α_{A,B} > 0` 的等价形式（「两配对都为正」）；
+1. `Split.IsDSplitStrong` —— **Buneman 1971 `μ_σ > 0`** 的等价形式（两项 `min` 形）；
+   ★D 校正后：它**不是** BdD 的 `α_{A,B} > 0`（后者 ⟺ `IsDSplit`，见上）；
 2. ★★★ `bunemanIndex_pos_iff_isDSplitStrong` —— **真正的桥**：
    `0 < bunemanIndex δ s ↔ IsDSplitStrong δ.val s.sideA s.sideB`；
    单向推论 `isDSplit_of_bunemanIndex_pos`（`α > 0 ⇒ IsDSplit`，`max` 形式）；
@@ -43,10 +61,13 @@ open Finset
 
 namespace Split
 
-/-- **强 d-split**（≡ BdD 隔离指数 `α_{A,B} > 0`，BdD p. 51）：对**每个**四元组
+/-- **强 d-split**（≡ **Buneman 1971 p. 390 的 `μ_σ > 0`**，即「两项 `min` 形」）：对**每个**四元组
 `a, a' ∈ A`、`b, b' ∈ B`，**两个配对都**严格为正。
 
-⚠️ 与 `Split.IsDSplit` 的 `max` 形式**不同**：后者只要「两者之一」为正。 -/
+⚠️ ★D 校正（W25-b，见 `§8.1` 与 `IsDSplit` 的 docstring）：这**不是** BdD 1992 的隔离指数 `α_{A,B} > 0`
+—— BdD 的 `α` 的 `max{…}` 里**还含内部项** `d(a,a')+d(b,b')`（md `:446-454`），故
+`α_{A,B} > 0 ⟺ IsDSplit`（`max` 形）；本 `def`（两项 `min`）**严格强于**它。
+与 `Split.IsDSplit` 的差别：后者只要「两者之一」为正。 -/
 def IsDSplitStrong {α : Type*} (δ : α → α → ℝ) (A B : Finset α) : Prop :=
   ∀ a ∈ A, ∀ a' ∈ A, ∀ b ∈ B, ∀ b' ∈ B,
     δ a a' + δ b b' < δ a b + δ a' b' ∧ δ a a' + δ b b' < δ a b' + δ a' b
@@ -547,7 +568,10 @@ def fourPointOfSplitMetricSum_gap_correct_shape : Prop :=
 根因：BdD 的「(partial) split」两侧**非空**，库内 `def SplitPrime` 漏了这个侧条件
 （文献形态应写 `A.Nonempty → B.Nonempty → ¬ …`）。
 
-⇒ 忠实形态登记为 `SplitPrimeStd`（非空侧 + 强形式）+ `canonicalSplitDecomposition_gap_correct_shape`；
+⇒ 补齐非空侧后的形态登记为 `SplitPrimeStd` + `canonicalSplitDecomposition_gap_correct_shape`；
+★ **W25-b ★D 校正**：`SplitPrimeStd`（`μ` 形）**仍不是**忠实 split-prime，忠实形态 = `SplitPrimeFaithful`
+（`§8.1`）；且 `……_correct_shape` 已被**证成**（`canonicalSplitDecomposition_gap_correct_shape_holds`），
+但它是**空转**缺口（见该 `def` 的 docstring）；
 原 `def` **逐字未改** ✓。 -/
 
 /-- ★★★ **库内 `SplitPrime` 不可满足**（空集使其空真反驳）。 -/
@@ -555,7 +579,11 @@ theorem not_splitPrime {α : Type*} (δ : α → α → ℝ) : ¬ SplitPrime δ 
   intro h
   exact h ∅ ∅ (by intro a ha; exact absurd ha (Finset.notMem_empty a))
 
-/-- **忠实形态的 split-prime**（BdD：split 两侧非空；「不是（强）d-split」= 隔离指数 `≤ 0`）。 -/
+/-- **`μ` 形 split-prime**（两侧非空 + `¬ IsDSplitStrong`，即 `bunemanIndex ≤ 0`）。
+
+⚠️ ★D 校正（W25-b）：这**不是** BdD 的忠实 split-prime —— 忠实形态是隔离指数 `α_{A,B} = 0`
+（即 `¬ IsDSplit`，`max` 形；md `:673-684`），登记为 `SplitPrimeFaithful`（本文件 `§8.1`）。
+本 `def` **弱于**它（`¬IsDSplit ⟹ ¬IsDSplitStrong`，见 `splitPrimeStd_of_splitPrimeNE`）。 -/
 def SplitPrimeStd {α : Type*} (δ : α → α → ℝ) : Prop :=
   ∀ A B : Finset α, A.Nonempty → B.Nonempty → ¬ IsDSplitStrong δ A B
 
@@ -574,13 +602,203 @@ theorem not_canonicalSplitDecomposition_gap : ¬ canonicalSplitDecomposition_gap
     h (α := Fin 4) (fun _ _ => 0) (fun _ _ => rfl)
   exact not_splitPrime δ₀ hprime
 
-/-- ⬜ **`canonicalSplitDecomposition_gap` 的正确形态（W12k 登记；未证）**：
-残差改为**忠实形态** `SplitPrimeStd`（非空侧 + 强形式）。 -/
+/-- ✓ **`canonicalSplitDecomposition_gap` 的正确形态**（W12k 登记；**W25-b：已证成**，但见下「空转」）：
+残差改为**非空侧 + 强形式** `SplitPrimeStd`。
+
+★★ **W25-b 判定：本 `Prop` 为真，且证明不需要 `δ` 的对称性**
+（`canonicalSplitDecomposition_gap_correct_shape_holds`，主引理 `exists_splitPrimeFaithful_decomposition`）：
+取 `F := 全体 split`、系数恒为足够大的 `M`，残差 `δ₀ := δ − M·∑_s δ_s` 的**非对角元**可任意负，
+而对角元 `δ₀ x x = δ x x` 不动（`δ_s x x = 0`）⇒ 一对**退化四元组** `a = a'`、`b = b'`
+就使每个非空 `A,B` 的隔离指数 `≤ 0` ✓。
+
+⛔ **所以本 `Prop` 仍是「空转缺口」，不是 BdD Theorem 2**。BdD 的残差还要求
+**仍在 `M(X)` 里（仍是度量）**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:673-684`
+「the residue `d₀ := d − ∑_{S∈Σ_d} α_S δ_S` of `d` with respect to its splits is always **in M(X)**
+and it is **split-prime**」（另见 `:816`、`:825`「a split-prime metric and a sum of nonnegative
+multiples of …」），且系数必须**等于隔离指数**（`:1651-1655` Thm 2）、分解**唯一**。
+本 `Prop` 缺的恰是这三件：①`δ` 与 `δ₀` 的**度量约束**（`M(X)`：`δ x x = 0`、非负、三角不等式；
+松掉它 ⇒ 非对角可任意下压 ⇒ 平凡为真）；②**典范性** `c s = α_s`；③**唯一性**。
+⇒ 忠实形态登记为 `canonicalSplitDecomposition_gap_faithful`（`§8.2`；仍为缺口）。 -/
 def canonicalSplitDecomposition_gap_correct_shape : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
       (∀ s ∈ F, 0 < c s) ∧ SplitPrimeStd δ₀ ∧
         ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
+
+/-! ## 8.1 ★★★ W25-b：`……_gap_correct_shape` **已证成**，但它是**空转缺口**
+
+### 证明（思路三行）
+
+`F := Finset.univ`、`c ≡ M := 2·(∑_{x,y} |δ x y|) + 1`、`δ₀ := δ − M·∑_s SplitMetric s`。
+
+* **对角**：`SplitMetric s x x = 0`（`sideA` 与 `sideB` 不交）⇒ `δ₀ x x = δ x x` 不动；
+* **非对角**（`x ≠ y`）：split `{x} | {x}ᶜ` 分开它们 ⇒ `∑_s SplitMetric s x y ≥ 1` ⇒
+  `δ₀ x y ≤ δ x y − M`（可任意负）；
+* **split-prime**：任取非空 `A, B` —— 若 `A ∩ B ≠ ∅`，取 `a = a' = b = b' ∈ A ∩ B`（两边**相等**）；
+  否则取 `a ∈ A`、`b ∈ B`（`a ≠ b`），用**退化四元组** `a = a'`、`b = b'`：
+  `δ₀ a a + δ₀ b b = δ a a + δ b b ≥ 2·δ₀ a b`（`M` 足够大）
+  ⇒ `¬ IsDSplitStrong` —— 更强：连 `¬ IsDSplit`（`max` 形）都成立。
+
+### ★D 校正（W25-b 独立复核；**推翻 W12j「忠实性更正 #2」**）
+
+* **旧判断**（W12j；曾写在 `Phylo/SplitWeak.lean` 的 `IsDSplit` docstring 与本文件的
+  `IsDSplitStrong` docstring 里，现已按下面的四要素改正）：「BdD 的 d-split（= 隔离指数 `α_{A,B} > 0`）是 **`min` 形**，
+  故库内 `IsDSplit`（**`max` 形**）**不忠实**，`IsDSplitStrong` 才是 `α > 0`」；
+* **新判断**：`α` 的定义里 `max{…}` **含第三项**（被减的 `d(a,a')+d(b,b')` 自身），故
+  `α_{A,B} = min{max{P,Q,I} − I} = max(min{max{P,Q} − I}, 0)` ⇒
+  `α_{A,B} > 0 ⟺ ∀ 四元组 max{P,Q} > I` ⟺ **`IsDSplit`（`max` 形）** ✓ ——
+  库内 `IsDSplit` **就是** BdD 的 d-split；而 `IsDSplitStrong`（两项 `min` 形）≡
+  **Buneman 1971 p. 390 的 `μ_σ`**（= 库内 `bunemanIndex`），**不是** BdD 的 `α`；
+* **文献行号**：`BandeltDress1992_CanonicalDecompositionMetrics.md:438-440`（d-split ⟺ 隔离指数为正）
+  ＋ `:446-454`（`α := min{max{d(a,b)+d(a',b'), d(a,b')+d(a',b), d(a,a')+d(b,b')} − d(a,a') − d(b,b')}`，
+  **第三项在 `max` 内**）＋ `:673-684`（split-prime = **对每个 split 隔离指数 `0`**）；
+* **理由（真假判据，非措辞）**：若 `α` 是两项 `min` 形，则 `α` 可取**负值**，`:673-684` 的
+  「isolation index `0`」就无法刻画 split-prime；且 `:438-440` 的「`α > 0` ⟺ `max` 形」与 `:446`
+  的三项 `max` **自相矛盾**；两项 `min` 形是 Buneman 1971 p. 390 的 `μ_σ`。
+  ⇒ `bunemanIndex_pos_iff_isDSplitStrong` **不变**（它说的是 `μ`，不是 `α`），但
+  **「`IsDSplit` 不忠实」这个结论作废**。
+  ★ 连带后果：`SplitPrimeStd`（`¬ IsDSplitStrong` = `μ ≤ 0`）**弱于**忠实 split-prime
+  （`¬ IsDSplit` = `α = 0`）⇒ 忠实形态登记为 `SplitPrimeFaithful`。 -/
+
+/-- **忠实形态的 split-prime**（BdD `:673-684`「对每个 split 的隔离指数为 `0`」）：两侧**非空**、
+且 `¬ IsDSplit`（`max` 形，即 `α_{A,B} = 0`）。
+
+⚠️ **严格强于** `SplitPrimeStd`（`¬ IsDSplitStrong` = `μ ≤ 0`）：`IsDSplitStrong ⟹ IsDSplit`
+（逐四元组的 `min ≤ max`），故 `¬IsDSplit ⟹ ¬IsDSplitStrong`（见 `splitPrimeStd_of_splitPrimeNE`）；
+反向**不成立**（`§3`：`cex_isDSplit` 与 `¬ IsDSplitStrong` 同时成立）。 -/
+def SplitPrimeFaithful {α : Type*} (δ : α → α → ℝ) : Prop :=
+  ∀ A B : Finset α, A.Nonempty → B.Nonempty → ¬ IsDSplit δ A B
+
+/-- ★★★ **存在性主引理（零假设；连 `δ` 的对称性都不需要）**：`F := 全体 split`、系数恒为
+`M := 2S + 1`（`S := ∑_{x,y} |δ x y|`）、残差 `δ₀ := δ − M·∑_s δ_s` 满足
+「**每个**非空 `A, B` 都不是 `δ₀` 的 `d`-split」（`max` 形，比 `SplitPrimeStd` 更强）。
+
+见 `§8.1` 的三行思路。★ 注意：这只证明**存在某个**分解，**不是** BdD 的**典范**分解
+（残差不是度量、系数不是隔离指数、分解不唯一）。 -/
+theorem exists_splitPrimeFaithful_decomposition {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) :
+    ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithful δ₀ ∧
+        ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y := by
+  classical
+  set S : ℝ := ∑ x : α, ∑ y : α, |δ x y| with hS
+  have hSnn : 0 ≤ S := by
+    rw [hS]
+    exact Finset.sum_nonneg fun x _ => Finset.sum_nonneg fun y _ => abs_nonneg _
+  have hle1 : ∀ x : α, (∑ y : α, |δ x y|) ≤ S := by
+    intro x
+    rw [hS]
+    exact Finset.single_le_sum (f := fun x => ∑ y : α, |δ x y|)
+      (fun x _ => Finset.sum_nonneg fun y _ => abs_nonneg _) (Finset.mem_univ x)
+  have hle2 : ∀ x y : α, |δ x y| ≤ ∑ y : α, |δ x y| := by
+    intro x y
+    exact Finset.single_le_sum (f := fun y => |δ x y|) (fun y _ => abs_nonneg _)
+      (Finset.mem_univ y)
+  have habs : ∀ x y : α, |δ x y| ≤ S := fun x y => (hle2 x y).trans (hle1 x)
+  set M : ℝ := 2 * S + 1 with hM
+  have hMpos : 0 < M := by rw [hM]; linarith
+  -- 单点 split 分开任意一对不同的点
+  have hsep : ∀ a b : α, a ≠ b → ∃ s : Split α, a ∈ s.sideA ∧ b ∈ s.sideB := by
+    intro a b hab
+    have hb : b ∈ ({a} : Finset α)ᶜ := by
+      simp only [Finset.mem_compl, Finset.mem_singleton]
+      exact Ne.symm hab
+    have h1 : ({a} : Finset α).Nonempty := ⟨a, by simp⟩
+    have h2 : (({a} : Finset α)ᶜ).Nonempty := ⟨b, hb⟩
+    refine ⟨Split.ofSideA ({a} : Finset α) h1 h2, ?_, ?_⟩
+    · rw [Split.ofSideA_sideA]
+      exact Finset.mem_singleton_self a
+    · rw [Split.ofSideA_sideB]
+      exact hb
+  have hmetric_diag : ∀ (s : Split α) (x : α), SplitMetric s x x = 0 := by
+    intro s x
+    have hnot : ¬((x ∈ s.sideA ∧ x ∈ s.sideB) ∨ (x ∈ s.sideB ∧ x ∈ s.sideA)) := by
+      rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact (Finset.disjoint_left.mp (disjoint_sides s)) h1 h2
+      · exact (Finset.disjoint_left.mp (disjoint_sides s)) h2 h1
+    simp only [SplitMetric, ite_eq_right hnot]
+  have hmetric_nonneg : ∀ (s : Split α) (x y : α), 0 ≤ SplitMetric s x y := by
+    intro s x y
+    unfold SplitMetric
+    split_ifs <;> norm_num
+  have hsum_diag : ∀ x : α, (∑ s : Split α, M * SplitMetric s x x) = 0 := by
+    intro x
+    simp [hmetric_diag]
+  refine ⟨Finset.univ, fun _ => M, fun x y => δ x y - ∑ s : Split α, M * SplitMetric s x y,
+    ⟨fun s _ => hMpos, ?_, ?_⟩⟩
+  · -- 残差的每个非空 `A | B` 都不是 `max` 形 d-split
+    intro A B hA hB hDS
+    obtain ⟨a, ha⟩ := hA
+    obtain ⟨b, hb⟩ := hB
+    rcases eq_or_ne a b with hab | hab
+    · -- 重叠：`a = b`，退化四元组 `a = a' = b = b'`
+      subst hab
+      have h := hDS a ha a ha a hb a hb
+      dsimp only at h
+      rw [hsum_diag a] at h
+      rw [max_self] at h
+      linarith
+    · -- 分离：`a ≠ b`，退化四元组 `a = a'`、`b = b'`
+      obtain ⟨s0, hs0a, hs0b⟩ := hsep a b hab
+      have h1 : SplitMetric s0 a b = 1 := by
+        have hcond : (a ∈ s0.sideA ∧ b ∈ s0.sideB) ∨ (a ∈ s0.sideB ∧ b ∈ s0.sideA) :=
+          Or.inl ⟨hs0a, hs0b⟩
+        simp only [SplitMetric, ite_eq_left hcond]
+      have hsum1 : 1 ≤ ∑ s : Split α, SplitMetric s a b := by
+        have hle := Finset.single_le_sum (f := fun s => SplitMetric s a b)
+          (fun s _ => hmetric_nonneg s a b) (Finset.mem_univ s0)
+        rw [h1] at hle
+        linarith
+      have hsumM : M ≤ ∑ s : Split α, M * SplitMetric s a b := by
+        rw [← Finset.mul_sum]
+        calc M = M * 1 := by ring
+          _ ≤ M * ∑ s : Split α, SplitMetric s a b :=
+              mul_le_mul_of_nonneg_left hsum1 (le_of_lt hMpos)
+      have hδab : δ a b ≤ S := le_trans (le_abs_self _) (habs a b)
+      have hδaa : -δ a a ≤ S := by
+        have h := neg_abs_le (δ a a)
+        linarith [habs a a]
+      have hδbb : -δ b b ≤ S := by
+        have h := neg_abs_le (δ b b)
+        linarith [habs b b]
+      have h2M : 2 * M = 4 * S + 2 := by rw [hM]; ring
+      have hcontra := hDS a ha a ha b hb b hb
+      dsimp only at hcontra
+      rw [hsum_diag a, hsum_diag b] at hcontra
+      rw [max_self] at hcontra
+      linarith
+  · -- 分解等式（定义即残差）
+    intro x y
+    dsimp only
+    ring
+
+/-- ★★★ **`canonicalSplitDecomposition_gap_correct_shape` 成立**（`_holds` 形态；**零假设**，
+连 `δ` 的对称性都不用）。★ 但见该 `def` 的 docstring：这是**空转**结论 —— 真正的 BdD 内容
+（残差仍是度量 + 系数 = 隔离指数 + 唯一性）不在本 `Prop` 里。 -/
+theorem canonicalSplitDecomposition_gap_correct_shape_holds :
+    canonicalSplitDecomposition_gap_correct_shape.{0} := by
+  intro α _ _ δ _
+  obtain ⟨F, c, δ₀, hpos, hfaith, heq⟩ := exists_splitPrimeFaithful_decomposition δ
+  exact ⟨F, c, δ₀, hpos, splitPrimeStd_of_splitPrimeNE hfaith, heq⟩
+
+/-! ## 8.2 ⬜ **BdD Theorem 2 的忠实形态**（W25-b 登记；未证） -/
+
+/-- ⬜ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；未证）**：
+
+`δ` 是 `X` 上的**度量**（`M(X)`：对称、`x = x ⟹ 0`、非负、三角不等式 —— `:673-684`、
+`:816`、`:825` 的框架），且**残差 `δ₀` 仍是度量**、并且 split-prime（隔离指数处处 `0`）。
+
+★ 与 `……_correct_shape` 的**唯一差别**就是「`δ` 与 `δ₀` 仍在 `M(X)` 里」—— 但这一条
+**恰好挡住** `§8.1` 的「全体 split 大系数下压」构造（那里 `δ₀` 非对角为负），
+故本形态**不是空转**；它等价于 `:1651-1655` Thm 2 的**存在性**一半
+（本 `Prop` 未要求 `c s = α_s` 与唯一性，故弱于 Thm 2 全文）。缺的具名器材见报告「卡点」。 -/
+def canonicalSplitDecomposition_gap_faithful : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
+    (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
+    ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithful δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
 
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
@@ -1664,3 +1882,4 @@ theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} 
   fourPointCharacterization_gap_of_noWRealizer noWRealizer_exists_gap_proof
 
 end Split
+

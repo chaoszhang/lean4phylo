@@ -256,13 +256,27 @@ def pairDeficit (δ : α → α → ℝ) (a a' b b' : α) : ℝ :=
 
 （隔离指数取 `min`，故「`min > 0`」⟺「逐对全为正」。）
 
-⚠️ **W12j 更正**：上面括号里的等价**只对「两个配对都为正」的强形式成立**，对本 `def` 的
-`max` 形式**不成立** —— `IsDSplit` 只要求 `max` 为正（两配对**至少一个**为正），
-而 `bunemanIndex`（隔离指数 `α`）取 `min`（两配对**都**要在内）。形式化反例：
-`Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_isDSplit_implies_bunemanIndex_pos`
-（`δ : Dissimilarity (Fin 4)`，`{0,1}|{2,3}` 满足 `IsDSplit` 而 `α = -2/5`）。
-强形式（`min > 0`）登记为 `Split.IsDSplitStrong`（同文件），
-两者的等价**在四点条件 `FourPoint` 下成立**（`Split.isDSplit_iff_isDSplitStrong_of_fourPoint`）。 -/
+⚠️ **W12j 更正 —— 已被 W25-b ★D 校正推翻**：上面括号里的等价**只对「两个配对都为正」的强形式成立**，
+对本 `def` 的 `max` 形式**不成立**（当时据此判 `IsDSplit` 不忠实；**该判断作废**，见下）。
+
+★★★ **W25-b ★D 校正（四要素）**
+
+* **旧形态/旧判断（作废）**：BdD 的 d-split（隔离指数 `α_{A,B} > 0`）是 `min` 形 ⇒ 本 `def`（`max` 形）
+  不忠实；`bunemanIndex`（`α`）取 `min`，故两者不等价；
+* **新形态/新判断**：BdD 的
+  `α := min{max{d(a,b)+d(a',b'), d(a,b')+d(a',b), d(a,a')+d(b,b')} − d(a,a') − d(b,b')}`（md `:446-454`）
+  的 `max` **含内部项** ⇒ `α = max(min{max{P,Q} − I}, 0)` ⇒ `α_{A,B} > 0 ⟺ ∀ 四元组 max{P,Q} > I`
+  ⟺ **本 `def`（`max` 形）** ⇒ **`IsDSplit` 是忠实的** ✓；两项 `min` 形是
+  **Buneman 1971 p. 390 的 `μ_σ`**（= 库内 `bunemanIndex`，`μ > 0 ⟺ IsDSplitStrong`，**严格强于**本 `def`）；
+* **文献行号**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:438-440`（d-split ⟺ 隔离指数为正）
+  ＋ `:446-454`（三项 `max` 的 `α`）＋ `:673-684`（split-prime = 隔离指数**恰为 `0`**）；
+* **理由（真假判据）**：两项 `min` 形可取负值 ⇒ `:673-684` 的「isolation index `0`」无法刻画 split-prime；
+  且 `:438-440` 会与 `:446` 的三项 `max` 自相矛盾。⇒ 本文件的反例
+  `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_isDSplit_implies_bunemanIndex_pos` 仍是**真命题**
+  （`δ : Dissimilarity (Fin 4)`，`{0,1}|{2,3}` 满足 `IsDSplit` 而 `bunemanIndex < 0`），但它反的是
+  「`IsDSplit ⟺ 0 < bunemanIndex`」，**不是**「`IsDSplit` 的忠实性」。
+  强形式（两项 `min`）登记为 `Split.IsDSplitStrong`（同文件），两者的等价**在四点条件 `FourPoint` 下成立**
+  （`Split.isDSplit_iff_isDSplitStrong_of_fourPoint`）。 -/
 def IsDSplit (δ : α → α → ℝ) (A B : Finset α) : Prop :=
   ∀ a ∈ A, ∀ a' ∈ A, ∀ b ∈ B, ∀ b' ∈ B,
     δ a a' + δ b b' < max (δ a b + δ a' b') (δ a b' + δ a' b)
@@ -386,8 +400,12 @@ def SplitMetric (s : Split α) (x y : α) : ℝ :=
 （`∀ a ∈ ∅, …`）⇒ `¬ IsDSplit δ ∅ B` **为假** ⇒ `SplitPrime δ` 对**任何** `δ` 都不成立：
 形式化见 `Phylo/Stat/BunemanIndexBridge.lean` 的 `Split.not_splitPrime`。
 根因：BdD 的「(partial) split」两侧**非空**，本定义**漏了非空侧条件**。
-忠实形态登记为 `Split.SplitPrimeStd`（非空侧 + 强形式；同文件），
-且库内形态（补齐非空侧后）⟹ 忠实形态（`splitPrimeStd_of_splitPrimeNE`）。 -/
+补齐非空侧后的形态登记为 `Split.SplitPrimeStd`（同文件），
+且库内形态（补齐非空侧后）⟹ 它（`splitPrimeStd_of_splitPrimeNE`）。
+★ **W25-b ★D 校正**：`SplitPrimeStd` 用的是两项 `min` 形的 `¬ IsDSplitStrong`（= `bunemanIndex ≤ 0`），
+**不是**忠实 split-prime；忠实形态是「隔离指数 `α_{A,B} = 0`」即 `¬ IsDSplit`（`max` 形，md `:673-684`），
+登记为 `Split.SplitPrimeFaithful`（`Phylo/Stat/BunemanIndexBridge.lean` 的 `§8.1`），
+且 `SplitPrimeFaithful ⟹ SplitPrimeStd`（严格）。 -/
 def SplitPrime (δ : α → α → ℝ) : Prop := ∀ A B : Finset α, ¬ IsDSplit δ A B
 
 /-- ⛔ **四点条件（旧 / 错形态）—— 已被证伪；本名保留为 `FourPointLegacy`，仅供追溯，勿引用。**
