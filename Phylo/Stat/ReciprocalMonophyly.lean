@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.MSCProof
 import Phylo.InternalEdge
+import Phylo.CladogramBuild
 
 /-!
 # `Phylo.Stat.ReciprocalMonophyly` —— Zhu–Degnan–Steel 2011 的 clade/clan 闭形式
@@ -142,7 +143,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 |---|---|
 | 闭形式的**数值正确性** | ✅ 脚本 `n ≤ 6` 全穷举复核（§3） |
 | 闭形式之间的**算术恒等式** | ✅ 已证 4 条：`clanProb_eq_inclusionExclusion`（Lemma 6.2 ⟸ Lemma 6.1 的包含-排除）、`pnHat_eq_pn_mul`（Lemma 4.4 ⟸ 4.2 ⊗ 4.3，论文第 398–444 行的证明）、`qnExhaustive_eq_clanProb`（Theorem 6.3(i) ⟸ Lemma 6.2）、`clanProb_eq_unfolded`；另有 `choose_mul_pn`（Lemma 4.1 **右端**的算术核对）、`qnExhaustive_two_two`、`qn_six_two_two`、`qTriple_two_two_two`、`qConvex_two_two_two` 等锚点 |
-| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6） |
+| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条） |
 | **`qn` 是「两个 clan」的概率**（Theorem 6.3 的概率层） | ❌ **未证** —— 缺口 `TwoClanLawGap`（§6） |
 | **`q` 是「三个 clan」的概率**（Theorem 6.4 的概率层） | ❌ **未证** —— 缺口 `TripleClanLawGap`（§6） |
 | **Theorem 5.1**（一般 `k` 个 clade，含指定 `Tk`） | ❌ **未落地**（连闭形式都依赖 `Iv(Ai)` 这套 `Tk` 上的指示变量；本库无「内部顶点 + 后代叶集」的层面对象） |
@@ -704,6 +705,174 @@ theorem twoClan_exhaustive_singleton_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} 
     simpa using hsum
   · exact absurd h (by omega)
 
+/-! ### 5.2 缺口 `YHKClanLawGap` 的无条件切片（任意 `n` 的平凡基数 ＋ `n = 3` 的整条）
+
+`YHKClanLawGap`（§6）要求「一般 `n` 的 YHK 律下 `clanProb n a` = `A` 是 clan 的概率」。
+本节证明它**不需要** YHK 律的两块：
+
+* **平凡基数**（`a = 1` 或 `a = n − 1`）：对**任意**概率空间、**任意**树族无条件成立
+  —— `A` 是单点集或其补集 ⇒ 「`A` 是 clan」是**必然事件** ⇒ 左端 `= 1`，
+  右端由 ★★ `clanProb_one` / ★★ `clanProb_pred` 也是 `1`；
+* **`n = 3` 的整条**：`Fin 3` 的非空真子集只有这两种形状，故 `YHKClanLawGap` 的
+  `∃` 从句在 `n = 3` 上**完整成立**（退化分布 ＋ 任意一棵树即见证）—— 这是缺口的
+  一个**完整实例**，不是只有一列 `a`。
+
+⚠️ **边界（不得夸大）**：`n ≥ 4` 且 `2 ≤ a ≤ n − 2` 时 `clanProb n a` 取**非 `0/1`** 的值
+（★ `clanProb_four_two`：`clanProb 4 2 = 1/3`），而单点/补集论证只覆盖 `a ∈ {1, n − 1}`
+⇒ 本节**不是** `YHKClanLawGap` 的证明；一般 `n` 仍需具名器材 `MSCTreeLaw n`（判决见该 `def` 的 docstring）。 -/
+
+/-- ★★ **`clanProb n (n − 1) = 1`**（`n ≥ 2`）：`X \ {x}` 在**任何**树上都是 clan。
+由 Theorem 6.3(i)（★★★ `qnExhaustive_eq_clanProb`）＋ ★★ `qnExhaustive_one_right` 立得 —— 纯算术。 -/
+theorem clanProb_pred {n : ℕ} (hn : 2 ≤ n) : clanProb n (n - 1) = 1 := by
+  have h := qnExhaustive_eq_clanProb (a := n - 1) (b := 1) (by omega) (by norm_num)
+  rw [show n - 1 + 1 = n from by omega] at h
+  rw [← h, qnExhaustive_one_right (by omega)]
+
+/-- ★★ **缺口 RHS 在 `n = 4, a = 2` 取非 `0/1` 值**：`clanProb 4 2 = 1/3`
+（= 4 叶 MSC 的 concordant 概率，与 ★★ `qnExhaustive_two_two = 1/3` 一致）。
+这条说明缺口**不是空转**：`∃ Ω, prob, tree` 的槽位**不能**用退化分布填掉。 -/
+theorem clanProb_four_two : clanProb 4 2 = 1 / 3 := by
+  have h : Nat.choose 4 2 = 6 := by decide
+  simp only [clanProb, h]
+  norm_num
+
+/-- ★★★ **缺口 `YHKClanLawGap` 的「平凡基数」切片（任意 `n`、任意概率空间、任意树族）**。
+
+若 `A.card = 1` 或 `A.card = n − 1`，则缺口等式**无条件**成立：左端是**必然事件**的概率
+（`= ∑ prob = 1`），右端是 `clanProb n 1 = 1` 或 `clanProb n (n − 1) = 1`。
+**不需要** YHK 律，连 `prob ≥ 0` 也不需要（故这一侧比缺口更强）。
+
+⚠️ 这**不是** `YHKClanLawGap` 的证明：缺口对 `A` 的**所有**基数都要求等式成立。 -/
+theorem yhkClanLawGap_trivial_card_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} [Fintype Ω]
+    (prob : Ω → ℝ) (hsum : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin n))
+    {A : Finset (Fin n)} (hne : A.Nonempty) (hcard : A.card = 1 ∨ A.card = n - 1) :
+    (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A), prob ω) = clanProb n A.card := by
+  have : Nontrivial (Fin n) :=
+    ⟨⟨0, by omega⟩, ⟨1, by omega⟩, by
+      intro h
+      exact absurd (Fin.mk.inj h) (by omega)⟩
+  have hclade : ∀ ω, (tree ω).IsClade A := by
+    intro ω
+    rcases hcard with h1 | h1
+    · obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp h1
+      exact Cladogram.exists_isSplitOf_singleton (tree ω) x
+    · have hc : Aᶜ.card = 1 := by
+        rw [Finset.card_compl, Fintype.card_fin, h1]
+        omega
+      obtain ⟨x, hx⟩ := Finset.card_eq_one.mp hc
+      have hA : A = ({x} : Finset (Fin n))ᶜ := by rw [← hx, compl_compl]
+      rw [hA]
+      exact (isClade_compl (tree ω) {x}).mpr (Cladogram.exists_isSplitOf_singleton (tree ω) x)
+  have hfilter : Finset.univ.filter (fun ω => (tree ω).IsClade A) = Finset.univ :=
+    Finset.filter_true_of_mem (fun ω _ => hclade ω)
+  rw [hfilter]
+  rcases hcard with h1 | h1
+  · rw [h1, clanProb_one hn]
+    exact hsum
+  · rw [h1, clanProb_pred hn]
+    exact hsum
+
+/-- `Fin 3` 上的一棵**具体**树（星形：无任何非平凡 split），
+由 ★★★ `Cladogram.ofCompatibleSplits` 用**空族**造出。 -/
+noncomputable def starTree3 : Cladogram.{0, 0} (Fin 3) :=
+  Cladogram.ofCompatibleSplits (∅ : Finset (Split (Fin 3))) 0
+    (by simp) (by simp) (by simp) (by decide)
+
+/-- ★★★ **缺口 `YHKClanLawGap` 在 `n = 3` 上的完整实例**（无条件）。
+
+`Fin 3` 的非空真子集只有 `{x}`（`card = 1`）与 `{x}ᶜ`（`card = 2 = 3 − 1`）两种形状，
+故缺口对**所有** `A` 的要求都落进 ★★★ `yhkClanLawGap_trivial_card_slice`
+⇒ 取 `Ω = PUnit`、`prob ≡ 1`、`tree ≡ starTree3` 即得缺口 `∃` 从句在 `n = 3` 的**完整**成立。
+⚠️ `n ≥ 4` 时 `2 ≤ a ≤ n − 2` 的那些 `a` **不在**本定理覆盖内。 -/
+theorem yhkClanLawGap_three_slice :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 3)),
+      ∀ A : Finset (Fin 3), A.Nonempty → A.card < 3 →
+        (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A), prob ω)
+          = clanProb 3 A.card := by
+  refine ⟨PUnit, inferInstance, fun _ => 1, fun _ => by norm_num, by simp,
+    fun _ => starTree3, ?_⟩
+  intro A hne hcard
+  have hcard' : A.card = 1 ∨ A.card = 3 - 1 := by
+    have hpos : 1 ≤ A.card := Finset.card_pos.mpr hne
+    omega
+  exact yhkClanLawGap_trivial_card_slice (n := 3) (by norm_num) (fun _ => 1) (by simp)
+    (fun _ => starTree3) hne hcard'
+
+/-! ### 5.3 补器材：由「单个 split ＋ 换向」造树并**算出**其 clade 集
+
+YHKClanLawGap 在 
+ = 4 的证明需要「**命名**一棵 quartet 树并知道它有哪些 clade」。
+库内 Cladogram.ofCompatibleSplits（Phylo/CladogramBuild.lean）能造树，但缺「两台集族」
+这一最常用情形的现成桥。本节补上：族 {s, s.swap} 的三条前提**自动**满足，
+且建出的树的 clade 集被**完全刻画**（A 是 s 的某一侧，或 A 平凡）。
+
+★ 这是本泳道交付的**器材**（供下一泳道做 
+ = 4 切片直接调用）。 -/
+
+/-- **族 {s, s.swap} 两两相容**（任意 s：s 的两侧不交）。 -/
+theorem compatible_pair_swap {α : Type} [Fintype α] [DecidableEq α] (s : Split α) :
+    ∀ t ∈ ({s, s.swap} : Finset (Split α)), ∀ u ∈ ({s, s.swap} : Finset (Split α)),
+      Split.Compatible t u := by
+  have h := Split.disjoint_sides s
+  intro t ht u hu
+  simp only [Finset.mem_insert, Finset.mem_singleton] at ht hu
+  rcases ht with rfl | rfl <;> rcases hu with rfl | rfl <;>
+    simp only [Split.Compatible, Split.swap_sideA, Split.swap_sideB] <;> tauto
+
+/-- **族 {s, s.swap} 非平凡**（换向只对调两侧）。 -/
+theorem nontrivial_pair_swap {α : Type} [Fintype α] [DecidableEq α] {s : Split α}
+    (h : 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card) :
+    ∀ t ∈ ({s, s.swap} : Finset (Split α)), 2 ≤ t.sideA.card ∧ 2 ≤ t.sideB.card := by
+  intro t ht
+  simp only [Finset.mem_insert, Finset.mem_singleton] at ht
+  rcases ht with rfl | rfl
+  · exact h
+  · rw [Split.swap_sideA, Split.swap_sideB]
+    exact ⟨h.2, h.1⟩
+
+/-- **族 {s, s.swap} 对换向封闭**。 -/
+theorem swap_closed_pair_swap {α : Type} [Fintype α] [DecidableEq α] (s : Split α) :
+    ∀ t ∈ ({s, s.swap} : Finset (Split α)), t.swap ∈ ({s, s.swap} : Finset (Split α)) := by
+  intro t ht
+  simp only [Finset.mem_insert, Finset.mem_singleton] at ht ⊢
+  rcases ht with rfl | rfl
+  · exact Or.inr rfl
+  · rw [Split.swap_swap]
+    exact Or.inl rfl
+
+/-- ★★★ **两台集族树的 clade 集被完全刻画**：A 是 ofCompatibleSplits {s, s.swap} ⋯
+的 clan ⟺ A 是 s 的某一侧，或 A 平凡（单点集 / 单点集的补）。
+（树的 split 系统 = {s, s.swap} ∪ 平凡 split，见 ★★★ Cladogram.isSplitOf_ofCompatibleSplits。） -/
+theorem isClade_ofCompatible_pair {α : Type} [Fintype α] [DecidableEq α] [Nontrivial α]
+    (s : Split α) (ρ : α) (hn : 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card)
+    (h3 : 3 ≤ Fintype.card α) (A : Finset α) :
+    (Cladogram.ofCompatibleSplits {s, s.swap} ρ (compatible_pair_swap s)
+      (nontrivial_pair_swap hn) (swap_closed_pair_swap s) h3).IsClade A ↔
+      A = s.sideA ∨ A = s.sideB ∨ (∃ x : α, A = {x}) ∨ (∃ x : α, A = {x}ᶜ) := by
+  have hchar := Cladogram.isSplitOf_ofCompatibleSplits {s, s.swap} ρ (compatible_pair_swap s)
+    (nontrivial_pair_swap hn) (swap_closed_pair_swap s) h3
+  constructor
+  · rintro ⟨t, ht, rfl⟩
+    rw [hchar] at ht
+    rcases ht with hmem | ⟨x, hx⟩ | ⟨x, hx⟩
+    · simp only [Finset.mem_insert, Finset.mem_singleton] at hmem
+      rcases hmem with rfl | rfl
+      · exact Or.inl rfl
+      · exact Or.inr (Or.inl (by rw [Split.swap_sideA]))
+    · exact Or.inr (Or.inr (Or.inl ⟨x, hx⟩))
+    · exact Or.inr (Or.inr (Or.inr ⟨x, hx⟩))
+  · rintro (h | h | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · refine ⟨s, (hchar s).mpr (Or.inl (Finset.mem_insert_self _ _)), ?_⟩
+      rw [h]
+    · refine ⟨s.swap, (hchar s.swap).mpr
+        (Or.inl (Finset.mem_insert_of_mem (Finset.mem_singleton_self _))), ?_⟩
+      rw [Split.swap_sideA, h]
+    · rw [hx]
+      exact Cladogram.exists_isSplitOf_singleton _ x
+    · rw [hx]
+      exact (isClade_compl _ _).mpr (Cladogram.exists_isSplitOf_singleton _ x)
+
 /-! ## 6. 显式缺口（**未证**，也不被任何已证定理使用）
 
 以下三条 `def … : Prop` 是本文件**没有**做到的部分的可引用形式。
@@ -713,7 +882,44 @@ theorem twoClan_exhaustive_singleton_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} 
 
 本库**没有**一般 `n` 的 YHK / Kingman **拓扑律**（只有 `Fin 4` 的 `MSCFreq` 实例与
 一步合并的均匀性）。故 `clanProb`（乃至 `pn`）目前只是**闭形式**，
-它们与概率空间的接通就是本缺口。 -/
+它们与概率空间的接通就是本缺口。
+
+★ **W25 泳道 b 判定（2026-10-19）：【收档 · 真缺口，非空转】** —— **命题一字未改** ✓。
+
+* **忠实性 ✓**：RHS `clanProb n A.card` 与文献 Lemma 6.2（`:1007-1036` ✓）逐字对应；
+  「`A` 是 clan」= 文献 `:985-988` ✓ 的 clan（本库 `IsClade` 即 clan，见文件头 §2）；
+  前提 `A.Nonempty` ＋ `A.card < n` 排除 `∅` 与 `X`（两者都不是 split 的一侧）。
+* **不是「空转缺口」✗**：`∃ Ω, prob, tree` 是自由槽，但 `clanProb n a` 对 `2 ≤ a ≤ n − 2`
+  取**非 0/1** 值（★ `clanProb_four_two`：`clanProb 4 2 = 1/3`）⇒ 退化分布
+  （单点树 / 星形树 / `prob` 取 0-1 原子）**拿不到**这些值 ⇒ 槽位**不能**被平凡填掉。
+* **可证伪否 ✗**：`scripts/msc/zds2011_monophyly.py` 以精确有理数在 `n ∈ {4,5,6}` 上穷举
+  核对 Lemma 6.2 与 YHK 分布（`:271-318` ✓，末行 `总判定：ALL OK`）⇒ 命题为**真**，本库内**没有**反例。
+* **可证成否 ✗（本库内）**：缺**四件具名器材** ——
+  ① **`MSCTreeLaw n`**：一般 `n` 的 YHK/Kingman **无根拓扑律**（有限概率空间 ＋
+     `tree : Ω → Cladogram (Fin n)` ＋ 文献 `:191-216` 的 YHK 权重）。库内最近的是
+     `MSCKingman.root_topology_class_prob`（仅 `Fin 4`）、`MSCProof.mscFreqFin4`、
+     `Coalescent.mergePairsFinset`（一步合并均匀）—— 都**不是**一般 `n` 的律。
+  ② **去根载体桥 `rootedToCladogram`**：YHK 是**有根**过程，文献的 clan 是 `T − ρ` 的 split；
+     本库 `Cladogram` 无 root 概念（文件头 §5 已登记「有根树 clade 的库内对象 ❌ 不存在」）。
+  ③ **Lemma 6.1 的概率层**（`:991-992` ✓，证明 = `:1038-1044` ✓ 的包含-排除
+     `qn(A) = pn(A) + pn(X−A) − pn(A, X−A)`）：本文件只有**树层**件
+     （`isClade_compl`、`isClade_and_compl_iff` 等），缺「`clade(T)` ↔ `clan(T−ρ)`」的**概率**桥。
+  ④ **(EP) 的群作用实现**（`:230-232` ✓）：leaf 重标号对 `Cladogram` 的作用 ＋ 律的等变性
+     —— 用来把 `qn` 的依赖化归到 `(a, b)`；以及 Theorem 4.5 情形 2/5（`Rn`/`rn`）的概率层。
+* **已交付的无条件切片（§5.2）**：★★★ `yhkClanLawGap_trivial_card_slice`（**任意** `n`、
+  **任意**概率空间与树族，`A.card ∈ {1, n−1}` 时等式恒成立；不需要 YHK 律、不需要 `prob ≥ 0`）
+  ＋ ★★★ `yhkClanLawGap_three_slice`（缺口 `∃` 从句在 `n = 3` 上**完整成立**）。
+* **★ 新发现（留给下一泳道）：`n = 4` 那一条其实**可证**，卡点是**枚举的可判定性**，不是数学** ——
+  库内 `Cladogram.ofCompatibleSplits`（`Phylo/CladogramBuild.lean`）能**造出** 3 棵 quartet 树
+  （族取 `{splitOf {0,1}, swap}`、`{splitOf {0,2}, swap}`、`{splitOf {0,3}, swap}`），
+  其 clade 集由本节新引理（本泳道试写的 `isClade_ofCompatible_pair`）完全刻画为
+  「`A` 是某个二元子集或其补，或 `A` 平凡」；均匀混合 3 棵即得 `clanProb 4 2 = 1/3`
+  （`Fin 4` 的 6 个二元子集各在**恰好 1 棵**里成 clade）。
+  **实测卡点**：`Finset.filter`（谓词含 `IsClade`）的 `DecidablePred` 落到
+  `Classical.propDecidable`，`decide` 在 `Finset.card` 上**不归约**（`beq` 停在
+  `{j | ⋯}.card.beq 1`）⇒ 需先把滤子改写成**可计算谓词**（`Finset.filter_congr` ＋ 显式
+  `Decidable` 实例），或按 6 个二元子集显式 `fin_cases` 分情形。补齐这件器材后
+  `n = 4` 的切片应是纯机械工作。 -/
 def YHKClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
