@@ -79,8 +79,10 @@ import Mathlib.RingTheory.MvPolynomial.Ideal
   代数几何）；`minor_mem_edgeIdeal` 只在**行列式族内部**说「大阶次式 ∈ 5 阶理想」。
 * 本文件**只在 `κ = 4`（DNA，`Fin 4`）与 4 分类群、展平 `κ² × κ² = 16 × 16` 上做**，
   `κ^k`（k ≥ 3）的展平不做（与 `InvariantsRank` 的边界一致）。
-* 模型半边（「`P` 来自树上的 Markov 模型 ⟹ 存在因子分解」）仍是
-  `InvariantsRank.TreeMarkovFactorGap` 的欠账，本文件以 `Factorizable` 为显式假设传入。
+* 模型半边（「`P` 来自树上的 Markov 模型 ⟹ 存在因子分解」）在 **4 叶 GMM** 上已由
+  `InvariantsRank.treeMarkovFactorGap_holds`（W25b 泳道 b，无假设）**证成**；
+  本文件仍以 `Factorizable` 为显式假设传入 —— 好处是**不依赖**模型的具体形状，
+  对任意可因子分解张量都成立。`n` 叶一般树仍在 `TreeMarkovFactorGap` 的遗留边界里。
 * 本文件对**一般情形**（任意 `n`、任意拓扑、生成整个理想）如实落缺口，不弱化陈述冒充达标。
 * 无 `sorry`、无 `axiom`、无 `native_decide`。
 -/
@@ -288,7 +290,8 @@ edge invariants 消失）；**未证的是 `→`**：一般点上「edge invaria
 * 「展平秩取到期望值」的一般点集 `U` 的显式刻画（1510–1527 行 `U_{T,β}`、`U_T`），
 * Buneman 的「分裂集合决定无根树拓扑」（同文件 1465–1508 行 Theorem 4.1）。
 
-这三条都在当前库的器材之外（前者见 `InvariantsRank.TreeMarkovFactorGap`，
+这三条都在当前库的器材之外（前者＝一般树 GMM 层，其 **4 叶**情形已由
+`InvariantsRank.treeMarkovFactorGap_holds` 证成，一般 `n` 仍见 `TreeMarkovFactorGap` 的边界；
 后两者需要一般树的 GMM 层），故如实落缺口而不弱化陈述。 -/
 def edgeInvariants_suffice_gap (U : Set (SiteFreq (Fin 4)))
     (Model : Set (SiteFreq (Fin 4))) : Prop :=

@@ -83,9 +83,10 @@ import Phylo.JukesCantor
 * **已做（W12c）**：一般 `m` 片叶的 Evans–Speed Theorem 6 的**代数内核**
   `evansSpeed_general`（= `evansSpeed_general_gap` 的逐字陈述）**已证**；
   该陈述不含任何树/GMM 假设，故 `m ≥ 2` 的「分支」并无额外障碍。
-* **未做（真正的树模型层）**：把 `π` / `f i` 解释成**树上的** Markov 模型边缘分布
-  （`Phylo.JC.patternProb` 只有 4 叶固定拓扑）= `InvariantsRank.TreeMarkovFactorGap`
-  的同一欠账；它与上面的恒等式无关。
+* **树模型层**：把 `π` / `f i` 解释成**树上的** Markov 模型边缘分布这一件，其
+  **4 叶 GMM** 情形已由 `InvariantsRank.treeMarkovFactorGap_holds`（W25b，无假设）证成；
+  `n` 叶一般树（`Phylo.JC.patternProb` 只有 4 叶固定拓扑）= `InvariantsRank`
+  同一缺口的**遗留边界**；这一层与上面的恒等式无关。
 * **未做**：Casanellas §5.5 的 `T^{fe}(ψ)` 分块、`S0,…,S4` 的秩条件
   （那条路线属 `Phylo.JukesCantor` / `Phylo.LakeInvariants`）。
 * 本文件**不引入**新的 Mathlib import（只用 `Phylo.JukesCantor` 自带的依赖）。
@@ -322,7 +323,9 @@ theorem chainProd_eq (n : ℕ) :
 
 （W11 的原判词把「抽象恒等式」与「树模型层」混为一谈 —— 见 §5 的说明。
 真正still缺的是**树模型层**：`Phylo.Stat.InvariantsRank.TreeMarkovFactorGap`
-的欠账，即「`P` 来自树上的 Markov 模型 ⟹ 存在沿边因子分解」，与本恒等式无关。） -/
+原先登记的「`P` 来自树上的 Markov 模型 ⟹ 存在沿边因子分解」—— 其 **4 叶 GMM** 情形
+已由 W25b 证成（`InvariantsRank.treeMarkovFactorGap_holds`），一般 `n` 仍是欠账；
+这一层与本恒等式无关。） -/
 def evansSpeed_general_gap (m : ℕ) : Prop :=
   ∀ (G : Type) [AddCommGroup G] [Fintype G] [DecidableEq G]
     (π : G → ℝ) (f : Fin m → G → ℝ) (χ : Fin m → G → ℝ),
