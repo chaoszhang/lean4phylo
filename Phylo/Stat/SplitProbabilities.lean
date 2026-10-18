@@ -546,7 +546,9 @@ MSC gene tree 分布**诱导**」在 **quartet 层**已经有了**正面对象**
 （`astral_iso_ae_of_geneTrees` 的假设面里没有它）。
 ⚠️ **仍然是缺口**：**一般 `n`**（本 `Prop` 要的是任意 `n`）的 gene tree 分布与 binary 物种树对象**仍不在库内**；
 上述新对象是**每个 4-元子集**层面的（对任意 `X`）。
-**本文件不在任何证明中使用它。** -/
+**本文件不在任何证明中使用它。**
+
+⚠️ **W25c 机器判定（2026-10-19）**：本 `Prop` **可被平凡满足** —— 退化见证已被提升为**全 `n`** 的 Lean 定理 ★★★★ `msc_split_probability_object_gap_holds`（见下方 §5.1）。这**不**表示缺口已闭合：`∃` 的自由槽把「要造的对象」整个写成了断言，故本 `Prop` 是**账目**（恒真可满足），不是「`P` 由参数诱导」的定理。真缺件仍是 `MSCTreeLaw n`（`Phylo/Stat/ReciprocalMonophyly.lean:898`、`:950`）＋ 带枝长的 binary 物种树对象。 -/
 def msc_split_probability_object_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n → ∀ ε : ℝ, 0 ≤ ε →
     ∃ (σ : Type) (_ : Nonempty σ) (Displays : σ → Split (Fin n) → Prop)
@@ -554,6 +556,96 @@ def msc_split_probability_object_gap : Prop :=
       (∀ s r, IsTrivialSplit r → Displays s r ∧ P s r = 1) ∧
       (∀ s, ∑ r : Split (Fin n), P s r = 2 * (2 * (n : ℝ) - 3)) ∧
       (∀ s r, (1 / 3) * Real.exp (-ε) ≤ P s r → Displays s r)
+
+/-! ### ★★ W25c 判定：`msc_split_probability_object_gap` **为真但空转**（全 `n` 机器复核）
+
+上面 ★E 的退化见证在 W12a 只用 Python（`scripts/msc/w12a_gap_check.py` Part III）复核了
+`n = 3…10`；本节把它升为**全 `n`** 的 Lean 定理（**零假设**）：
+
+* `msc_split_probability_object_gap_holds : msc_split_probability_object_gap` —— 证成的是
+  **陈述本身**，不是缺口背后的数学。
+* 见证（与 ★E 逐条一致）：`σ := Unit`、`Displays := fun _ _ => True`、
+  `P r := if IsTrivialSplit r then 1 else (if r = r₀ then 2n − 6 else 0)`，
+  锚点 `r₀ := {0,1} | X∖{0,1}`（`n ≥ 4` 时非平凡；`n = 3` 时 `2n − 6 = 0`，该支不贡献质量）。
+  账目：`Σ_r P = #triv + (2n − 6) = 2n + 2n − 6 = 2(2n − 3)`，
+  其中 `#triv = 2n` 是缺口 G1（★★★ `card_trivial_splits_gap_proof`）。
+* 第三条（`1/3·e^{−ε}` 阈值 ⟹ 被展示）在 `Displays := True` 下**恒真**。
+
+⚠️ **不得**把本定理读成「缺口 G2 已闭合」：它说明的恰恰是**本 `Prop` 抓不住**真正的数学内容
+（`P` 必须由 **binary 带长度物种树 σ ＋ 一般 `n` 的 MSC gene tree 分布** *诱导*）。
+具名缺件与「下一步」见 `Phylo/Stat/ReciprocalMonophyly.lean` §6 的 `MSCTreeLaw n`
+（同文件 `:898`、`:950` 两处）以及 ADR2017 的
+`references/md/AllmanDegnanRhodes2017_SplitProbabilitiesMSC.md` 第 318–357 行。 -/
+
+/-- ★★★★ **W25c：`msc_split_probability_object_gap` 成立（无任何数学假设，退化见证）**。
+
+这是把 ★E 的 Python 复核（`n ≤ 10`）提升为**全 `n`** 的机器证明：`P` 取
+「平凡 split 取 `1`，其余质量 `2n − 6` 全压在锚点 `r₀ = {0,1} | X∖{0,1}` 上」。
+它**只**证明本 `Prop` 为真（本 `Prop` 的 `∃` 把「要造的对象」写成自由槽），
+**不是**缺口 G2 的闭合：真缺口要求 `P` 由 binary 物种树＋MSC gene tree 分布**诱导**。 -/
+theorem msc_split_probability_object_gap_holds : msc_split_probability_object_gap := by
+  intro n hn ε _
+  -- 锚点 split `{0,1} | X ∖ {0,1}`（`n ≥ 3` 保证两侧非空）
+  let a : Fin n := ⟨0, by omega⟩
+  let b : Fin n := ⟨1, by omega⟩
+  have hab : a ≠ b := by
+    intro h
+    simp only [a, b, Fin.mk.injEq] at h
+    omega
+  have hAne : ({a, b} : Finset (Fin n)).Nonempty := ⟨a, by simp⟩
+  have hAcom : ({a, b} : Finset (Fin n))ᶜ.Nonempty := by
+    refine ⟨⟨2, by omega⟩, ?_⟩
+    simp only [Finset.mem_compl, Finset.mem_insert, Finset.mem_singleton, a, b, Fin.mk.injEq]
+    omega
+  let r0 : Split (Fin n) := Phylo.splitOf {a, b} hAne hAcom
+  have hAcard : r0.sideA.card = 2 := by
+    rw [Phylo.splitOf_sideA, Finset.card_pair hab]
+  have hcardsum : r0.sideA.card + r0.sideB.card = n := by
+    simpa using Phylo.Stat.CASTERTopoSplit.card_sideA_add_card_sideB r0
+  refine ⟨Unit, ⟨⟨⟩⟩, fun _ _ => True,
+    fun _ r => if IsTrivialSplit r then (1 : ℝ) else (if r = r0 then 2 * (n : ℝ) - 6 else 0),
+    ?_, ?_, ?_⟩
+  · intro _ r hr
+    dsimp only
+    exact ⟨trivial, ite_eq_left hr⟩
+  · intro _
+    dsimp only
+    have hsplit := Finset.sum_filter_add_sum_filter_not
+      (s := (Finset.univ : Finset (Split (Fin n))))
+      (p := fun r : Split (Fin n) => IsTrivialSplit r)
+      (f := fun r : Split (Fin n) =>
+        if IsTrivialSplit r then (1 : ℝ) else (if r = r0 then 2 * (n : ℝ) - 6 else 0))
+    have htriv : (∑ r ∈ Finset.univ.filter (fun r : Split (Fin n) => IsTrivialSplit r),
+        (if IsTrivialSplit r then (1 : ℝ) else (if r = r0 then 2 * (n : ℝ) - 6 else 0)))
+        = 2 * (n : ℝ) := by
+      rw [Finset.sum_congr rfl (fun r hr => ite_eq_left (Finset.mem_filter.mp hr).2),
+        Finset.sum_const, card_trivial_splits_gap_proof n hn]
+      simp
+    have hntriv : (∑ r ∈ Finset.univ.filter (fun r : Split (Fin n) => ¬ IsTrivialSplit r),
+        (if IsTrivialSplit r then (1 : ℝ) else (if r = r0 then 2 * (n : ℝ) - 6 else 0)))
+        = 2 * (n : ℝ) - 6 := by
+      rw [Finset.sum_congr rfl (fun r hr => ite_eq_right (Finset.mem_filter.mp hr).2)]
+      have hsingle : (∑ r ∈ Finset.univ.filter (fun r : Split (Fin n) => ¬ IsTrivialSplit r),
+          (if r = r0 then 2 * (n : ℝ) - 6 else 0)) = 2 * (n : ℝ) - 6 := by
+        refine (Finset.sum_eq_single r0 ?_ ?_).trans (ite_eq_left rfl)
+        · intro b _ hne
+          exact ite_eq_right hne
+        · intro hnot
+          have htr0 : IsTrivialSplit r0 := by
+            by_contra hcon
+            exact hnot (Finset.mem_filter.mpr ⟨Finset.mem_univ _, hcon⟩)
+          have hn3 : n = 3 := by
+            rcases htr0 with h1 | h1
+            · rw [hAcard] at h1
+              omega
+            · omega
+          rw [ite_eq_left rfl, hn3]
+          norm_num
+      exact hsingle
+    rw [← hsplit, htriv, hntriv]
+    ring
+  · intro _ r _
+    exact trivial
 
 /-- ❌ **缺口 G3（Theorem 4.1 的 `n = 4` 计数，第 656–677 行）**：
 `(a,b,c,d) = (0,1,2,3)` 时，分离 `{0,2}` 与 `{1,3}`、`{0,3}` 与 `{1,2}`、`{0,1}` 与 `{2,3}`
