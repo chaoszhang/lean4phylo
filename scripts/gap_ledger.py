@@ -80,6 +80,8 @@ FORM_OVERRIDE = {
     "generalModelIdentifiability_gap": "全称闭包为假（`¬ ∀ Θ …,`）",
     "rfPoissonAsymptotic_gap": "闭命题（`¬ gap`）",
     "maxQuartetDistance_gap": "闭命题（`¬ gap`）",
+    "ContinuousPriorPosteriorConsistencyGap":
+        "全称闭包为假（`¬ gap.{0}`；反例：`prior = δ₀`、`lik ≡ 1`、真值 `1`）",
 }
 
 # ===== 收口定理「只有特化、没有全称」的条目（人工核对；W25-B）=====

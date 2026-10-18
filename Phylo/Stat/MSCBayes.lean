@@ -20,7 +20,7 @@ import Phylo.Stat.MSCKingmanMeasure
   * **615–637** 行：`P(S) = fBD(S)·PN(S)`（(4) 式）；发散时间先验 `fBD` 是
     **reconstructed birth–death process**（Gernhard 2008，参数 `λ` / `μ`，(5) 式给出密度）；
     拓扑先验在 ranked labeled trees 上**均匀**；
-  * **510–520** 行：直接算该积分**不可能** —— 用 MCMC 近似。
+  * **533–534** 行：直接算该积分**不可能** —— 用 MCMC 近似（W25-a 复核：原写 510–520，`grep -n 'approximated using Markov'` 实为 **533–534**）。
 * **Rannala & Yang (2003)**, *Genetics* **164**:1645–1656 ——
   `references/md/RannalaYang2003_BayesSpeciesDivergenceTimesAncestralPopulationSizes.md`
   **355–370** 行 (4)(5) 式：`f(Θ,G|D) ∝ f(D|G) f(G|Θ) f(Θ)`、`f(Θ|D) = ∫ f(Θ,G|D) dG`。
@@ -28,7 +28,9 @@ import Phylo.Stat.MSCKingmanMeasure
 ⇒ **形态判定：实现**。有限/离散层（§1、§3）与**已有** ★★★ `kingmanMSCMeasure` 的
 测度层边缘化（§2）都承载得了「后验 ∝ 先验 × 似然 ＋ 归一」。
 **只有「一般连续先验 `ρ` 下的 MCMC / 后验一致性」超范围 ⇒ 落显式 `def … : Prop` 缺口（§5）**，
-不硬编。
+不硬编。★ **W25-a 复核（2026-10-19）**：该缺口 `ContinuousPriorPosteriorConsistencyGap`
+**作为全称命题为假**（§5 的 `ContinuousPriorPosteriorConsistencyGap_false`，反例 `prior = δ₀` +
+`lik ≡ 1`）—— `∃ post` 被合取项②钉死，缺口实际断言「任意先验 ⇒ 后验一致」。
 
 ## 1. 交付结构
 
@@ -517,7 +519,9 @@ Heled–Drummond (2010) Eq. (1)（**496–510** 行）与 Rannala–Yang (2003) 
 * ★ 这正是文献里**本就成立**的隐含前提（真模型的边际似然不会恒为 `0` ✓，`HeledDrummond2010` /
   `RannalaYang2003` **均在库** ✓）；★ 本次改动**只是补假设** ⇒ 新命题**强于**旧命题 ✓（**未改弱** ✓）；
 * **影响的下游声明**：本文件**无人使用**该 `def` ✓；不改任何其它声明 ✓。
-  ⚠️ 注意：补假设**只消除"恒假"** ✗，**不**使第三条（后验一致性）可证 ✓ —— 那仍需 MCMC/连续先验器材 ✓。 -/
+  ⚠️ 注意：补假设**只消除"恒假"** ✗，**不**使第三条（后验一致性）可证 ✓ —— 那仍需 MCMC/连续先验器材 ✓。
+
+**★★ W25-a（2026-10-19）复核：本条已判定为【已证伪】（全称闭包为假）** —— `∃ post` 被合取项②**钉死**（假自由度），命题实际断言「任意先验 + 任意似然 ⇒ 后验一致」，**为假**；反例 + 缺件见下方 `ContinuousPriorPosteriorConsistencyGap_false`。**`def` 陈述逐字未动** ✓。 -/
 def ContinuousPriorPosteriorConsistencyGap : Prop :=
   ∀ {Θ : Type*} [MeasurableSpace Θ] [TopologicalSpace Θ]
     (prior : Measure Θ) [IsProbabilityMeasure prior]
@@ -528,6 +532,66 @@ def ContinuousPriorPosteriorConsistencyGap : Prop :=
         (∀ n, post n = prior.withDensity fun θ => lik n θ / ∫⁻ θ', lik n θ' ∂prior) ∧
         ∀ U : Set Θ, IsOpen U → trueθ ∈ U →
           Tendsto (fun n : ℕ => post n U) atTop (𝓝 1)
+
+/-- ★★★ **W25-a（2026-10-19）判定：`ContinuousPriorPosteriorConsistencyGap` 为假** ⇒ 登记
+`[已证伪]`（**全称闭包为假**，universe `0` 实例），**不是**「补假设就能救」的那类假。
+
+**★ 先判真假（★D）：`∃ post` 是假自由度。** 合取项②
+`∀ n, post n = prior.withDensity (fun θ => lik n θ / ∫⁻ θ', lik n θ' ∂prior)` 把 `post`
+**完全钉死**；故缺口实际断言：
+
+> 对**任意**概率先验 `prior`、任意似然 `lik`（只要边际似然 `Z n` 最终为正）、任意指定点
+> `trueθ`，`prior` 经 `lik n / Z n` 重加权后的后验在每个含 `trueθ` 的开邻域上质量 → `1`。
+
+即「**任意先验 + 任意似然 ⇒ 后验一致**」—— 缺口对 `prior` 与 `lik n` **不加任何约束**。
+
+**★ 反例（取 `lik n ≡ 1` ⇒ `Z n = 1` ⇒ `post n = prior`：后验 = 先验，贝叶斯更新不发生）**：
+`Θ := ℝ`、`prior := Measure.dirac 0`、`trueθ := 1`、`lik n := fun _ => 1`、`U := Ioi (1/2 : ℝ)`：
+
+* 假设 ✓：`∫⁻ θ', lik n θ' ∂prior = ∫⁻ _, 1 ∂(δ₀) = 1 > 0`；
+* `U` 开 ✓、`trueθ = 1 ∈ U` ✓；
+* 结论 ✗：`post n U = (δ₀.withDensity (fun _ => 1)) U = δ₀ (Ioi (1/2)) = 0` 对**所有** `n`
+  （`0 ∉ Ioi (1/2)`）⇒ `Tendsto (fun n => post n U) atTop (𝓝 1)` **不成立**
+  （`Ioi (1/2) ∈ 𝓝 (1 : ℝ≥0∞)` 而 `0 ∉ Ioi (1/2)`）。
+
+★ 反例**不违反假设**（`lik n ≡ 1` 是合法似然、`Z n = 1 > 0` 恒成立）⇒ 毛病在**结论**，不在前提。
+
+**★ 文献对照（行号已核）**：
+`references/md/HeledDrummond2010_BayesianSpeciesTreesMultilocus.md` **506–508** 的 (1) 式里
+`P(S)` 是**给定**先验，同文件 **533–534** 行明言该积分只能靠 MCMC 近似；
+`references/md/RannalaYang2003_BayesSpeciesDivergenceTimesAncestralPopulationSizes.md` **358** 的
+(4) 式、**364** 的 (5) 式同理，**372–373** 行更把「链的**平稳分布** `= f(Θ,G|D)`」作为 MCMC 的
+待设内容。这些文献里的后验一致性陈述**都附带**对先验 / 似然的条件，本缺口把它们全丢了。
+
+**⇒ 缺的具名器材（⚠ 需人工核）**：
+1. **先验一致性条件**：`ρ n` 随 `n` 变且**弱收敛到 `δ_{trueθ}`**（或「每个邻域上最终一致地给正质量」）
+   —— 本库把 `ρ` 当**固定参数**（`Phylo/Stat/MSCKingmanMeasure.lean` 文件头 §2）⇒ 缺这一层；
+2. **似然比条件**（Schwartz 型：`trueθ` 邻域外似然比指数衰减 / KL 条件）—— 本库无；
+3. **后验一致性的一般定理**（Schwartz 1965 / Doob）—— `references/md/` 下**无**该文献（目录已核）；
+4. MCMC **平稳分布 = 后验**（本缺口第三条想说的，但被更强的合取项②一并否证了）。
+
+**★ 形态**：`¬ ContinuousPriorPosteriorConsistencyGap.{0}` —— **全称闭包为假**（universe `0` 实例；
+与 `Phylo/Stat/BunemanIndexBridge.lean` 的 `minimalCluster_exists_gap_false` 同形态）。
+**`def` 陈述逐字未动**（只补了本条 docstring 注记）；本定理只**否证**它，不改陈述 ✓。 -/
+theorem ContinuousPriorPosteriorConsistencyGap_false :
+    ¬ ContinuousPriorPosteriorConsistencyGap.{0} := by
+  intro h
+  obtain ⟨post, -, hform, htend⟩ := h (Θ := ℝ) (prior := Measure.dirac (0 : ℝ))
+    (lik := fun _ _ => (1 : ℝ≥0∞)) (trueθ := 1) (by simp)
+  -- `lik n ≡ 1` ⇒ `Z n = 1` ⇒ 后验退化为先验 `δ₀`
+  have hzero : ∀ n, post n (Set.Ioi (1 / 2 : ℝ)) = 0 := by
+    intro n
+    rw [hform n]
+    simp
+  -- 但 `trueθ = 1 ∈ Ioi (1/2)`，且 `Ioi (1/2)` 是 `(1 : ℝ≥0∞)` 的邻域
+  have hmem : Set.Ioi (1 / 2 : ℝ≥0∞) ∈ 𝓝 (1 : ℝ≥0∞) := isOpen_Ioi.mem_nhds (by norm_num)
+  have hev : ∀ᶠ n : ℕ in atTop, post n (Set.Ioi (1 / 2 : ℝ)) ∈ Set.Ioi (1 / 2 : ℝ≥0∞) :=
+    (htend (Set.Ioi (1 / 2 : ℝ)) isOpen_Ioi (by norm_num)) hmem
+  have hev0 : ∀ᶠ n : ℕ in atTop, (0 : ℝ≥0∞) ∈ Set.Ioi (1 / 2 : ℝ≥0∞) := by
+    filter_upwards [hev] with n hn
+    rwa [hzero n] at hn
+  obtain ⟨n, hn⟩ := hev0.exists
+  simp at hn
 
 /-- **缺口（X6-B）：多位点后验集中（有限树空间版）** —— ★ **2026-10-14 W19 按真假审查更正** ✓。
 
