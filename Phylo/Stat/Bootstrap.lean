@@ -1025,7 +1025,9 @@ example :
 以及 `iIndepFun_infinitePi`（`Probability/Independence/InfinitePi.lean`）。
 故「本版 Mathlib 无可数无限乘积测度」这一判词**已过时**（`Phylo/Stat/EmpiricalConvergence.lean`
 §3/§4 缺口 K 的表述需要复核 —— 该文件**不在** W12a 写域内，此处只登记发现）。
-组件②③（弱收敛、相容性）**仍缺**，故缺口本体不变。 -/
+组件②③（弱收敛、相容性）**仍缺**，故缺口本体不变。
+
+⚠️ **W25c 已机器判定**：本 `Prop` **恒真**（`bootstrap_confidence_gap_iff_true`），且可**无假设证成**（`bootstrap_confidence_gap_holds`）—— 这恰恰说明它是**假设槽 / 空转**（`∃` 的自由槽把想要的结论写进去了），**不**等于「支持度 → 置信度」被证成。真缺口仍是 ②③。 -/
 def bootstrap_confidence_gap : Prop :=
   ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (Fin 4) → ℚ),
     (∀ ω (s : Split (Fin 4)), 0 ≤ p ω s ∧ p ω s ≤ 1) ∧
@@ -1056,6 +1058,74 @@ example : ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (
       exact Or.inr (Or.inl (Phylo.splitOf ({0, 1} : Finset (Fin 4)) (by decide) (by decide)).disjoint_sides)
     · simp [h] at hs
       exact absurd hs (by norm_num)
+
+/-! ### ★★ W25c 判定：`bootstrap_confidence_gap` 是「**假设槽 / 恒真**」—— 三条残量定理
+
+`bootstrap_confidence_gap` 的 `∃ (Ω) (TrueSplit) (p)` 是三个**自由槽**：`Ω` 不受任何约束，
+`TrueSplit` 与 `p` 也跟 `bootstrapSupport` / `Resample` / `ruleSupport` **不发生任何关系**。
+于是它**可以被证成**（无数学假设），但证成的只是账目本身 —— 下面三条把它钉死为恒真：
+
+* `bootstrap_confidence_gap_iff_true`：取 `Ω := Empty`，三条 `∀ ω` 前提**全部空真** ⇒
+  整个 `Prop` `↔ True`（连一个 `Split` 都不需要）；
+* `bootstrap_confidence_gap_holds`：由上一行直接得到 —— **零假设**，但**不**表示
+  「频率 → 置信度」被证成了（真缺口见 `def` 的 docstring 第 ②③ 条）；
+* `exists_confidence_account_for`：把 `Ω` 固定成 `PUnit` 后，**任一**候选真树 `s`（包括 §5
+  里 `bootstrapSupport = 13/27 < 1/2` 的 `fourAB`）都能配上点质量 `p` 满足三条 ⇒
+  「哪棵是真树」这一槽对 `s` **毫无约束**；`1 / 2 < p ω (TrueSplit ω)` 与
+  `1 / 2 < bootstrapSupport T (TrueSplit ω)` 是两件**互不相干**的事。
+
+⇒ 真正的数学内容（Felsenstein L261–263 的「重抽样分布逼近抽样分布」、L275–284 的
+`n` 大时的论证、L776–783 的「方法不相容则 bootstrap 误导」）**不在**这个 `Prop` 里：
+它仍是账目，不是定理。**不要**把 `bootstrap_confidence_gap_holds` 读成缺口已闭合。 -/
+
+/-- ★★ **W25c 残量（`↔ True`）**：`bootstrap_confidence_gap` 是**恒真**命题。
+
+`Ω := Empty` 让三条约束（`0 ≤ p ≤ 1`、`1/2 < p (TrueSplit ω)`、相容性）的 `∀ ω`
+前缀**无元素可验**，故整个 `∃ Ω …` 只被「存在一个类型」满足，与 split、概率、
+bootstrap 全无关。**这是判定它为「假设槽」的机器证据**：
+把想要的结论（存在真树 + 高概率 + 相容）同时写进 `∃` 的自由槽，
+任何「能挑一个空类型」的人都能满足它。 -/
+theorem bootstrap_confidence_gap_iff_true : bootstrap_confidence_gap ↔ True := by
+  constructor
+  · intro _; trivial
+  · intro _
+    refine ⟨Empty, fun ω => ω.elim, fun ω => ω.elim, ?_, ?_, ?_⟩
+    · intro ω; exact ω.elim
+    · intro ω; exact ω.elim
+    · intro ω; exact ω.elim
+
+/-- ★★ **W25c `_holds`（无假设）**：登记 `Prop` `bootstrap_confidence_gap` 成立。
+
+⚠️ 这条**只**说明账目可满足（见 `bootstrap_confidence_gap_iff_true` 的 `Empty` 见证），
+**不**说明 Felsenstein 的「支持度 → 置信度」被证成了：`p` 与 `bootstrapSupport`
+之间没有任何桥，弱收敛（L261–263 / L275–284）与估计量相容性（L776–783）仍缺。 -/
+theorem bootstrap_confidence_gap_holds : bootstrap_confidence_gap :=
+  bootstrap_confidence_gap_iff_true.mpr trivial
+
+/-- ★★ **W25c 残量（`p` 槽对「真树」无约束）**：对**任意**候选真树 `s`，都存在一个
+取值 `[0,1]`、在 `s` 上 `> 1/2`、且让「高概率的 split 与 `s` 相容」的「概率」`p`
+—— 即点质量 `p := 1{s} = 1`（`Compatible s s` 由 `disjoint_sides` 给出）。
+
+所以 `bootstrap_confidence_gap` 的第三条**不可能**把「支持的 split 与真树相容」转成
+对 `s` 的任何实质要求。特别地取 §5 的 `fourAB`（其 bootstrap 支持度已证为 `13/27 < 1/2`，
+`minimal_example_support_lt_half`）也一样成立 —— 低支持度的 split 同样能当「真树」。 -/
+theorem exists_confidence_account_for (s : Split (Fin 4)) :
+    ∃ p : Split (Fin 4) → ℚ,
+      (∀ t : Split (Fin 4), 0 ≤ p t ∧ p t ≤ 1) ∧
+      (1 / 2 < p s) ∧
+      (∀ t : Split (Fin 4), 1 / 2 < p t → Split.Compatible t s) := by
+  refine ⟨fun t => if t = s then (1 : ℚ) else 0, ?_, ?_, ?_⟩
+  · intro t
+    by_cases h : t = s <;> simp [h]
+  · simp only [↓reduceIte]
+    rw [div_lt_iff₀ (show (0 : ℚ) < 2 by norm_num)]
+    norm_num
+  · intro t ht
+    by_cases h : t = s
+    · rw [h]
+      exact Or.inr (Or.inl (Split.disjoint_sides s))
+    · simp only [h, ↓reduceIte] at ht
+      exact absurd ht (by norm_num)
 
 /-! ## §7 反空真（★B）
 
