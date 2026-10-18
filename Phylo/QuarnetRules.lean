@@ -322,7 +322,9 @@ theorem exN_compatible : Compatible exN₁ exN₂ := by
 
 end Split
 
-/-! ## 7. ⬜ 缺口：level-1 载体不存在 -/
+/-! ## 7. ⬜ 缺口：level-1 载体不存在
+
+★ **判定**（§9）：本 `Prop` 为**真**（`quarnetRules_level1_gap_holds`），但四条规则都是自由谓词、可整体消去（`quarnetRules_level1_gap_iff_display`）⇒ **空转缺口**，不含 level-1 内容。 -/
 
 namespace Split
 
@@ -418,5 +420,81 @@ theorem quarnetRules_level1_gap_degenerate : quarnetRules_level1_gap := by
   · refine ⟨{PUnit.unit}, by simp, by simp, by simp, ?_, by simp⟩
     intro N h
     exact (h PUnit.unit).mp (by simp)
+
+/-! ## 9. ★A′ `quarnetRules_level1_gap` 的**判定**：四条规则是自由谓词变量（可整体消去）
+
+§8 已给出该 `Prop` 的退化见证 `quarnetRules_level1_gap_degenerate`。本节把它升成**判定**
+（不是「可满足」，而是「内容恰好是什么」），并登记标准名 `_holds`：
+
+* `quarnetRules_level1_gap_holds`（**无假设**）：该 `Prop` **为真**。⇒ 它**不是**未证缺口，
+  而是**空转缺口**：其真值不依赖任何 level-1 / quarnet 内容。
+* `quarnetRules_level1_gap_iff_display`（`↔`，**无假设**）：该 `Prop` **等价于**它的残量
+
+  > `∃ (Qnet Net : Type) (_ : Fintype Qnet) (_ : Fintype Net) (displayedBy) (isTypeI),`
+  > `∃ F : Finset Qnet, (∀ N, ¬ ∀ q, q ∈ F ↔ displayedBy q N) ∧ (∀ q ∈ F, ¬ isTypeI q)`
+
+  即文献 Huber et al. 2018 的四条规则 —— **`consistent`**（`Huber2018_QuarnetRules_Level1Networks.md:520`）、
+  **`minimally dense`**（同文 `:524`）、**`cyclative`**（同文 `:532`）、**`saturated`**
+  （同文 `:545`；(S1)–(S3) 在 `:558–562`）—— 在该 `def` 里**全部**由存在量词绑定，
+  可恒取 `fun _ => True` / `fun _ => False` **消去**，对载体 `(Qnet, Net, displayedBy, isTypeI)`
+  **不施加任何约束**。**Theorem 2**（同文 `:605`）的「⟸」方向（consistent + cyclative +
+  saturated ⟹ `F = F(N)`）在 `Prop` 里退化成 (a) 的一行**空真蕴含**：取
+  `minimallyDense := fun _ => False` 即前提不可满足。
+
+⇒ **判定**：`quarnetRules_level1_gap` **可为真，但不含 quarnet / level-1 内容** ——
+文献的 `cyclative`（`:532`，需要 `⊕` 记号 `:497`）、`F(N)`（`:505–507`）、`N|A` 抑制算子
+（`:436–441`）在 `Prop` 里**一个都没有**被强制。真正的缺口仍是 §7 列的三件具名器材；
+`_iff_display` 的右端正是「三件器材缺席」的**可陈述残量**（residue）。 -/
+
+/-- ★A′ **判定 (i)：四条规则可整体消去**（`quarnetRules_level1_gap` 的等价残量，无假设）。
+
+右端不再出现 `minimallyDense` / `consistent` / `cyclative` / `saturated` —— 它们都是自由谓词，
+可分别取 `fun _ => False`（使 (a) 的蕴含**空真**）与 `fun _ => True`（使 (b) 的 `consistent` /
+`cyclative` / `saturated` 三个合取项自动成立）。故该 `Prop` 的**全部内容**只剩
+
+> 存在一个**不被任何 `N : Net` 展示**、且**不含 Type I qnet** 的 `F : Finset Qnet`。
+
+★ 残量仍**不是**一条 level-1 命题：`displayedBy` 与 `isTypeI` 同样是被存在量词绑定的自由数据
+（取 `displayedBy := fun _ _ => False` 即「什么都不展示」的载体），故残量依旧可满足 —— 这正是
+§8 的见证。残量的作用是把**消去后的剩余内容**写准：(a) 整条消失（它只是「规则 ⟹ 被展示」的
+一行蕴含，规则可恒假），(b) 收缩为「存在一个不是任一 `N` 的展示集、且不含 Type I qnet 的 `F`」。
+★ 附注：§8 用 `F = {PUnit.unit}` 而非 `F = ∅` 是**必要**的 —— 在 `displayedBy` 恒假的载体上
+`F = ∅` 反而**不**满足 (b) 的第一合取项（`q ∈ ∅ ↔ False` 对每个 `q` 都真，故
+`∀ N, ¬ ∀ q, …` 为假），这与「`∀ q ∈ ∅, ¬ isTypeI q` 恰恒真」并不矛盾。 -/
+theorem quarnetRules_level1_gap_iff_display :
+    quarnetRules_level1_gap ↔
+      ∃ (Qnet Net : Type) (_ : Fintype Qnet) (_ : Fintype Net)
+        (displayedBy : Qnet → Net → Prop) (isTypeI : Qnet → Prop),
+        ∃ F : Finset Qnet,
+          (∀ N : Net, ¬ ∀ q : Qnet, q ∈ F ↔ displayedBy q N) ∧
+          ∀ q ∈ F, ¬ isTypeI q := by
+  constructor
+  · rintro ⟨Qnet, Net, instQ, instN, displayedBy, _md, _cons, _cyc, _sat, isTypeI, _hA,
+      F, _hcons, _hcyc, _hsat, hnot, htype⟩
+    exact ⟨Qnet, Net, instQ, instN, displayedBy, isTypeI, F, hnot, htype⟩
+  · rintro ⟨Qnet, Net, instQ, instN, displayedBy, isTypeI, F, hnot, htype⟩
+    refine ⟨Qnet, Net, instQ, instN, displayedBy, fun _ => False, fun _ => True,
+      fun _ => True, fun _ => True, isTypeI, ?_, F, by simp, by simp, by simp, hnot, htype⟩
+    intro G hG
+    exact absurd hG (by simp)
+
+/-- ★A′ **判定 (ii)：`quarnetRules_level1_gap` 为真**（无假设；标准 `_holds` 名）。
+
+★ 证法经 `_iff_display` 的残量表，与 §8 的 `_degenerate` 互为**独立**见证。
+★ 顺带得到一个更硬的观察：该 `Prop` 被 **`Qnet := PUnit`**（载体上只有**一个** qnet）
+满足 —— 而 Theorem 2（`Huber2018_QuarnetRules_Level1Networks.md:605`）的前提是 `|X| ≥ 4` 上
+**minimally dense** 的 qnet 系统（同文 `:524`：每个 3-元子集恰有一个 qnet），其规模随 `X`
+增长。⇒ `Prop` 连「qnet 系统的基数下界」都未约束（具体数据：`displayedBy := fun _ _ => False`、
+`isTypeI := fun _ => False`、`F := {PUnit.unit}`）。
+
+⚠️ 本定理**不是** Theorem 2（同文 `:605`）的证明：`Prop` 的四条规则谓词是自由变量，
+故为真**不带** level-1 内容（见 `_iff_display` 的残量）。 -/
+theorem quarnetRules_level1_gap_holds : quarnetRules_level1_gap :=
+  quarnetRules_level1_gap_iff_display.mpr
+    ⟨PUnit, PUnit, inferInstance, inferInstance, fun _ _ => False, fun _ => False,
+     {PUnit.unit}, by
+       intro N h
+       exact (h PUnit.unit).mp (by simp),
+     by simp⟩
 
 end Split
