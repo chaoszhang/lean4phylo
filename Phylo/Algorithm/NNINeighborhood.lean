@@ -47,6 +47,13 @@ import Phylo.Algorithm.RF
   `nniConnectivity_gap`；**第二项**（最小步数存在唯一）已在**给定存在性**时证成
   （`nniDist_existsUnique_min`，一般引理）。⚠️ 注册的 `def` 对**一般 `S S'`** 为**假**
   （步数保持基数 ⇒ 反例 `nniDistance_exact_gap_false`，见 §7.0）。
+* ⚠️ **W25 判定：`nniConnectivity_gap`（§7.0 的「第一项」）为假** —— 不是「缺证据」：
+  `NNIDist` 每步保持 split 数 ⇒ 基数是 NNI 图的不变量（`nniConnectivity_gap_card_eq`），
+  故对**任意** `S S'` 量化时陈述为假：反例 `nniConnectivity_gap_false`（`n = 4`，
+  `∅` 与 `{exS₀}`，`0 ≠ 1`），全称闭包否证 `nniConnectivity_gap_refuted`。
+  可达关系本身是**等价关系**（`nniConnectivity_gap_refl`/`_symm`/`_trans`），按 split 数分块；
+  ⚠️ 基数相等的**充分性未判定**（真命题需「`S, S'` 分别是 `n` 叶二叉树 `UB(n)` 的
+  split 系统」，组合层不可表达）。
 * ★C **`n = 4` 的连通性实例**（§7.1）：三棵二叉树的 split 系统两两 1 步可达。
 
 ## 2. ⚠️ 诚实的边界（必读）
@@ -527,11 +534,32 @@ theorem nniDistance_exact_gap_not_universal :
     ¬ (∀ (n : ℕ) (S S' : Finset (Split (Fin n))), nniDistance_exact_gap n S S') :=
   fun h => nniDistance_exact_gap_false (h 4 ∅ {exS₀})
 
-/-- ⬜ **新登记缺口（W12g）**：NNI 图（组合 split 层）的**连通性** ——
-即 `nniDistance_exact_gap` 的**第一项**，单独登记以便追踪。
+/-- ⚠️ **缺口（W12g 登记 · W25 判定：【陈述为假】）**：NNI 图（组合 split 层）的**连通性** ——
+即 `nniDistance_exact_gap` 的**第一项**。
 
-（正确的目标陈述需要 `S, S'` 是**同一二叉树的 split 系统**；但 `NNIMove` 在本库是
-**纯组合**移动，语义桥仍缺 ⇒ 见文件头「诚实的边界」。） -/
+**W25 结论**：`NNIDist` 每一步都是 `NNIMove`（删一条、加一条）⇒ split 数**守恒**
+（`nniDist_card_eq`），即基数（split 数）是 NNI 图的**不变量**
+（`nniConnectivity_gap_card_eq`）。本 `def` 对**任意** `S S'` 量化 ⇒ **必然为假**：取
+`n = 4`、`S = ∅`、`S' = {exS₀}`（`0 ≠ 1`）即不可达（`nniConnectivity_gap_false`）；
+其全称闭包亦被否证（`nniConnectivity_gap_refuted`）。
+
+**真命题的正确形态（文献）**：连通性是**树层**陈述 ——
+`references/md/AllenSteel2001_SubtreeTransferOperationsAnnalsOfCombinatorics.md:592–593`：
+「Robinson [11] showed that `G_NNI(n)` is connected, that is, `d_NNI(T,T')` is defined for
+all `T,T' ∈ UB(n)`」⇒ 前提是「`T, T'` 是 `n` 叶**二叉树**（`UB(n)`）」，**不是**「任意
+`Finset (Split α)`」。补证需三件具名器材：
+
+* (a) **树层 split 系统 —— 已有**：`Cladogram.nontrivialSplits`
+  （`Phylo/CladogramBuild.lean:224`）、`Cladogram.treeSplits`
+  （`Phylo/ConsensusExtra.lean:105`）；
+* (b) **缺**：树层 NNI 操作 ＋ 语义桥 —— `Phylo/Algorithm/NNI.lean:102` 的 `nniResolvent`
+  只活在 split 层，缺「二叉 `Cladogram` 上一次 NNI ⟹ 其 split 系统上一次 `NNIMove`」及反向；
+* (c) **缺**：二叉性桥 —— `Cladogram.ofCompatibleSplits`（`Phylo/CladogramBuild.lean:188`）
+  的输出**不保证** `IsBinary`；库内只有正向 `IsBinary ⟹ SplitsMaximal`
+  （`Phylo/InternalEdge.lean:944–945` 的 `BinarySplitsMaximal`），**反方向缺**。
+
+⚠️ 基数相等只是**必要**条件，是否**充分**在本层**未判定**（本文件不声称）。
+✅ 本 `def` 与 W12g 登记形态**逐字相同**（未改弱、未把结论塞进前提）。 -/
 def nniConnectivity_gap (n : ℕ) (S S' : Finset (Split (Fin n))) : Prop :=
   ∃ k : ℕ, NNIDist S S' k
 
@@ -539,6 +567,73 @@ def nniConnectivity_gap (n : ℕ) (S S' : Finset (Split (Fin n))) : Prop :=
 theorem nniConnectivity_gap_nonempty :
     nniConnectivity_gap 4 ({exS₀} : Finset (Split (Fin 4))) {exS₁} :=
   ⟨1, nniDist_one_of_move ex_nniMove⟩
+
+/-! ### 6.1 ★D（W25）`nniConnectivity_gap` 判定：**陈述为假** —— 基数不变量 ＋ 反例
+
+注册的 `nniConnectivity_gap n S S'` 是 `∃ k, NNIDist S S' k`，对**任意** `S S'` 量化
+（**不带任何前提**）。下面给出三件事，构成**证伪**（不是「缺证据」）：
+
+1. **正结构**：可达关系是**等价关系**（`nniConnectivity_gap_refl` / `_symm` / `_trans`）；
+2. **不变量**：可达 ⟹ split 数相等（`nniConnectivity_gap_card_eq`），等价的不可达判据
+   `not_nniConnectivity_gap_of_card_ne`；
+3. **反例**：`n = 4` 上 `∅` 与 `{exS₀}` 基数不同 ⇒ 不可达（`nniConnectivity_gap_false`），
+   全称闭包为假（`nniConnectivity_gap_refuted`）。 -/
+
+/-- ★★ **（W25）可达关系自反**：`0` 步行走就是 `NNIDist S S 0`。 -/
+theorem nniConnectivity_gap_refl (n : ℕ) (S : Finset (Split (Fin n))) :
+    nniConnectivity_gap n S S :=
+  ⟨0, nniDist_self S⟩
+
+/-- ★★ **（W25）可达关系对称**：反转一条 NNI 行走（`nniDist_symm`）。 -/
+theorem nniConnectivity_gap_symm {n : ℕ} {S S' : Finset (Split (Fin n))}
+    (h : nniConnectivity_gap n S S') : nniConnectivity_gap n S' S := by
+  obtain ⟨k, hk⟩ := h
+  exact ⟨k, nniDist_symm hk⟩
+
+/-- ★★ **（W25）可达关系传递**：两段行走拼接（`nniDist_append`，步数相加）。 -/
+theorem nniConnectivity_gap_trans {n : ℕ} {S S' S'' : Finset (Split (Fin n))}
+    (h₁ : nniConnectivity_gap n S S') (h₂ : nniConnectivity_gap n S' S'') :
+    nniConnectivity_gap n S S'' := by
+  obtain ⟨k, hk⟩ := h₁
+  obtain ⟨l, hl⟩ := h₂
+  exact ⟨k + l, nniDist_append hk hl⟩
+
+/-- ★★★ **（W25）基数不变量**：可达 ⟹ 两个 split 系统的 **split 数相等**。
+
+`NNIDist` 每一步都是 `NNIMove`（删一条、加一条）⇒ 基数守恒（`nniDist_card_eq`）。
+`n` 叶二叉树的 split 系统恰有 `2n − 3` 条 split ⇒ NNI 连通性只能在**同一基数类内**成立。 -/
+theorem nniConnectivity_gap_card_eq {n : ℕ} {S S' : Finset (Split (Fin n))}
+    (h : nniConnectivity_gap n S S') : S.card = S'.card := by
+  obtain ⟨k, hk⟩ := h
+  exact nniDist_card_eq hk
+
+/-- ★★★ **（W25）不可达判据**：split 数不同 ⟹ NNI 图上**不可达**
+（`nniConnectivity_gap_card_eq` 的逆否形态）。 -/
+theorem not_nniConnectivity_gap_of_card_ne {n : ℕ} {S S' : Finset (Split (Fin n))}
+    (h : S.card ≠ S'.card) : ¬ nniConnectivity_gap n S S' :=
+  fun hc => h (nniConnectivity_gap_card_eq hc)
+
+/-- ★D ★★★ **（W25）注册缺口 `nniConnectivity_gap` 的反例（闭命题）**：
+`n = 4`、`S = ∅`、`S' = {exS₀}`。两者 split 数不同（`0 ≠ 1`），而可达必须基数相等
+（`nniConnectivity_gap_card_eq`）⇒ **不存在**任何 `k` 使 `NNIDist S S' k`。
+
+⚠️ 与 `nniDistance_exact_gap_false` **同一个病根**：注册的 `def` 对**任意** `S S'` 量化，
+没有「是 `n` 叶二叉树 `UB(n)` 的 split 系统」这一前提。 -/
+theorem nniConnectivity_gap_false :
+    ¬ nniConnectivity_gap 4 (∅ : Finset (Split (Fin 4))) {exS₀} := by
+  refine not_nniConnectivity_gap_of_card_ne ?_
+  simp
+
+/-- ★D ★★★ **（W25）全称闭包被否证**：`nniConnectivity_gap` **不能**作为「NNI 图连通」
+的定理成立。
+
+**形态（精确）**：`¬ ∀ n S S', nniConnectivity_gap n S S'` —— **全称闭包为假**，
+反例为 `n = 4`、`S = ∅`、`S' = {exS₀}`（`nniConnectivity_gap_false`）。
+真命题的正确前提（`S, S'` 分别是 **`n` 叶二叉树 `UB(n)`** 的 split 系统）在组合层**不可表达** ⇒
+语义桥仍缺（见文件头「诚实的边界」）。 -/
+theorem nniConnectivity_gap_refuted :
+    ¬ (∀ (n : ℕ) (S S' : Finset (Split (Fin n))), nniConnectivity_gap n S S') :=
+  fun h => nniConnectivity_gap_false (h 4 ∅ {exS₀})
 
 /-- ⬜ **修复形态（W12g）**：把「可达性」放成**前提**（正是 `nniDist_existsUnique_min` 的假设）——
 即 `(∃ k, NNIDist S S' k) → 最小步数存在且唯一`。与注册的 `nniDistance_exact_gap` 不同，
