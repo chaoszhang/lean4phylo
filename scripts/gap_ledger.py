@@ -109,6 +109,10 @@ VACUOUS = {
     "bootstrap_confidence_gap":
         "空转（假设槽）：`∃ Ω TrueSplit p` 三个都是自由槽 —— 取 `Ω := Empty` 则三条 `∀ ω` 全空真 ⇒ `↔ True`（连一个 Split 都不需要）。"
         "真缺件三件：① `p` 与 `bootstrapSupport` 的桥（重抽样树族上的 pushforward）② 弱收敛（bootstrap→抽样分布）③ 估计量相容性",
+    "msc_split_probability_object_gap":
+        "空转（退化见证）：`σ := Unit`、`Displays := True`、`P r = if IsTrivialSplit r then 1 else if r = r₀ then 2n−6 else 0` "
+        "即满足账目 `2n + (2n−6) = 2(2n−3)` ⇒ 对一切 `n ≥ 3` 为真（把 W12a 的 Python 复核 n≤10 升为全 n 定理）。"
+        "真缺件：① 一般 n 的 `MSCTreeLaw n` ② 带枝长（>ε）的 binary 物种树载体 —— 补上可一次解锁 4 条缺口（含三条 clan 律）",
 }
 
 SPEC_OVERRIDE = {
