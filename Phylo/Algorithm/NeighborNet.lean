@@ -1186,6 +1186,19 @@ split）：注册 `Prop` 的两个合取项**都成立**（下一条 `example`�
 并证明「存在由极小化 + 约化驱动的运行，其展开产出环形 split 族」（文献 321–324 行称可用归纳法证明）。
 **缺的器材**：聚类对 / 约化的归纳定义 + 反演展开的组合引理 —— 本库完全没有。
 
+★★ **2026-10-19 W25-a 复核（四要素；`def neighborNetAgglomeration_gap` 本身一字未动）**
+
+* **旧形态**：上段（W12g）「按 ★E **不**登记为已证、**没有**对应定理」。
+* **新形态**：新增 `neighborNetAgglomeration_gap_holds`（**无假设**）＋ **残量**
+  `neighborNetAgglomeration_gap_iff_star`（§13）。后者把该 `Prop` 的**全部内容**写成
+  「每个 `1 < card X` 的 `X` 上存在一个环形族、每个 taxon 有一条单点侧成员」——
+  `∃ Step` 与输入 `d` **都被消去**（`⟹` 方向只用恒 `0` 这一个对称 `d`）。
+* **文献**：Bryant–Moulton 2004 md `:289–320`（凝聚过程 / 反演展开）、`:443–452` ＋ `:541–556`
+  （选择式 / 约化式）、`:321–325`（环形，归纳法）。
+* **理由**：W25 台账新增的 `VACUOUS` 口径（「空转缺口」= 真值已定，但**必须挂 ⚠：真缺口要改
+  命题**）⇒ 登记 `_holds` 只为**把真值钉死**，**不**宣称「agglomeration 已形式化」；★E 的原意
+  由 §13 的**形式化残量**保住。真缺口仍是 §13.3 列的四件具名器材。
+
 ### 8.2 缺口 1（`circularDistanceRealization_gap`）：⚠️ **按形式陈述为假** ⇒ 保留缺口
 
 `IsCircularDist` 只约束**上三角**（`i ≤ j ≤ k ≤ l` 的四元组），既不要求 `d` 对称、也不要求零对角；
@@ -3218,5 +3231,133 @@ theorem circularDistanceRealization_gap_corrected_holds :
       simp
     rw [← h1]
     exact hident (f x) (f y) (fun h => hxy (f.injective h))
+
+/-! ## 13. ★ 缺口 3 判定（W25-a）：`neighborNetAgglomeration_gap` **为真 · 空转缺口**
+
+### 13.1 判定（结果）
+
+`neighborNetAgglomeration_gap`（§6，**定义一字未动**）把 Bryant–Moulton 2004 的 agglomeration
+主体写成：「**存在**一个关系 `Step : (X → X → ℝ) → Finset (Split X) → Prop`，使
+(a) 任何 `Step d F` 都给出环形族、且每个 taxon 都有一条单点侧成员；
+(b) 任何对称 `d` 都有某个 `F` 满足 `Step d F`」。
+
+★ 判定：该 `Prop` **为真**（`neighborNetAgglomeration_gap_holds`，**无任何数学假设**），
+但它是**空转缺口** —— `Step` 是 `∃` 绑定的**自由槽**，见证可与 `d` 无关地任取，于是 `d` 在
+**残量**里整个消失（`neighborNetAgglomeration_gap_iff_star`，`↔`，**无假设**）：
+
+> 该 `Prop` ⟺「每个 `1 < Fintype.card X` 的类型 `X` 上，存在一个环形 split 族，
+> 每个 taxon 都有一条单点侧成员」（即**星形族** `starSplits X h2`）。
+
+右端与 Neighbor-Net、与输入距离 `d`、与 §6 docstring 所列的 (1)(2)(3) / (4)(5) **全都无关** ——
+这正是 W25 台账 `VACUOUS` 口径所说的「机制上真值已定，但**真缺口要改命题才可陈述**」。
+⚠️ 本节的 `_holds` **不**宣称「agglomeration 已形式化」；它只把真值钉死，并把残量写准。
+
+### 13.2 文献（行号 = `references/md/BryantMoulton2004_NeighborNetAgglomerativePhylogeneticNetworks.md`）
+
+* `:289–320` 凝聚过程：选中的一对节点**不立即合并**（`:300–305`：`wait until a node has been
+  paired up a second time`）；保留合并列表，**反演**才得到 split（`:313–320`：
+  `Reversing the amalgamation process gives the splits`）。`:273–281` 图 2/3 即此过程。
+* `:443–452` 「方法由**选择式**与**约化式**决定」；`:453–465` 聚类 `C₁,…,C_m`（每簇 1 或 2 个节点）；
+  `:465–486` 簇距离平均式 (1)；`:488–512` NJ 的 `Q` (2)（先选簇对、再选簇内节点）；
+  `:691–704` 簇内选点的 `Q̂` (3)。
+* `:541–556` 约化式：`d(u,a) = α d(x,a) + β d(y,a)`、`d(v,a) = β d(y,a) + γ d(z,a)`、
+  `d(u,v) = α d(x,y) + β d(x,z) + γ d(y,z)`（`α,β,γ ≥ 0`、`α+β+γ = 1`，默认 `1/3`）。
+* `:321–325` 输出是环形族（`as can be proved using mathematical induction`）。
+
+### 13.3 真缺口 = 缺哪几件**具名**器材（下一步）
+
+1. **`Cluster` 载体**（`:453–465`）：节点被相邻关系划成 `m` 个簇，每簇 1 或 2 个节点，簇上带
+   **环序**（`Cᵢ` 的下标即环上顺序）。本库**没有**：`Split.cluster`（`Phylo/Split.lean:400`）是
+   「去掉 `ρ` 所在那一侧」，与 agglomeration 的簇无关。
+2. **簇距离 (1) ＋ 选择式 (2)(3)**（`:465–512`、`:691–704`）：需要簇的有限序 ＋ 取极小者的选择
+   函数（`Finset.exists_min_image` 级别），前提是先把 `Q` 的全域写出来。
+3. **约化式**（`:541–556`）：三节点 → 两节点的 `α,β,γ` 加权平均，及「对称性在约化下保持」。
+4. **反演展开**（`:313–320`）：把归并历史反向解开为原始 taxon 上的 `Finset (Split X)`。
+   ★ 这是唯一直接产出 `Finset (Split X)` 的一步，也正是 `Step` 必须写成**确定性递归的函数图**
+   （而非存在量词）的原因。
+⇒ 忠实形态（下一步）：把 `∃ Step` 换成「`Step` 是上述确定性递归的函数图」，结论写成「该递归在
+对称 `d` 上终止，且反演展开所得族是环形族」；那时 `:321–325` 的归纳法才会真正被用上。 -/
+
+universe u
+
+/-- **星形 split**：`{x} | X \ {x}`（`1 < Fintype.card X` 保证补侧非空）。 -/
+noncomputable def starSplit (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) (x : X) : Split X :=
+  Split.ofSideA {x} (Finset.singleton_nonempty x) (by
+    refine Finset.card_pos.mp ?_
+    rw [Finset.card_compl, Finset.card_singleton]
+    omega)
+
+/-- 星形 split 的第一侧就是 `{x}`。 -/
+@[simp] theorem starSplit_sideA (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) (x : X) : (starSplit X h2 x).sideA = {x} := by
+  unfold starSplit
+  simp
+
+/-- **星形族**：每个 taxon 一条 `{x} | X \ {x}` 的 split。 -/
+noncomputable def starSplits (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) : Finset (Split X) :=
+  Finset.univ.image (starSplit X h2)
+
+/-- 星形族的成员判定：`s ∈ starSplits X h2 ↔ ∃ x, starSplit X h2 x = s`。 -/
+@[simp] theorem mem_starSplits (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) (s : Split X) :
+    s ∈ starSplits X h2 ↔ ∃ x : X, starSplit X h2 x = s := by
+  unfold starSplits
+  simp [Finset.mem_image]
+
+/-- **星形族是环形族**：每个成员有一侧是单点（`isCyclicArc_singleton`），用 `circular_of_trivial`。 -/
+theorem starSplits_circular (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) : Circular (↑(starSplits X h2) : Set (Split X)) := by
+  refine circular_of_trivial _ (fun s hs => ?_)
+  obtain ⟨x, rfl⟩ := (mem_starSplits X h2 s).mp (show s ∈ starSplits X h2 from hs)
+  exact Or.inl ⟨x, starSplit_sideA X h2 x⟩
+
+/-- **星形族覆盖每个 taxon**（每个 `x` 的 `starSplit X h2 x` 在第一侧就是 `{x}`）。 -/
+theorem starSplits_cover (X : Type u) [Fintype X] [DecidableEq X]
+    (h2 : 1 < Fintype.card X) (x : X) :
+    ∃ s ∈ starSplits X h2, s.sideA = {x} ∨ s.sideB = {x} :=
+  ⟨starSplit X h2 x, (mem_starSplits X h2 _).mpr ⟨x, rfl⟩, Or.inl (starSplit_sideA X h2 x)⟩
+
+/-- ★★ **残量（residue）**：`neighborNetAgglomeration_gap` 的**全部内容** ——
+`∃ Step` 与输入距离 `d` **都已消去**，只剩「星形族存在」。 -/
+theorem starFamily_exists :
+    ∀ {X : Type u} [Fintype X] [DecidableEq X], 1 < Fintype.card X →
+      ∃ F : Finset (Split X), Circular (↑F : Set (Split X)) ∧
+        ∀ x : X, ∃ s ∈ F, s.sideA = {x} ∨ s.sideB = {x} := by
+  intro X _ _ h2
+  exact ⟨starSplits X h2, starSplits_circular X h2, starSplits_cover X h2⟩
+
+/-- ★★ **判定 (i)：`∃ Step` 是自由槽 ⇒ 该 `Prop` 等价于「星形族存在」**（`↔`，无假设）。
+
+* `⟹` 只用**一个** `d`（恒 `0`，它当然对称）：完备性给出某个 `F` 满足 `Step d F`，再由可靠性
+  取它的两个性质 ⇒ 输入 `d` 的全称量化在此**塌缩成单点**，`d` 从残量里消失。
+* `⟸` 取 `Step d F := (F = F₀)`（`F₀` 为给定的星形族，**与 `d` 无关**；`Step` 甚至可以依赖 `X`，
+  因为它在 `∀ X` **之内**被 `∃` 绑定）—— 这正是「`Step` 不作为算法定义出现」的代价。 -/
+theorem neighborNetAgglomeration_gap_iff_star :
+    neighborNetAgglomeration_gap.{u} ↔
+      ∀ {X : Type u} [Fintype X] [DecidableEq X], 1 < Fintype.card X →
+        ∃ F : Finset (Split X), Circular (↑F : Set (Split X)) ∧
+          ∀ x : X, ∃ s ∈ F, s.sideA = {x} ∨ s.sideB = {x} := by
+  constructor
+  · intro h X _ _ h2
+    obtain ⟨Step, hsnd, hcomp⟩ := h h2
+    obtain ⟨F, hF⟩ := hcomp (fun _ _ => (0 : ℝ)) (fun _ _ => rfl)
+    exact ⟨F, (hsnd _ F hF).1, (hsnd _ F hF).2⟩
+  · rintro h X _ _ h2
+    obtain ⟨F, hcirc, hcov⟩ := h h2
+    refine ⟨fun _ G => G = F, ?_, ?_⟩
+    · rintro d G rfl
+      exact ⟨hcirc, hcov⟩
+    · intro d _
+      exact ⟨F, rfl⟩
+
+/-- ★★ **判定 (ii)：`neighborNetAgglomeration_gap` 为真（空转缺口）**，**无任何数学假设**。
+
+⚠️ 本定理**不是** Neighbor-Net 的 agglomeration 算法：被证的 `Prop` 只要求「**存在**一个 `Step`」，
+而见证（`Step d F := (F = starSplits X h2)`）与输入 `d` 无关 ⇒ 该 `Prop` 不承载文献
+`:289–320`、`:443–556` 的任何内容。真缺口见 §13.3 的四件具名器材。 -/
+theorem neighborNetAgglomeration_gap_holds : neighborNetAgglomeration_gap.{u} :=
+  neighborNetAgglomeration_gap_iff_star.mpr starFamily_exists
 
 end NeighborNet
