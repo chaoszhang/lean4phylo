@@ -394,7 +394,11 @@ def bme_pauplin_identity_gap (δ : Dissimilarity X) : Prop :=
 （`KingmanLaw` 等），但没有把它接到距离估计上。
 
 **一旦补上**，★★ `bme_consistency_of_consistent_estimator` 即给出
-「样本量足够后 BME 输出真树」（DesperGascuel2004 `:701–712` 的统计一致性）。 -/
+「样本量足够后 BME 输出真树」（DesperGascuel2004 `:701–712` 的统计一致性）。
+
+**W25-C 判定**：本 `def` 是**假设槽**（§13）：无假设的 `_holds` **不存在**
+（★★★ `bme_statistical_consistency_gap_refuted`）；「相合性 ⟹ 输出真树」的收口见
+★★★ `bme_consistency_of_gap`。 -/
 def bme_statistical_consistency_gap (Δhat : ℕ → X → X → ℝ) (D : Dissimilarity X) : Prop :=
   ∀ η : ℝ, 0 < η → ∃ N : ℕ, ∀ n ≥ N,
     (∑ x ∈ plane, |Δhat n x.1 x.2 - D.val x.1 x.2|) < η
@@ -736,6 +740,159 @@ omit [Fintype X] [DecidableEq X] in
 不可能成立（而这样的星形树是**合法** `Cladogram`：`no_degree_two` 只排除度 2）。 -/
 theorem star4_plane_sum_ne_two : (2 * (4 - 1) : ℝ) * bmeCoeff 2 ≠ 2 := by
   norm_num [bmeCoeff]
+
+/-! ## 13. ★★★ 缺口 2 的**判定**（W25-C）：`bme_statistical_consistency_gap` 是**假设槽**而非定理
+
+§6 的 `bme_statistical_consistency_gap`（`:402`）陈述「样本距离序列 `Δ̂ n` 依 plane ℓ¹ 范数
+收敛到真矩阵 `D`」。本节把它的**逻辑地位**钉死，并给出它作为**假设**时的收口 —— 三件独立材料：
+
+1. ★★★ `bme_statistical_consistency_gap_refuted`：**判定 = 证伪（全称闭包为假）**。
+   取 `Δ̂ n ≡ exPert` —— `Fin 4` 上**合法**的相异度（真矩阵 ＋ 有界扰动 `‖ε‖_∞ = 2/5`，
+   `Phylo/AttesonRadius.lean:650–670`）—— 时 plane ℓ¹ 和恒为 `14/5`，在 `η = 1` 处不成立。
+   与 §7 ★C `bme_statistical_consistency_gap_satisfiable`（`:414`，取 `Δ̂ ≡ D`）**合起来**：
+   该 `def` 是**真谓词**（既可满足、又可假）⇒ **不存在**无假设的 `_holds`。
+   ※ 与文献一致：DesperGascuel2004 `:656–659` 原文即「**Assuming that** `Δ̂` is a consistent
+   estimate of `D`, …」—— 相合性在文献里**也是假设**；`:660–662` 才是由它推出的结论。
+2. ★★ `bmeLength_abs_sub_le`：BME 树长（`:188`）在 plane ℓ¹ 范数下是 `C/2`-Lipschitz（`|c| ≤ C`）
+   —— 即 `:682–691` 的「树长是距离矩阵的连续函数」的**定量形式**；★ `abs_bmeCoeff_le_two`
+   给出 `c := bmeCoeff ∘ p` 时 `C = 2` 可用（`0 < bmeCoeff p ≤ 2`）。
+3. ★★★ `bme_consistency_of_gap`（抽象系数）／★★★ `bme_consistency_of_gap_bmeCoeff`（`bmeCoeff` 实例）：
+   缺口（作为**假设**）＋ (2) ＋「真矩阵上 `T` 严格最短、且留出余量」⟹
+   **样本量足够后 `T` 仍是唯一最短树**。这正是 `:660–662` 的「as soon as `Δ̂` is sufficiently
+   close to `D`」；同时把 `bme_consistency_of_consistent_estimator`（`:152`）里的 `hgrow`
+   （**树长层**的接近性）变成缺口（**距离层** ℓ¹ 接近性）的**推论** —— 两层之间的桥就是 (2)。
+
+**与库内先例同构**（「确定性收敛谓词证不出来」在本库已是第三次出现，模板可复用）：
+`Phylo/Stat/Parsimony.lean` 把「ISM 位点采样 ＋ 大数律」公理化成 `SiteSampling.converges`，
+其确定性形状「**没有概率空间，所以它证不出来**」（`Phylo/Stat/SiteSamplingAE.lean:14`）。
+那里的正解是**两步**：先「真律固定版 = 假设槽 ＋ 算法稳定性 ⟹ 一致性定理」
+（`SiteSamplingFixed`，`:247–253`；`parsimony_statisticallyConsistent_fixed`，`:288–304`），
+再**独立地**用 SLLN 给 a.e. 版（`exists_siteSamplingFixed_ae`，`:269–284`；
+`parsimony_statisticallyConsistent_ae`，`:311–328`）。本节交付的是 **BME 版的「真律固定」定理**
+(2)(3) ＋ 缺口 (1) 的**判定**；BME 版的 a.e. 形态仍缺下列**具名**器材（库内**无** ✗）：
+
+* `exists_bme_distance_estimator_ae`：由**替换模型 ＋ 位点 iid ＋ SLLN**（库内已有
+  `strong_law_ae`，`Phylo/Stat/EmpiricalConvergence.lean:36`）构造 `Δ̂ n` 并证
+  「成对距离估计量相合」—— 形态须为 `∀ᵐ ω, ∀ η > 0, ∃ N, ∀ n ≥ N, …`，库内**未接** ✗；
+* `ae_gap_to_deterministic_gap`（**形态桥**）：概率层只能给 `∀ᵐ ω, …`，而 §6 的 `def` 是
+  **确定性** `∀ η > 0, ∃ N, ∀ n ≥ N, …`；把 a.e. 一致性转成 §6 形态（Egorov／子列抽取）库内**无** ✗。
+  （先例的同一诚实边界：`SiteSamplingAE.lean:52–58`；那里的 a.e. 定理是**另立**的
+  `parsimony_statisticallyConsistent_ae`，**不是** `SiteSampling.converges` 的推论。）
+
+⚠ 本节**不**声称缺口可证：判定 = (1) 证伪 ＋ (2)(3) 「作为假设时的收口」。 -/
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **缺口 2 的判定：证伪（全称闭包为假）**。
+
+取 `Δ̂ n ≡ exPert` —— `Fin 4` 上**合法**的相异度（= 真矩阵 `exDiss` ＋ 有界扰动，
+`‖ε‖_∞ = 2/5`，`Phylo/AttesonRadius.lean:650–670`）。plane ℓ¹ 和与 `n` **无关**：
+`Σ_{x∈plane} |exPert − exDiss| = 14/5`（12 个非对角项各 `1/5`~`2/5`，对角项 `0`），
+故 `η = 1` 时缺口的「`∃ N, ∀ n ≥ N, … < η`」**不可能**成立。
+
+⇒ 缺口**不是**恒真命题；配 §7 ★C `bme_statistical_consistency_gap_satisfiable`（取 `Δ̂ ≡ D`）
+得：该 `def` 是**真谓词**，**不存在**无假设的 `_holds`（这正是本节的判定）。
+※ 文献同：DesperGascuel2004 `:656–659` 把「`Δ̂` 相合」写作 **Assuming that**。 -/
+theorem bme_statistical_consistency_gap_refuted :
+    ¬ bme_statistical_consistency_gap (fun (_ : ℕ) => exPert.val) exDiss := by
+  intro h
+  obtain ⟨N, hN⟩ := h 1 (by norm_num)
+  have h1 := hN N le_rfl
+  have hsum : (∑ x ∈ plane, |exPert.val x.1 x.2 - exDiss.val x.1 x.2|) = 14 / 5 := by
+    rw [← sum_sum_eq_plane (fun i j : Fin 4 => |exPert.val i j - exDiss.val i j|)]
+    simp only [sum_univ_four_fin, exPert, exPertVal, exDiss, exVal]
+    norm_num
+  linarith
+
+omit [DecidableEq X] in
+/-- ★★ **BME 树长的 Lipschitz 连续性**（`:682–691` 的定量形式）：线性估计量
+`bmeLength c δ = ½ Σ_{x∈plane} c_{x}·δ_x`（`:188`）在 plane ℓ¹ 范数下以 `C/2` 为 Lipschitz 常数
+（前提 `|c i j| ≤ C`）：
+
+　　`|l̂_c(δ₁) − l̂_c(δ₂)| ≤ (C/2)·Σ_{x} |δ₁(x) − δ₂(x)|`。
+
+⇒ 「距离矩阵靠近 ⟹ 各拓扑树长靠近」这一步**不需要任何假设**（`C` 取 `sup|c|` 即可）。 -/
+theorem bmeLength_abs_sub_le (c : X → X → ℝ) {C : ℝ}
+    (hc : ∀ i j : X, |c i j| ≤ C) (δ₁ δ₂ : Dissimilarity X) :
+    |bmeLength c δ₁ - bmeLength c δ₂|
+      ≤ (C / 2) * ∑ x ∈ plane, |δ₁.val x.1 x.2 - δ₂.val x.1 x.2| := by
+  have hdiff : bmeLength c δ₁ - bmeLength c δ₂
+      = (1 / 2) * ∑ x ∈ plane, c x.1 x.2 * (δ₁.val x.1 x.2 - δ₂.val x.1 x.2) := by
+    simp only [bmeLength, ← Finset.sum_sub_distrib, ← mul_sub]
+  have hbound : |∑ x ∈ plane, c x.1 x.2 * (δ₁.val x.1 x.2 - δ₂.val x.1 x.2)|
+      ≤ C * ∑ x ∈ plane, |δ₁.val x.1 x.2 - δ₂.val x.1 x.2| := by
+    refine (Finset.abs_sum_le_sum_abs _ _).trans ?_
+    rw [Finset.mul_sum]
+    refine Finset.sum_le_sum fun x _ => ?_
+    rw [abs_mul]
+    exact mul_le_mul_of_nonneg_right (hc x.1 x.2) (abs_nonneg _)
+  rw [hdiff, abs_mul, abs_of_nonneg (by norm_num : (0 : ℝ) ≤ 1 / 2)]
+  have h2 := mul_le_mul_of_nonneg_left hbound (by norm_num : (0 : ℝ) ≤ 1 / 2)
+  calc (1 / 2) * |∑ x ∈ plane, c x.1 x.2 * (δ₁.val x.1 x.2 - δ₂.val x.1 x.2)|
+      ≤ (1 / 2) * (C * ∑ x ∈ plane, |δ₁.val x.1 x.2 - δ₂.val x.1 x.2|) := h2
+    _ = (C / 2) * ∑ x ∈ plane, |δ₁.val x.1 x.2 - δ₂.val x.1 x.2| := by ring
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **`bmeCoeff` 落在 `(0, 2]`** ⇒ `bmeLength_abs_sub_le` 里的 `C = 2` 对 BME 系数矩阵可用。 -/
+theorem abs_bmeCoeff_le_two (p : ℕ) : |bmeCoeff p| ≤ 2 := by
+  have hpos : (0 : ℝ) < 2 * (1 / 2) ^ p := mul_pos (by norm_num) (pow_pos (by norm_num) p)
+  rw [bmeCoeff, abs_of_pos hpos]
+  calc 2 * (1 / 2) ^ p ≤ 2 * 1 :=
+        mul_le_mul_of_nonneg_left
+          (pow_le_one₀ (by norm_num) (by norm_num) : (1 / 2 : ℝ) ^ p ≤ 1) (by norm_num)
+    _ = 2 := by ring
+
+omit [DecidableEq X] in
+/-- ★★★ **相合性 ⟹ BME 输出真树**（DesperGascuel2004 `:660–662` 的定量形式）：
+把 ★ `bme_statistical_consistency_gap` 作为**假设**，则「样本量足够后 `T` 仍是唯一最短树」。
+
+输入三层，缺一不可：
+
+* `hgap`：**缺口本体**（距离层 ℓ¹ 相合，`:653–669`）；
+* `hLip` 已被 ★★ `bmeLength_abs_sub_le` **证掉**，故这里只需 `hc : |c| ≤ C`（`hC : 0 ≤ C`）；
+* `hstrict`：**真矩阵上 `T` 严格最短并留余量 `C·η`** —— 即 Theorem 2（`:694–699`）的
+  `l̂(W) > l̂(T) = l(T)`（`l̂(T) = l(T)` 由 ★★★ `bme_length_eq_true_length` 提供）。
+  有限拓扑集时余量自动存在（取 `min`）；无限拓扑集时此即「**一致余量**」（不可省，
+  否则余量沿拓扑趋于 `0` 时没有统一 `N`）。
+
+⇒ `bme_consistency_of_consistent_estimator`（`:152`）的 `hgrow`（树长层）由 `hgap` ＋ Lipschitz
+**推出**，两个逼近层（距离层／树长层）由此打通。 -/
+theorem bme_consistency_of_gap {ι : Type*} (c : ι → X → X → ℝ)
+    (Δhat : ℕ → Dissimilarity X) (D : Dissimilarity X) (T : ι) {C : ℝ}
+    (hC : 0 ≤ C) (hc : ∀ (W : ι) (i j : X), |c W i j| ≤ C)
+    (hgap : bme_statistical_consistency_gap (fun n => (Δhat n).val) D)
+    (hstrict : ∃ η : ℝ, 0 < η ∧
+      ∀ W : ι, W ≠ T → bmeLength (c T) D + C * η < bmeLength (c W) D) :
+    ∃ N : ℕ, ∀ n ≥ N, ∀ W : ι, W ≠ T →
+      bmeLength (c T) (Δhat n) < bmeLength (c W) (Δhat n) := by
+  obtain ⟨η, hη, hst⟩ := hstrict
+  obtain ⟨N, hN⟩ := hgap η hη
+  refine ⟨N, fun n hn W hW => ?_⟩
+  have hs : (∑ x ∈ plane, |(Δhat n).val x.1 x.2 - D.val x.1 x.2|) < η := hN n hn
+  have hle : (C / 2) * (∑ x ∈ plane, |(Δhat n).val x.1 x.2 - D.val x.1 x.2|) ≤ C / 2 * η :=
+    mul_le_mul_of_nonneg_left (le_of_lt hs) (by linarith)
+  have hTW := bmeLength_abs_sub_le (c := c T) (hc T) (Δhat n) D
+  have hWW := bmeLength_abs_sub_le (c := c W) (hc W) (Δhat n) D
+  have h1 := (abs_le.mp (hTW.trans hle)).2
+  have h2 := (abs_le.mp (hWW.trans hle)).1
+  have h3 := hst W hW
+  linarith
+
+omit [DecidableEq X] in
+/-- ★★★ **`bmeCoeff` 实例**：`c W := bmeCoeff ∘ p W`（`p W` = 拓扑 `W` 的拓扑距离）时
+`C = 2`（★ `abs_bmeCoeff_le_two`），故余量写作 `2·η` —— 即**直接的 BME 版本**：
+相合距离序列 ＋ 「真矩阵上 `T` 严格最短、余量 `2η`」⟹ 样本量足够后 `bmeLength` 在 `Δ̂ n` 上
+仍以 `T` 为唯一最短。 -/
+theorem bme_consistency_of_gap_bmeCoeff {ι : Type*} (p : ι → X → X → ℕ)
+    (Δhat : ℕ → Dissimilarity X) (D : Dissimilarity X) (T : ι)
+    (hgap : bme_statistical_consistency_gap (fun n => (Δhat n).val) D)
+    (hstrict : ∃ η : ℝ, 0 < η ∧ ∀ W : ι, W ≠ T →
+      bmeLength (fun i j => bmeCoeff (p T i j)) D + 2 * η
+        < bmeLength (fun i j => bmeCoeff (p W i j)) D) :
+    ∃ N : ℕ, ∀ n ≥ N, ∀ W : ι, W ≠ T →
+      bmeLength (fun i j => bmeCoeff (p T i j)) (Δhat n)
+        < bmeLength (fun i j => bmeCoeff (p W i j)) (Δhat n) :=
+  bme_consistency_of_gap (c := fun W i j => bmeCoeff (p W i j)) Δhat D T (C := 2)
+    (by norm_num) (fun W i j => abs_bmeCoeff_le_two (p W i j)) hgap hstrict
 
 end Dissimilarity
 
