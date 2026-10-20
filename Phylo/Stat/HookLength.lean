@@ -66,6 +66,7 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | **§13 ★★★★** | **`hook_cladesOf_eq_card_sub_one`** ＋ `rankedFiberCount_gap_of_LE` | **(O2) 已证**：`hook (cladesOf n f) C = C.card - 1`（`2 ≤ C.card`，无额外假设）；缺口现在**只剩 (O1)**（W25 泳道 C 落地） |
 | **§14.2–§14.3 ★★★** | **`card_cladesOf`** ＋ **`card_filter_nonsingleton_cladesOf`** ＋ **`existsUnique_creation_level`** ＋ `children_fiberOf_chainMap_succ` | **层分解无重（全局版）**：`|cladesOf n f| = 2n-1`、非单点 clade 恰 `n-1` 个、每个非单点 clade 的**创建步唯一**且 `children` 恰为该步被合并的两块 —— (O1) 具名缺件 ① 已落地（W26 泳道 b） |
 | §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
+| **§14.4–§14.5 ★★★★** | **`reconstruct`** ＋ **`reconstructStep_eq`** ＋ **`reconstruct_newClade_eq`** ＋ **`cladesOf_reconstruct_newClade`** ＋ **`eq_of_newClade_eq`** ＋ **`image_newClade`** / **`existsUnique_newClade`** | **(O1) 重建映射**：由「clade 集 ＋ 创建块」按最小元读出合并对，重建出的合并史**就是** `f`（左逆），故 `cladesOf` 复原、`f ↦ (cladesOf, newClade)` **单射**；且 `k ↦ newClade f k` **恰枚举**非单点 clade（**满射**）—— (O1) 的「纤维 ↪ 创建序」两向已通（W26 泳道 f） |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
 **✅ (i) 已收口（第八轮）**：hook-length 公式本体
@@ -2111,8 +2112,17 @@ theorem eq_of_mem_blocksOf_succ {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} {
    **共同给出**「非单点 clade ↔ 创建步」这一端的**双射**
    （单射 = `eq_of_mem_blocksOf_succ`：同一步至多一个新非单点块；
    基数对消 = `card_filter_nonsingleton_cladesOf`）。
-   ⬜ **仍缺**（(O1) 本体的一部分）：把这端**接到 `g ∈ mergeHistories n` 上的双向映射**
-   （由创建序重建 `g`，证 `cladesOf n g` 复原且往返为恒等），以及下面第 2 件的计数。
+   ✅ **W26 泳道 f 已落地**（本文件 §14.4–§14.5）：**重建映射**
+   `reconstruct (S) (σ) (d)`，第 `k` 步按「`C = σ k` 的最小元 `x` ＋ 含 `x` 的孩子」
+   读出合并对 `(min' C, min' (C \ 含 x 的孩子))`。四条已证：
+   `reconstructStep_eq`（读数正确）、**`reconstruct_newClade_eq`（左逆：重建 = `f`）**、
+   **`cladesOf_reconstruct_newClade`（往返引理：`cladesOf` 复原）**、
+   **`eq_of_newClade_eq`（单射）**、**`image_newClade` / `existsUnique_newClade`（满射：
+   `k ↦ newClade f k` 恰枚举非单点 clade）**。
+   ⬜ **仍缺**（(O1) 本体的最后一块）：把「**合法创建序**」刻画成 `S` 上的偏序 ——
+   `σ` 合法 ⟺ `σ` 是 `S` 的非单点 clade 在**严格包含序**下的**线性扩展**
+   （即 `D ⊊ σ k ⟹ D = σ j` 且 `j < k`），从而纤维基数 `= ` 线性扩展数；
+   再与下面第 2 件的 `LinExt` 对上。
 2. ★ **`LE` = 线性扩展数**：`LE`（§8）现在是**多项式系数递推**。要把它认成「创建序的个数」，
    需要自造线性扩展计数 `LinExt`（`internalBelow T C` 上按 `⊊` 的线性扩展数）
    ＋ **交错引理** `LinExt C = multinomial(hook 孩子) · ∏ LinExt 孩子`
@@ -2125,5 +2135,324 @@ theorem eq_of_mem_blocksOf_succ {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} {
 ⇒ `rankedFiberCount_gap` **仍开着**（(O1) 未证）；可复用增量是 §14 的二叉性定理
 ＋ **§14.2/§14.3 的层分解无重**（创建步存在唯一 ＋ 基数 `2n-1` / 非单点 `n-1`）。
 -/
+
+/-! ### §14.4 ★★★ (O1) 重建映射：`clade 集 ＋ 创建块 ↦ 合并对`
+
+§14.3 给出方向「非单点 clade ↦ 创建步」。本小节给出**反方向**：
+由「clade 集 `S`」与「第 `k` 步创建出的块 `C_k`」读出第 `k` 步被合并的两块。
+
+关键事实：**块的代表元就是块的最小元**（`min'_fiberOf_chainMap`）。
+故第 `k` 步被合并的两块的代表元 ＝ 这两块**各自的最小元**；按「最小元的较小者在前」
+排序后，合并对由 `C_k` 与它的两个孩子**唯一确定**（`reconstructStep`）。 -/
+
+/-- 块代表元从**不超过**块内任意元素：`chainMap n f L z ≤ z`。
+（归纳：每步 `x < y`，`y` 的块并入 `x` 的块后新代表元 `x` 更小。） -/
+theorem le_chainMap_self {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ∀ (L : ℕ) (z : Fin n), chainMap n f L z ≤ z := by
+  intro L
+  induction L with
+  | zero => intro z; exact le_refl z
+  | succ L ih =>
+    intro z
+    rw [chainMap_succ]
+    split_ifs with h
+    · rw [stepMap]
+      split_ifs with hz
+      · exact le_trans ((hf.1 ⟨L, h⟩).2.2).le (hz ▸ ih z)
+      · exact ih z
+    · exact ih z
+
+/-- ★★ **代表元就是块的最小元**：`v` 是第 `L` 层的块代表元（`chainMap n f L v = v`）
+⇒ 纤维 `v` 的最小元是 `v`。 -/
+theorem min'_fiberOf_chainMap {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {L : ℕ} {v : Fin n} (hv : chainMap n f L v = v)
+    (hne : (fiberOf (chainMap n f L) v).Nonempty) :
+    (fiberOf (chainMap n f L) v).min' hne = v := by
+  rw [Finset.min'_eq_iff]
+  refine ⟨mem_fiberOf.mpr hv, fun b hb => ?_⟩
+  rw [mem_fiberOf] at hb
+  exact hb ▸ le_chainMap_self hf L b
+
+/-- 第 `k` 步**合并出的新块**（两块纤维之并）。 -/
+def newClade {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) (k : Fin (n - 1)) : Finset (Fin n) :=
+  fiberOf (chainMap n f (k : ℕ)) (f k).1 ∪ fiberOf (chainMap n f (k : ℕ)) (f k).2
+
+/-- 新块就是第 `k+1` 层里 `(f k).1` 的纤维。 -/
+theorem newClade_eq_fiberOf_succ {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n)
+    (k : Fin (n - 1)) :
+    newClade f k = fiberOf (chainMap n f ((k : ℕ) + 1)) (f k).1 := by
+  rw [newClade, chainMap_succ, dite_eq_left k.isLt, fiberOf_stepMap, ite_eq_left rfl]
+
+/-- 新块属于 `cladesOf n f`。 -/
+theorem mem_cladesOf_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) : newClade f k ∈ cladesOf n f := by
+  refine mem_cladesOf.mpr ⟨(k : ℕ) + 1, by omega, ?_⟩
+  rw [newClade_eq_fiberOf_succ]
+  refine fiberOf_mem_blocksOf_of_nonempty ⟨(f k).1, mem_fiberOf.mpr ?_⟩
+  rw [chainMap_succ, dite_eq_left k.isLt, stepMap]
+  by_cases h : chainMap n f (k : ℕ) (f k).1 = (f k).2
+  · rw [ite_eq_left h]
+  · rw [ite_eq_right h]
+    exact (hf.1 k).1
+
+/-- 第 `k` 步被合并的两块**不交**。 -/
+theorem disjoint_newClade_fibers {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) :
+    Disjoint (fiberOf (chainMap n f (k : ℕ)) (f k).1)
+      (fiberOf (chainMap n f (k : ℕ)) (f k).2) := by
+  rw [Finset.disjoint_left]
+  intro z hz1 hz2
+  rw [mem_fiberOf] at hz1 hz2
+  exact absurd (hz1.symm.trans hz2) (ne_of_lt (hf.1 k).2.2)
+
+/-- `(f k).1` 不在 `(f k).2` 的纤维里。 -/
+theorem not_mem_fiberOf_snd {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) :
+    (f k).1 ∉ fiberOf (chainMap n f (k : ℕ)) (f k).2 := by
+  intro h
+  rw [mem_fiberOf] at h
+  exact absurd ((hf.1 k).1 ▸ h) (ne_of_lt (hf.1 k).2.2)
+
+/-- ★★★ 新块的**孩子**恰是第 `k` 步被合并的两块
+（§14.2 的 `children_fiberOf_chainMap_succ` 在 `newClade` 上的重述）。 -/
+theorem children_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) :
+    children (cladesOf n f) (newClade f k)
+      = {fiberOf (chainMap n f (k : ℕ)) (f k).1,
+          fiberOf (chainMap n f (k : ℕ)) (f k).2} :=
+  children_fiberOf_chainMap_succ k.isLt rfl (hf.1 k).1 (hf.1 k).2.1 (ne_of_lt (hf.1 k).2.2)
+/-- `s` 的最小元；`s` 空时退化为 `d`（`Finset.min'` 的非空保险，
+使 `reconstructStep` 成为**无证明参数**的函数）。 -/
+noncomputable def minOr {n : ℕ} (d : Fin n) (s : Finset (Fin n)) : Fin n :=
+  if h : s = ∅ then d else s.min' (Finset.nonempty_iff_ne_empty.mpr h)
+
+/-- `minOr` 在非空集上就是 `min'`。 -/
+theorem minOr_of_nonempty {n : ℕ} {d : Fin n} {s : Finset (Fin n)} (h : s.Nonempty) :
+    minOr d s = s.min' h := by
+  unfold minOr
+  rw [dite_eq_right (Finset.nonempty_iff_ne_empty.mp h)]
+
+/-- ★★★ **(O1) 重建映射（单步）**：由「clade 集 `S`」与「第 `k` 步创建出的块 `C`」
+读出第 `k` 步的**合并对**：
+
+* `x = min' C` —— 被合并两块中**较小者**的代表元；
+* `a = ⋃ {D ∈ children S C : x ∈ D}` —— 含 `x` 的那个孩子（孩子镶嵌 ⇒ 恰一个）；
+* `y = min' (C \ a)` —— 另一块的代表元。
+
+`C = a ∪ (C \ a)`、两孩子非空都由 `S` 的镶嵌结构给出，**与 `f` 无关**；
+`f` 只用来命名「第 `k` 步的创建块」`C = σ k`。`d` 只是空集情形的退化值。 -/
+noncomputable def reconstructStep {n : ℕ} (S : Finset (Finset (Fin n))) (C : Finset (Fin n))
+    (d : Fin n) : Fin n × Fin n :=
+  let x := minOr d C
+  (x, minOr x (C \ ((children S C).filter (fun D => x ∈ D)).biUnion id))
+
+/-- ★★★ **重建出的合并史**：第 `k` 步由 `S` 与「第 `k` 步创建块 `σ k`」读出。 -/
+noncomputable def reconstruct {n : ℕ} (S : Finset (Finset (Fin n)))
+    (σ : Fin (n - 1) → Finset (Fin n)) (d : Fin n) : Fin (n - 1) → Fin n × Fin n :=
+  fun k => reconstructStep S (σ k) d
+
+/-- `reconstructStep` 的**计算规则**：若 `C = A ∪ B`（`A, B` 不交，`x ∈ A`、`y ∈ B` 分别是
+两块的最小元，`x < y`），且 `A`、`B` 恰是 `C` 在 `S` 中的两个孩子，则
+`reconstructStep S C = (x, y)`（与退化值 `d` 无关）。 -/
+theorem reconstructStep_eq {n : ℕ} {S : Finset (Finset (Fin n))}
+    {C A B : Finset (Fin n)} {x y : Fin n} (d : Fin n) (hC : C.Nonempty)
+    (hCAB : C = A ∪ B) (hAB : Disjoint A B) (hxA : x ∈ A) (hyB : y ∈ B)
+    (hminA : ∀ b ∈ A, x ≤ b) (hminB : ∀ b ∈ B, y ≤ b) (hxy : x < y)
+    (hchildren : children S C = {A, B}) :
+    reconstructStep S C d = (x, y) := by
+  have hxnotB : x ∉ B := fun h => absurd (hminB x h) (not_le.mpr hxy)
+  have hxminC : C.min' hC = x := by
+    rw [Finset.min'_eq_iff]
+    refine ⟨?_, ?_⟩
+    · rw [hCAB]
+      exact Finset.mem_union_left B hxA
+    · intro b hb
+      rw [hCAB, Finset.mem_union] at hb
+      rcases hb with hb | hb
+      · exact hminA b hb
+      · exact le_trans hxy.le (hminB b hb)
+  have hminC : minOr d C = x := by
+    rw [minOr_of_nonempty hC, hxminC]
+  have hfilter : (children S C).filter (fun D => x ∈ D) = {A} := by
+    rw [hchildren]
+    ext D
+    simp only [Finset.mem_filter, Finset.mem_insert, Finset.mem_singleton]
+    constructor
+    · rintro ⟨hD, hxD⟩
+      rcases hD with rfl | rfl
+      · rfl
+      · exact absurd hxD hxnotB
+    · rintro rfl
+      exact ⟨Or.inl rfl, hxA⟩
+  have hfilterC : (children S C).filter (fun D => minOr d C ∈ D) = {A} := by
+    rw [hminC]
+    exact hfilter
+  have hunionC : ((children S C).filter (fun D => minOr d C ∈ D)).biUnion id = A := by
+    rw [hfilterC]
+    simp
+  have hBA : C \ A = B := by
+    rw [hCAB]
+    ext z
+    simp only [Finset.mem_sdiff, Finset.mem_union]
+    constructor
+    · rintro ⟨hz | hz, hnz⟩
+      · exact absurd hz hnz
+      · exact hz
+    · intro hz
+      exact ⟨Or.inr hz, fun hzA => Finset.disjoint_left.mp hAB hzA hz⟩
+  have hminB' : ∀ (h : B.Nonempty), B.min' h = y := by
+    intro h
+    rw [Finset.min'_eq_iff]
+    exact ⟨hyB, hminB⟩
+  have hminOrB : minOr (minOr d C) B = y := by
+    rw [minOr_of_nonempty ⟨y, hyB⟩, hminB' ⟨y, hyB⟩]
+  have hstep : reconstructStep S C d = (minOr d C, y) := by
+    unfold reconstructStep
+    dsimp only
+    rw [hunionC, hBA, hminOrB]
+  rw [hstep, hminC]
+/-- 第 `k` 步新块非空（含 `(f k).1`）。 -/
+theorem newClade_nonempty {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) : (newClade f k).Nonempty :=
+  ⟨(f k).1, Finset.mem_union_left _ (mem_fiberOf.mpr (hf.1 k).1)⟩
+
+/-- ★★★★ **(O1) 重建映射是左逆**：用「`cladesOf n f` ＋ 第 `k` 步的新块 `newClade f k`」
+重建出的合并史**就是** `f`（对任意退化值 `d`）。
+
+（证明要点：`min' (newClade f k) = (f k).1`、另一块的最小元 `= (f k).2`
+—— 即 `min'_fiberOf_chainMap`：**代表元就是块的最小元**。） -/
+theorem reconstruct_newClade_eq {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (d : Fin n) :
+    reconstruct (cladesOf n f) (fun k => newClade f k) d = f := by
+  funext k
+  refine reconstructStep_eq d (newClade_nonempty hf k) rfl (disjoint_newClade_fibers hf k)
+    (mem_fiberOf.mpr (hf.1 k).1) (mem_fiberOf.mpr (hf.1 k).2.1) ?_ ?_ (hf.1 k).2.2
+    (children_newClade hf k)
+  · intro b hb
+    have hne : (fiberOf (chainMap n f (k : ℕ)) (f k).1).Nonempty := ⟨_, mem_fiberOf.mpr (hf.1 k).1⟩
+    rw [← min'_fiberOf_chainMap hf (L := (k : ℕ)) (v := (f k).1) (hf.1 k).1 hne]
+    exact Finset.min'_le _ b hb
+  · intro b hb
+    have hne : (fiberOf (chainMap n f (k : ℕ)) (f k).2).Nonempty := ⟨_, mem_fiberOf.mpr (hf.1 k).2.1⟩
+    rw [← min'_fiberOf_chainMap hf (L := (k : ℕ)) (v := (f k).2) (hf.1 k).2.1 hne]
+    exact Finset.min'_le _ b hb
+
+/-- ★★★★ **(O1) 往返引理（本泳道交付的主体）**：
+**由 `cladesOf n f` 按「创建块 = `newClade f ·`」重建出的合并史与 `f` 有相同的 clade 集**
+—— 即重建映射的 `cladesOf` 侧是恒等。 -/
+theorem cladesOf_reconstruct_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (d : Fin n) :
+    cladesOf n (reconstruct (cladesOf n f) (fun k => newClade f k) d) = cladesOf n f := by
+  rw [reconstruct_newClade_eq hf d]
+
+/-- 重建出的编码**仍是合并史**（`IsMergeHistory` 在重建下不变）。 -/
+theorem isMergeHistory_reconstruct_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (d : Fin n) :
+    IsMergeHistory n (reconstruct (cladesOf n f) (fun k => newClade f k) d) := by
+  rw [reconstruct_newClade_eq hf d]
+  exact hf
+
+/-- ★★★★ **(O1) 双射的「单射」半**：合并史由「clade 集 ＋ 每步创建出的块」**唯一确定**
+—— 即 `f ↦ (cladesOf n f, newClade f ·)` 是**单射**。
+
+（这就是 (O1) 里「纤维 ↪ 合法创建序」的方向；剩下的「满射 ＋ 计数」
+=「合法创建序的个数 = `LE`」，见本节末尾的边界说明。） -/
+theorem eq_of_newClade_eq {n : ℕ} {f f' : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (hf' : IsMergeHistory n f')
+    (hS : cladesOf n f = cladesOf n f') (h : ∀ k, newClade f k = newClade f' k) : f = f' := by
+  funext k
+  rw [← congrFun (reconstruct_newClade_eq hf (f k).1) k,
+    ← congrFun (reconstruct_newClade_eq hf' (f k).1) k, hS, funext h]
+/-! ### §14.5 ★★★ (O1) 「创建块」恰枚举**非单点 clade**
+
+`newClade f · : Fin (n-1) → Finset (Fin n)` 满足：
+
+* 落在 `cladesOf n f` 里且非单点（`two_le_card_newClade`）；
+* **单射**（`newClade_injective`：同一步至多一个新块 ⇒ 不同步的新块不同）；
+* 定义域基数是 `n-1`，而非单点 clade 也恰有 `n-1` 个（`card_filter_nonsingleton_cladesOf`）
+  ⇒ 像是**满的**：`image_newClade`。
+
+推论 `existsUnique_newClade`：**每个非单点 clade 恰是某一步创建出的新块**
+（这就是「创建序」这一端所需的**满射性**，与 §14.3 的 `existsUnique_creation_level` 互补）。 -/
+
+/-- 新块在第 `k+1` 层是块。 -/
+theorem mem_blocksOf_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) :
+    newClade f k ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)) := by
+  rw [newClade_eq_fiberOf_succ]
+  refine fiberOf_mem_blocksOf_of_nonempty ⟨(f k).1, mem_fiberOf.mpr ?_⟩
+  rw [chainMap_succ, dite_eq_left k.isLt, stepMap]
+  by_cases h : chainMap n f (k : ℕ) (f k).1 = (f k).2
+  · rw [ite_eq_left h]
+  · rw [ite_eq_right h]
+    exact (hf.1 k).1
+
+/-- 新块**不在**更低层出现过。 -/
+theorem not_mem_upto_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) : newClade f k ∉ upto f (k : ℕ) :=
+  not_mem_upto_union (f := f) (L := (k : ℕ)) (x := (f k).1) (y := (f k).2)
+    (hf.1 k).1 (hf.1 k).2.1 (ne_of_lt (hf.1 k).2.2)
+
+/-- 新块至少两个元素。 -/
+theorem two_le_card_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) : 2 ≤ (newClade f k).card := by
+  have hA : (fiberOf (chainMap n f (k : ℕ)) (f k).1).Nonempty := ⟨_, mem_fiberOf.mpr (hf.1 k).1⟩
+  have hB : (fiberOf (chainMap n f (k : ℕ)) (f k).2).Nonempty := ⟨_, mem_fiberOf.mpr (hf.1 k).2.1⟩
+  have hcard : (newClade f k).card
+      = (fiberOf (chainMap n f (k : ℕ)) (f k).1).card
+        + (fiberOf (chainMap n f (k : ℕ)) (f k).2).card := by
+    rw [newClade]
+    exact Finset.card_union_of_disjoint (disjoint_newClade_fibers hf k)
+  have h1 : 1 ≤ (fiberOf (chainMap n f (k : ℕ)) (f k).1).card := Finset.card_pos.mpr hA
+  have h2 : 1 ≤ (fiberOf (chainMap n f (k : ℕ)) (f k).2).card := Finset.card_pos.mpr hB
+  omega
+
+/-- 新块是**非单点 clade**。 -/
+theorem mem_filter_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (k : Fin (n - 1)) :
+    newClade f k ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card) :=
+  Finset.mem_filter.mpr ⟨mem_cladesOf_newClade hf k, two_le_card_newClade hf k⟩
+
+/-- ★★★ **不同步创建的新块不同**：`k ↦ newClade f k` 是**单射**。 -/
+theorem newClade_injective {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) : Function.Injective (fun k : Fin (n - 1) => newClade f k) := by
+  intro k k' hkk'
+  have hkk : newClade f k = newClade f k' := hkk'
+  apply Fin.ext
+  by_contra hne
+  rcases Nat.lt_or_gt_of_ne hne with hlt | hlt
+  · have hmem : newClade f k ∈ upto f (k' : ℕ) :=
+      mem_upto_of_le (L := (k' : ℕ)) (j := (k : ℕ) + 1) (by omega)
+        (mem_blocksOf_newClade hf k)
+    rw [hkk] at hmem
+    exact not_mem_upto_newClade hf k' hmem
+  · have hmem : newClade f k' ∈ upto f (k : ℕ) :=
+      mem_upto_of_le (L := (k : ℕ)) (j := (k' : ℕ) + 1) (by omega)
+        (mem_blocksOf_newClade hf k')
+    rw [← hkk] at hmem
+    exact not_mem_upto_newClade hf k hmem
+
+/-- ★★★★ **(O1) 满射性**：第 `k` 步创建出的新块**恰枚举全部非单点 clade**。 -/
+theorem image_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) :
+    (Finset.univ.image (fun k : Fin (n - 1) => newClade f k))
+      = (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+  refine Finset.eq_of_subset_of_card_le ?_ ?_
+  · intro C hC
+    obtain ⟨k, -, rfl⟩ := Finset.mem_image.mp hC
+    exact mem_filter_newClade hf k
+  · rw [Finset.card_image_of_injective _ (newClade_injective hf), Finset.card_univ,
+      Fintype.card_fin, card_filter_nonsingleton_cladesOf hf]
+
+/-- ★★★★ **(O1) 每个非单点 clade 恰是某一步创建出的新块**（唯一性 ⇒ 创建块的标号唯一）。
+这是 §14.3 `existsUnique_creation_level`（「由 `f` 定 `k`」）的**逆方向**。 -/
+theorem existsUnique_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f)
+    (h2 : 2 ≤ C.card) : ∃! k : Fin (n - 1), newClade f k = C := by
+  have hmem : C ∈ Finset.univ.image (fun k : Fin (n - 1) => newClade f k) := by
+    rw [image_newClade hf]
+    exact Finset.mem_filter.mpr ⟨hC, h2⟩
+  obtain ⟨k, -, hk⟩ := Finset.mem_image.mp hmem
+  exact ⟨k, hk, fun k' hk' => newClade_injective hf (hk'.trans hk.symm)⟩
 
 end Phylo.Stat.HookLength
