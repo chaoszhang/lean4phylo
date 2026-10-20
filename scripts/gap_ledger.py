@@ -115,6 +115,16 @@ VACUOUS = {
         "真缺件：① 一般 n 的 `MSCTreeLaw n` ② 带枝长（>ε）的 binary 物种树载体 —— 补上可一次解锁 4 条缺口（含三条 clan 律）",
 }
 
+# ===== 「证伪只打在归约目标上」的条目（W26 人工判定）=====
+# 情形：库内确实有 `_refuted` 定理，但它证的是 **`def` 的某个归约目标/全称闭包** 为假，
+# **不是** `def` 本体为假（本体仍开放）。这类若机械记 [已证伪] 会**过度声称**。
+PARTIAL_REFUTE = {
+    "bme_pauplin_identity_gap":
+        "证伪只打在**归约目标的全称闭包**上：`bme_pauplin_identity_gap_refuted : ∃ T, ¬ BmePauplinNormalization T`（`star4Tree`，"
+        "4 叶星形中心度 4 ⇒ plane 和 = 3 ≠ 2）。`def bme_pauplin_identity_gap δ` 本体（`δ.FourPoint → δ.PositiveDefinite → ∃ …`）**仍开放**，"
+        "故本行记 [真开放]，并另立二叉忠实形态 `bme_pauplin_identity_gap_binary`",
+}
+
 SPEC_OVERRIDE = {
     "edgeInvariants_suffice_gap_correct_shape":
         "特化：`Model` 固定为 `{p | Factorizable p}`（一般 `Model` 未覆盖）",
@@ -290,6 +300,9 @@ def main():
             if cands:
                 ref = sorted(cands, key=lambda d: (d[0], d[1]))[0]
         if ref is not None:
+            if name in PARTIAL_REFUTE:
+                buckets["open"].append((rel, ln, name, PARTIAL_REFUTE[name], None))
+                continue
             form = FORM_OVERRIDE.get(name) or "形态待人工核 ⚠"
             buckets["refuted"].append((rel, ln, name, form, ref))
             continue
