@@ -691,6 +691,297 @@ def notIsDSplit_of_splitMetricSum_gap : Prop :=
       ∀ s : Split α, (∀ t ∈ F, t ≠ s ∧ t.swap ≠ s) →
         ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) s.sideA s.sideB
 
+/-! ## 7.2 ★★★ W26 泳道 d：**弱相容**下的「成员半边」（四元组计数机器在本文件内重建）
+
+### 要证的东西
+
+`F : Finset (Split α)` **弱相容**、`w > 0` 于 `F`、`t ∈ F`，取 `δ := Σ_{u∈F} w_u·δ_u`
+（`δ_u = SplitMetric u`）。则 `t` 的两侧是 `δ` 的 **d-split**（`IsDSplit`）：
+`∀ a,a' ∈ t.sideA, ∀ b,b' ∈ t.sideB, δaa' + δbb' < max (δab + δa'b') (δab' + δa'b)`
+—— 这正是 `weakCompatibilityRealization_gap`（同文件 `:562`）结论里 `↔` 的 **`→` 半边**
+（成员方向），也是 BdD Theorem 3（md `:1683-1699`）「隔离指数 `α_S = λ_S > 0`」的成员一侧。
+
+### 为何必须在本文件内重建（W25 判定：import 方向不可达）
+
+W22 的成员件 `Split.isDSplit_splitMetricSum_of_mem`（`Phylo/Stat/BunemanIndexBridge.lean:1949`）
+只覆盖**两两相容**：它靠三种配对**两两**互斥 ⇒ `c_P = c_X = 0`。弱相容**只**禁止三者**同时**出现
+（`F ⊇ {{aa'|bb'}, {ab|a'b'}, {ab'|a'b}}` 才冲突），故那条路子在弱相容下**不成立** ✗。
+而 `BunemanIndexBridge.lean` **import 本文件** ⇒ 本文件的 `bSep`/`bPair*`/差分恒等式**取不到**
+⇒ **计数机器在此重建**；全部判据加 `q`（quartet）前缀，避免与上游同名声明冲突。
+
+### 计数核心（逐 split 五情形）
+
+固定四元组 `(a,a',b,b')`，记
+`I_u := δ_u(a,a') + δ_u(b,b')`、`P_u := δ_u(a,b) + δ_u(a',b')`、`X_u := δ_u(a,b') + δ_u(a',b)`；
+`c_W := Σ_{u∈F, u 实现 {a,a'}|{b,b'}} w_u`，`c_P`、`c_X` 同理。按 4 点在 `u` 两侧的分布逐项核对得
+
+| 分布 | `(I_u,P_u,X_u)` |
+|---|---|
+| 全在同一侧 | `(0,0,0)` |
+| `1|3` 分布 | `(1,1,1)` |
+| `{a,a'}|{b,b'}` | `(0,2,2)` |
+| `{a,b}|{a',b'}` | `(2,0,2)` |
+| `{a,b'}|{a',b}` | `(2,2,0)` |
+
+⇒ 两条**差分恒等式**：`X̂ − Î = 2c_W − 2c_X`、`X̂ − P̂ = 2c_P − 2c_X`。
+
+### 收口（★ 与 W22 的关键差别：`c_P·c_X = 0`，而非 `c_P = c_X = 0`）
+
+`t ∈ F` 且 `a,a' ∈ t.sideA`、`b,b' ∈ t.sideB` ⇒ `t` 实现 W-配对 ⇒ `c_W ≥ w_t > 0`；
+弱相容 ⇒ 三种配对**不同时**被实现 ⇒ `¬(0 < c_P ∧ 0 < c_X)`。反设 `max P̂ X̂ ≤ Î`：
+`X̂ − Î = 2(c_W − c_X) ≤ 0` ⇒ `c_W ≤ c_X`；`P̂ − Î = 2(c_W − c_P) ≤ 0` ⇒ `c_W ≤ c_P`
+⇒ `c_P > 0 ∧ c_X > 0` ⇒ 与弱相容**矛盾** ∎
+
+★ **退化四元组**（`a = a'` 或 `b = b'`）**不需要**弱相容：此时 `P̂`、`X̂` 由同一批项组成，
+上式给 `Î ≤ max P̂ X̂`，而 `t` 仍提供 `2w_t > 0` 的**严格余量** ⇒ 严格不等式照样成立；
+本证明**自动覆盖**退化情形（差分恒等式对任意四元组成立，**不假设四点互异**）。
+
+### 下一步（弱相容版 (B2)：非成员不是 d-split）
+
+本批只补了**成员**方向。`weakCompatibilityRealization_gap` 的另一半 = 弱相容版 **(B2)**。
+它的**两两相容**版已收口（`Split.notIsDSplit_of_splitMetricSum_gap_holds`，
+`Phylo/Stat/BunemanIndexBridge.lean:2268`），但那条路线**不可直接搬**：
+它经 (★′) `noWRealizer_exists_gap` 用到 **cluster 的层析性**（`laminar_sideNotMem` ←
+`laminar_of_compatible_clusters`），而弱相容**不给层析性** —— 反例正是本文件 `:382` 的
+`exists_weaklyCompatible_not_pairwiseCompatible`（两个交叉 split 弱相容，cluster `{0,1}` 与 `{0,2}`
+非嵌套）⇒ 缺的具名器材 = BdD Theorem 3（md `:1683-1699`）第二句（`Σ` 恰是 `d` 的**全部** d-split）
+所需的**隔离指数 ≤ 0** 论证的弱相容版；本节的 `qPairW/qPairP/qPairX` 计数与
+`splitMetricSum_diff_qW/qP`（`X̂ − Î = 2c_W − 2c_X`）就是它的**计算落脚点**。
+
+-/
+
+/-- `x`、`y` 是否被 `u` 分到两侧（`Bool` 形式，便于逐情形求值；`bSep` 的本文件重建版）。 -/
+def qSep (u : Split α) (x y : α) : Bool :=
+  decide (x ∈ u.sideA) != decide (y ∈ u.sideA)
+
+/-- `SplitMetric` 的 `Bool` 形式（条件可判定 ⇒ 可逐情形化简）。 -/
+theorem splitMetric_eq_qSep (u : Split α) (x y : α) :
+    SplitMetric u x y = if qSep u x y = true then 1 else 0 := by
+  by_cases hx : x ∈ u.sideA <;> by_cases hy : y ∈ u.sideA <;>
+    simp only [SplitMetric, qSep, mem_sideB_iff_not_mem_sideA, hx, hy] <;> norm_num
+
+/-- **W-配对**的布尔判据：`{a,a'}` 同侧、`{b,b'}` 同侧、`a` 与 `b` 异侧。 -/
+abbrev qPairW (u : Split α) (a a' b b' : α) : Bool :=
+  (qSep u a a' == false) && (qSep u b b' == false) && (qSep u a b == true)
+
+/-- **P-配对**的布尔判据：`{a,b}` 同侧、`{a',b'}` 同侧、`a` 与 `a'` 异侧。 -/
+abbrev qPairP (u : Split α) (a a' b b' : α) : Bool :=
+  (qSep u a b == false) && (qSep u a' b' == false) && (qSep u a a' == true)
+
+/-- **X-配对**的布尔判据：`{a,b'}` 同侧、`{a',b}` 同侧、`a` 与 `a'` 异侧。 -/
+abbrev qPairX (u : Split α) (a a' b b' : α) : Bool :=
+  (qSep u a b' == false) && (qSep u a' b == false) && (qSep u a a' == true)
+
+/-- 布尔 W-判据 ⟺ `u` 在四元组上诱导 `{a,a'}|{b,b'}`。 -/
+theorem qPairW_eq_true_iff (u : Split α) (a a' b b' : α) :
+    qPairW u a a' b b' = true ↔ u.Separates a a' b b' := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [qPairW, qSep, Separates, mem_sideB_iff_not_mem_sideA, ha, ha', hb, hb'] <;> decide
+
+/-- 布尔 P-判据 ⟺ `u` 在四元组上诱导 `{a,b}|{a',b'}`。 -/
+theorem qPairP_eq_true_iff (u : Split α) (a a' b b' : α) :
+    qPairP u a a' b b' = true ↔ u.Separates a b a' b' := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [qPairP, qSep, Separates, mem_sideB_iff_not_mem_sideA, ha, ha', hb, hb'] <;> decide
+
+/-- 布尔 X-判据 ⟺ `u` 在四元组上诱导 `{a,b'}|{a',b}`。 -/
+theorem qPairX_eq_true_iff (u : Split α) (a a' b b' : α) :
+    qPairX u a a' b b' = true ↔ u.Separates a b' a' b := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [qPairX, qSep, Separates, mem_sideB_iff_not_mem_sideA, ha, ha', hb, hb'] <;> decide
+
+/-- ★★★ **逐 split 差分恒等式（W 分量）**：`X_u − I_u = 2·[W] − 2·[X]`（五情形逐项核对）。
+其中 `I_u = δ_u(a,a') + δ_u(b,b')`、`X_u = δ_u(a,b') + δ_u(a',b)`。 -/
+theorem splitMetric_diff_qW (u : Split α) (a a' b b' : α) :
+    (SplitMetric u a b' + SplitMetric u a' b) - (SplitMetric u a a' + SplitMetric u b b')
+      = (if qPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if qPairX u a a' b b' = true then (2 : ℝ) else 0) := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [SplitMetric, qPairW, qPairX, qSep, mem_sideB_iff_not_mem_sideA, ha, ha', hb, hb'] <;>
+    norm_num
+
+/-- ★★★ **逐 split 差分恒等式（P 分量）**：`X_u − P_u = 2·[P] − 2·[X]`。 -/
+theorem splitMetric_diff_qP (u : Split α) (a a' b b' : α) :
+    (SplitMetric u a b' + SplitMetric u a' b) - (SplitMetric u a b + SplitMetric u a' b')
+      = (if qPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - (if qPairX u a a' b b' = true then (2 : ℝ) else 0) := by
+  by_cases ha : a ∈ u.sideA <;> by_cases ha' : a' ∈ u.sideA <;>
+    by_cases hb : b ∈ u.sideA <;> by_cases hb' : b' ∈ u.sideA <;>
+    simp only [SplitMetric, qPairP, qPairX, qSep, mem_sideB_iff_not_mem_sideA, ha, ha', hb, hb'] <;>
+    norm_num
+
+/-- 指标和：`∑ w u · (if p u then c else 0) = c · ∑_{u ∈ F.filter p} w u`。 -/
+theorem qSum_mul_ite_eq (F : Finset (Split α)) (w : Split α → ℝ) (p : Split α → Prop)
+    [DecidablePred p] (c : ℝ) :
+    (∑ u ∈ F, w u * (if p u then c else 0)) = c * ∑ u ∈ F.filter p, w u := by
+  rw [Finset.mul_sum, Finset.sum_filter]
+  exact Finset.sum_congr rfl fun u _ => by by_cases h : p u <;> simp [h, mul_comm]
+
+/-- ★★★ **拆和（W 分量）**：`X̂ − Î = 2c_W − 2c_X`（`X̂ = Σ_u w_u X_u` 等）。 -/
+theorem splitMetricSum_diff_qW (F : Finset (Split α)) (w : Split α → ℝ) (a a' b b' : α) :
+    (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+        - ((∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b'))
+      = 2 * (∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+        - 2 * (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u) := by
+  have h1 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      = ∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b) :=
+    Finset.sum_add_distrib.symm
+  have h2 : (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+      = ∑ u ∈ F, (w u * SplitMetric u a a' + w u * SplitMetric u b b') :=
+    Finset.sum_add_distrib.symm
+  rw [h1, h2, ← Finset.sum_sub_distrib]
+  rw [show (∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b
+        - (w u * SplitMetric u a a' + w u * SplitMetric u b b')))
+      = ∑ u ∈ F, w u * ((if qPairW u a a' b b' = true then (2 : ℝ) else 0)
+          - (if qPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by
+      rw [show w u * SplitMetric u a b' + w u * SplitMetric u a' b
+            - (w u * SplitMetric u a a' + w u * SplitMetric u b b')
+          = w u * ((SplitMetric u a b' + SplitMetric u a' b)
+            - (SplitMetric u a a' + SplitMetric u b b')) from by ring,
+        splitMetric_diff_qW u a a' b b']]
+  rw [show (∑ u ∈ F, w u * ((if qPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - (if qPairX u a a' b b' = true then (2 : ℝ) else 0)))
+      = ∑ u ∈ F, (w u * (if qPairW u a a' b b' = true then (2 : ℝ) else 0)
+        - w u * (if qPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by ring]
+  rw [Finset.sum_sub_distrib,
+    qSum_mul_ite_eq F w (fun u => qPairW u a a' b b' = true) 2,
+    qSum_mul_ite_eq F w (fun u => qPairX u a a' b b' = true) 2]
+
+/-- ★★★ **拆和（P 分量）**：`X̂ − P̂ = 2c_P − 2c_X`。 -/
+theorem splitMetricSum_diff_qP (F : Finset (Split α)) (w : Split α → ℝ) (a a' b b' : α) :
+    (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+        - ((∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b'))
+      = 2 * (∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u)
+        - 2 * (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u) := by
+  have h1 : (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+      = ∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b) :=
+    Finset.sum_add_distrib.symm
+  have h2 : (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+      = ∑ u ∈ F, (w u * SplitMetric u a b + w u * SplitMetric u a' b') :=
+    Finset.sum_add_distrib.symm
+  rw [h1, h2, ← Finset.sum_sub_distrib]
+  rw [show (∑ u ∈ F, (w u * SplitMetric u a b' + w u * SplitMetric u a' b
+        - (w u * SplitMetric u a b + w u * SplitMetric u a' b')))
+      = ∑ u ∈ F, w u * ((if qPairP u a a' b b' = true then (2 : ℝ) else 0)
+          - (if qPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by
+      rw [show w u * SplitMetric u a b' + w u * SplitMetric u a' b
+            - (w u * SplitMetric u a b + w u * SplitMetric u a' b')
+          = w u * ((SplitMetric u a b' + SplitMetric u a' b)
+            - (SplitMetric u a b + SplitMetric u a' b')) from by ring,
+        splitMetric_diff_qP u a a' b b']]
+  rw [show (∑ u ∈ F, w u * ((if qPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - (if qPairX u a a' b b' = true then (2 : ℝ) else 0)))
+      = ∑ u ∈ F, (w u * (if qPairP u a a' b b' = true then (2 : ℝ) else 0)
+        - w u * (if qPairX u a a' b b' = true then (2 : ℝ) else 0)) from
+    Finset.sum_congr rfl fun u _ => by ring]
+  rw [Finset.sum_sub_distrib,
+    qSum_mul_ite_eq F w (fun u => qPairP u a a' b b' = true) 2,
+    qSum_mul_ite_eq F w (fun u => qPairX u a a' b b' = true) 2]
+
+/-- ★★★ **弱相容的互斥（弱相容版）**：三种配对**不同时**被实现。
+
+★ 与两两相容版的差别：那里是「**任意两种**都互斥」（`not_compatible_of_separates`）；
+弱相容**只**禁止**三者同时**被实现（`HasConflictingQuartet` 的定义要三个成员）。
+正是这一处差别使 `c_P = c_X = 0` 失效，必须换成加权计数
+（`c_W ≤ c_P`、`c_W ≤ c_X` ＋ `c_P·c_X = 0`）。 -/
+theorem not_all_three_quartetPair_of_weaklyCompatible {F : Finset (Split α)}
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (a a' b b' : α) :
+    ¬ ((∃ u ∈ F, qPairW u a a' b b' = true) ∧ (∃ v ∈ F, qPairP v a a' b b' = true) ∧
+        (∃ z ∈ F, qPairX z a a' b b' = true)) := by
+  rintro ⟨⟨u, huF, huW⟩, ⟨v, hvF, hvP⟩, ⟨z, hzF, hzX⟩⟩
+  exact hF ⟨a, a', b, b', ⟨u, by simpa using huF, (qPairW_eq_true_iff u a a' b b').mp huW⟩,
+    ⟨v, by simpa using hvF, (qPairP_eq_true_iff v a a' b b').mp hvP⟩,
+    ⟨z, by simpa using hzF, (qPairX_eq_true_iff z a a' b b').mp hzX⟩⟩
+
+/-- ★★★★ **弱相容下的「成员半边」**（W26 泳道 d，本文件 §7.2）：`F` **弱相容**、`w > 0` 于 `F`、
+`t ∈ F` ⇒ `t` 的两侧是 `δ := Σ_{u∈F} w_u·δ_u` 的 **`d`-split**（`IsDSplit`）。
+
+* **这是 `weakCompatibilityRealization_gap`（`SplitWeak.lean:562`）成员方向的第一次推进**：W22
+  `Split.isDSplit_splitMetricSum_of_mem` 只对**两两相容**成立，弱相容版此前**空白**；
+* **不需要**任何度量公理、对称性、`δ x x = 0`：纯组合计数；
+* **退化四元组自动覆盖**（`a = a'` 或 `b = b'`：`P̂`、`X̂` 同批项，`t` 提供 `2w_t > 0` 的余量）。 -/
+theorem isDSplit_splitMetricSum_of_mem_of_weaklyCompatible (F : Finset (Split α))
+    (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∈ F) :
+    IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  intro a ha a' ha' b hb b' hb'
+  have hba : b ∉ t.sideA := (t.mem_sideB_iff_not_mem_sideA b).mp hb
+  have hb'a : b' ∉ t.sideA := (t.mem_sideB_iff_not_mem_sideA b').mp hb'
+  have hWt : qPairW t a a' b b' = true := by
+    simp [qPairW, qSep, ha, ha', hba, hb'a]
+  set Iv : ℝ := (∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+    with hIv
+  set Pv : ℝ := (∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b')
+    with hPv
+  set Xv : ℝ := (∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)
+    with hXv
+  have hcW : 0 < ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u := by
+    have hle : ∀ u ∈ F.filter (fun u => qPairW u a a' b b' = true), 0 ≤ w u :=
+      fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have h1 : w t ≤ ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u :=
+      Finset.single_le_sum hle (Finset.mem_filter.mpr ⟨ht, hWt⟩)
+    linarith [hw t ht]
+  have hXW := splitMetricSum_diff_qW F w a a' b b'
+  have hXP := splitMetricSum_diff_qP F w a a' b b'
+  have hexc := not_all_three_quartetPair_of_weaklyCompatible hF a a' b b'
+  refine not_le.mp ?_
+  intro hle
+  rw [max_le_iff] at hle
+  obtain ⟨hPI, hXI⟩ := hle
+  have hcX : (∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+      ≤ ∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u := by linarith
+  have hcP : (∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+      ≤ ∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u := by linarith
+  have hPpos : 0 < ∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u := by linarith
+  have hXpos : 0 < ∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u := by linarith
+  have hneP : (F.filter (fun u => qPairP u a a' b b' = true)).Nonempty := by
+    rcases Finset.eq_empty_or_nonempty (F.filter (fun u => qPairP u a a' b b' = true)) with h | h
+    · rw [h] at hPpos; simp at hPpos
+    · exact h
+  have hneX : (F.filter (fun u => qPairX u a a' b b' = true)).Nonempty := by
+    rcases Finset.eq_empty_or_nonempty (F.filter (fun u => qPairX u a a' b b' = true)) with h | h
+    · rw [h] at hXpos; simp at hXpos
+    · exact h
+  obtain ⟨v, hv⟩ := hneP
+  obtain ⟨hvF, hvP⟩ := Finset.mem_filter.mp hv
+  obtain ⟨z, hz⟩ := hneX
+  obtain ⟨hzF, hzX⟩ := Finset.mem_filter.mp hz
+  exact hexc ⟨⟨t, ht, hWt⟩, ⟨v, hvF, hvP⟩, ⟨z, hzF, hzX⟩⟩
+
+/-- `SplitMetric` 对两个自变量对称。 -/
+theorem splitMetric_symm (u : Split α) (x y : α) : SplitMetric u x y = SplitMetric u y x := by
+  by_cases hx : x ∈ u.sideA <;> by_cases hy : y ∈ u.sideA <;>
+    simp only [SplitMetric, mem_sideB_iff_not_mem_sideA, hx, hy] <;> norm_num
+
+/-- 加权和也对称（`isDSplit_comm` 的对称性前提）。 -/
+theorem splitMetricSum_symm (F : Finset (Split α)) (w : Split α → ℝ) (x y : α) :
+    (∑ u ∈ F, w u * SplitMetric u x y) = ∑ u ∈ F, w u * SplitMetric u y x :=
+  Finset.sum_congr rfl fun u _ => by rw [splitMetric_symm u x y]
+
+/-- ★★★★ **「成员半边」的最终形态（含 `swap`）**：`F` 弱相容、`w > 0` 于 `F`，
+且 `t ∈ F` **或** `t.swap ∈ F` ⇒ `t` 的两侧是 `δ := Σ_{u∈F} w_u·δ_u` 的 `d`-split。
+
+★ 前提 `t ∈ F ∨ t.swap ∈ F` **逐字**就是 `weakCompatibilityRealization_gap`（`SplitWeak.lean:562`）
+结论右边 `∃ t ∈ F, t = s ∨ t.swap = s` 里**成员方向**的那一半 ⇒ 本定理给出该 `∃` 的第 **`→`** 半边
+（★ 剩下的「非成员不是 d-split」即弱相容版 **(B2)**，仍缺 —— 见本文件 §7.1）。 -/
+theorem isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible (F : Finset (Split α))
+    (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∈ F ∨ t.swap ∈ F) :
+    IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  rcases ht with ht | ht
+  · exact isDSplit_splitMetricSum_of_mem_of_weaklyCompatible F w hF hw ht
+  · have h := isDSplit_splitMetricSum_of_mem_of_weaklyCompatible F w hF hw ht
+    simp only [swap_sideA, swap_sideB] at h
+    exact (isDSplit_comm (fun x y => splitMetricSum_symm F w x y)).mp h
+
 end Split
 
 /-! ## 8. 树的 split 系统弱相容（`Phylo/Split.lean:894` 的接口） -/
