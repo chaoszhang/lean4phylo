@@ -485,7 +485,8 @@ def BinaryConnectedEqualsSideGap : Prop :=
     (∃ ℓ : T.V → Bool, (∀ x : X, ℓ (T.leaf x) = true ↔ x ∈ A) ∧
       ∀ s : Bool, IsConnectedSet T.graph {v | ℓ v = s}) ↔ DisplaysBinary T A
 
-/-- **缺口 G2（未证）**：**多状态时两两相容不充分** —— Fitch–Meacham `F₃`
+/-- **缺口 G2 —— ✅ 2026-10-21 W26 泳道 e 已收口**（MultiStatePairwiseInsufficiencyGap_holds，文件末尾）：
+**多状态时两两相容不充分** —— Fitch–Meacham `F₃`
 （5 taxa × 3 字符 × 3 状态：`021, 100, 002, 220, 111`；`LamGusfieldSridhar2009`
 1256–1273 行构造、1283–1284 行 `EC1={a0,b2,c1}`/`EC2={a1,b0,c0}`）。
 
@@ -987,3 +988,347 @@ theorem not_exists_displays_all_fitchMeachamF3 :
       (card_two_of_optionC hCopt) (optionA_ne_optionC hAopt hCopt) hm hAC
   · exact not_sidesCompatible_of_binary_meet (card_two_of_optionB hBopt)
       (card_two_of_optionC hCopt) (optionB_ne_optionC hBopt hCopt) hm hBC
+
+namespace MultiStateTree
+
+/-- ★ **一条边的一侧连通**（`Phylo/Connectivity.lean` 的 `inSide_isConnectedSet` 的**前置副本**：
+该文件 **import 本文件**，故此处不能引用它）。 -/
+theorem inSide_isConnectedSet (T : Cladogram.{u, u} X) (e : Sym2 T.V) (u : T.V) :
+    IsConnectedSet T.graph {v | T.inSide e u v} := by
+  intro u' hu' v' hv'
+  obtain ⟨r⟩ := ((T.inSide_comm e u u').mp hu').trans hv'
+  refine ⟨r.mapLe (SimpleGraph.deleteEdges_le {e}), ?_⟩
+  rw [SimpleGraph.Walk.support_mapLe_eq_support]
+  intro w hw
+  exact hu'.trans (SimpleGraph.reachable_of_mem_support r hw)
+
+/-- ★ **`e` 一侧的补恰是另一端点一侧**（`Phylo/Connectivity.lean` 的 `compl_inSide` 的前置副本）。 -/
+theorem compl_inSide (T : Cladogram.{u, u} X) {a b u : T.V} (hab : T.graph.Adj a b)
+    (hua : T.inSide s(a, b) u a) :
+    {v : T.V | ¬ T.inSide s(a, b) u v} = {v : T.V | T.inSide s(a, b) b v} := by
+  ext v
+  constructor
+  · intro hv
+    rcases T.inSide_or_inSide hab (x := v) with h | h
+    · exact absurd (hua.trans ((T.inSide_comm _ _ _).mp h)) hv
+    · exact (T.inSide_comm _ _ _).mp h
+  · intro hv hu
+    exact T.not_inSide_both hab
+      ⟨(T.inSide_comm _ _ _).mp hua, hv.trans ((T.inSide_comm _ _ _).mp hu)⟩
+
+omit [Fintype X] [DecidableEq X] in
+/-- **单点集连通**（唯一的 walk 是 `nil`）。 -/
+theorem isConnectedSet_singleton (T : Cladogram.{u, u} X) (w : T.V) :
+    IsConnectedSet T.graph ({w} : Set T.V) := by
+  intro u hu v hv
+  rw [Set.mem_singleton_iff] at hu hv
+  subst hu
+  subst hv
+  exact ⟨Walk.nil, by intro z hz; simpa using hz⟩
+
+omit [Fintype X] [DecidableEq X] in
+/-- **度 1 顶点的邻居唯一**（叶只有唯一邻居）。 -/
+theorem eq_of_adj_of_degree_one (T : Cladogram.{u, u} X) {v a b : T.V}
+    (h : T.graph.degree v = 1) (ha : T.graph.Adj v a) (hb : T.graph.Adj v b) : a = b := by
+  obtain ⟨w, -, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp h
+  rw [huniq a ha, huniq b hb]
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **简单路不过叶的「内部」**：`T.leaf x` 既不是起点也不是终点 ⟹ 它不在路的支持集里。
+
+（若 `T.leaf x` 出现在路中间，则路在该点用了两条**不同**的边；但叶的度是 1，
+两条边必是同一端点矛盾 —— 内层 `Walk.recOn` 把「路的第二步」显式展开。） -/
+theorem leaf_notMem_support_of_isPath (T : Cladogram.{u, u} X) {x : X} {u v : T.V}
+    (q : T.graph.Walk u v) (hq : q.IsPath) (hu : u ≠ T.leaf x) (hv : v ≠ T.leaf x) :
+    T.leaf x ∉ q.support := by
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    Cladogram.IsLeaf.degree_eq_one (T := T) (v := T.leaf x) ⟨x, rfl⟩
+  have key : ∀ {a b : T.V} (r : T.graph.Walk a b), r.IsPath → a ≠ T.leaf x →
+      b ≠ T.leaf x → T.leaf x ∉ r.support := by
+    intro a b r
+    refine Walk.recOn (motive := fun a b r => r.IsPath → a ≠ T.leaf x → b ≠ T.leaf x →
+      T.leaf x ∉ r.support) r ?_ ?_
+    · intro a' _ ha' _
+      simp only [Walk.support_nil, List.mem_singleton]
+      exact ha'.symm
+    · intro a' w' b' hadj r' ih hp ha' hb'
+      rw [Walk.support_cons]
+      intro hmem
+      rcases List.mem_cons.mp hmem with heq | hmem'
+      · exact ha' heq.symm
+      · by_cases hw : w' = T.leaf x
+        · subst hw
+          have hnotu : a' ∉ r'.support := ((Walk.cons_isPath_iff hadj r').mp hp).2
+          have hinner : ∀ {c d : T.V} (s : T.graph.Walk c d), s.IsPath → c = T.leaf x →
+              d ≠ T.leaf x → a' ∉ s.support → False := by
+            intro c d s
+            refine Walk.recOn (motive := fun c d s => s.IsPath → c = T.leaf x →
+              d ≠ T.leaf x → a' ∉ s.support → False) s ?_ ?_
+            · intro c' _ hc' hd' _
+              exact hd' hc'
+            · intro c' w2 d' hadj2 s' _ _ hc' hd' hnot
+              have ha2 : T.graph.Adj (T.leaf x) w2 := by rw [← hc']; exact hadj2
+              have hw2 : w2 = a' := eq_of_adj_of_degree_one T hdeg ha2 hadj.symm
+              have hmem2 : a' ∈ s'.support := by
+                rw [← hw2]
+                exact s'.start_mem_support
+              exact hnot (by
+                rw [Walk.support_cons]
+                exact List.mem_cons_of_mem _ hmem2)
+          exact hinner r' ((Walk.cons_isPath_iff hadj r').mp hp).1 rfl hb' hnotu
+        · exact ih ((Walk.cons_isPath_iff hadj r').mp hp).1 hw hb' hmem'
+  exact key q hq hu hv
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★ **叶不是割点**：连通的 `S` 去掉其中的一片叶 `T.leaf x` 仍连通。
+
+**证明**：`S` 连通给出行走在 `S` 里的 walk；用 `Walk.bypass` 约成**简单路**（支持集只减不增），
+再由 `leaf_notMem_support_of_isPath` 该路不含 `T.leaf x`（端点都不是它）⇒ 支持集落在
+`S ∖ {T.leaf x}` 里。 -/
+theorem isConnectedSet_sdiff_leaf (T : Cladogram.{u, u} X) {S : Set T.V}
+    (hS : IsConnectedSet T.graph S) {x : X} (_hx : T.leaf x ∈ S) :
+    IsConnectedSet T.graph (S \ {T.leaf x}) := by
+  intro u hu v hv
+  have huS : u ∈ S := hu.1
+  have hvS : v ∈ S := hv.1
+  have hux : u ≠ T.leaf x := fun h => hu.2 (by simp [h])
+  have hvx : v ≠ T.leaf x := fun h => hv.2 (by simp [h])
+  obtain ⟨p, hp⟩ := hS u huS v hvS
+  have hsub : ∀ w : T.V, w ∈ p.bypass.support → w ∈ S := fun w hw =>
+    hp w (Walk.support_bypass_subset_support p hw)
+  have hnot : T.leaf x ∉ p.bypass.support :=
+    leaf_notMem_support_of_isPath T p.bypass p.bypass_isPath hux hvx
+  refine ⟨p.bypass, fun w hw => ⟨hsub w hw, fun hw' => hnot (hw' ▸ hw)⟩⟩
+
+/-- ★★★ **单字符展示引擎**：`χ` 是 `(2,2,1)` 型（`p` 类 `A` 是**边侧**、`r` 类单元在 `x₀`、
+`q` 类是剩下的二元类），则 `T` 展示 `χ`。
+
+标注：`p` 取在 `a` 侧，`r` 取在 `T.leaf x₀`，`q` 取在「补侧去掉 `T.leaf x₀`」。三个纤维连通性：
+`inSide_isConnectedSet` / `isConnectedSet_singleton` / `isConnectedSet_sdiff_leaf`（＋`compl_inSide`）。 -/
+theorem displaysMultiState_of_side (T : Cladogram.{u, u} X) (χ : X → Fin 3)
+    (p q r : Fin 3) (x0 : X) (A : Finset X) {a b : T.V} (hab : T.graph.Adj a b)
+    (hside : A = T.sideLeaves s(a, b) a) (hx0side : x0 ∉ T.sideLeaves s(a, b) a)
+    (hpq : p ≠ q) (hpr : p ≠ r) (hqr : q ≠ r)
+    (htri : ∀ s : Fin 3, s = p ∨ s = q ∨ s = r)
+    (hx0 : χ x0 = r) (huniq : ∀ x : X, χ x = r → x = x0)
+    (hpA : ∀ x : X, x ∈ A ↔ χ x = p)
+    (hval : ∀ x : X, χ x = p ∨ χ x = q ∨ χ x = r) :
+    DisplaysMultiState T χ := by
+  classical
+  have hside' : ∀ x : X, x ∈ A ↔ T.inSide s(a, b) a (T.leaf x) := by
+    intro x
+    rw [hside, T.mem_sideLeaves_iff_inSide]
+  have hx0notin : ¬ T.inSide s(a, b) a (T.leaf x0) := by
+    intro hin
+    exact hx0side ((T.mem_sideLeaves_iff_inSide).mpr hin)
+  let ℓ : T.V → Fin 3 :=
+    fun v => if T.inSide s(a, b) a v then p else if v = T.leaf x0 then r else q
+  have hℓv : ∀ v : T.V,
+      ℓ v = if T.inSide s(a, b) a v then p else if v = T.leaf x0 then r else q := fun _ => rfl
+  have hp_fiber : {v : T.V | ℓ v = p} = {v : T.V | T.inSide s(a, b) a v} := by
+    ext v
+    change (ℓ v = p) ↔ T.inSide s(a, b) a v
+    rw [hℓv v]
+    by_cases hin : T.inSide s(a, b) a v
+    · rw [ite_eq_left hin]
+      exact ⟨fun _ => hin, fun _ => rfl⟩
+    · by_cases hw : v = T.leaf x0
+      · rw [ite_eq_right hin, ite_eq_left hw]
+        exact ⟨fun h => absurd h.symm hpr, fun h => absurd h hin⟩
+      · rw [ite_eq_right hin, ite_eq_right hw]
+        exact ⟨fun h => absurd h.symm hpq, fun h => absurd h hin⟩
+  have hr_fiber : {v : T.V | ℓ v = r} = {T.leaf x0} := by
+    ext v
+    change (ℓ v = r) ↔ v = T.leaf x0
+    rw [hℓv v]
+    constructor
+    · intro hv
+      by_cases hin : T.inSide s(a, b) a v
+      · rw [ite_eq_left hin] at hv
+        exact absurd hv hpr
+      · by_cases hw : v = T.leaf x0
+        · exact hw
+        · rw [ite_eq_right hin, ite_eq_right hw] at hv
+          exact absurd hv hqr
+    · intro hv
+      subst hv
+      rw [ite_eq_right hx0notin, ite_eq_left rfl]
+  have hq_fiber : {v : T.V | ℓ v = q} = {v : T.V | ¬ T.inSide s(a, b) a v} \ {T.leaf x0} := by
+    ext v
+    change (ℓ v = q) ↔ (¬ T.inSide s(a, b) a v ∧ v ≠ T.leaf x0)
+    rw [hℓv v]
+    constructor
+    · intro hv
+      have hnin : ¬ T.inSide s(a, b) a v := by
+        intro hin
+        rw [ite_eq_left hin] at hv
+        exact absurd hv hpq
+      have hw : v ≠ T.leaf x0 := by
+        intro hw
+        rw [ite_eq_right hnin, ite_eq_left hw] at hv
+        exact absurd hv hqr.symm
+      exact ⟨hnin, hw⟩
+    · rintro ⟨hnin, hw⟩
+      rw [ite_eq_right hnin, ite_eq_right hw]
+  refine ⟨ℓ, ?_, ?_⟩
+  · intro x
+    rw [hℓv (T.leaf x)]
+    by_cases hxA : x ∈ A
+    · have hin : T.inSide s(a, b) a (T.leaf x) := (hside' x).mp hxA
+      rw [ite_eq_left hin]
+      exact ((hpA x).mp hxA).symm
+    · have hnin : ¬ T.inSide s(a, b) a (T.leaf x) := fun hin => hxA ((hside' x).mpr hin)
+      by_cases hx : x = x0
+      · subst hx
+        rw [ite_eq_right hnin, ite_eq_left rfl]
+        exact hx0.symm
+      · have hleaf : T.leaf x ≠ T.leaf x0 := fun h => hx (T.leaf.injective h)
+        rw [ite_eq_right hnin, ite_eq_right hleaf]
+        have hq : χ x = q := by
+          rcases hval x with h | h | h
+          · exact absurd ((hpA x).mpr h) hxA
+          · exact h
+          · exact absurd (huniq x h) hx
+        exact hq.symm
+  · intro s
+    rcases htri s with rfl | rfl | rfl
+    · rw [hp_fiber]
+      exact inSide_isConnectedSet T s(a, b) a
+    · rw [hq_fiber]
+      have hcompl : {v : T.V | ¬ T.inSide s(a, b) a v} = {v : T.V | T.inSide s(a, b) b v} :=
+        compl_inSide T hab (T.inSide_self s(a, b) a)
+      rw [hcompl]
+      refine isConnectedSet_sdiff_leaf T (x := x0) (inSide_isConnectedSet T s(a, b) b) ?_
+      rw [← hcompl]
+      exact hx0notin
+    · rw [hr_fiber]
+      exact isConnectedSet_singleton T (T.leaf x0)
+
+/-- 把「边侧」的两种定向合成一条：`A` 是边 `s(a,b)` 的 `a` 侧**或** `b` 侧皆可。 -/
+theorem displaysMultiState_of_side_or (T : Cladogram.{u, u} X) (χ : X → Fin 3)
+    (p q r : Fin 3) (x0 : X) (A : Finset X) {a b : T.V} (hab : T.graph.Adj a b)
+    (hside : A = T.sideLeaves s(a, b) a ∨ A = T.sideLeaves s(a, b) b)
+    (hx0side : x0 ∉ A)
+    (hpq : p ≠ q) (hpr : p ≠ r) (hqr : q ≠ r)
+    (htri : ∀ s : Fin 3, s = p ∨ s = q ∨ s = r)
+    (hx0 : χ x0 = r) (huniq : ∀ x : X, χ x = r → x = x0)
+    (hpA : ∀ x : X, x ∈ A ↔ χ x = p)
+    (hval : ∀ x : X, χ x = p ∨ χ x = q ∨ χ x = r) :
+    DisplaysMultiState T χ := by
+  rcases hside with h | h
+  · exact displaysMultiState_of_side T χ p q r x0 A hab h (by rw [← h]; exact hx0side) hpq hpr hqr
+      htri hx0 huniq hpA hval
+  · refine displaysMultiState_of_side T χ p q r x0 A hab.symm ?_ ?_ hpq hpr hqr htri hx0 huniq
+      hpA hval
+    · rw [← Sym2.eq_swap]; exact h
+    · rw [← Sym2.eq_swap, ← h]; exact hx0side
+
+/-- `IsSideOf` 给出「边 ＋ 端点定向」的形式（两种定向取其一）。 -/
+theorem exists_side_disj_of_isSideOf (T : Cladogram.{u, u} X) {A : Finset X}
+    (h : T.IsSideOf A) :
+    ∃ (a b : T.V), ∃ (_ : T.graph.Adj a b),
+      A = T.sideLeaves s(a, b) a ∨ A = T.sideLeaves s(a, b) b := by
+  obtain ⟨a, b, hab, w, hw⟩ := h
+  refine ⟨a, b, hab, ?_⟩
+  rcases T.inSide_or_inSide hab (x := w) with h' | h'
+  · exact Or.inl (by rw [hw, T.sideLeaves_eq_of_inSide h'])
+  · exact Or.inr (by rw [hw, T.sideLeaves_eq_of_inSide h'])
+
+end MultiStateTree
+
+open MultiStateTree in
+/-- ★★★ **`F₃` 的第 0、1 个字符同时被一棵 `Cladogram (Fin 5)` 展示**（叶侧 `{1,4}` 与 `{0,3}`）。 -/
+theorem exists_cladogram_displays_fitchMeachamF3_01 :
+    ∃ T : Cladogram.{0, 0} (Fin 5),
+      DisplaysMultiState T (fitchMeachamF3 0) ∧ DisplaysMultiState T (fitchMeachamF3 1) := by
+  have hpair : ∀ A ∈ ({{1, 4}, {0, 3}} : Finset (Finset (Fin 5))),
+      ∀ B ∈ ({{1, 4}, {0, 3}} : Finset (Finset (Fin 5))), BinaryCompatible A B := by
+    intro A hA B hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB
+    rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> (unfold BinaryCompatible; decide)
+  obtain ⟨T, hT⟩ := exists_cladogram_of_pairwise_binaryCompatible
+    ({{1, 4}, {0, 3}} : Finset (Finset (Fin 5))) hpair (by decide)
+  have h1 : T.IsSideOf ({1, 4} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  have h2 : T.IsSideOf ({0, 3} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  obtain ⟨a1, b1, hab1, hd1⟩ := exists_side_disj_of_isSideOf T h1
+  obtain ⟨a2, b2, hab2, hd2⟩ := exists_side_disj_of_isSideOf T h2
+  exact ⟨T,
+    displaysMultiState_of_side_or T (fitchMeachamF3 0) 1 0 2 3 {1, 4} hab1 hd1
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide),
+    displaysMultiState_of_side_or T (fitchMeachamF3 1) 2 0 1 4 {0, 3} hab2 hd2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide)⟩
+
+open MultiStateTree in
+/-- ★★★ **`F₃` 的第 0、2 个字符同时被一棵 `Cladogram (Fin 5)` 展示**（叶侧 `{0,2}` 与 `{1,3}`）。 -/
+theorem exists_cladogram_displays_fitchMeachamF3_02 :
+    ∃ T : Cladogram.{0, 0} (Fin 5),
+      DisplaysMultiState T (fitchMeachamF3 0) ∧ DisplaysMultiState T (fitchMeachamF3 2) := by
+  have hpair : ∀ A ∈ ({{0, 2}, {1, 3}} : Finset (Finset (Fin 5))),
+      ∀ B ∈ ({{0, 2}, {1, 3}} : Finset (Finset (Fin 5))), BinaryCompatible A B := by
+    intro A hA B hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB
+    rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> (unfold BinaryCompatible; decide)
+  obtain ⟨T, hT⟩ := exists_cladogram_of_pairwise_binaryCompatible
+    ({{0, 2}, {1, 3}} : Finset (Finset (Fin 5))) hpair (by decide)
+  have h1 : T.IsSideOf ({0, 2} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  have h2 : T.IsSideOf ({1, 3} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  obtain ⟨a1, b1, hab1, hd1⟩ := exists_side_disj_of_isSideOf T h1
+  obtain ⟨a2, b2, hab2, hd2⟩ := exists_side_disj_of_isSideOf T h2
+  exact ⟨T,
+    displaysMultiState_of_side_or T (fitchMeachamF3 0) 0 1 2 3 {0, 2} hab1 hd1
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide),
+    displaysMultiState_of_side_or T (fitchMeachamF3 2) 0 1 2 2 {1, 3} hab2 hd2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide)⟩
+
+open MultiStateTree in
+/-- ★★★ **`F₃` 的第 1、2 个字符同时被一棵 `Cladogram (Fin 5)` 展示**（叶侧 `{1,2}` 与 `{0,4}`）。 -/
+theorem exists_cladogram_displays_fitchMeachamF3_12 :
+    ∃ T : Cladogram.{0, 0} (Fin 5),
+      DisplaysMultiState T (fitchMeachamF3 1) ∧ DisplaysMultiState T (fitchMeachamF3 2) := by
+  have hpair : ∀ A ∈ ({{1, 2}, {0, 4}} : Finset (Finset (Fin 5))),
+      ∀ B ∈ ({{1, 2}, {0, 4}} : Finset (Finset (Fin 5))), BinaryCompatible A B := by
+    intro A hA B hB
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hA hB
+    rcases hA with rfl | rfl <;> rcases hB with rfl | rfl <;> (unfold BinaryCompatible; decide)
+  obtain ⟨T, hT⟩ := exists_cladogram_of_pairwise_binaryCompatible
+    ({{1, 2}, {0, 4}} : Finset (Finset (Fin 5))) hpair (by decide)
+  have h1 : T.IsSideOf ({1, 2} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  have h2 : T.IsSideOf ({0, 4} : Finset (Fin 5)) := hT _ (by simp) (by decide) (by decide)
+  obtain ⟨a1, b1, hab1, hd1⟩ := exists_side_disj_of_isSideOf T h1
+  obtain ⟨a2, b2, hab2, hd2⟩ := exists_side_disj_of_isSideOf T h2
+  exact ⟨T,
+    displaysMultiState_of_side_or T (fitchMeachamF3 1) 0 2 1 4 {1, 2} hab1 hd1
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide),
+    displaysMultiState_of_side_or T (fitchMeachamF3 2) 1 0 2 2 {0, 4} hab2 hd2
+      (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+      (by decide)⟩
+
+/-- ★★★★★ **`MultiStatePairwiseInsufficiencyGap` 的「两两可解」半**：`F₃` 的任两个字符
+都被某一棵 `Cladogram (Fin 5)` 同时展示。 -/
+theorem pairwise_displays_fitchMeachamF3 :
+    ∀ i j : Fin 3, i ≠ j → ∃ T : Cladogram.{0, 0} (Fin 5),
+      DisplaysMultiState T (fitchMeachamF3 i) ∧ DisplaysMultiState T (fitchMeachamF3 j) := by
+  intro i j hij
+  fin_cases i <;> fin_cases j
+  · exact absurd rfl hij
+  · exact exists_cladogram_displays_fitchMeachamF3_01
+  · exact exists_cladogram_displays_fitchMeachamF3_02
+  · obtain ⟨T, h1, h2⟩ := exists_cladogram_displays_fitchMeachamF3_01
+    exact ⟨T, h2, h1⟩
+  · exact absurd rfl hij
+  · exact exists_cladogram_displays_fitchMeachamF3_12
+  · obtain ⟨T, h1, h2⟩ := exists_cladogram_displays_fitchMeachamF3_02
+    exact ⟨T, h2, h1⟩
+  · obtain ⟨T, h1, h2⟩ := exists_cladogram_displays_fitchMeachamF3_12
+    exact ⟨T, h2, h1⟩
+  · exact absurd rfl hij
+
+/-- ★★★★★★ **`MultiStatePairwiseInsufficiencyGap` 收口**（`M := fitchMeachamF3`）：
+两两可解（`pairwise_displays_fitchMeachamF3`）＋整体不可解（`not_exists_displays_all_fitchMeachamF3`）。 -/
+theorem MultiStatePairwiseInsufficiencyGap_holds : MultiStatePairwiseInsufficiencyGap :=
+  ⟨fitchMeachamF3, pairwise_displays_fitchMeachamF3, not_exists_displays_all_fitchMeachamF3⟩
