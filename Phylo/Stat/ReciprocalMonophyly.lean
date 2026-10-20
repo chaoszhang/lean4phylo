@@ -135,7 +135,10 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 * **§3**（`def` 层）：论文各定理闭形式的**忠实转写**（11 个 `def`）；
 * **§4**：这些闭形式之间的**算术恒等式**（真证，无 `sorry`）＋ 论文三个数值锚点；
 * **§5**：Prop 6.5 的**树层**内容（与库内 `Cladogram.IsClade` 接合）；
-* **§6**：**显式缺口**（概率层，3 个 `def … : Prop`，未被证、也未被引用）。
+* **§6**：**显式缺口**（概率层，3 个 `def … : Prop`，未被证、也未被引用）；
+* **§8**：一般 `n` 的**律容器** `MSCTreeLaw n`（有限概率空间 ＋ 树映射 ＋ 概率公理）
+  ＋ **`n = 4` 的 YHK 律实例**（三棵 quartet 树等权 `1/3`，★★★ `yhkLawFour`）
+  ＋ 缺口 `YHKClanLawGap` 在 **`n = 4` 的整条**（★★★ `yhkClanLawGap_four_slice`）。
 
 ## 5. 诚实边界（**没做到的**，逐条）
 
@@ -143,7 +146,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 |---|---|
 | 闭形式的**数值正确性** | ✅ 脚本 `n ≤ 6` 全穷举复核（§3） |
 | 闭形式之间的**算术恒等式** | ✅ 已证 4 条：`clanProb_eq_inclusionExclusion`（Lemma 6.2 ⟸ Lemma 6.1 的包含-排除）、`pnHat_eq_pn_mul`（Lemma 4.4 ⟸ 4.2 ⊗ 4.3，论文第 398–444 行的证明）、`qnExhaustive_eq_clanProb`（Theorem 6.3(i) ⟸ Lemma 6.2）、`clanProb_eq_unfolded`；另有 `choose_mul_pn`（Lemma 4.1 **右端**的算术核对）、`qnExhaustive_two_two`、`qn_six_two_two`、`qTriple_two_two_two`、`qConvex_two_two_two` 等锚点 |
-| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条） |
+| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条 ＋ §8 的 **`n = 4` 整条**） |
 | **`qn` 是「两个 clan」的概率**（Theorem 6.3 的概率层） | ❌ **未证** —— 缺口 `TwoClanLawGap`（§6） |
 | **`q` 是「三个 clan」的概率**（Theorem 6.4 的概率层） | ❌ **未证** —— 缺口 `TripleClanLawGap`（§6） |
 | **Theorem 5.1**（一般 `k` 个 clade，含指定 `Tk`） | ❌ **未落地**（连闭形式都依赖 `Iv(Ai)` 这套 `Tk` 上的指示变量；本库无「内部顶点 + 后代叶集」的层面对象） |
@@ -152,7 +155,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 | **有根树 clade** 的库内对象 | ❌ **不存在**：库内 `Cladogram` 是无根载体、`IsClade` 是 clan 语义，故 Theorem 4.5（有根 clade）**没有**库内对应物 |
 | Prop 6.5 的**树层**内容 | ⚠️ **部分**：`isClade_compl`（补集对称）、`union_eq_univ_of_isClade`（第 1294–1295 行的**必要性**）、`isClade_sdiff_inter_iff`（第 1296–1297 行）、`isClade_and_compl_iff`（第 1291–1292 行）、`disjoint_compl_of_subset` 已证；**未**把 Prop 6.5 的两条情形组合成单一 `theorem` |
 | Prop 6.5 的**概率层** | ❌ **未证**（树层部分见上一行） |
-| `x = 4` 之外的**概率层**桥 | ❌ 只有 `qnExhaustive 2 2 = mscConcordant 0` 这一条**数值**桥（§4） |
+| `x = 4` 之外的**概率层**桥 | ⚠️ **部分**：`qnExhaustive 2 2 = mscConcordant 0` 这一条**数值**桥（§4）；`n = 4` 的**整条概率层**已由 §8 落地（★★★ `yhkClanLawGap_four_slice`） |
 -/
 
 noncomputable section
@@ -909,17 +912,15 @@ theorem isClade_ofCompatible_pair {α : Type} [Fintype α] [DecidableEq α] [Non
 * **已交付的无条件切片（§5.2）**：★★★ `yhkClanLawGap_trivial_card_slice`（**任意** `n`、
   **任意**概率空间与树族，`A.card ∈ {1, n−1}` 时等式恒成立；不需要 YHK 律、不需要 `prob ≥ 0`）
   ＋ ★★★ `yhkClanLawGap_three_slice`（缺口 `∃` 从句在 `n = 3` 上**完整成立**）。
-* **★ 新发现（留给下一泳道）：`n = 4` 那一条其实**可证**，卡点是**枚举的可判定性**，不是数学** ——
-  库内 `Cladogram.ofCompatibleSplits`（`Phylo/CladogramBuild.lean`）能**造出** 3 棵 quartet 树
-  （族取 `{splitOf {0,1}, swap}`、`{splitOf {0,2}, swap}`、`{splitOf {0,3}, swap}`），
-  其 clade 集由本节新引理（本泳道试写的 `isClade_ofCompatible_pair`）完全刻画为
-  「`A` 是某个二元子集或其补，或 `A` 平凡」；均匀混合 3 棵即得 `clanProb 4 2 = 1/3`
-  （`Fin 4` 的 6 个二元子集各在**恰好 1 棵**里成 clade）。
-  **实测卡点**：`Finset.filter`（谓词含 `IsClade`）的 `DecidablePred` 落到
-  `Classical.propDecidable`，`decide` 在 `Finset.card` 上**不归约**（`beq` 停在
-  `{j | ⋯}.card.beq 1`）⇒ 需先把滤子改写成**可计算谓词**（`Finset.filter_congr` ＋ 显式
-  `Decidable` 实例），或按 6 个二元子集显式 `fin_cases` 分情形。补齐这件器材后
-  `n = 4` 的切片应是纯机械工作。 -/
+* **★ W26 泳道 a 判定（2026-10-21）：`n = 4` 的**整条**已落地**（§8）—— 本 `def` **一字未改** ✓。
+  交付 ★★★ `yhkClanLawGap_four_slice`：缺口 `∃` 从句在 `n = 4` 上**完整成立**
+  （`Ω = Fin 3`、`prob ≡ 1/3`、3 棵 quartet 树等权；`A.card = 2` 时概率 `= 1/3 = clanProb 4 2`）。
+  W25 认定的卡点（`Finset.filter` 的 `DecidablePred` 落到 `Classical.propDecidable`、
+  `decide` 在 `Finset.card` 上不归约）**被绕过而非被解决**：不求值滤子，改用
+  **`Finset.ext` ＋ `∃!`**（★★★ `existsUnique_qPair`：`Fin 4` 的每个二元子集**恰在 1 棵**
+  quartet 树里成 clan，★★★ `isClade_qTree_iff`）把滤子结构性化成单点集，故**不需要**
+  「可计算谓词」这件器材。容器 `MSCTreeLaw n`（§8，一般 `n`）＋ `n = 4` 的律实例
+  ★★★ `yhkLawFour` 同时交付；一般 `n` 仍缺 §8.4 的两件具名器材。 -/
 def YHKClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
@@ -1135,5 +1136,372 @@ theorem tripleClanLawGap_nonempty_three_slice :
       hclade A3 starTree3 hne3 e3⟩
   rw [Finset.filter_true_of_mem (fun ω _ => hpred ω), e1, e2, e3, qTriple_one_one_one]
   simp
+
+/-! ## 8. 杠杆器材：一般 `n` 的律容器 `MSCTreeLaw n` ＋ `n = 4` 的 YHK 律实例
+
+### 8.1 为什么需要容器 —— 以及它**不是**什么
+
+`YHKClanLawGap`（§6）的 `∃ Ω, prob, tree` 三个槽位在库里**没有可命名的对象**：
+每次要谈「YHK 律下 `A` 是 clan 的概率」，都只能在定理里现写
+`{Ω : Type} [Fintype Ω] (prob : Ω → ℝ) (h : ∑ ω, prob ω = 1) (tree : …)`。本节把这组数据收成
+**可命名、可传参、可构造**的结构体：
+
+* `MSCTreeLaw n` ＝ 有限概率空间 `Ω` ＋ `prob : Ω → ℝ`（**非负** ＋ **全概率 `1`**）＋
+  `tree : Ω → Cladogram (Fin n)`，即「`n` 叶**无根**拓扑上的一个概率律」；
+* `MSCTreeLaw.clanEvent L A` ＝「`A` 是 `L` 的随机树的 clan」的**事件概率**（有限和，不是测度）。
+
+⚠️ **纪律（防止把结论写进假设）**：`MSCTreeLaw` 只装**数据与概率公理**（`0 ≤ prob`、`∑ prob = 1`），
+**不装**「`clanEvent A = clanProb n A.card`」这类断言 —— 那正是缺口要证的东西。
+故本容器**不能**用来假设缺口成立；它的用途是让 `n = 4` 的 YHK 律**被构造出来**（§8.3），
+而不是被假定存在。
+
+### 8.2 容器上的**一般 `n`** 性质（无假设）
+
+`clanProb` 是闭形式（§3），`clanEvent` 是概率；两者在**平凡基数**上对**任意**律相等
+（★★★ `clanEvent_eq_clanProb_of_trivial_card`）：`A` 是单点集或单点集的补 ⇒ 「`A` 是 clan」
+是**必然事件** ⇒ 左端 `= ∑ prob = 1`，右端由 ★★ `clanProb_one` / ★★ `clanProb_pred` 也是 `1`。
+这与 §5.2 的 `yhkClanLawGap_trivial_card_slice` 是**同一件事的容器版**（那条写成裸 `prob`/`tree`）。
+
+### 8.3 `n = 4`：把 YHK 律**造出来**
+
+文献 `:991-996` 指出「YHK 是**有根**过程，而在**无根**树上诱导出概率」；`Fin 4` 的无根拓扑只有
+3 棵 quartet 树，且 `A | X−A` 的 6 个二元 split 在 3 棵树间**恰好各出现一次**（每棵 two-sided
+split 给出两个互补的二元子集）。故 `n = 4` 的 YHK/Kingman 律是**均匀三条**（各 `1/3`）：
+
+* 三棵树：★★ `qTree i`（`i = 0,1,2`），由 ★★★ `Cladogram.ofCompatibleSplits` 用族
+  `{qSplit i, (qSplit i).swap}` 造出，`qSplit i` 的两侧是 `{0, 1+i}` 与其补
+  （★★ `qPair`、★★ `sideA_qSplit`、★★ `sideB_qSplit`）；
+* 「`A` 是第 `i` 棵的 clan」**完全刻画**为 `A = qPair i ∨ A = (qPair i)ᶜ`（★★★ `isClade_qTree_iff`，
+  由 §5.3 的 ★★★ `isClade_ofCompatible_pair` 去掉平凡支）；
+* 于是 `Fin 4` 的**每个**二元子集**恰在 1 棵**里成 clan（★★★ `existsUnique_qPair`）⇒
+  事件概率 `= 1/3 = clanProb 4 2`（★★★ `qTree_clanEvent_two`、★★★ `yhkLawFour_clanEvent_two`）。
+
+**W25 卡点的处理**：`Finset.filter`（谓词含 `IsClade`）的 `DecidablePred` 落到
+`Classical.propDecidable`，`decide` 在 `Finset.card` 上**不归约**。本节的解法是
+**不求值滤子** —— 用 `Finset.ext` ＋ `∃!` 把滤子**结构性地**化成单点集 `{i₀}`（不走 `decide`），
+故**不需要**「把谓词改成可计算谓词」这件器材。
+
+### 8.4 边界（不得夸大）
+
+* 本节**没有**证 `YHKClanLawGap`：那条是 `∀ n`，一般 `n` 仍缺**两件具名器材**：
+  ① **一般 `n` 的 YHK 权重函数**（`n` 叶无根拓扑上的 `2^{n−1}/(n!·∏…)` 型权；库内最近的是
+  `MSCKingman.root_topology_class_prob`（仅 `Fin 4`）与 `MSCProof.mscFreqFin4`，都**不是**一般 `n`）；
+  ② **有根 → 无根桥**（`Cladogram` 无 root；`Fin 4` 时由「3 棵等权」一步跨过，一般 `n` 不行）。
+* 已落地的是缺口的**整条 `n = 4`**（★★★ `yhkClanLawGap_four_slice`）与 `n = 3`（§5.2）。 -/
+
+/-- **`n` 叶无根拓扑上的一个概率律**（器材）：有限概率空间 ＋ 树映射 ＋ 概率公理。
+
+★ 各字段的含义与**纪律**见 §8.1：本结构**只装数据**，不装任何「事件概率 = 闭形式」的断言。 -/
+structure MSCTreeLaw (n : ℕ) where
+  /-- 样本空间（有限）。 -/
+  Ω : Type
+  /-- `Ω` 的有限性（作为实例登记，便于直接写 `∑ ω`）。 -/
+  [fintype : Fintype Ω]
+  /-- 概率质量函数。 -/
+  prob : Ω → ℝ
+  /-- 非负性。 -/
+  prob_nonneg : ∀ ω, 0 ≤ prob ω
+  /-- 全概率为 `1`。 -/
+  prob_sum : ∑ ω, prob ω = 1
+  /-- 每点是一棵 `n` 叶**无根**树（`Cladogram` 即无根载体；其 `IsClade` 是学界的 clan）。 -/
+  tree : Ω → Cladogram.{0, 0} (Fin n)
+
+/-- 把 `MSCTreeLaw.fintype` 登记为全局实例：`L : MSCTreeLaw n` 的 `L.Ω` 上可直接写 `∑ ω`。 -/
+instance {n : ℕ} (L : MSCTreeLaw n) : Fintype L.Ω := L.fintype
+
+namespace MSCTreeLaw
+
+variable {n : ℕ} (L : MSCTreeLaw n)
+
+/-- **`A` 是 `L` 的随机树的 clan** 的**事件概率**（§8.1 的 `clanEvent`）。 -/
+noncomputable def clanEvent (A : Finset (Fin n)) : ℝ :=
+  ∑ ω ∈ (Finset.univ : Finset L.Ω).filter (fun ω => (L.tree ω).IsClade A), L.prob ω
+
+/-- ★★ **`∅` 的事件概率恒 `0`**（任意 `n`、任意律）：`∅` 永远不是 clan（★★ `not_isClade_empty`）。 -/
+theorem clanEvent_empty : L.clanEvent (∅ : Finset (Fin n)) = 0 := by
+  have h : (Finset.univ : Finset L.Ω).filter
+      (fun ω => (L.tree ω).IsClade (∅ : Finset (Fin n))) = ∅ :=
+    Finset.filter_false_of_mem (fun ω _ hc => not_isClade_empty (L.tree ω) hc)
+  simp only [clanEvent, h, Finset.sum_empty]
+
+/-- ★★ **单点集的事件概率恒 `1`**（`n ≥ 2`、任意律）：单点集在任何树上都是 clan。 -/
+theorem clanEvent_singleton (hn : 2 ≤ n) (x : Fin n) :
+    L.clanEvent ({x} : Finset (Fin n)) = 1 := by
+  have : Nontrivial (Fin n) :=
+    ⟨⟨0, by omega⟩, ⟨1, by omega⟩, by
+      intro h
+      exact absurd (Fin.mk.inj h) (by omega)⟩
+  have h : (Finset.univ : Finset L.Ω).filter
+      (fun ω => (L.tree ω).IsClade ({x} : Finset (Fin n))) = Finset.univ :=
+    Finset.filter_true_of_mem (fun ω _ => Cladogram.exists_isSplitOf_singleton (L.tree ω) x)
+  rw [clanEvent, h, L.prob_sum]
+
+/-- ★★ **单点集的补的事件概率恒 `1`**（`n ≥ 2`、任意律）：由 ★★ `isClade_compl` 与上一行。 -/
+theorem clanEvent_compl_singleton (hn : 2 ≤ n) (x : Fin n) :
+    L.clanEvent (({x} : Finset (Fin n))ᶜ) = 1 := by
+  have : Nontrivial (Fin n) :=
+    ⟨⟨0, by omega⟩, ⟨1, by omega⟩, by
+      intro h
+      exact absurd (Fin.mk.inj h) (by omega)⟩
+  have h : (Finset.univ : Finset L.Ω).filter
+      (fun ω => (L.tree ω).IsClade (({x} : Finset (Fin n))ᶜ)) = Finset.univ :=
+    Finset.filter_true_of_mem (fun ω _ =>
+      (isClade_compl (L.tree ω) {x}).mpr (Cladogram.exists_isSplitOf_singleton (L.tree ω) x))
+  rw [clanEvent, h, L.prob_sum]
+
+/-- ★★★ **平凡基数上「概率 = 闭形式」对任意律成立**（`A.card ∈ {1, n−1}`）。
+
+这是 §5.2 的 ★★★ `yhkClanLawGap_trivial_card_slice` 的**容器版**：
+**不需要** YHK 律，也不需要 `0 ≤ prob`（本定理因此比缺口的那一侧更强）。 -/
+theorem clanEvent_eq_clanProb_of_trivial_card (hn : 2 ≤ n) (A : Finset (Fin n))
+    (hcard : A.card = 1 ∨ A.card = n - 1) : L.clanEvent A = clanProb n A.card := by
+  rcases hcard with h1 | h1
+  · obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp h1
+    rw [clanEvent_singleton L hn x, Finset.card_singleton, clanProb_one hn]
+  · have hc : Aᶜ.card = 1 := by
+      rw [Finset.card_compl, Fintype.card_fin, h1]
+      omega
+    obtain ⟨x, hx⟩ := Finset.card_eq_one.mp hc
+    have hA : A = (({x} : Finset (Fin n))ᶜ) := by rw [← hx, compl_compl]
+    rw [hA, clanEvent_compl_singleton L hn x, Finset.card_compl, Finset.card_singleton,
+      Fintype.card_fin, clanProb_pred hn]
+
+end MSCTreeLaw
+
+/-! ### 8.5 `n = 4` 的三棵 quartet 树与 `1/3` 律 -/
+
+/-- ★★ **第 `i` 个二元 split 的一侧**：`{0, i+1}`（`i = 0,1,2` 给出 `{0,1}`、`{0,2}`、`{0,3}`）。 -/
+def qPair (i : Fin 3) : Finset (Fin 4) := {0, Fin.succ i}
+
+/-- `(0 : Fin 4) ≠ Fin.succ i`（`Fin.succ` 的值是 `i.val + 1`）。 -/
+theorem zero_ne_succ_fin4 (i : Fin 3) : (0 : Fin 4) ≠ Fin.succ i := by
+  intro h
+  have h' := congrArg Fin.val h
+  simp only [Fin.val_zero, Fin.val_succ] at h'
+  omega
+
+/-- `qPair` 的成员刻画。 -/
+theorem mem_qPair (i : Fin 3) (x : Fin 4) : x ∈ qPair i ↔ x = 0 ∨ x = Fin.succ i := by
+  simp [qPair]
+
+/-- ★★ **每个 `qPair i` 恰有 `2` 个元素**。 -/
+theorem card_qPair (i : Fin 3) : (qPair i).card = 2 := by
+  simp [qPair, zero_ne_succ_fin4 i]
+
+theorem qPair_nonempty (i : Fin 3) : (qPair i).Nonempty :=
+  Finset.card_pos.mp (by rw [card_qPair]; norm_num)
+
+/-- ★★ **`qPair i` 的补也恰有 `2` 个元素**（`Fin 4` 的互补二元子集）。 -/
+theorem card_compl_qPair (i : Fin 3) : ((qPair i)ᶜ : Finset (Fin 4)).card = 2 := by
+  rw [Finset.card_compl, Fintype.card_fin, card_qPair]
+
+theorem compl_qPair_nonempty (i : Fin 3) : ((qPair i)ᶜ : Finset (Fin 4)).Nonempty :=
+  Finset.card_pos.mp (by rw [card_compl_qPair]; norm_num)
+
+/-- ★★ **`0` 不在任何 `qPair i` 的补里**（`0 ∈ qPair i`）。这条是 `∃!` 的**唯一性**支点。 -/
+theorem mem_compl_qPair_zero (i : Fin 3) : (0 : Fin 4) ∉ (qPair i)ᶜ := by
+  simp [qPair]
+
+/-- ★★ **第 `i` 条 quartet split**：`{0, i+1} | 其补`（由 ★★ `splitOf` 造）。 -/
+noncomputable def qSplit (i : Fin 3) : Split (Fin 4) :=
+  splitOf (qPair i) (qPair_nonempty i) (compl_qPair_nonempty i)
+
+theorem sideA_qSplit (i : Fin 3) : (qSplit i).sideA = qPair i := by
+  simp [qSplit]
+
+theorem sideB_qSplit (i : Fin 3) : (qSplit i).sideB = (qPair i)ᶜ := by
+  simp [qSplit]
+
+/-- ★★ **第 `i` 条 quartet split 非平凡**（两侧各 `2` 叶）。 -/
+theorem qSplit_nontrivial (i : Fin 3) :
+    2 ≤ (qSplit i).sideA.card ∧ 2 ≤ (qSplit i).sideB.card := by
+  rw [sideA_qSplit, sideB_qSplit, card_qPair, card_compl_qPair]
+  exact ⟨le_refl 2, le_refl 2⟩
+
+/-- ★★★ **第 `i` 棵 quartet 树**：由族 `{qSplit i, (qSplit i).swap}` 造（§5.3 器材的直接用例）。 -/
+noncomputable def qTree (i : Fin 3) : Cladogram.{0, 0} (Fin 4) :=
+  Cladogram.ofCompatibleSplits {qSplit i, (qSplit i).swap} 0
+    (compatible_pair_swap (qSplit i)) (nontrivial_pair_swap (qSplit_nontrivial i))
+    (swap_closed_pair_swap (qSplit i)) (by decide : 3 ≤ Fintype.card (Fin 4))
+
+/-- ★★★ **`qTree i` 的 clan 集被完全刻画**：`A`（`card = 2`）是第 `i` 棵的 clan
+⟺ `A` 就是 `qPair i` 或它的补。
+
+由 §5.3 的 ★★★ `isClade_ofCompatible_pair` 去掉两个「平凡」支（`card = 2` 排除单点集与其补）。 -/
+theorem isClade_qTree_iff (i : Fin 3) (A : Finset (Fin 4)) (hA : A.card = 2) :
+    (qTree i).IsClade A ↔ A = qPair i ∨ A = (qPair i)ᶜ := by
+  have h := isClade_ofCompatible_pair (s := qSplit i) (ρ := (0 : Fin 4))
+    (hn := qSplit_nontrivial i) (h3 := (by decide : 3 ≤ Fintype.card (Fin 4))) A
+  have h' : (qTree i).IsClade A ↔
+      A = qPair i ∨ A = (qPair i)ᶜ ∨ (∃ x : Fin 4, A = {x}) ∨ (∃ x : Fin 4, A = {x}ᶜ) := by
+    simp only [qTree, qSplit]
+    exact h
+  rw [h']
+  constructor
+  · rintro (h1 | h1 | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · exact Or.inl h1
+    · exact Or.inr h1
+    · exfalso
+      rw [hx, Finset.card_singleton] at hA
+      omega
+    · exfalso
+      rw [hx, Finset.card_compl, Finset.card_singleton, Fintype.card_fin] at hA
+      omega
+  · rintro (h1 | h1)
+    · exact Or.inl h1
+    · exact Or.inr (Or.inl h1)
+
+/-- ★★ **`qPair` 是单射**（`0` 固定、`Fin.succ` 单射）。 -/
+theorem qPair_injective : Function.Injective qPair := by
+  intro i j h
+  have hmem : Fin.succ i ∈ qPair j := by rw [← h]; simp [qPair]
+  rcases (mem_qPair j (Fin.succ i)).mp hmem with h0 | hs
+  · exact absurd h0 (zero_ne_succ_fin4 i).symm
+  · exact Fin.succ_inj.mp hs
+
+/-- ★★ **`0 ∈ A` 且 `card A = 2` ⇒ `A = qPair i` 对某个 `i`**（`A.erase 0` 是单点集）。 -/
+theorem exists_qPair_of_mem_zero {A : Finset (Fin 4)} (hA : A.card = 2)
+    (h0 : (0 : Fin 4) ∈ A) : ∃ i : Fin 3, A = qPair i := by
+  have herase : (A.erase 0).card = 1 := by
+    rw [Finset.card_erase_of_mem h0, hA]
+  obtain ⟨x, hx⟩ := Finset.card_eq_one.mp herase
+  have hA' : A = {0, x} := by
+    rw [← Finset.insert_erase h0, hx]
+  have hxne : x ≠ 0 := by
+    have hmem : x ∈ A.erase 0 := by rw [hx]; exact Finset.mem_singleton_self x
+    exact (Finset.mem_erase.mp hmem).1
+  have hxval : x.val ≠ 0 := fun h => hxne (Fin.ext (by simpa using h))
+  have hsucc : Fin.succ (⟨x.val - 1, by omega⟩ : Fin 3) = x := Fin.ext (by simp; omega)
+  exact ⟨⟨x.val - 1, by omega⟩, by rw [qPair, hA', hsucc]⟩
+
+/-- ★★ **每个二元子集都是某个 `qPair i` 或它的补**（按 `0 ∈ A` 与否二分，补集情形化归上一行）。 -/
+theorem exists_qPair {A : Finset (Fin 4)} (hA : A.card = 2) :
+    ∃ i : Fin 3, A = qPair i ∨ A = (qPair i)ᶜ := by
+  by_cases h0 : (0 : Fin 4) ∈ A
+  · obtain ⟨i, hi⟩ := exists_qPair_of_mem_zero hA h0
+    exact ⟨i, Or.inl hi⟩
+  · have hc0 : (0 : Fin 4) ∈ Aᶜ := Finset.mem_compl.mpr h0
+    have hcA : Aᶜ.card = 2 := by
+      rw [Finset.card_compl, Fintype.card_fin, hA]
+    obtain ⟨i, hi⟩ := exists_qPair_of_mem_zero hcA hc0
+    exact ⟨i, Or.inr (by rw [← hi, compl_compl])⟩
+
+/-- ★★ **唯一性**：同一条 `A = qPair i ∨ A = qPair iᶜ` 不可能是两个不同 `i` 的见证
+（`qPair i` 含 `0`、`qPair iᶜ` 不含 `0`）。 -/
+theorem qPair_unique {i j : Fin 3} {A : Finset (Fin 4)}
+    (hi : A = qPair i ∨ A = (qPair i)ᶜ) (hj : A = qPair j ∨ A = (qPair j)ᶜ) : i = j := by
+  rcases hi with hi | hi <;> rcases hj with hj | hj
+  · exact qPair_injective (hi.symm.trans hj)
+  · exfalso
+    have hmem : (0 : Fin 4) ∈ A := by rw [hi]; simp [qPair]
+    rw [hj] at hmem
+    exact mem_compl_qPair_zero j hmem
+  · exfalso
+    have hmem : (0 : Fin 4) ∈ A := by rw [hj]; simp [qPair]
+    rw [hi] at hmem
+    exact mem_compl_qPair_zero i hmem
+  · have hcompl : (qPair i)ᶜ = (qPair j)ᶜ := by rw [← hi, hj]
+    refine qPair_injective (by simpa using congrArg (fun s : Finset (Fin 4) => sᶜ) hcompl)
+
+/-- ★★★ **`Fin 4` 的每个二元子集恰在 1 棵 quartet 树里成 clan**（`∃!` 形态）。
+
+这条就是 §5.2 里被 W25 判为「可证」的那件事的组合核心，也是绕开 `decide` 的关键器材：
+**不**求值 `Finset.filter`，而是把「哪个 `i`」结构性指出。 -/
+theorem existsUnique_qPair (A : Finset (Fin 4)) (hA : A.card = 2) :
+    ∃! i : Fin 3, A = qPair i ∨ A = (qPair i)ᶜ := by
+  obtain ⟨i, hi⟩ := exists_qPair hA
+  exact ⟨i, hi, fun j hj => qPair_unique hj hi⟩
+
+/-- ★★★ **`n = 4` 的 clan 事件概率**：若 `A` 的基数是 `2`，
+则它在均匀三条 quartet 律下的概率 `= 1/3 = clanProb 4 2`（★★ `clanProb_four_two`）。
+
+证明**不**用 `decide`：由 ★★★ `existsUnique_qPair` 得唯一见证 `i₀`，
+再用 `Finset.ext` 把滤子化成 `{i₀}`（★★★ `isClade_qTree_iff`），最后 `sum_singleton`。 -/
+theorem qTree_clanEvent_two (A : Finset (Fin 4)) (hA : A.card = 2) :
+    (∑ _i ∈ Finset.univ.filter (fun i : Fin 3 => (qTree i).IsClade A), (1 / 3 : ℝ))
+      = clanProb 4 A.card := by
+  obtain ⟨i₀, hi₀, huniq⟩ := existsUnique_qPair A hA
+  have hfilter : Finset.univ.filter (fun i : Fin 3 => (qTree i).IsClade A) = {i₀} := by
+    ext i
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_singleton]
+    rw [isClade_qTree_iff i A hA]
+    exact ⟨fun h => huniq i h, fun h => by rw [h]; exact hi₀⟩
+  rw [hfilter, Finset.sum_singleton, hA, clanProb_four_two]
+
+/-- ★★★ **`n = 4` 的 YHK/Kingman 无根拓扑律**（§8.3）：`Ω = Fin 3`、三棵 quartet 树**等权 `1/3`**。
+
+`1/3` 不是规定：`Fin 4` 的 `C(4,2) = 6` 个二元 split 在 3 棵两两侧的树里**各出现一次**
+（★★★ `existsUnique_qPair`），故均匀三条就是 YHK 在无根拓扑上的诱导律
+（与 `MSCKingman.root_topology_class_prob` 的 `Fin 4` 推导一致，文献 `:191-216`、`:991-996`）。 -/
+noncomputable def yhkLawFour : MSCTreeLaw 4 where
+  Ω := Fin 3
+  fintype := inferInstance
+  prob := fun _ => 1 / 3
+  prob_nonneg := fun _ => by norm_num
+  prob_sum := by
+    rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    norm_num
+  tree := qTree
+
+/-- ★★ **该律不是空壳**：`MSCTreeLaw 4` 有一个**构造出来的**居留者（不是被假设存在）。 -/
+theorem yhkLawFour_nonempty : Nonempty (MSCTreeLaw 4) := ⟨yhkLawFour⟩
+
+/-- ★★★ **容器版取值定理**：在 ★★★ `yhkLawFour` 下，二元子集的事件概率 `= clanProb 4 2 = 1/3`。 -/
+theorem yhkLawFour_clanEvent_two (A : Finset (Fin 4)) (hA : A.card = 2) :
+    MSCTreeLaw.clanEvent yhkLawFour A = clanProb 4 A.card := by
+  change (∑ _i ∈ Finset.univ.filter (fun i : Fin 3 => (qTree i).IsClade A), (1 / 3 : ℝ))
+    = clanProb 4 A.card
+  exact qTree_clanEvent_two A hA
+
+/-- ★★★ **缺口 `YHKClanLawGap` 在 `n = 4` 上的整条**（无条件）。
+
+这是 §6 的 `def` 在 `n = 4` 的 `∃` 从句的**完整**成立 —— 见证
+`Ω = Fin 3`、`prob ≡ 1/3`、`tree = qTree`：
+* `A.card = 1` 或 `3`：★★★ `yhkClanLawGap_trivial_card_slice`（任意律）；
+* `A.card = 2`：★★★ `qTree_clanEvent_two`（`= 1/3 = clanProb 4 2`，非退化值）。
+
+⚠️ **边界**：这不是 `YHKClanLawGap` 的证明（那条是 `∀ n`，一般 `n` 仍缺 §8.4 的两件器材）。 -/
+theorem yhkClanLawGap_four_slice :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 4)),
+      ∀ A : Finset (Fin 4), A.Nonempty → A.card < 4 →
+        (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A), prob ω)
+          = clanProb 4 A.card := by
+  refine ⟨Fin 3, inferInstance, fun _ => 1 / 3, fun _ => by norm_num, ?_, qTree, ?_⟩
+  · rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    norm_num
+  · intro A hne hlt
+    have hpos : 1 ≤ A.card := Finset.card_pos.mpr hne
+    have hcases : A.card = 1 ∨ A.card = 2 ∨ A.card = 3 := by omega
+    rcases hcases with h1 | h2 | h3
+    · exact yhkClanLawGap_trivial_card_slice (n := 4) (by norm_num) (fun _ => 1 / 3) (by
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]; norm_num)
+        _ hne (Or.inl h1)
+    · simpa using qTree_clanEvent_two A h2
+    · exact yhkClanLawGap_trivial_card_slice (n := 4) (by norm_num) (fun _ => 1 / 3) (by
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]; norm_num)
+        _ hne (Or.inr (by omega))
+
+
+/-! ### 8.6 容器的回报：`n = 3` 的整条对**任意**律成立
+
+§5.2 的 ★★★ `yhkClanLawGap_three_slice` 只给出**一个**见证（退化分布 ＋ 星形树）。
+有了容器就能说更强的话：`Fin 3` 的**任何**律都满足缺口在 `n = 3` 的等式
+（因为 `Fin 3` 的非空真子集只有 `card = 1` 与 `card = 2 = 3 − 1` 两种形状，
+而平凡基数上概率恒等于闭形式，见 ★★★ `clanEvent_eq_clanProb_of_trivial_card`）。 -/
+
+namespace MSCTreeLaw
+
+variable (L : MSCTreeLaw 3)
+
+/-- ★★★ **`n = 3` 的整条对任意律成立**（容器版 `yhkClanLawGap_three_slice`，但**无需**选见证）。 -/
+theorem clanEvent_eq_clanProb_three (A : Finset (Fin 3)) (hne : A.Nonempty)
+    (hlt : A.card < 3) : L.clanEvent A = clanProb 3 A.card := by
+  have hpos : 1 ≤ A.card := Finset.card_pos.mpr hne
+  rcases (show A.card = 1 ∨ A.card = 3 - 1 by omega) with h1 | h1
+  · exact L.clanEvent_eq_clanProb_of_trivial_card (by norm_num) A (Or.inl h1)
+  · exact L.clanEvent_eq_clanProb_of_trivial_card (by norm_num) A (Or.inr h1)
+
+end MSCTreeLaw
 
 end Phylo.Stat.ReciprocalMonophyly
