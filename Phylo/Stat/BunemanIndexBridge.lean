@@ -886,9 +886,9 @@ theorem canonicalSplitDecomposition_gap_correct_shape_holds :
   obtain ⟨F, c, δ₀, hpos, hfaith, heq⟩ := exists_splitPrimeFaithful_decomposition δ
   exact ⟨F, c, δ₀, hpos, splitPrimeStd_of_splitPrimeNE hfaith, heq⟩
 
-/-! ## 8.2 ⬜ **BdD Theorem 2 的忠实形态**（W25-b 登记；未证） -/
+/-! ## 8.2 ⛔ **BdD Theorem 2 的忠实形态**（W25-b 登记；**W26-c 由 `§8.5` 机器证伪**） -/
 
-/-- ⬜ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；未证）**：
+/-- ⛔ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；★★★ W26-c 已机器证伪）**：
 
 `δ` 是 `X` 上的**度量**（`M(X)`：对称、`x = x ⟹ 0`、非负、三角不等式 —— `:673-684`、
 `:816`、`:825` 的框架），且**残差 `δ₀` 仍是度量**、并且 split-prime（隔离指数处处 `0`）。
@@ -896,7 +896,13 @@ theorem canonicalSplitDecomposition_gap_correct_shape_holds :
 ★ 与 `……_correct_shape` 的**唯一差别**就是「`δ` 与 `δ₀` 仍在 `M(X)` 里」—— 但这一条
 **恰好挡住** `§8.1` 的「全体 split 大系数下压」构造（那里 `δ₀` 非对角为负），
 故本形态**不是空转**；它等价于 `:1651-1655` Thm 2 的**存在性**一半
-（本 `Prop` 未要求 `c s = α_s` 与唯一性，故弱于 Thm 2 全文）。缺的具名器材见报告「卡点」。 -/
+（本 `Prop` 未要求 `c s = α_s` 与唯一性，故弱于 Thm 2 全文）。缺的具名器材见报告「卡点」。
+
+★ **W26-c（`§8.4` 的机器结论）**：本 `Prop` 的结论其实**把残差压成 `0`**（`eq_zero_of_splitPrimeFaithful` ✓ 机器证明 —— 注册形态的 `SplitPrimeFaithful` 量化了**非划分对** `{x}|{y}`，其隔离指数含退化项 `2·δ₀ x y`），故本 `Prop` 的结论等价于「`δ` 是正系数 split 度量之和」，**不是** BdD Thm 2 的残差形态。忠实形态见 `§8.4` 的 `canonicalSplitDecomposition_gap_faithful_v2`（四要素在 `§8.4` 头部）。
+
+★★★ **W26-c 追加：本 `Prop` 已被机器证伪** —— `not_canonicalSplitDecomposition_gap_faithful`
+（`§8.5`）：`Fin 5` 上的度量 `d₅`（`{0,1,2}` 两两 `2`；`3、4` 到三者 `1`；`d(3,4) = 1`）使结论失败
+（超度量泛函 `Φ`：每个 split 度量上 `≤ 0`，而 `Φ(d₅) = 2`）。 -/
 def canonicalSplitDecomposition_gap_faithful : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
@@ -1037,6 +1043,344 @@ theorem residue_le_of_nonneg {α : Type*} [Fintype α] [DecidableEq α]
   have hnn : 0 ≤ ∑ s ∈ F, c s * SplitMetric s x y :=
     Finset.sum_nonneg fun s hs => mul_nonneg (hc s hs) (hmetric s x y)
   rw [heq x y]
+  linarith
+
+/-! ## 8.4 ★★★ W26-c：注册形态 `SplitPrimeFaithful` 的**退化定理**（机器证明）与四要素校正
+
+### 机器结论
+
+`§8.1` 的 `SplitPrimeFaithful` 量化的是**任意一对**非空 `Finset` `A, B`，**不要求** `A ∪ B = X`。
+取**非划分对** `A = {x}`、`B = {y}`（`x ≠ y`）时四元组集 `A×A×B×B` 只有 `(x,x,y,y)` 一点，
+隔离指数只剩 `max{2·(δ₀ x y), δ₀ x x + δ₀ y y} − δ₀ x x − δ₀ y y`；对角 `0` 加非负使它等于 `2·δ₀ x y`
+⇒ `¬ IsDSplit` 就是 `δ₀ x y ≤ 0` ⇒ 与「非负」合用即得 `δ₀ ≡ 0`（`eq_zero_of_splitPrimeFaithful` ✓）。
+
+⇒ `§8.2` 的 `canonicalSplitDecomposition_gap_faithful` 的结论**退化**成
+「`δ` 是一族**正系数** split 度量之和」（`exists_splitMetric_sum_of_faithful` ✓）：
+残差没有留下任何「split-prime 但非零」的余地。这不是 BdD Thm 2 的形态。
+
+### 四要素（`§8.1`/`§8.2` 登记形态 ⇒ 忠实形态）
+
+* **旧形态**（**逐字保留**，未改）：`SplitPrimeFaithful δ := ∀ A B, A.Nonempty → B.Nonempty →
+  ¬ IsDSplit δ A B`（`§8.1`）；`canonicalSplitDecomposition_gap_faithful`（`§8.2`，同样未改）；
+* **新形态**：`SplitPrimeFaithfulPartition δ := ∀ A B, A.Nonempty → B.Nonempty → Disjoint A B →
+  A ∪ B = Finset.univ → ¬ IsDSplit δ A B`（只取 `X` 的**划分** `A|B`），配套
+  `canonicalSplitDecomposition_gap_faithful_v2`（残差用新形态）＋
+  `splitPrimeFaithfulPartition_iff_isolationIndex_nonpos`（与 `§8.3` 隔离指数的桥，形态照抄 `§8.3`）；
+* **文献**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:1245-1253`
+  （split 度量 `δ_{A,B}` 定义在 `A ⊔ B` 上 ⇒ split = **不交并覆盖 `X`** 的一对子集）＋ `:1255-1262`
+  （**split-prime = 不存在任何 d-split**；`K₂,₃` 的度量是其五点例，「up to a scalar」唯一）＋
+  `:1281-1285`（**Thm 2**：残差 `d₀` 是 split-prime 函数）＋ `:3560-3564`
+  （`d₀ = 0` ⟺ 无 split-prime 余项；**四点度量总可分解**，而**五点上存在非零 split-prime 度量**）
+  ＋ `:673-684`（残差对**每个 split** 的隔离指数为 `0`）；
+* **理由（真假判据，非措辞）**：BdD 的 split-prime = 「对每个 **split（划分）** `A|B` 隔离指数为 `0`」，
+  且 `:3564` 明言五点上**存在非零 split-prime 度量**（`K₂,₃`）⇒ 忠实形态**不能**逼出残差为零；
+  注册形态却对**非划分对** `{x}|{y}` 也要求隔离指数为 `0`，把残差压成 `0`
+  ⇒ 注册形态**严格强于**忠实形态（对 `K₂,₃` 这类度量直接为假）⇒ 须换新形态。
+  ★ 下一步（未做）：用 `K₂,₃` 五点度量机器验证「严格强于」（旧形态假、新形态真）。
+
+★ **W26-c 追加（`§8.5`）**：由本节的退化定理可**推出** `§8.2` 的 `Prop` 为**假**
+（`not_canonicalSplitDecomposition_gap_faithful`）：退化后结论要求「`δ` 是正系数 split 度量之和」，
+而 `Fin 5` 上的 `d₅` 不是（超度量泛函 `Φ` 反证）。 -/
+
+/-- ★★★ **注册形态的 `SplitPrimeFaithful` 逼出「残差恒为零」**：取**非划分对** `A = {x}`、`B = {y}`
+（`x ≠ y`），四元组集只有 `(x,x,y,y)` 一点，`¬ IsDSplit` 即 `δ₀ x y ≤ 0`；与非负性合并即得 `δ₀ ≡ 0`。
+
+★ 这不是刻意构造的病态条件：`§8.1` 的 `def` 本来就没有「`A ∪ B = X`」这一条
+（BdD 的 split 有，见 `§8.4` 头部的四要素）。 -/
+theorem eq_zero_of_splitPrimeFaithful {α : Type*} {δ₀ : α → α → ℝ}
+    (hsp : SplitPrimeFaithful δ₀) (hdiag : ∀ x, δ₀ x x = 0) (hnn : ∀ x y, 0 ≤ δ₀ x y) :
+    ∀ x y, δ₀ x y = 0 := by
+  intro x y
+  rcases eq_or_ne x y with rfl | hxy
+  · exact hdiag x
+  · have hA : ({x} : Finset α).Nonempty := ⟨x, Finset.mem_singleton_self x⟩
+    have hB : ({y} : Finset α).Nonempty := ⟨y, Finset.mem_singleton_self y⟩
+    have hle : δ₀ x y ≤ 0 := by
+      by_contra hcon
+      rw [not_le] at hcon
+      refine hsp {x} {y} hA hB (fun a ha a' ha' b hb b' hb' => ?_)
+      rw [Finset.mem_singleton] at ha ha' hb hb'
+      rw [ha, ha', hb, hb']
+      rw [hdiag x, hdiag y, max_self]
+      linarith
+    have hge : 0 ≤ δ₀ x y := hnn x y
+    linarith
+
+/-- ★★★ **`§8.2` 忠实缺口的结论 ⇒ `δ` 是「正系数 split 度量之和」**：
+残差被 `eq_zero_of_splitPrimeFaithful` 压成 `0`，于是分解式里只剩 split 度量的和。
+★ 这条把注册形态的**真实内容**暴露出来：它不是「存在 split-prime 残差」，而是「`δ` 在 split 锥里」。 -/
+theorem exists_splitMetric_sum_of_faithful {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ}
+    (h : ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithful δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧ ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y) :
+    ∃ (F : Finset (Split α)) (c : Split α → ℝ), (∀ s ∈ F, 0 < c s) ∧
+      ∀ x y, δ x y = ∑ s ∈ F, c s * SplitMetric s x y := by
+  obtain ⟨F, c, δ₀, hpos, hsp, hdiag, hnn, heq⟩ := h
+  have hzero := eq_zero_of_splitPrimeFaithful hsp hdiag hnn
+  exact ⟨F, c, hpos, fun x y => by rw [heq x y, hzero x y, zero_add]⟩
+
+/-- **忠实 split-prime（四要素校正版）**：只对 `X` 的**划分** `A|B`（不交、并 = 全集、两侧非空）
+要求隔离指数 `0`（BdD `:1255-1262`、`:673-684`；split 的定义见 `:1245-1253` 的 `A ⊔ B`）。
+
+★ **严格弱于** `§8.1` 的 `SplitPrimeFaithful`（后者量化任意非空对；见 `§8.4` 的退化定理与
+`K₂,₃` 例子）。本 `def` 是 `§8.2` 残差应当使用的谓词。 -/
+def SplitPrimeFaithfulPartition {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) : Prop :=
+  ∀ A B : Finset α, A.Nonempty → B.Nonempty → Disjoint A B → A ∪ B = Finset.univ →
+    ¬ IsDSplit δ A B
+
+/-- ★★ **划分版 split-prime 的隔离指数形态**（`§8.3` 的 `splitPrimeFaithful_iff_isolationIndex_nonpos`
+限制到 `X` 的划分；证明照抄 `§8.3`）。 -/
+theorem splitPrimeFaithfulPartition_iff_isolationIndex_nonpos {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) :
+    SplitPrimeFaithfulPartition δ ↔
+      ∀ (A B : Finset α), A.Nonempty → B.Nonempty → Disjoint A B → A ∪ B = Finset.univ →
+        isolationIndex δ A B ≤ 0 := by
+  constructor
+  · intro h A B hA hB hd hu
+    by_contra hcon
+    rw [not_le] at hcon
+    exact h A B hA hB hd hu ((isolationIndex_pos_iff_isDSplit δ hA hB).mp hcon)
+  · intro h A B hA hB hd hu hds
+    exact absurd (h A B hA hB hd hu)
+      (not_le.mpr ((isolationIndex_pos_iff_isDSplit δ hA hB).mpr hds))
+
+/-- ⬜ **忠实缺口（四要素校正版；未证）**：与 `§8.2` 的 `canonicalSplitDecomposition_gap_faithful`
+**逐字相同**，只把残差的 split-prime 换成**划分版** `SplitPrimeFaithfulPartition`。
+
+★ 这是 BdD Thm 2（`:1281-1285`）的**存在性**一半（不要求 `c s = α_s`、不要求唯一性）；
+`§8.2` 的原版因残差被压成 `0` 而**不是** Thm 2（见 `§8.4`）。 -/
+def canonicalSplitDecomposition_gap_faithful_v2 : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
+    (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
+    ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
+
+/-! ## 8.5 ★★★ W26-c：注册形态 `canonicalSplitDecomposition_gap_faithful` **为假**（机器反例）
+
+### 三行思路
+
+1. 由 `§8.4`，该 `Prop` 的结论逼出残差 `δ₀ ≡ 0`，故结论等价于「`δ` 是**正系数** split 度量之和」；
+2. 取**超度量（hypermetric）型**线性泛函 `Φ(δ) := Σ_{i,j} w i · w j · δ i j`，`w = (1,1,1,-1,-1)`：
+   对**任何** split `s`（`X` 的划分）有 `Φ(δ_s) = 2·(Σ_A w)·(Σ_B w) ≤ 0`
+   （`Σ_A w`、`Σ_B w` 是整数且和为 `1`，故其积 ≤ `0`）—— `witnessForm_splitMetric_le`；
+3. 见证度量 `d₅`：`{0,1,2}` 两两 `2`；`3、4` 到三者 `1`；`d(3,4) = 1`。它是**度量** ✓
+   （`witnessDist_triangle`），但 `Φ(d₅) = 2 > 0` ⇒ 不可能是正系数 split 度量之和 ⇒ 结论假。
+
+★ 与 BdD 一致：「**四点**度量总可分解，**五点**上出现**非零** split-prime 残差」（md `:3560-3564`）；
+超度量不等式是 cut cone（split 度量锥）的合法不等式（Deza–Laurent）。 -/
+
+/-- 见证度量 `d₅` 的整数值（见 `§8.5`）：`{0,1,2}` 两两 `2`，`3、4` 到三者 `1`，`d(3,4) = 1`。 -/
+def witnessDistInt (x y : Fin 5) : ℤ :=
+  match x.val, y.val with
+  | 0, 0 => 0
+  | 1, 1 => 0
+  | 2, 2 => 0
+  | 3, 3 => 0
+  | 4, 4 => 0
+  | 3, 4 => 1
+  | 4, 3 => 1
+  | 3, _ => 1
+  | 4, _ => 1
+  | _, 3 => 1
+  | _, 4 => 1
+  | _, _ => 2
+
+/-- 见证度量 `d₅`（`witnessDistInt` 的 `ℝ` 版本）。 -/
+noncomputable def witnessDist (x y : Fin 5) : ℝ := (witnessDistInt x y : ℝ)
+
+/-- 整数值权重 `w = (1,1,1,-1,-1)`（`Σ w = 1`；整数值是 `(Σ_A w)(Σ_B w) ≤ 0` 的关键）。 -/
+def witnessWInt : Fin 5 → ℤ := fun i =>
+  match i.val with
+  | 3 => -1
+  | 4 => -1
+  | _ => 1
+
+/-- 实值权重 `w`（`witnessWInt` 的 `ℝ` 版本）。 -/
+noncomputable def witnessW (i : Fin 5) : ℝ := (witnessWInt i : ℝ)
+
+/-- **超度量型线性泛函** `Φ(δ) = Σ_{i,j} w i · w j · δ i j`（对称 `δ` 上即 cut cone 的合法不等式）。 -/
+noncomputable def witnessForm (δ : Fin 5 → Fin 5 → ℝ) : ℝ :=
+  ∑ i : Fin 5, ∑ j : Fin 5, witnessW i * witnessW j * δ i j
+
+theorem witnessDist_symm : ∀ x y, witnessDist x y = witnessDist y x := by
+  intro x y
+  fin_cases x <;> fin_cases y <;> norm_num [witnessDist, witnessDistInt]
+
+theorem witnessDist_diag : ∀ x, witnessDist x x = 0 := by
+  intro x
+  fin_cases x <;> norm_num [witnessDist, witnessDistInt]
+
+theorem witnessDist_nonneg : ∀ x y, 0 ≤ witnessDist x y := by
+  intro x y
+  fin_cases x <;> fin_cases y <;> norm_num [witnessDist, witnessDistInt]
+
+theorem witnessDist_triangle : ∀ x y z, witnessDist x z ≤ witnessDist x y + witnessDist y z := by
+  intro x y z
+  fin_cases x <;> fin_cases y <;> fin_cases z <;> norm_num [witnessDist, witnessDistInt]
+
+theorem witnessWInt_sum : (∑ i : Fin 5, witnessWInt i) = 1 := by decide
+
+/-- 权重和取整：`Σ_{i∈C} w i` 是整数（`w` 整数值）。 -/
+theorem witnessW_cast (C : Finset (Fin 5)) :
+    ((C.sum witnessWInt : ℤ) : ℝ) = C.sum witnessW := by
+  push_cast
+  rfl
+
+theorem witnessW_sum : (∑ i : Fin 5, witnessW i) = 1 := by
+  rw [← witnessW_cast Finset.univ, witnessWInt_sum]
+  norm_num
+
+/-- 整数 `k` 满足 `k·(1-k) ≤ 0`（这正是 `w` 必须整数值的原因）。 -/
+theorem int_mul_one_sub_nonpos (k : ℤ) : ((k : ℝ) * (1 - (k : ℝ)) ≤ 0) := by
+  rcases lt_or_ge (0 : ℤ) k with h | h
+  · have h1 : (1 : ℤ) ≤ k := h
+    have h2 : (1 : ℝ) ≤ (k : ℝ) := by exact_mod_cast h1
+    nlinarith
+  · have h2 : (k : ℝ) ≤ 0 := by exact_mod_cast h
+    nlinarith
+
+/-- `if i ∈ C then w i else 0` 对 `i` 的无约束求和等于 `C` 上的和。 -/
+theorem sum_ite_witnessW (C : Finset (Fin 5)) :
+    (∑ i : Fin 5, (if i ∈ C then witnessW i else 0)) = C.sum witnessW := by
+  have hf : (Finset.univ.filter (fun i : Fin 5 => i ∈ C)) = C := by
+    ext i
+    simp
+  rw [← Finset.sum_filter, hf]
+
+/-- `if` 乘积的双和 = 两个和之积。 -/
+theorem sum_ite_mul_ite (A B : Finset (Fin 5)) :
+    (∑ i : Fin 5, ∑ j : Fin 5,
+        (if i ∈ A then witnessW i else 0) * (if j ∈ B then witnessW j else 0))
+      = A.sum witnessW * B.sum witnessW := by
+  have hB : (∑ j : Fin 5, (if j ∈ B then witnessW j else 0)) = B.sum witnessW :=
+    sum_ite_witnessW B
+  calc (∑ i : Fin 5, ∑ j : Fin 5,
+          (if i ∈ A then witnessW i else 0) * (if j ∈ B then witnessW j else 0))
+      = ∑ i : Fin 5, (if i ∈ A then witnessW i else 0)
+          * (∑ j : Fin 5, (if j ∈ B then witnessW j else 0)) := by
+        refine Finset.sum_congr rfl (fun i _ => ?_)
+        rw [Finset.mul_sum]
+    _ = ∑ i : Fin 5, (if i ∈ A then witnessW i else 0) * B.sum witnessW := by
+        rw [hB]
+    _ = (∑ i : Fin 5, (if i ∈ A then witnessW i else 0)) * B.sum witnessW := by
+        rw [Finset.sum_mul]
+    _ = A.sum witnessW * B.sum witnessW := by
+        rw [sum_ite_witnessW A]
+
+/-- ★★★ **split 度量上的超度量不等式**：`Φ(δ_s) ≤ 0`（对**任何** split `s`）。
+`δ_s` 是 cut：`Φ(δ_s) = (Σ_A w)(Σ_B w) + (Σ_B w)(Σ_A w) = 2·(Σ_A w)(1 - Σ_A w) ≤ 0`。 -/
+theorem witnessForm_splitMetric_le (s : Split (Fin 5)) : witnessForm (SplitMetric s) ≤ 0 := by
+  have hB : ∀ i : Fin 5, i ∈ s.sideB ↔ i ∉ s.sideA := by
+    intro i
+    constructor
+    · intro h hA
+      exact Finset.disjoint_left.mp s.disjoint_sides hA h
+    · intro h
+      rcases Finset.mem_union.mp (by rw [s.union_sides]; exact Finset.mem_univ i) with h' | h'
+      · exact absurd h' h
+      · exact h'
+  have hpt : ∀ i j : Fin 5, witnessW i * witnessW j * SplitMetric s i j
+      = (if i ∈ s.sideA then witnessW i else 0) * (if j ∈ s.sideB then witnessW j else 0)
+        + (if i ∈ s.sideB then witnessW i else 0) * (if j ∈ s.sideA then witnessW j else 0) := by
+    intro i j
+    by_cases hi : i ∈ s.sideA <;> by_cases hj : j ∈ s.sideA <;>
+      simp [SplitMetric, hB, hi, hj]
+  have hpt2 : ∀ i : Fin 5, witnessW i
+      = (if i ∈ s.sideA then witnessW i else 0) + (if i ∈ s.sideB then witnessW i else 0) := by
+    intro i
+    by_cases hi : i ∈ s.sideA
+    · have hib : i ∉ s.sideB := fun h => Finset.disjoint_left.mp s.disjoint_sides hi h
+      simp [hi, hib]
+    · have hib : i ∈ s.sideB := (hB i).mpr hi
+      simp [hi, hib]
+  have hsplit : s.sideA.sum witnessW + s.sideB.sum witnessW = 1 := by
+    rw [← sum_ite_witnessW s.sideA, ← sum_ite_witnessW s.sideB, ← Finset.sum_add_distrib,
+      ← witnessW_sum]
+    exact Finset.sum_congr rfl (fun i _ => (hpt2 i).symm)
+  have hX : ((s.sideA.sum witnessWInt : ℤ) : ℝ) = s.sideA.sum witnessW := witnessW_cast s.sideA
+  have hY : s.sideB.sum witnessW = 1 - s.sideA.sum witnessW := by linarith
+  have hprod : s.sideA.sum witnessW * s.sideB.sum witnessW ≤ 0 := by
+    rw [hY, ← hX]
+    exact int_mul_one_sub_nonpos (s.sideA.sum witnessWInt)
+  calc witnessForm (SplitMetric s)
+      = ∑ i : Fin 5, ∑ j : Fin 5,
+          ((if i ∈ s.sideA then witnessW i else 0) * (if j ∈ s.sideB then witnessW j else 0)
+            + (if i ∈ s.sideB then witnessW i else 0) * (if j ∈ s.sideA then witnessW j else 0)) := by
+        unfold witnessForm
+        exact Finset.sum_congr rfl (fun i _ => Finset.sum_congr rfl (fun j _ => hpt i j))
+    _ = (∑ i : Fin 5, ∑ j : Fin 5,
+            (if i ∈ s.sideA then witnessW i else 0) * (if j ∈ s.sideB then witnessW j else 0))
+          + (∑ i : Fin 5, ∑ j : Fin 5,
+            (if i ∈ s.sideB then witnessW i else 0) * (if j ∈ s.sideA then witnessW j else 0)) := by
+        rw [← Finset.sum_add_distrib]
+        refine Finset.sum_congr rfl (fun i _ => ?_)
+        rw [Finset.sum_add_distrib]
+    _ = s.sideA.sum witnessW * s.sideB.sum witnessW
+          + s.sideB.sum witnessW * s.sideA.sum witnessW := by
+        rw [sum_ite_mul_ite, sum_ite_mul_ite]
+    _ = 2 * (s.sideA.sum witnessW * s.sideB.sum witnessW) := by ring
+    _ ≤ 0 := by linarith
+
+/-- `Φ` 对「`F` 上的加权和」可加（线性）。 -/
+theorem witnessForm_sum {ι : Type*} (F : Finset ι) (c : ι → ℝ) (δs : ι → Fin 5 → Fin 5 → ℝ) :
+    witnessForm (fun x y => ∑ s ∈ F, c s * δs s x y)
+      = ∑ s ∈ F, c s * witnessForm (δs s) := by
+  have step1 : ∀ i j : Fin 5, witnessW i * witnessW j * (∑ s ∈ F, c s * δs s i j)
+      = ∑ s ∈ F, c s * (witnessW i * witnessW j * δs s i j) := by
+    intro i j
+    rw [Finset.mul_sum]
+    exact Finset.sum_congr rfl (fun s _ => by ring)
+  calc witnessForm (fun x y => ∑ s ∈ F, c s * δs s x y)
+      = ∑ i : Fin 5, ∑ j : Fin 5,
+          ∑ s ∈ F, c s * (witnessW i * witnessW j * δs s i j) := by
+        unfold witnessForm
+        exact Finset.sum_congr rfl (fun i _ => Finset.sum_congr rfl (fun j _ => step1 i j))
+    _ = ∑ i : Fin 5, ∑ s ∈ F, ∑ j : Fin 5, c s * (witnessW i * witnessW j * δs s i j) := by
+        refine Finset.sum_congr rfl (fun i _ => ?_)
+        exact Finset.sum_comm
+    _ = ∑ s ∈ F, ∑ i : Fin 5, ∑ j : Fin 5, c s * (witnessW i * witnessW j * δs s i j) := by
+        exact Finset.sum_comm
+    _ = ∑ s ∈ F, c s * witnessForm (δs s) := by
+        refine Finset.sum_congr rfl (fun s _ => ?_)
+        unfold witnessForm
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl (fun i _ => ?_)
+        rw [Finset.mul_sum]
+
+/-- 见证度量上的泛函值：`Φ(d₅) = 2 > 0`（整数值计算，`decide` 收尾）。 -/
+theorem witnessForm_witnessDist : witnessForm witnessDist = 2 := by
+  have h : witnessForm witnessDist
+      = ((∑ i : Fin 5, ∑ j : Fin 5, witnessWInt i * witnessWInt j * witnessDistInt i j : ℤ) : ℝ) := by
+    unfold witnessForm
+    push_cast
+    rfl
+  have h2 : (∑ i : Fin 5, ∑ j : Fin 5, witnessWInt i * witnessWInt j * witnessDistInt i j) = 2 := by
+    decide
+  rw [h, h2]
+  norm_num
+
+/-- ★★★ **`canonicalSplitDecomposition_gap_faithful` 是假命题**（`Fin 5` 上的度量反例 `d₅`）：
+结论会把 `d₅` 写成**正系数** split 度量之和，从而 `Φ(d₅) ≤ 0`；而 `Φ(d₅) = 2`。 -/
+theorem not_canonicalSplitDecomposition_gap_faithful :
+    ¬ canonicalSplitDecomposition_gap_faithful.{0} := by
+  intro h
+  obtain ⟨F, c, δ₀, hpos, hsp, hdiag, hnn, heq⟩ :=
+    h (α := Fin 5) witnessDist witnessDist_symm witnessDist_diag witnessDist_nonneg
+      witnessDist_triangle
+  have hzero : ∀ x y, δ₀ x y = 0 := eq_zero_of_splitPrimeFaithful hsp hdiag hnn
+  have hdec : witnessForm witnessDist = ∑ s ∈ F, c s * witnessForm (SplitMetric s) := by
+    rw [show witnessDist = (fun x y => ∑ s ∈ F, c s * SplitMetric s x y) from ?_]
+    · exact witnessForm_sum F c (fun s => SplitMetric s)
+    · funext x y
+      rw [heq x y, hzero x y, zero_add]
+  have hnonpos : ∑ s ∈ F, c s * witnessForm (SplitMetric s) ≤ 0 :=
+    Finset.sum_nonpos fun s hs =>
+      mul_nonpos_of_nonneg_of_nonpos (le_of_lt (hpos s hs)) (witnessForm_splitMetric_le s)
+  have hpos2 : 0 < witnessForm witnessDist := by rw [witnessForm_witnessDist]; norm_num
   linarith
 
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
