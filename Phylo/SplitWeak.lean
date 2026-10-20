@@ -736,17 +736,17 @@ W22 的成员件 `Split.isDSplit_splitMetricSum_of_mem`（`Phylo/Stat/BunemanInd
 上式给 `Î ≤ max P̂ X̂`，而 `t` 仍提供 `2w_t > 0` 的**严格余量** ⇒ 严格不等式照样成立；
 本证明**自动覆盖**退化情形（差分恒等式对任意四元组成立，**不假设四点互异**）。
 
-### 下一步（弱相容版 (B2)：非成员不是 d-split）
+### 下一步（弱相容版 (B2)：非成员不是 d-split）—— ★ W26-d 已推进，见 §7.3
 
-本批只补了**成员**方向。`weakCompatibilityRealization_gap` 的另一半 = 弱相容版 **(B2)**。
-它的**两两相容**版已收口（`Split.notIsDSplit_of_splitMetricSum_gap_holds`，
-`Phylo/Stat/BunemanIndexBridge.lean:2268`），但那条路线**不可直接搬**：
-它经 (★′) `noWRealizer_exists_gap` 用到 **cluster 的层析性**（`laminar_sideNotMem` ←
-`laminar_of_compatible_clusters`），而弱相容**不给层析性** —— 反例正是本文件 `:382` 的
-`exists_weaklyCompatible_not_pairwiseCompatible`（两个交叉 split 弱相容，cluster `{0,1}` 与 `{0,2}`
-非嵌套）⇒ 缺的具名器材 = BdD Theorem 3（md `:1683-1699`）第二句（`Σ` 恰是 `d` 的**全部** d-split）
-所需的**隔离指数 ≤ 0** 论证的弱相容版；本节的 `qPairW/qPairP/qPairX` 计数与
-`splitMetricSum_diff_qW/qP`（`X̂ − Î = 2c_W − 2c_X`）就是它的**计算落脚点**。
+`weakCompatibilityRealization_gap` 的另一半 = 弱相容版 **(B2)**。它的**两两相容**版已收口
+（`Split.notIsDSplit_of_splitMetricSum_gap_holds`，`Phylo/Stat/BunemanIndexBridge.lean:2268`），
+但那条路线**不可直接搬**：它经 (★′) `noWRealizer_exists_gap` 用到 **cluster 的层析性**
+（`laminar_sideNotMem` ← `laminar_of_compatible_clusters`），而弱相容**不给层析性** ——
+反例正是本文件 `:382` 的 `exists_weaklyCompatible_not_pairwiseCompatible`。
+
+⇒ **W26-d 已在 §7.3 把 (B2) 收成一条不含度量的纯计数命题 (B2-core)，并证成其 `2+2` 情形**；
+本节的 `qPairW/qPairP/qPairX` 计数与 `splitMetricSum_diff_qW/qP`（`X̂ − Î = 2c_W − 2c_X`）
+正是那里的计算落脚点（`splitMetricSum_isDSplit_iff`）。
 
 -/
 
@@ -981,6 +981,383 @@ theorem isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible (F : Finset (
   · have h := isDSplit_splitMetricSum_of_mem_of_weaklyCompatible F w hF hw ht
     simp only [swap_sideA, swap_sideB] at h
     exact (isDSplit_comm (fun x y => splitMetricSum_symm F w x y)).mp h
+
+/-! ## 7.3 ★★★★ W26 泳道 d：**(B2) 的计数判据 + `2+2` 情形证成**
+
+### 本批证成什么
+
+§7.2 只给了 `weakCompatibilityRealization_gap`（`:562`）的**成员**半边。缺口剩下的唯一一块 =
+**非成员**方向：`t ∉ F` 且 `t.swap ∉ F` ⇒ `t` **不是** `δ := Σ_{u∈F} w_u δ_u` 的 `d`-split
+（= 弱相容版 **(B2)**，即 `notIsDSplit_of_splitMetricSum_gap`（`:688`）去掉两两相容、换成弱相容）。
+
+本批把 (B2) **精确归约成一条纯计数命题**，并**证成两个非平凡特化**：
+
+1. ★★★ `splitMetricSum_isDSplit_iff`（计数判据）：`IsDSplit (Σ_{u∈F} w_u δ_u) A B` **⟺**
+   对**每个**四元组 `a,a' ∈ A`、`b,b' ∈ B` 都有 `min c_P c_X < c_W`，其中
+   `c_W = Σ_{u ∈ F: u 实现 {a,a'}|{b,b'}} w_u`（`c_P`、`c_X` 同理，即 `qPairW/qPairP/qPairX` 的加权和）。
+   这是 §7.2 两条差分恒等式的直接推论：`X̂ − Î = 2(c_W − c_X)`、`X̂ − P̂ = 2(c_P − c_X)`
+   ⇒ `max P̂ X̂ − Î = 2·max (c_W − c_P) (c_W − c_X)`。
+2. ★★★ `not_isDSplit_splitMetricSum_of_quartet_le`：(B2) 的**见证式** ——
+   只要**找到**一个四元组使 `c_W ≤ min c_P c_X`，(B2) 对**该** `t` 立刻成立（零额外假设）。
+3. ★★★★ `not_isDSplit_splitMetricSum_of_no_qPairW`：更强的**充分条件**，且与 `w` **无关**：
+   若某四元组上**没有** `F` 的成员实现 W-配对（`c_W = 0`），则 `t` 不是 `d`-split
+   （= `not_isDSplit_splitMetricSum_of_quartet_le` 的「零权重」特例）。
+4. ★★★★ `not_isDSplit_of_weaklyCompatible_of_sideA_card_two`：**(B2) 的 `2+2` 情形已证成**
+   —— `t.sideA.card = 2`、`t.sideB.card = 2`（即 `n = 4` 的 2|2 split）、`t ∉ F`、`t.swap ∉ F`
+   ⇒ `¬ IsDSplit`。证明只用 `eq_of_le_sides`：四元组只能是 `t` 的两侧本身，
+   此时 `u` 实现 W-配对 ⇒ `u` 的两侧分别**包含** `t` 的两侧 ⇒ `u = t` 或 `u = t.swap` ⇒ 矛盾 ∎
+   （★ 这一条**完全不用**弱相容 —— 是 (B2) 的「无假设」特化。）
+
+### 精确卡点：(B2) 全一般情形还缺什么
+
+由 (1)，(B2) **等价于**下面这条**纯组合计数**命题（不含 `IsDSplit`、不含任何度量）：
+
+> **(B2-core)** 设 `F` 弱相容、`w > 0` 于 `F`、`t ∉ F`、`t.swap ∉ F`，则**存在**
+> `a,a' ∈ t.sideA`、`b,b' ∈ t.sideB` 使 `c_W ≤ min c_P c_X`。
+
+★ 两两相容版（`BunemanIndexBridge.lean:2268`）**绕开**了这条：那里 `c_P·c_X = 0`
+＋ cluster 层析性直接给出。弱相容下**两个对手**（P、X）可**同时**为正 ⇒ 必须**显式构造**四元组。
+
+★★ **手算反例否定了一条捷径**（即「`c_W = 0` 的加强版」为假；W26-d 手工核验，**未**形式化）：
+取 `X = {a,1,2,3,4,5}`、`t = {a}|{1,2,3,4,5}`、
+`F = {{a,4,5}|{1,2,3}, {a,3,5}|{1,2,4}, {a,3,4}|{1,2,5}, {a,1,2}|{3,4,5}}`，
+四成员的「远侧」`{1,2,3}`、`{1,2,4}`、`{1,2,5}`、`{3,4,5}` **覆盖 `B` 的全部 `10` 个二元子集**
+⇒ **每个**四元组都有 W-成员 ⇒ `not_isDSplit_splitMetricSum_of_no_qPairW` **不足以**证 (B2)；
+必须用带权的 `c_W ≤ min c_P c_X`。★ 该 `F` 恰**不**弱相容：`{a,1,3,4}` 上三个成员分别诱导
+`{a,4}|{1,3}`、`{a,3}|{1,4}`、`{a,1}|{3,4}` ⇒ 冲突四元组 —— 这正是 (B2) 真正需要的机制
+（「远侧覆盖」＋ 弱相容性 ⇒ 冲突四元组）。★ 该机制在 `|t.sideB| = 3` 时**已形式化**（§7.3.1：
+「每对都被覆盖 ⇒ 三个覆盖成员给出冲突四元组」），`|t.sideB| ≥ 4`（即 `|X| ≥ 5`）**仍开放**。 -/
+
+/-- `sideA` 相同的两个 split 相等（`sideB = sideAᶜ` 由「不交 + 并 = 全集」决定）。 -/
+theorem eq_of_sideA_eq {s t : Split α} (h : s.sideA = t.sideA) : s = t := by
+  refine (KPartition.eq_iff_parts s t).mpr ?_
+  funext i
+  fin_cases i
+  · exact h
+  · show s.sideB = t.sideB
+    rw [sideB_eq_sdiff, sideB_eq_sdiff, h]
+
+/-- **两侧都被包含 ⟹ 相等**（(B2) 的 `2+2` 情形靠它把「包含」升级成「相同」）。 -/
+theorem eq_of_le_sides {s t : Split α} (hA : t.sideA ⊆ s.sideA) (hB : t.sideB ⊆ s.sideB) :
+    t = s := by
+  refine eq_of_sideA_eq (Finset.Subset.antisymm hA ?_)
+  intro x hx
+  exact mem_sideA_of_not_mem_sideB t fun hc =>
+    (Finset.disjoint_left.mp s.disjoint_sides) hx (hB hc)
+
+/-- ★★★ **四元组计数判据（逐点形态）**。记
+`Î = δ(a,a') + δ(b,b')`、`P̂ = δ(a,b) + δ(a',b')`、`X̂ = δ(a,b') + δ(a',b)`，
+`c_W`、`c_P`、`c_X` 为三种配对在 `F` 上的**权重和**。则
+
+`Î < max P̂ X̂  ⟺  min c_P c_X < c_W`。
+
+**证明**：§7.2 的两条差分恒等式给 `X̂ − Î = 2(c_W − c_X)`、`X̂ − P̂ = 2(c_P − c_X)`，
+两式相减得 `P̂ − Î = 2(c_W − c_P)`；于是
+`max P̂ X̂ − Î = max (P̂ − Î) (X̂ − Î) = 2·max (c_W − c_P) (c_W − c_X)`，
+而 `0 < max (c_W − c_P) (c_W − c_X) ⟺ c_W > c_P ∨ c_W > c_X ⟺ min c_P c_X < c_W` ∎
+（★ **退化四元组**同样成立：恒等式不假设四点互异。） -/
+theorem splitMetricSum_quartet_lt_iff (F : Finset (Split α)) (w : Split α → ℝ)
+    (a a' b b' : α) :
+    ((∑ u ∈ F, w u * SplitMetric u a a') + (∑ u ∈ F, w u * SplitMetric u b b')
+        < max ((∑ u ∈ F, w u * SplitMetric u a b) + (∑ u ∈ F, w u * SplitMetric u a' b'))
+              ((∑ u ∈ F, w u * SplitMetric u a b') + (∑ u ∈ F, w u * SplitMetric u a' b)))
+      ↔ min (∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u)
+            (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u)
+          < ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u := by
+  have hXW := splitMetricSum_diff_qW F w a a' b b'
+  have hXP := splitMetricSum_diff_qP F w a a' b b'
+  rw [lt_max_iff, min_lt_iff]
+  constructor
+  · rintro (h | h)
+    · left; linarith
+    · right; linarith
+  · rintro (h | h)
+    · left; linarith
+    · right; linarith
+
+/-- ★★★ **`IsDSplit` 的计数判据**（★★★★ W26-d 的核心器材）：`Σ_{u∈F} w_u δ_u` 在 `A|B` 上是
+`d`-split **⟺** 每个四元组的 W-权重**严格大于**两个对手权重的**较小者**。
+
+★ 这把 (B2) 变成一条**不含度量**的计数命题：见本节头部的 **(B2-core)**。 -/
+theorem splitMetricSum_isDSplit_iff (F : Finset (Split α)) (w : Split α → ℝ)
+    (A B : Finset α) :
+    IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) A B
+      ↔ ∀ a ∈ A, ∀ a' ∈ A, ∀ b ∈ B, ∀ b' ∈ B,
+          min (∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u)
+              (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u)
+            < ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u := by
+  unfold IsDSplit
+  simp only [splitMetricSum_quartet_lt_iff]
+
+/-- ★★★★ **(B2) 的见证式**（本批的**可执行卡点**）：只要找到**一个**四元组使 W-权重
+不超过两个对手权重的较小者，(B2) 对该 `t` 就成立 —— **不需要**弱相容、不需要任何度量公理。
+
+★ 与 §7.2 成员半边**对偶**：那里靠「`t ∈ F` ⇒ `c_W ≥ w_t > 0`」；这里靠「造一个 `c_W` 被打平的
+四元组」。缺的正是「怎么造」（见 (B2-core) 与头部卡点分析）。 -/
+theorem not_isDSplit_splitMetricSum_of_quartet_le (F : Finset (Split α)) (w : Split α → ℝ)
+    {A B : Finset α} {a a' b b' : α} (ha : a ∈ A) (ha' : a' ∈ A) (hb : b ∈ B) (hb' : b' ∈ B)
+    (h : (∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+        ≤ min (∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u)
+            (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u)) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) A B := by
+  intro hD
+  have := (splitMetricSum_isDSplit_iff F w A B).mp hD a ha a' ha' b hb b' hb'
+  linarith
+
+/-- ★★★★ **(B2) 的充分条件**（与 `w` **无关**）：若某四元组上**没有** `F` 的成员实现 W-配对，
+则 `t` 不是 `d`-split。
+
+★ 手算已否掉「此条件总能满足」：见本节头部的 `F`（远侧覆盖 `B` 的全部二元子集，但**不**弱相容；W26-d 手工核验，**未**形式化）。 -/
+theorem not_isDSplit_splitMetricSum_of_no_qPairW (F : Finset (Split α)) (w : Split α → ℝ)
+    (hw : ∀ s ∈ F, 0 < w s)
+    {A B : Finset α} {a a' b b' : α} (ha : a ∈ A) (ha' : a' ∈ A) (hb : b ∈ B) (hb' : b' ∈ B)
+    (hW : ∀ u ∈ F, qPairW u a a' b b' ≠ true) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) A B := by
+  refine not_isDSplit_splitMetricSum_of_quartet_le F w ha ha' hb hb' ?_
+  have hempty : F.filter (fun u => qPairW u a a' b b' = true) = ∅ := by
+    rw [Finset.filter_eq_empty_iff]
+    exact fun u hu => hW u hu
+  rw [hempty]
+  simp only [Finset.sum_empty]
+  exact le_min (Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1))
+    (Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1))
+
+/-- ★★★★ **(B2) 的 `2+2` 情形**（`n = 4` 的 2|2 split；★ **不用**弱相容）：
+
+`|t.sideA| = |t.sideB| = 2`、`t ∉ F`、`t.swap ∉ F` ⇒ `t` **不是** `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+**证明**：`t` 的两侧就是**唯一**的四元组（`a,a'` 与 `b,b'` 两两取自两侧）。若 `u ∈ F` 在该四元组上
+实现 W-配对，则 `u` 的两侧分别**包含** `t.sideA = {a,a'}` 与 `t.sideB = {b,b'}`；
+`eq_of_le_sides` 给 `u = t`（或 `u = t.swap`，另一取向），与 `t ∉ F`、`t.swap ∉ F` 矛盾
+⇒ 该四元组无 W-成员 ⇒ `not_isDSplit_splitMetricSum_of_no_qPairW` ∎ -/
+theorem not_isDSplit_of_weaklyCompatible_of_sideA_card_two (F : Finset (Split α))
+    (w : Split α → ℝ) (hw : ∀ s ∈ F, 0 < w s) {t : Split α}
+    (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hA : t.sideA.card = 2) (hB : t.sideB.card = 2) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  obtain ⟨a, a', haa, hAeq⟩ := Finset.card_eq_two.mp hA
+  obtain ⟨b, b', hbb, hBeq⟩ := Finset.card_eq_two.mp hB
+  have ha : a ∈ t.sideA := by rw [hAeq]; simp
+  have ha' : a' ∈ t.sideA := by rw [hAeq]; simp
+  have hb : b ∈ t.sideB := by rw [hBeq]; simp
+  have hb' : b' ∈ t.sideB := by rw [hBeq]; simp
+  refine not_isDSplit_splitMetricSum_of_no_qPairW F w hw ha ha' hb hb' ?_
+  intro u hu hW
+  have hsep : u.Separates a a' b b' := (qPairW_eq_true_iff u a a' b b').mp hW
+  rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+  · refine ht ?_
+    have hAt : t.sideA ⊆ u.sideA := by
+      intro z hz
+      rw [hAeq, Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with h | h
+      · rw [h]; exact h1
+      · rw [h]; exact h2
+    have hBt : t.sideB ⊆ u.sideB := by
+      intro z hz
+      rw [hBeq, Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with h | h
+      · rw [h]; exact h3
+      · rw [h]; exact h4
+    rw [eq_of_le_sides hAt hBt]; exact hu
+  · refine hts ?_
+    have hAt : t.sideA ⊆ u.swap.sideA := by
+      rw [swap_sideA]
+      intro z hz
+      rw [hAeq, Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with h | h
+      · rw [h]; exact h1
+      · rw [h]; exact h2
+    have hBt : t.sideB ⊆ u.swap.sideB := by
+      rw [swap_sideB]
+      intro z hz
+      rw [hBeq, Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with h | h
+      · rw [h]; exact h3
+      · rw [h]; exact h4
+    rw [eq_of_le_sides hAt hBt, swap_swap]; exact hu
+
+/-! ### 7.3.1 ★★★★ `1+3` 情形与「`|X| = 4` 上 (B2) 完全证成」
+
+`1+3` 情形（`t = {a} | {b₁,b₂,b₃}`）是**唯一**必须真用弱相容性的特化：
+`t.sideA` 只有一点 ⇒ 四元组必然退化（`a = a'`），此时 `c_P = c_X = 0`，要 `c_W = 0`，
+即必须找到**一对** `b,b' ∈ t.sideB` 使 `F` 中**没有**成员把 `a` 与 `b,b'` 分开。
+
+★ 反证：若**每一对**都被覆盖，取覆盖 `{b₁,b₂}`、`{b₁,b₃}`、`{b₂,b₃}` 的三个成员 `u₁₂,u₁₃,u₂₃`。
+被 `u` 覆盖 ⇒ `u` 的「远侧」（不含 `a` 的那侧）**包含** `{bᵢ,bⱼ}`；远侧 `⊆ t.sideB`（因 `a` 不在其上）；
+远侧 `≠ t.sideB`（否则 `u = t` 或 `u = t.swap`，与 `t ∉ F`、`t.swap ∉ F` 矛盾）
+⇒ 远侧**恰是** `{bᵢ,bⱼ}`（`t.sideB` 只有三元）⇒ `u` 的另侧是 `{a, b_k}`
+⇒ `uᵢⱼ.Separates a b_k bᵢ bⱼ`。三个成员在四点组 `(a, b₁, b₂, b₃)` 上分别诱导
+`{a,b₃}|{b₁,b₂}`、`{a,b₂}|{b₁,b₃}`、`{a,b₁}|{b₂,b₃}` = **三个不同的 2|2 配对**
+⇒ `HasConflictingQuartet` ⇒ 与**弱相容矛盾** ∎
+
+⇒ 由此得到 `not_isDSplit_of_weaklyCompatible_of_sideA_card_one`，
+并与 `2+2` 情形合并成 **`|X| = 4` 上 (B2) 的完整证明**
+`not_isDSplit_of_weaklyCompatible_of_card_univ_four`（`2|2` 与 `1|3`／`3|1` 覆盖全部分拆方式）。
+-/
+
+/-- ★★★★ **(B2) 的 `1+3` 情形**（`|t.sideA| = 1`、`|t.sideB| = 3`；★ 这里**必须**用弱相容）：
+
+`F` 弱相容、`w > 0` 于 `F`、`t ∉ F`、`t.swap ∉ F` ⇒ `t` **不是** `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+**证明**（详见本节头）：退化四元组（`a = a'`）使 `c_P = c_X = 0`，故只需找到一对 `b,b' ∈ t.sideB`
+不被任何成员「与 `a` 分开」；若每对都被覆盖，则三个覆盖成员在 `(a,b₁,b₂,b₃)` 上诱导三个不同 2|2
+配对，与弱相容矛盾（`hF`）∎ -/
+theorem not_isDSplit_of_weaklyCompatible_of_sideA_card_one (F : Finset (Split α))
+    (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hA : t.sideA.card = 1) (hB : t.sideB.card = 3) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  obtain ⟨a, hAeq⟩ := Finset.card_eq_one.mp hA
+  obtain ⟨b1, b2, b3, _, _, _, hBeq⟩ := Finset.card_eq_three.mp hB
+  have ha : a ∈ t.sideA := by rw [hAeq]; simp
+  have hb1 : b1 ∈ t.sideB := by rw [hBeq]; simp
+  have hb2 : b2 ∈ t.sideB := by rw [hBeq]; simp
+  have hb3 : b3 ∈ t.sideB := by rw [hBeq]; simp
+  -- ★ 关键：「第三点」必与 `a` 同侧（情形 `a ∈ u.sideA`）
+  have keyA : ∀ {u : Split α} {p q r : α}, u ∈ F → t.sideB = {p, q, r} →
+      a ∈ u.sideA → p ∈ u.sideB → q ∈ u.sideB → r ∈ u.sideA := by
+    intro u p q r huF hBs hau hpu hqu
+    by_contra hru
+    have hru' : r ∈ u.sideB := mem_sideB_of_not_mem_sideA u hru
+    have hBsub : t.sideB ⊆ u.sideB := by
+      rw [hBs]
+      intro x hx
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with h | h | h
+      · rw [h]; exact hpu
+      · rw [h]; exact hqu
+      · rw [h]; exact hru'
+    have hAsub : t.sideA ⊆ u.sideA := by
+      rw [hAeq]
+      intro x hx
+      rw [Finset.mem_singleton] at hx
+      rw [hx]; exact hau
+    exact ht (by rw [eq_of_le_sides hAsub hBsub]; exact huF)
+  -- ★ 对偶情形（`a ∈ u.sideB`）：换成与 `u.swap` 比
+  have keyB : ∀ {u : Split α} {p q r : α}, u ∈ F → t.sideB = {p, q, r} →
+      a ∈ u.sideB → p ∈ u.sideA → q ∈ u.sideA → r ∈ u.sideB := by
+    intro u p q r huF hBs hau hpu hqu
+    by_contra hru
+    have hru' : r ∈ u.sideA := mem_sideA_of_not_mem_sideB u hru
+    have hAsub : t.sideA ⊆ u.swap.sideA := by
+      rw [swap_sideA, hAeq]
+      intro x hx
+      rw [Finset.mem_singleton] at hx
+      rw [hx]; exact hau
+    have hBsub : t.sideB ⊆ u.swap.sideB := by
+      rw [swap_sideB, hBs]
+      intro x hx
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with h | h | h
+      · rw [h]; exact hpu
+      · rw [h]; exact hqu
+      · rw [h]; exact hru'
+    have hts' : t = u.swap := eq_of_le_sides hAsub hBsub
+    exact hts (by rw [hts', swap_swap]; exact huF)
+  -- 由「被覆盖」得到 `Separates a r p q`
+  have sep3 : ∀ {u : Split α} {p q r : α}, u ∈ F → qPairW u a a p q = true →
+      t.sideB = {p, q, r} → u.Separates a r p q := by
+    intro u p q r huF hW hBs
+    have hsep : u.Separates a a p q := (qPairW_eq_true_iff u a a p q).mp hW
+    rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+    · exact Or.inl ⟨h1, keyA huF hBs h1 h3 h4, h3, h4⟩
+    · exact Or.inr ⟨h1, keyB huF hBs h1 h3 h4, h3, h4⟩
+  have hBeq231 : t.sideB = {b2, b3, b1} := by
+    rw [hBeq]
+    ext x
+    simp only [Finset.mem_insert, Finset.mem_singleton]
+    tauto
+  have hBeq132 : t.sideB = {b1, b3, b2} := by
+    rw [hBeq]
+    ext x
+    simp only [Finset.mem_insert, Finset.mem_singleton]
+    tauto
+  -- 若每对都被覆盖 ⇒ 冲突四元组 ⇒ 与弱相容矛盾
+  have hcontr : ¬ (∀ p ∈ t.sideB, ∀ q ∈ t.sideB, ∃ u ∈ F, qPairW u a a p q = true) := by
+    intro hall
+    obtain ⟨u12, hu12F, hu12⟩ := hall b1 hb1 b2 hb2
+    obtain ⟨u13, hu13F, hu13⟩ := hall b1 hb1 b3 hb3
+    obtain ⟨u23, hu23F, hu23⟩ := hall b2 hb2 b3 hb3
+    exact hF ⟨a, b1, b2, b3,
+      ⟨u23, by simpa using hu23F, sep3 hu23F hu23 hBeq231⟩,
+      ⟨u13, by simpa using hu13F, sep3 hu13F hu13 hBeq132⟩,
+      ⟨u12, by simpa using hu12F, sep3 hu12F hu12 hBeq⟩⟩
+  -- 故存在未被覆盖的一对
+  have hun : ∃ p ∈ t.sideB, ∃ q ∈ t.sideB, ∀ u ∈ F, qPairW u a a p q ≠ true := by
+    by_contra hcon
+    apply hcontr
+    intro p hp q hq
+    by_contra hex
+    exact hcon ⟨p, hp, q, hq, fun u hu hW => hex ⟨u, hu, hW⟩⟩
+  obtain ⟨p, hp, q, hq, huniv⟩ := hun
+  exact not_isDSplit_splitMetricSum_of_no_qPairW F w hw ha ha hp hq huniv
+
+/-- ★★★★★ **(B2) 在 `|X| = 4` 上**完全证成（`weakCompatibilityRealization_gap` 的非成员半边，
+`Fintype.card α = 4` 情形）：
+
+`F` 弱相容、`w > 0` 于 `F`、`t ∉ F`、`t.swap ∉ F` ⇒ `t` 不是 `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+**证明**：`t` 的两侧非空且并为全集 ⇒ `(|t.sideA|, |t.sideB|) ∈ {(1,3), (2,2), (3,1)}`
+⇒ 分别是 `not_isDSplit_of_weaklyCompatible_of_sideA_card_one`（`(3,1)` 用 `t.swap` ＋
+`isDSplit_comm` 归约）与 `not_isDSplit_of_weaklyCompatible_of_sideA_card_two` ∎
+
+⇒ 与 §7.2 的成员半边合并：**`|X| = 4` 时 `weakCompatibilityRealization_gap` 的 `↔` 两个方向都成立**
+（全一般情形仍缺 `(B2-core)`，见 §7.3 结尾的卡点分析）。 -/
+theorem not_isDSplit_of_weaklyCompatible_of_card_univ_four (F : Finset (Split α))
+    (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hcard : Fintype.card α = 4) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  have hApos : 0 < t.sideA.card := Finset.card_pos.mpr (t.nonempty 0)
+  have hBpos : 0 < t.sideB.card := Finset.card_pos.mpr (t.nonempty 1)
+  have hsum : t.sideA.card + t.sideB.card = 4 := by
+    have h := Finset.card_union_of_disjoint t.disjoint_sides
+    rw [t.union_sides, Finset.card_univ, hcard] at h
+    omega
+  have hcases : t.sideA.card = 1 ∨ t.sideA.card = 2 ∨ t.sideA.card = 3 := by omega
+  rcases hcases with h1 | h2 | h3
+  · exact not_isDSplit_of_weaklyCompatible_of_sideA_card_one F w hF hw ht hts h1 (by omega)
+  · exact not_isDSplit_of_weaklyCompatible_of_sideA_card_two F w hw ht hts h2 (by omega)
+  · have hB3 : t.sideB.card = 1 := by omega
+    have hsw := not_isDSplit_of_weaklyCompatible_of_sideA_card_one F w hF hw
+      (t := t.swap) (by simpa using hts) (by simpa using ht) (by simpa using hB3) (by simpa using h3)
+    intro hD
+    refine hsw ?_
+    simpa only [swap_sideA, swap_sideB] using
+      (isDSplit_comm (A := t.sideA) (B := t.sideB) (fun x y => splitMetricSum_symm F w x y)).mp hD
+
+/-! ### 7.3.2 ★★★★★ `weakCompatibilityRealization_gap` 在 `|X| = 4` 上**整体收口**
+
+把 §7.2 的**成员**半边与 §7.3.1 的**非成员**半边（`not_isDSplit_of_weaklyCompatible_of_card_univ_four`）
+合成 `∃ δ` 的**完整**双向刻画 —— 即 `weakCompatibilityRealization_gap`（`:562`）在 `|X| = 4` 时**逐字成立**：
+
+`F` 弱相容、`w > 0` 于 `F` ⇒ 取 `δ := Σ_{u∈F} w_u·δ_u`，则
+`∀ s, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s`（**两个方向都证**）。
+
+★ 全一般 `α` 仍缺 `(B2-core)`（§7.3 头部）；本定理把「缺哪一件」与「已到哪一步」
+压到同一句话上：**`n = 4` 已无缺口，`n ≥ 5` 只差 `(B2-core)`**。 -/
+theorem weakCompatibilityRealization_gap_card_four {α : Type*} [Fintype α] [DecidableEq α]
+    (hcard : Fintype.card α = 4) (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ s ∈ F, 0 < w s) :
+    ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
+      ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s := by
+  classical
+  refine ⟨fun x y => ∑ u ∈ F, w u * SplitMetric u x y, fun x y => splitMetricSum_symm F w x y,
+    fun s => ?_⟩
+  constructor
+  · intro hD
+    by_contra hcon
+    have hs : s ∉ F := fun h => hcon ⟨s, h, Or.inl rfl⟩
+    have hss : s.swap ∉ F := fun h => hcon ⟨s.swap, h, Or.inr (by simp)⟩
+    exact not_isDSplit_of_weaklyCompatible_of_card_univ_four F w hF hw hs hss hcard hD
+  · rintro ⟨t, htF, h | h⟩
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inl (h ▸ htF))
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inr (by rw [show s.swap = t by rw [← h, swap_swap]]; exact htF))
 
 end Split
 
