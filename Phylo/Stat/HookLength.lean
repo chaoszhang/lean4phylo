@@ -64,6 +64,7 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | §9.2 ★D | `Thgood` ＋ `example` | 「`hgood` 一般不成立」的**已核反例**。★ **2026-10-15 W20 任务 C 更正**：本行原写「§9.1/§9.2 ｜ `Tcex` / `Thgood` + 4 条 `example`」，但经核（依据 = 本文件内 `grep -nE 'def T[a-zA-Z]+'` 与 `grep -n '§9.1'`）**全库不存在名为 `Tcex` 的声明**、**也不存在 §9.1 这一节**，故删去该虚指项并把节号改准 ✓ |
 | **§10 ★★★** | **`LE_mul_prod_hook_eq_factorial`** ＋ `internalBelow_eq_empty_of_card_le_one` ＋ `laminarFamily_Tcat/_Tbal` | **hook-length 公式本体：`LE · ∏s = N!`**（第八轮落地，(i) **收口**） |
 | **§13 ★★★★** | **`hook_cladesOf_eq_card_sub_one`** ＋ `rankedFiberCount_gap_of_LE` | **(O2) 已证**：`hook (cladesOf n f) C = C.card - 1`（`2 ≤ C.card`，无额外假设）；缺口现在**只剩 (O1)**（W25 泳道 C 落地） |
+| **§14.2–§14.3 ★★★** | **`card_cladesOf`** ＋ **`card_filter_nonsingleton_cladesOf`** ＋ **`existsUnique_creation_level`** ＋ `children_fiberOf_chainMap_succ` | **层分解无重（全局版）**：`|cladesOf n f| = 2n-1`、非单点 clade 恰 `n-1` 个、每个非单点 clade 的**创建步唯一**且 `children` 恰为该步被合并的两块 —— (O1) 具名缺件 ① 已落地（W26 泳道 b） |
 | §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
@@ -1676,19 +1677,442 @@ theorem children_cladesOf_card_two {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n
   rw [hCw]
   exact children_fiberOf_chainMap_card_two hf j hj (chainMap n f j w) (hCw ▸ h2)
 
+/-! ### §14.2 ★★★ 层分解**无重**（全局版）：`cladesOf` 的基数
+
+`upto_succ_union` 只给出**逐步**事实（每步恰添一个新块，且新块不在旧的并里）。
+本小节把它沿层**累加**成**全局**结论 —— 这正是 §14.1 具名缺件 ① 里
+「各层新块之并**无重**」的那一半：
+
+* `card_upto`：`(upto f L).card = n + L`（`L ≤ n - 1`）；
+* `card_cladesOf`：`(cladesOf n f).card = 2 * n - 1`（二叉树的 `2n-1` 个 clade）；
+* ★ `card_filter_nonsingleton_cladesOf`：**非单点 clade 恰 `n - 1` 个**
+  —— (O1) 双射「创建序」一端的**载体基数**；
+* ★ `children_fiberOf_chainMap_succ`：新块的 `children` **恰是**该步被合并的两块
+  （把 §14 归纳证明里的 `hchildren` 一段**提升**成独立引理，供 `existsUnique_creation_level` 用）。
+
+⚠️ 仍是 (O1) 的**器材**（数量半 ＋ 孩子半），不是 (O1) 本体（双射未给出）。 -/
+
+/-- `id` 的纤维是单点（第 `0` 层的块全是单点）。 -/
+theorem fiberOf_id {n : ℕ} (v : Fin n) : fiberOf (id : Fin n → Fin n) v = {v} := by
+  ext z
+  simp [fiberOf]
+
+/-- `blocksOf` 与 `fiberOf` 的定义式一致（`image` 形式）。 -/
+theorem blocksOf_eq_image_fiberOf {n : ℕ} (r : Fin n → Fin n) :
+    blocksOf n r = (Finset.univ : Finset (Fin n)).image (fun w => fiberOf r (r w)) := rfl
+
+/-- 第 `0` 层的块 = `n` 个单点。 -/
+theorem blocksOf_zero {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) :
+    blocksOf n (chainMap n f 0)
+      = (Finset.univ : Finset (Fin n)).image (fun w => ({w} : Finset (Fin n))) := by
+  have h0 : chainMap n f 0 = (id : Fin n → Fin n) := rfl
+  have hfun : (fun w : Fin n => fiberOf (id : Fin n → Fin n) (id w))
+      = (fun w : Fin n => ({w} : Finset (Fin n))) := by
+    funext w
+    rw [id_eq, fiberOf_id]
+  rw [h0, blocksOf_eq_image_fiberOf, hfun]
+
+/-- 第 `0` 层恰有 `n` 个块。 -/
+theorem card_blocksOf_zero {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) :
+    (blocksOf n (chainMap n f 0)).card = n := by
+  rw [blocksOf_zero]
+  have hinj : Function.Injective (fun w : Fin n => ({w} : Finset (Fin n))) := by
+    intro a b hab
+    have hab' : ({a} : Finset (Fin n)) = {b} := hab
+    exact Finset.singleton_inj.mp hab'
+  rw [Finset.card_image_of_injective _ hinj, Finset.card_univ, Fintype.card_fin]
+
+/-- `upto f 0` 就是第 `0` 层的块集。 -/
+theorem upto_zero {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) :
+    upto f 0 = blocksOf n (chainMap n f 0) := by
+  ext D
+  rw [mem_upto]
+  constructor
+  · rintro ⟨j, hj, h⟩
+    have hj0 : j = 0 := by omega
+    subst hj0
+    exact h
+  · intro h
+    exact ⟨0, by omega, h⟩
+
+/-- `upto` 随层数**单调**。 -/
+theorem upto_subset {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) {L L' : ℕ} (h : L ≤ L') :
+    upto f L ⊆ upto f L' := by
+  intro D hD
+  obtain ⟨j, hj, hjD⟩ := mem_upto.mp hD
+  exact mem_upto.mpr ⟨j, by omega, hjD⟩
+
+/-- **一步恰添一个新块**：`(upto f (L+1)).card = (upto f L).card + 1`。 -/
+theorem upto_succ_card {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    {L : ℕ} (hL : L < n - 1) : (upto f (L + 1)).card = (upto f L).card + 1 := by
+  set x : Fin n := (f ⟨L, hL⟩).1 with hxdef
+  set y : Fin n := (f ⟨L, hL⟩).2 with hydef
+  have hpair : f ⟨L, hL⟩ = (x, y) := by rw [hxdef, hydef]
+  have hstep := hf.1 ⟨L, hL⟩
+  have hx : chainMap n f L x = x := by rw [hxdef]; exact hstep.1
+  have hy : chainMap n f L y = y := by rw [hydef]; exact hstep.2.1
+  have hxy : x ≠ y := by rw [hxdef, hydef]; exact ne_of_lt hstep.2.2
+  have hU := upto_succ_union (f := f) hL hpair hx
+  have hnot := not_mem_upto_union (f := f) hx hy hxy
+  rw [hU, Finset.union_singleton, Finset.card_insert_of_notMem hnot]
+
+/-- 前 `L+1` 层共 `n + L` 个块（`n` 个单点 ＋ 每步恰一个新块）。 -/
+theorem card_upto {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ∀ L, L ≤ n - 1 → (upto f L).card = n + L := by
+  intro L
+  induction L with
+  | zero =>
+    intro _
+    rw [upto_zero, card_blocksOf_zero]
+    omega
+  | succ L ih =>
+    intro hL1
+    have hL : L < n - 1 := by omega
+    rw [upto_succ_card (f := f) hf hL, ih (by omega)]
+    omega
+
+/-- `cladesOf n f` 就是到第 `n-1` 层为止的块并。 -/
+theorem cladesOf_eq_upto {n : ℕ} (f : Fin (n - 1) → Fin n × Fin n) :
+    cladesOf n f = upto f (n - 1) := by
+  ext D
+  rw [mem_cladesOf, mem_upto]
+  constructor
+  · rintro ⟨j, hj, h⟩
+    exact ⟨j, by omega, h⟩
+  · rintro ⟨j, hj, h⟩
+    obtain ⟨z, hz⟩ := nonempty_of_mem_blocksOf h
+    have hzn : z.val < n := z.isLt
+    exact ⟨j, by omega, h⟩
+
+/-- ★★★ **`cladesOf` 的基数 = `2n - 1`**（`n` 个叶的二叉树恰有 `2n-1` 个 clade）。 -/
+theorem card_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) : (cladesOf n f).card = 2 * n - 1 := by
+  rw [cladesOf_eq_upto f, card_upto hf (n - 1) (by omega)]
+  omega
+
+/-- 前 `L+1` 层里**非单点**块恰 `L` 个（每步新块必非单点，旧块里单点只有 `n` 个）。 -/
+theorem card_upto_filter {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ∀ L, L ≤ n - 1 → ((upto f L).filter (fun C => 2 ≤ C.card)).card = L := by
+  intro L
+  induction L with
+  | zero =>
+    intro _
+    rw [upto_zero, Finset.card_eq_zero, Finset.filter_eq_empty_iff]
+    intro D hD h2
+    obtain ⟨w, hw⟩ := exists_fiberOf_of_mem_blocksOf hD
+    have h0 : chainMap n f 0 = (id : Fin n → Fin n) := rfl
+    have h1 : D.card = 1 := by rw [hw, h0, fiberOf_id]; simp
+    omega
+  | succ L ih =>
+    intro hL1
+    have hL : L < n - 1 := by omega
+    set x : Fin n := (f ⟨L, hL⟩).1 with hxdef
+    set y : Fin n := (f ⟨L, hL⟩).2 with hydef
+    have hpair : f ⟨L, hL⟩ = (x, y) := by rw [hxdef, hydef]
+    have hstep := hf.1 ⟨L, hL⟩
+    have hx : chainMap n f L x = x := by rw [hxdef]; exact hstep.1
+    have hy : chainMap n f L y = y := by rw [hydef]; exact hstep.2.1
+    have hxy : x ≠ y := by rw [hxdef, hydef]; exact ne_of_lt hstep.2.2
+    have hU := upto_succ_union (f := f) hL hpair hx
+    have hnot := not_mem_upto_union (f := f) hx hy hxy
+    have hxInA : x ∈ fiberOf (chainMap n f L) x := mem_fiberOf.mpr hx
+    have hyInB : y ∈ fiberOf (chainMap n f L) y := mem_fiberOf.mpr hy
+    have h2AB : 2 ≤ (fiberOf (chainMap n f L) x ∪ fiberOf (chainMap n f L) y).card := by
+      have hsub : ({x, y} : Finset (Fin n))
+          ⊆ fiberOf (chainMap n f L) x ∪ fiberOf (chainMap n f L) y := by
+        intro z hz
+        rw [Finset.mem_insert, Finset.mem_singleton] at hz
+        rcases hz with rfl | rfl
+        · exact Finset.mem_union_left _ hxInA
+        · exact Finset.mem_union_right _ hyInB
+      have hcard : ({x, y} : Finset (Fin n)).card = 2 := by
+        rw [Finset.card_insert_of_notMem (by simpa using hxy), Finset.card_singleton]
+      have hle := Finset.card_le_card hsub
+      omega
+    rw [hU, Finset.filter_union, Finset.filter_singleton, ite_eq_left h2AB,
+      Finset.union_singleton,
+      Finset.card_insert_of_notMem (fun hmem => hnot (Finset.mem_of_mem_filter _ hmem)),
+      ih (by omega)]
+
+/-- ★★★ **非单点 clade 恰 `n - 1` 个** —— (O1) 双射「创建序」的**载体基数**。 -/
+theorem card_filter_nonsingleton_cladesOf {n : ℕ}
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ((cladesOf n f).filter (fun C => 2 ≤ C.card)).card = n - 1 := by
+  rw [cladesOf_eq_upto f, card_upto_filter hf (n - 1) (by omega)]
+
+/-- ★★★ **(O1) 具名缺件 ① 的定性半**：第 `L` 步合并出的新块 `A ∪ B` 在
+`cladesOf n f` 里的 `children` **恰是**该步被合并的两块 `A`、`B`。 -/
+theorem children_fiberOf_chainMap_succ {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} {L : ℕ}
+    (hL : L < n - 1) {x y : Fin n} (hpair : f ⟨L, hL⟩ = (x, y))
+    (hx : chainMap n f L x = x) (hy : chainMap n f L y = y) (hxy : x ≠ y) :
+    children (cladesOf n f) (fiberOf (chainMap n f L) x ∪ fiberOf (chainMap n f L) y)
+      = {fiberOf (chainMap n f L) x, fiberOf (chainMap n f L) y} := by
+  have hLn : L < n := by omega
+  have hsucc : chainMap n f (L + 1) = stepMap (chainMap n f L) x y := by
+    rw [chainMap_succ, dite_eq_left hL, hpair]
+  set A : Finset (Fin n) := fiberOf (chainMap n f L) x with hA
+  set B : Finset (Fin n) := fiberOf (chainMap n f L) y with hB
+  have hCx : fiberOf (chainMap n f (L + 1)) x = A ∪ B := by
+    rw [hsucc, fiberOf_stepMap, ite_eq_left rfl, ← hA, ← hB]
+  have hAT : A ∈ cladesOf n f := by
+    rw [hA]
+    exact mem_cladesOf.mpr ⟨L, hLn, hx ▸ fiberOf_mem_blocksOf (chainMap n f L) x⟩
+  have hBT : B ∈ cladesOf n f := by
+    rw [hB]
+    exact mem_cladesOf.mpr ⟨L, hLn, hy ▸ fiberOf_mem_blocksOf (chainMap n f L) y⟩
+  have hxInA : x ∈ A := by rw [hA]; exact mem_fiberOf.mpr hx
+  have hyInB : y ∈ B := by rw [hB]; exact mem_fiberOf.mpr hy
+  have hAneB : A ≠ B := by
+    intro heq
+    have h1 : x ∈ B := heq ▸ hxInA
+    rw [hB, mem_fiberOf] at h1
+    exact hxy (hx.symm.trans h1)
+  have hyNotA : y ∉ A := by
+    intro h
+    rw [hA, mem_fiberOf] at h
+    exact hxy (h.symm.trans hy)
+  have hxNotB : x ∉ B := by
+    intro h
+    rw [hB, mem_fiberOf] at h
+    exact hxy (hx.symm.trans h)
+  have hAproper : A ⊂ A ∪ B := by
+    refine Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_union_left, ?_⟩
+    intro heq
+    have h1 : y ∈ A ∪ B := Finset.mem_union_right A hyInB
+    rw [← heq] at h1
+    exact hyNotA h1
+  have hBproper : B ⊂ A ∪ B := by
+    refine Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_union_right, ?_⟩
+    intro heq
+    have h1 : x ∈ A ∪ B := Finset.mem_union_left B hxInA
+    rw [← heq] at h1
+    exact hxNotB h1
+  have hclassify : ∀ D ∈ cladesOf n f, D ⊆ A ∪ B → D ⊆ A ∨ D ⊆ B ∨ D = A ∪ B := by
+    intro D hDT hDsub
+    obtain ⟨j, hj, hDj⟩ := mem_cladesOf.mp hDT
+    obtain ⟨a0, ha0⟩ := nonempty_of_mem_blocksOf hDj
+    have hDeq : D = fiberOf (chainMap n f j) (chainMap n f j a0) :=
+      eq_fiberOf_of_mem_blocksOf hDj ha0
+    have ha0C : a0 ∈ A ∪ B := hDsub ha0
+    by_cases hle : j ≤ L
+    · have hmono : D ⊆ fiberOf (chainMap n f L) (chainMap n f L a0) := by
+        rw [hDeq]
+        exact fiberOf_chainMap_mono f hle a0
+      rcases Finset.mem_union.mp ha0C with h | h
+      · left
+        have hxa : chainMap n f L a0 = x := mem_fiberOf.mp (hA ▸ h)
+        have hfe : fiberOf (chainMap n f L) (chainMap n f L a0) = A := by
+          rw [hxa, ← hA]
+        rwa [hfe] at hmono
+      · right; left
+        have hya : chainMap n f L a0 = y := mem_fiberOf.mp (hB ▸ h)
+        have hfe : fiberOf (chainMap n f L) (chainMap n f L a0) = B := by
+          rw [hya, ← hB]
+        rwa [hfe] at hmono
+    · right; right
+      have hle' : L + 1 ≤ j := by omega
+      have hmono : fiberOf (chainMap n f (L + 1)) (chainMap n f (L + 1) a0) ⊆ D := by
+        rw [hDeq]
+        exact fiberOf_chainMap_mono f hle' a0
+      have hxval : chainMap n f (L + 1) a0 = x := by
+        have h1 : a0 ∈ fiberOf (chainMap n f (L + 1)) x := by
+          rw [hCx]
+          exact ha0C
+        exact mem_fiberOf.mp h1
+      have hsub : A ∪ B ⊆ D := by
+        rw [← hCx, ← hxval]
+        exact hmono
+      exact Finset.Subset.antisymm hDsub hsub
+  have hAmax : ∀ D ∈ cladesOf n f, A ⊂ D → D ⊂ A ∪ B → False := by
+    intro D hDT hAD hDC
+    rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+    · have h1 := Finset.card_lt_card hAD
+      have h2 := Finset.card_le_card hsub
+      omega
+    · have h1 : x ∈ D := hAD.1 hxInA
+      have h2 : x ∈ B := hsub h1
+      rw [hB, mem_fiberOf] at h2
+      exact hxy (hx.symm.trans h2)
+    · exact hDC.2 (heq ▸ Finset.Subset.refl D)
+  have hBmax : ∀ D ∈ cladesOf n f, B ⊂ D → D ⊂ A ∪ B → False := by
+    intro D hDT hBD hDC
+    rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+    · have h1 : y ∈ D := hBD.1 hyInB
+      have h2 : y ∈ A := hsub h1
+      rw [hA, mem_fiberOf] at h2
+      exact hxy (h2.symm.trans hy)
+    · have h1 := Finset.card_lt_card hBD
+      have h2 := Finset.card_le_card hsub
+      omega
+    · exact hDC.2 (heq ▸ Finset.Subset.refl D)
+  have hAchild : A ∈ children (cladesOf n f) (A ∪ B) :=
+    mem_children.mpr ⟨hAT, hAproper, hAmax⟩
+  have hBchild : B ∈ children (cladesOf n f) (A ∪ B) :=
+    mem_children.mpr ⟨hBT, hBproper, hBmax⟩
+  ext D
+  rw [Finset.mem_insert, Finset.mem_singleton]
+  constructor
+  · intro hD
+    obtain ⟨hDT, hDC, -⟩ := mem_children.mp hD
+    rcases hclassify D hDT hDC.1 with hsub | hsub | heq
+    · by_cases hDA : D = A
+      · exact Or.inl hDA
+      · exfalso
+        exact (children_maximal hD hAT
+          (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hDA⟩)) hAproper
+    · by_cases hDB : D = B
+      · exact Or.inr hDB
+      · exfalso
+        exact (children_maximal hD hBT
+          (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hDB⟩)) hBproper
+    · exact absurd (heq ▸ Finset.Subset.refl D) hDC.2
+  · rintro (rfl | rfl)
+    · exact hAchild
+    · exact hBchild
+
+/-! ### §14.3 ★★★ (O1) 具名缺件 ①：`existsUnique_creation_level`
+
+`card_filter_nonsingleton_cladesOf` 给出「非单点 clade 恰 `n - 1` 个」，
+`children_fiberOf_chainMap_succ` 给出「新块的孩子恰为被合并的两块」。
+本小节把两者并成 §14.1 里**具名缺件 ①** 的完整陈述：
+
+> 每个非单点 clade `C` **唯一**确定一个「创建步」`k : Fin (n-1)`：
+> `C` 在第 `k+1` 层成为块（`C ∈ blocksOf (chainMap (k+1))`）、
+> 不在前 `k` 层出现过（`C ∉ upto f k`）、且 `children (cladesOf n f) C`
+> 恰是第 `k` 步被合并的两块。
+
+即：`C ↦ k` 是 `{C ∈ cladesOf n f : 2 ≤ |C|} → Fin (n-1)` 的**单射**
+（单射 = 本小节末尾的 `eq_of_mem_blocksOf_succ`：同一步至多一个新非单点块；
+配合 `card_filter_nonsingleton_cladesOf` 即为**双射**）——
+这就是「创建序」这一端的全部组合内容。 -/
+
+/-- ★★★ **(O1) 具名缺件 ①**：每个非单点 clade 的**创建步唯一**，
+且 `children` 恰为该步被合并的两块。 -/
+theorem existsUnique_creation_level {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f) (h2 : 2 ≤ C.card) :
+    ∃! k : Fin (n - 1),
+      C ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)) ∧ C ∉ upto f (k : ℕ) ∧
+        children (cladesOf n f) C
+          = {fiberOf (chainMap n f (k : ℕ)) (f k).1,
+              fiberOf (chainMap n f (k : ℕ)) (f k).2} := by
+  have hCn : C ∈ upto f (n - 1) := by
+    rw [← cladesOf_eq_upto f]
+    exact hC
+  -- 第 `0` 层没有非单点块
+  have hC0 : C ∉ upto f 0 := by
+    intro hmem
+    rw [upto_zero] at hmem
+    obtain ⟨w, hw⟩ := exists_fiberOf_of_mem_blocksOf hmem
+    have h0 : chainMap n f 0 = (id : Fin n → Fin n) := rfl
+    have h1 : C.card = 1 := by rw [hw, h0, fiberOf_id]; simp
+    omega
+  -- 最小层 `m`（`C` 首次成为块的那一层）
+  have hex : ∃ j : ℕ, C ∈ upto f j := ⟨n - 1, hCn⟩
+  set m : ℕ := Nat.find hex with hm
+  have hm_spec : C ∈ upto f m := by
+    rw [hm]
+    exact Nat.find_spec hex
+  have hm_min : ∀ j, j < m → C ∉ upto f j := by
+    intro j hj
+    rw [hm] at hj
+    exact Nat.find_min hex hj
+  have hm_le : m ≤ n - 1 := by
+    by_contra hlt
+    exact hm_min (n - 1) (by omega) hCn
+  have hm_pos : 0 < m := by
+    rcases Nat.eq_zero_or_pos m with h | h
+    · exact absurd (h ▸ hm_spec) hC0
+    · exact h
+  -- 创建步 `k = m - 1`
+  set k : Fin (n - 1) := ⟨m - 1, by omega⟩ with hk
+  have hkval : (k : ℕ) = m - 1 := rfl
+  have hk1 : (k : ℕ) + 1 = m := by rw [hkval]; omega
+  have hklt : (k : ℕ) < m := by rw [hkval]; omega
+  have hnotK : C ∉ upto f (k : ℕ) := hm_min (k : ℕ) hklt
+  have hmemB : C ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)) := by
+    have hspec' : C ∈ upto f ((k : ℕ) + 1) := by rw [hk1]; exact hm_spec
+    rw [upto_succ f (k : ℕ)] at hspec'
+    rcases Finset.mem_union.mp hspec' with h | h
+    · exact absurd h hnotK
+    · exact h
+  -- `C` 就是第 `k` 步合并出的新块 `A ∪ B`
+  have hstep := hf.1 k
+  have hx : chainMap n f (k : ℕ) (f k).1 = (f k).1 := hstep.1
+  have hy : chainMap n f (k : ℕ) (f k).2 = (f k).2 := hstep.2.1
+  have hxy : (f k).1 ≠ (f k).2 := ne_of_lt hstep.2.2
+  have hsucck : chainMap n f ((k : ℕ) + 1)
+      = stepMap (chainMap n f (k : ℕ)) (f k).1 (f k).2 := by
+    rw [chainMap_succ, dite_eq_left k.isLt]
+  have hCe : C = fiberOf (chainMap n f (k : ℕ)) (f k).1
+      ∪ fiberOf (chainMap n f (k : ℕ)) (f k).2 := by
+    have hmemB' : C ∈ blocksOf n (stepMap (chainMap n f (k : ℕ)) (f k).1 (f k).2) := by
+      rw [← hsucck]
+      exact hmemB
+    have hsub := blocksOf_stepMap_subset (chainMap n f (k : ℕ)) (f k).1 (f k).2 hmemB'
+    rcases Finset.mem_union.mp hsub with h | h
+    · exact absurd (mem_upto_of_le (le_refl (k : ℕ)) h) hnotK
+    · rw [Finset.mem_singleton] at h
+      exact h
+  have hchild : children (cladesOf n f) C
+      = {fiberOf (chainMap n f (k : ℕ)) (f k).1,
+          fiberOf (chainMap n f (k : ℕ)) (f k).2} := by
+    rw [hCe]
+    exact children_fiberOf_chainMap_succ k.isLt rfl hx hy hxy
+  refine ⟨k, ⟨hmemB, hnotK, hchild⟩, ?_⟩
+  -- 唯一性：任何满足条件的 `k'` 与 `k` 的创建层相同
+  intro k' hk'
+  obtain ⟨hmemB', hnotK', -⟩ := hk'
+  have hmemU : C ∈ upto f ((k : ℕ) + 1) := mem_upto_of_le (le_refl ((k : ℕ) + 1)) hmemB
+  have hmemU' : C ∈ upto f ((k' : ℕ) + 1) :=
+    mem_upto_of_le (le_refl ((k' : ℕ) + 1)) hmemB'
+  apply Fin.ext
+  by_contra hne
+  rcases Nat.lt_or_gt_of_ne hne with hlt | hlt
+  · exact hnotK (upto_subset f (by omega) hmemU')
+  · exact hnotK' (upto_subset f (by omega) hmemU)
+
+/-- ★★★ **同一步至多创建一个非单点块**（「无重」的直接形式）：
+两个都在第 `k+1` 层成为块、且都没在前 `k` 层出现过，则它们**必相等**。
+这是「非单点 clade ↦ 创建步」映射**单射**的来源。 -/
+theorem eq_of_mem_blocksOf_succ {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n} {k : Fin (n - 1)}
+    {C C' : Finset (Fin n)}
+    (hC : C ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)))
+    (hC' : C' ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)))
+    (hnC : C ∉ upto f (k : ℕ)) (hnC' : C' ∉ upto f (k : ℕ)) : C = C' := by
+  have hsucck : chainMap n f ((k : ℕ) + 1)
+      = stepMap (chainMap n f (k : ℕ)) (f k).1 (f k).2 := by
+    rw [chainMap_succ, dite_eq_left k.isLt]
+  have key : ∀ D : Finset (Fin n), D ∈ blocksOf n (chainMap n f ((k : ℕ) + 1)) →
+      D ∉ upto f (k : ℕ) →
+      D = fiberOf (chainMap n f (k : ℕ)) (f k).1
+        ∪ fiberOf (chainMap n f (k : ℕ)) (f k).2 := by
+    intro D hD hnD
+    have hD' : D ∈ blocksOf n (stepMap (chainMap n f (k : ℕ)) (f k).1 (f k).2) := by
+      rw [← hsucck]
+      exact hD
+    have hsub := blocksOf_stepMap_subset (chainMap n f (k : ℕ)) (f k).1 (f k).2 hD'
+    rcases Finset.mem_union.mp hsub with h | h
+    · exact absurd (mem_upto_of_le (le_refl (k : ℕ)) h) hnD
+    · rw [Finset.mem_singleton] at h
+      exact h
+  rw [key C hC hnC, key C' hC' hnC']
+
 /-! ### §14.1 (O1) 的**诚实边界**（本节**没有**做的事，逐件具名）
 
 `children_cladesOf_card_two` 把 (O1) 双射**两端对象的形状**对齐了
 （纤维一侧是「二叉树上的合并序」，`LE` 一侧是「二叉树偏序上的线性扩展」），
 但双射本身**未给出**。剩余内容精确地是**两件**：
 
-1. ★ **`cladesOf` 的层分解无重**：`C ∈ cladesOf n f`（`2 ≤ |C|`）**唯一**确定一个
-   「创建步」`k_C < n - 1`（`C` 首次成为块的层），且 `children (cladesOf n f) C` 恰是
-   第 `k_C` 步合并前的那两块。由此「合并史 `g`（同 clade 集）」↔「非单点 clade 的
-   **创建序** `Fin (n-1) ≃ {C ∈ cladesOf n f : 2 ≤ |C|}`（保持孩子先于父）」。
-   **缺的具名器材**：`existsUnique_creation_level`
-   （现在只有 `upto_succ_union` 的**逐步**版本：每步恰添一个新块；缺「每个非单点 clade
-   只被创建一次」的**全局**版本，即 `cladesOf n f` 与「各层新块」之间的无重并）。
+1. ✅ **`cladesOf` 的层分解无重** —— **W26 泳道 b 已落地**：由
+   `card_cladesOf`（`|cladesOf n f| = 2n-1`）、`card_filter_nonsingleton_cladesOf`
+   （非单点 clade 恰 `n-1` 个）与 `existsUnique_creation_level`
+   （每个非单点 `C` **唯一**确定创建步 `k : Fin (n-1)`：`C` 在第 `k+1` 层成为块、
+   前 `k` 层未出现、且 `children (cladesOf n f) C` 恰是第 `k` 步被合并的两块）
+   **共同给出**「非单点 clade ↔ 创建步」这一端的**双射**
+   （单射 = `eq_of_mem_blocksOf_succ`：同一步至多一个新非单点块；
+   基数对消 = `card_filter_nonsingleton_cladesOf`）。
+   ⬜ **仍缺**（(O1) 本体的一部分）：把这端**接到 `g ∈ mergeHistories n` 上的双向映射**
+   （由创建序重建 `g`，证 `cladesOf n g` 复原且往返为恒等），以及下面第 2 件的计数。
 2. ★ **`LE` = 线性扩展数**：`LE`（§8）现在是**多项式系数递推**。要把它认成「创建序的个数」，
    需要自造线性扩展计数 `LinExt`（`internalBelow T C` 上按 `⊊` 的线性扩展数）
    ＋ **交错引理** `LinExt C = multinomial(hook 孩子) · ∏ LinExt 孩子`
@@ -1698,7 +2122,8 @@ theorem children_cladesOf_card_two {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n
    `LinearExtension` 类型别名与存在性 `extend_partialOrder`，见 §8 的三次 grep）
    ⇒ 这件必须自造，且交错引理是**真正的组合作业**（`Finset`/`Multiset` 层面的洗牌双射）。
 
-⇒ `rankedFiberCount_gap` **仍开着**（(O1) 未证）；本轮的可复用增量是 §14 的二叉性定理。
+⇒ `rankedFiberCount_gap` **仍开着**（(O1) 未证）；可复用增量是 §14 的二叉性定理
+＋ **§14.2/§14.3 的层分解无重**（创建步存在唯一 ＋ 基数 `2n-1` / 非单点 `n-1`）。
 -/
 
 end Phylo.Stat.HookLength
