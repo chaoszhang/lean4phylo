@@ -1026,7 +1026,8 @@ theorem isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible (F : Finset (
 必须用带权的 `c_W ≤ min c_P c_X`。★ 该 `F` 恰**不**弱相容：`{a,1,3,4}` 上三个成员分别诱导
 `{a,4}|{1,3}`、`{a,3}|{1,4}`、`{a,1}|{3,4}` ⇒ 冲突四元组 —— 这正是 (B2) 真正需要的机制
 （「远侧覆盖」＋ 弱相容性 ⇒ 冲突四元组）。★ 该机制在 `|t.sideB| = 3` 时**已形式化**（§7.3.1：
-「每对都被覆盖 ⇒ 三个覆盖成员给出冲突四元组」），`|t.sideB| ≥ 4`（即 `|X| ≥ 5`）**仍开放**。 -/
+「每对都被覆盖 ⇒ 三个覆盖成员给出冲突四元组」）；`|t.sideB| = 4` 亦**已形式化**（§7.3.2a：`farSide`
+＋ `stepA`/`stepB` 刚性计数）；`|t.sideB| ≥ 5` **仍开放**（§7.3.2b 写明缺件）。 -/
 
 /-- `sideA` 相同的两个 split 相等（`sideB = sideAᶜ` 由「不交 + 并 = 全集」决定）。 -/
 theorem eq_of_sideA_eq {s t : Split α} (h : s.sideA = t.sideA) : s = t := by
@@ -1328,6 +1329,555 @@ theorem not_isDSplit_of_weaklyCompatible_of_card_univ_four (F : Finset (Split α
     refine hsw ?_
     simpa only [swap_sideA, swap_sideB] using
       (isDSplit_comm (A := t.sideA) (B := t.sideB) (fun x y => splitMetricSum_symm F w x y)).mp hD
+
+/-! ### 7.3.2a ★★★★★ `1+4` 情形（`|X| = 5`）：「**远侧覆盖** ＋ 弱相容 ⟹ 冲突四元组」
+
+§7.3.1 的 `1+3` 情形只用到 `|t.sideB| = 3` 的**唯一**三元组；`|t.sideB| = 4` 时四元组的自由度
+真的变大，必须换一件器材：把「**远侧**」（成员 `u` 两侧中**不含** `a` 的那一侧，`farSide u a`）
+当作组合对象，把「每对 `b,b' ∈ t.sideB` 都被某成员与 `a` 分离」写成**覆盖**条件，再证明：
+
+> **(远侧覆盖 ⟹ 冲突)** `|t.sideB| = 4` 时，若每个二元子集 `p ⊆ t.sideB` 都有成员以 `p`
+> 为远侧、或把 `p` 扩成 `p ∪ {d}`（`d` = 被「补」的那一点）为远侧，则 `F` 有冲突四元组。
+
+证明（`goodConflict`）：`t.sideB \ {d}` 只有三点 ⇒ 三对内每对都得有「**好**见证」（远侧恰是
+`p` 或 `p ∪ {d}`，即远侧与 `t.sideB \ {d}` 的**交恰为 `p`**）⇒ 三个成员在 `{a} ∪ (t.sideB \ {d})`
+上诱导**三个不同**的 2|2 ⇒ `HasConflictingQuartet`。
+
+★ 关键计数（`stepA`/`stepB`）：若二元 `p` 不是远侧，覆盖给出成员 `u` 使 `p ⊆ farSide u a`；
+`farSide u a ⊆ t.sideB`、`≠ t.sideB`、`|t.sideB| = 4` ⇒ `|farSide u a| = 3` ⇒ 恰有**一个**第三点
+`e`。若还有 `p ∪ {d}` 不是远侧（`d` 是第三点的一个候选），则 `e ≠ d` ⇒ `farSide u a = t.sideB \ {d}`。
+这条「第三点只能落在 `t.sideB \ p` 的两点之一」正是 `|t.sideB| = 4` 才有的**刚性**；
+`|t.sideB| ≥ 5` 时第三点有更多落点 ⇒ 该计数论证失效（见 §7.3 头部的卡点分析）。 -/
+
+/-- 「**远侧**」：`u` 的两侧中**不含 `a`** 的那一侧（`a` 落在哪侧就取另一侧）。 -/
+def farSide (u : Split α) (a : α) : Finset α :=
+  if a ∈ u.sideA then u.sideB else u.sideA
+
+/-- `a` 不在自己的远侧上。 -/
+theorem not_mem_farSide (u : Split α) (a : α) : a ∉ farSide u a := by
+  by_cases ha : a ∈ u.sideA
+  · have h : farSide u a = u.sideB := by simp [farSide, ha]
+    rw [h]
+    exact fun hb => Finset.disjoint_left.mp u.disjoint_sides ha hb
+  · have h : farSide u a = u.sideA := by simp [farSide, ha]
+    rw [h]; exact ha
+
+/-- `a ∉ u.sideA`、`x ∈ u.sideA` ⇒ `x` 落在远侧。 -/
+theorem mem_farSide_of_not_mem_sideA {u : Split α} {a x : α} (ha : a ∉ u.sideA)
+    (hx : x ∈ u.sideA) : x ∈ farSide u a := by
+  have h : farSide u a = u.sideA := by simp [farSide, ha]
+  rw [h]; exact hx
+
+/-- `a ∈ u.sideA`、`x ∈ u.sideB` ⇒ `x` 落在远侧。 -/
+theorem mem_farSide_of_mem_sideB {u : Split α} {a x : α} (ha : a ∈ u.sideA)
+    (hx : x ∈ u.sideB) : x ∈ farSide u a := by
+  have h : farSide u a = u.sideB := by simp [farSide, ha]
+  rw [h]; exact hx
+
+/-- 远侧上的点总在 `u` 的某一侧。 -/
+theorem mem_side_of_mem_farSide {u : Split α} {a x : α} (h : x ∈ farSide u a) :
+    x ∈ u.sideA ∨ x ∈ u.sideB := by
+  by_cases ha : a ∈ u.sideA
+  · exact Or.inr (by simpa [farSide, ha] using h)
+  · exact Or.inl (by simpa [farSide, ha] using h)
+
+/-- ★ **远侧判据**：`a`、`p₁` 不在远侧、`p₂`、`p₃` 在远侧 ⇒ `u` 在四点 `{a,p₁,p₂,p₃}` 上
+诱导 2|2 split `{a,p₁}|{p₂,p₃}`。 -/
+theorem separates_of_farSide {u : Split α} {a p1 p2 p3 : α}
+    (h1 : p1 ∉ farSide u a) (h2 : p2 ∈ farSide u a) (h3 : p3 ∈ farSide u a) :
+    u.Separates a p1 p2 p3 := by
+  by_cases ha : a ∈ u.sideA
+  · have hT : farSide u a = u.sideB := by simp [farSide, ha]
+    rw [hT] at h1 h2 h3
+    exact Or.inl ⟨ha, u.mem_sideA_of_not_mem_sideB h1, h2, h3⟩
+  · have hT : farSide u a = u.sideA := by simp [farSide, ha]
+    rw [hT] at h1 h2 h3
+    exact Or.inr ⟨u.mem_sideB_of_not_mem_sideA ha, u.mem_sideB_of_not_mem_sideA h1, h2, h3⟩
+
+/-- `sideB` 相同 ⟹ `split` 相同（`eq_of_sideA_eq` 的对偶）。 -/
+theorem eq_of_sideB_eq {s t : Split α} (h : s.sideB = t.sideB) : s = t := by
+  refine eq_of_sideA_eq ?_
+  ext p
+  constructor
+  · intro hp
+    have h' : p ∉ s.sideB := fun hs => Finset.disjoint_left.mp s.disjoint_sides hp hs
+    rw [h] at h'
+    exact t.mem_sideA_of_not_mem_sideB h'
+  · intro hp
+    have h' : p ∉ t.sideB := fun hs => Finset.disjoint_left.mp t.disjoint_sides hp hs
+    rw [← h] at h'
+    exact s.mem_sideA_of_not_mem_sideB h'
+
+/-- ★★★★★ **(B2) 的 `1+4` 情形**（`|t.sideA| = 1`、`|t.sideB| = 4`，即 `|X| = 5`）：
+`F` 弱相容、`t ∉ F`、`t.swap ∉ F` ⇒ `t` **不是** `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+★ 注意：本定理**不需要** `w > 0`（与 §7.3.1 的 `1+3`、`2+2` 两条不同）——证明只用**退化四元组** `(a,a,b,b')`：
+此时 `c_P = c_X = 0`，于是 `min c_P c_X < c_W` 直接给出覆盖，**不用**权重为正。
+
+**证明**（详见本节头）：反设每对 `b,b' ∈ t.sideB` 都被某成员与 `a` 分离（「远侧覆盖」）。
+固定 `d ∈ t.sideB`，则三元集 `t.sideB \ {d}` 的三对内只要有「好见证」就得到冲突四元组
+（`goodConflict`）⇒ 存在一对 `p ⊆ t.sideB \ {d}` 使 `p` 与 `p ∪ {d}` 都不是远侧；
+此时 `farSide u a` 的**第三点**只能落在 `t.sideB \ p` 的两点上，`p ∪ {d}` 非远侧逼出
+`farSide u a = t.sideB \ {d}`（`stepB`）。对 `d = x` 得 `t.sideB \ {r}` **不是**远侧
+（`r` = `t.sideB \ (p ∪ {x})` 的那一点）；再对 `d = r` 用一次即得 `t.sideB \ {r}` **是**远侧 ⇒ 矛盾 ∎ -/
+theorem not_isDSplit_of_weaklyCompatible_of_sideA_card_one_of_sideB_card_four
+    (F : Finset (Split α)) (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hA : t.sideA.card = 1) (hB : t.sideB.card = 4) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  intro hD
+  obtain ⟨a, hAeq⟩ := Finset.card_eq_one.mp hA
+  obtain ⟨x, _, _, _, _, _, _, _, _, _, hBeq⟩ := Finset.card_eq_four.mp hB
+  have ha : a ∈ t.sideA := by rw [hAeq]; simp
+  have hxB : x ∈ t.sideB := by rw [hBeq]; simp
+  -- 远侧总在 `t.sideB` 内，且**不**等于 `t.sideB`
+  have farSub : ∀ u ∈ F, farSide u a ⊆ t.sideB := by
+    intro u _ s hs
+    have hsa : s ≠ a := by
+      intro h
+      exact not_mem_farSide u a (h ▸ hs)
+    exact t.mem_sideB_of_not_mem_sideA (by rw [hAeq]; simpa using hsa)
+  have farNe : ∀ u ∈ F, farSide u a ≠ t.sideB := by
+    intro u hu hEq
+    by_cases hca : a ∈ u.sideA
+    · have hB' : u.sideB = t.sideB := by simpa [farSide, hca] using hEq
+      exact ht ((eq_of_sideB_eq hB') ▸ hu)
+    · have hA' : u.sideA = t.sideB := by simpa [farSide, hca] using hEq
+      have hut : u = t.swap := eq_of_sideA_eq (by simpa using hA')
+      exact hts (hut ▸ hu)
+  -- ★ 覆盖：每对 `p, q ∈ t.sideB` 都被某成员与 `a` 分离（退化四元组 `a = a'`）
+  have cover : ∀ p ∈ t.sideB, ∀ q ∈ t.sideB, ∃ u ∈ F, p ∈ farSide u a ∧ q ∈ farSide u a := by
+    intro p hp q hq
+    have hq' := (splitMetricSum_isDSplit_iff F w t.sideA t.sideB).mp hD a ha a ha p hp q hq
+    have hemptyP : F.filter (fun u => qPairP u a a p q = true) = ∅ := by
+      rw [Finset.filter_eq_empty_iff]
+      intro u _
+      simp [qPairP, qSep]
+    have hemptyX : F.filter (fun u => qPairX u a a p q = true) = ∅ := by
+      rw [Finset.filter_eq_empty_iff]
+      intro u _
+      simp [qPairX, qSep]
+    rw [hemptyP, hemptyX] at hq'
+    simp only [Finset.sum_empty, min_self] at hq'
+    rcases Finset.eq_empty_or_nonempty (F.filter (fun u => qPairW u a a p q = true)) with hnil | hne
+    · rw [hnil] at hq'; simp at hq'
+    · obtain ⟨u, hu⟩ := hne
+      obtain ⟨huF, huW⟩ := Finset.mem_filter.mp hu
+      have hsep := (qPairW_eq_true_iff u a a p q).mp huW
+      rcases hsep with ⟨h1, _, h3, h4⟩ | ⟨h1, _, h3, h4⟩
+      · exact ⟨u, huF, mem_farSide_of_mem_sideB h1 h3, mem_farSide_of_mem_sideB h1 h4⟩
+      · have h1' : a ∉ u.sideA := (u.mem_sideB_iff_not_mem_sideA a).mp h1
+        exact ⟨u, huF, mem_farSide_of_not_mem_sideA h1' h3, mem_farSide_of_not_mem_sideA h1' h4⟩
+  -- ★ `stepA`：二元 `p` 不是远侧 ⇒ 覆盖它的成员有**唯一**第三点 `e`
+  have stepA : ∀ p : Finset α, p ⊆ t.sideB → p.card = 2 →
+      (∀ u ∈ F, farSide u a ≠ p) →
+      ∃ e ∈ t.sideB, e ∉ p ∧ ∃ u ∈ F, farSide u a = insert e p := by
+    intro p hpB hpc hnp
+    obtain ⟨p1, p2, _, hpeq⟩ := Finset.card_eq_two.mp hpc
+    have hp1 : p1 ∈ t.sideB := hpB (by rw [hpeq]; simp)
+    have hp2 : p2 ∈ t.sideB := hpB (by rw [hpeq]; simp)
+    obtain ⟨u, huF, hu1, hu2⟩ := cover p1 hp1 p2 hp2
+    have hsub : p ⊆ farSide u a := by
+      rw [hpeq, Finset.insert_subset_iff]
+      exact ⟨hu1, by simpa using hu2⟩
+    have hTsub := farSub u huF
+    have hTne := farNe u huF
+    have hge : 2 ≤ (farSide u a).card := by rw [← hpc]; exact Finset.card_le_card hsub
+    have hle : (farSide u a).card ≤ 4 := by
+      have h := Finset.card_le_card hTsub
+      rwa [hB] at h
+    have hne4 : (farSide u a).card ≠ 4 := by
+      intro hc
+      exact hTne (Finset.eq_of_subset_of_card_le hTsub (by rw [hB, hc]))
+    have hne2 : (farSide u a).card ≠ 2 :=
+      fun hc => hnp u huF (Finset.eq_of_subset_of_card_le hsub (by rw [hpc, hc])).symm
+    have hcases : (farSide u a).card = 2 ∨ (farSide u a).card = 3 :=
+      by omega
+    have hcard3 : (farSide u a).card = 3 := by
+      rcases hcases with h2 | h3
+      · exact absurd h2 hne2
+      · exact h3
+    have hdiff : ((farSide u a) \ p).card = 1 := by
+      rw [Finset.card_sdiff, Finset.inter_eq_left.mpr hsub, hcard3, hpc]
+    obtain ⟨e, he⟩ := Finset.card_eq_one.mp hdiff
+    have hesd : e ∈ (farSide u a) \ p := by rw [he]; exact Finset.mem_singleton_self e
+    obtain ⟨heT, hep⟩ := Finset.mem_sdiff.mp hesd
+    have hTeq : farSide u a = insert e p := by
+      refine Finset.eq_of_subset_of_card_le ?_ ?_
+      · intro s hs
+        by_cases hsp : s ∈ p
+        · exact Finset.mem_insert.mpr (Or.inr hsp)
+        · refine Finset.mem_insert.mpr (Or.inl ?_)
+          have hs' : s ∈ (farSide u a) \ p := Finset.mem_sdiff.mpr ⟨hs, hsp⟩
+          rw [he] at hs'
+          exact Finset.mem_singleton.mp hs'
+      · rw [Finset.card_insert_of_notMem hep, hpc, hcard3]
+    exact ⟨e, hTsub heT, hep, u, huF, hTeq⟩
+  -- ★ `stepB`：`p` 与 `p ∪ {d}` 都不是远侧 ⇒ `t.sideB \ {d}` 是远侧
+  have stepB : ∀ (d : α) (p : Finset α), d ∈ t.sideB → p ⊆ t.sideB → p.card = 2 → d ∉ p →
+      (∀ u ∈ F, farSide u a ≠ p) → (∀ u ∈ F, farSide u a ≠ insert d p) →
+      ∃ u ∈ F, farSide u a = t.sideB \ {d} := by
+    intro d p hdB hpB hpc hdp hnp hndp
+    obtain ⟨e, heB, hep, u, huF, hTeq⟩ := stepA p hpB hpc hnp
+    have hed : e ≠ d := by
+      intro h
+      exact hndp u huF (h ▸ hTeq)
+    have hc1 : (insert e p).card = 3 := by
+      rw [Finset.card_insert_of_notMem hep, hpc]
+    have hc2 : (t.sideB \ {d}).card = 3 := by
+      rw [Finset.card_sdiff, Finset.singleton_inter_of_mem hdB, Finset.card_singleton, hB]
+    have hsub : insert e p ⊆ t.sideB \ {d} := by
+      intro s hs
+      rw [Finset.mem_sdiff, Finset.mem_singleton]
+      refine ⟨?_, ?_⟩
+      · rcases Finset.mem_insert.mp hs with rfl | hsp
+        · exact heB
+        · exact hpB hsp
+      · intro hsd
+        rcases Finset.mem_insert.mp hs with hse | hsp
+        · exact hed (hse.symm.trans hsd)
+        · exact hdp (hsd ▸ hsp)
+    refine ⟨u, huF, ?_⟩
+    rw [hTeq]
+    exact Finset.eq_of_subset_of_card_le hsub (by rw [hc2, hc1])
+  -- ★ `goodConflict`：三元集的三对都有好见证 ⇒ 冲突四元组
+  have goodConflict : ∀ d ∈ t.sideB,
+      (∀ p : Finset α, p ⊆ t.sideB → p.card = 2 → d ∉ p →
+        (∃ u ∈ F, farSide u a = p) ∨ (∃ u ∈ F, farSide u a = insert d p)) →
+      HasConflictingQuartet (↑F : Set (Split α)) := by
+    intro d hdB hall
+    have hS3 : (t.sideB \ {d}).card = 3 := by
+      rw [Finset.card_sdiff, Finset.singleton_inter_of_mem hdB, Finset.card_singleton, hB]
+    obtain ⟨p1, p2, p3, h12, h13, h23, hSeq⟩ := Finset.card_eq_three.mp hS3
+    -- 给定「第三点 `q1`」与「对 `{q2,q3}`」，取出诱导 `{a,q1}|{q2,q3}` 的成员
+    have wit : ∀ q1 q2 q3 : α, q1 ∈ t.sideB \ {d} → q2 ∈ t.sideB \ {d} →
+        q3 ∈ t.sideB \ {d} → q1 ≠ q2 → q1 ≠ q3 → q2 ≠ q3 →
+        ∃ u ∈ F, u.Separates a q1 q2 q3 := by
+      intro q1 q2 q3 hq1 hq2 hq3 hq12 hq13 hq23
+      obtain ⟨hq1B, hq1d⟩ := Finset.mem_sdiff.mp hq1
+      obtain ⟨hq2B, hq2d⟩ := Finset.mem_sdiff.mp hq2
+      obtain ⟨hq3B, hq3d⟩ := Finset.mem_sdiff.mp hq3
+      have hd1 : q1 ≠ d := fun h => hq1d (by simp [h])
+      have hd2 : q2 ≠ d := fun h => hq2d (by simp [h])
+      have hd3 : q3 ≠ d := fun h => hq3d (by simp [h])
+      have hpairB : ({q2, q3} : Finset α) ⊆ t.sideB := by
+        intro s hs
+        rcases Finset.mem_insert.mp hs with rfl | hs'
+        · exact hq2B
+        · rw [Finset.mem_singleton] at hs'
+          rw [hs']; exact hq3B
+      have hpairc : ({q2, q3} : Finset α).card = 2 := by
+        rw [Finset.card_insert_of_notMem (by simpa using hq23), Finset.card_singleton]
+      have hpaird : d ∉ ({q2, q3} : Finset α) := by
+        simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+        exact ⟨fun h => hd2 h.symm, fun h => hd3 h.symm⟩
+      rcases hall {q2, q3} hpairB hpairc hpaird with ⟨u, huF, hu⟩ | ⟨u, huF, hu⟩
+      · refine ⟨u, huF, separates_of_farSide ?_ ?_ ?_⟩
+        · rw [hu]
+          simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+          exact ⟨hq12, hq13⟩
+        · rw [hu]; exact Finset.mem_insert_self q2 {q3}
+        · rw [hu]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self q3)
+      · refine ⟨u, huF, separates_of_farSide ?_ ?_ ?_⟩
+        · rw [hu]
+          simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+          exact ⟨hd1, hq12, hq13⟩
+        · rw [hu]; exact Finset.mem_insert_of_mem (Finset.mem_insert_self q2 {q3})
+        · rw [hu]
+          exact Finset.mem_insert_of_mem (Finset.mem_insert_of_mem (Finset.mem_singleton_self q3))
+    obtain ⟨u23, hu23F, hu23⟩ :=
+      wit p1 p2 p3 (by rw [hSeq]; simp) (by rw [hSeq]; simp) (by rw [hSeq]; simp) h12 h13 h23
+    obtain ⟨u13, hu13F, hu13⟩ :=
+      wit p2 p1 p3 (by rw [hSeq]; simp) (by rw [hSeq]; simp) (by rw [hSeq]; simp)
+        h12.symm h23 h13
+    obtain ⟨u12, hu12F, hu12⟩ :=
+      wit p3 p1 p2 (by rw [hSeq]; simp) (by rw [hSeq]; simp) (by rw [hSeq]; simp)
+        h13.symm h23.symm h12
+    exact ⟨a, p1, p2, p3, ⟨u23, by simpa using hu23F, hu23⟩,
+      ⟨u13, by simpa using hu13F, hu13⟩, ⟨u12, by simpa using hu12F, hu12⟩⟩
+  -- ★ 存在「坏对」（`badExists`）
+  have badExists : ∀ d ∈ t.sideB, ∃ p : Finset α,
+      p ⊆ t.sideB ∧ p.card = 2 ∧ d ∉ p ∧
+        (∀ u ∈ F, farSide u a ≠ p) ∧ (∀ u ∈ F, farSide u a ≠ insert d p) := by
+    intro d hdB
+    by_contra hcon
+    refine hF (goodConflict d hdB ?_)
+    intro p hpB hpc hdp
+    by_contra hg
+    exact hcon ⟨p, hpB, hpc, hdp, fun u hu h => hg (Or.inl ⟨u, hu, h⟩),
+      fun u hu h => hg (Or.inr ⟨u, hu, h⟩)⟩
+  obtain ⟨p, hpB, hpc, hxp, hnp, hndp⟩ := badExists x hxB
+  -- `r` = `t.sideB \ (p ∪ {x})` 的那一点
+  have hpx : insert x p ⊆ t.sideB := by
+    rw [Finset.insert_subset_iff]; exact ⟨hxB, hpB⟩
+  have hpxc : (insert x p).card = 3 := by
+    rw [Finset.card_insert_of_notMem hxp, hpc]
+  have hBdiff : (t.sideB \ (insert x p)).card = 1 := by
+    rw [Finset.card_sdiff, Finset.inter_eq_left.mpr hpx, hB, hpxc]
+  obtain ⟨r, hr⟩ := Finset.card_eq_one.mp hBdiff
+  have hrsd : r ∈ t.sideB \ (insert x p) := by rw [hr]; exact Finset.mem_singleton_self r
+  obtain ⟨hrB, hrnot⟩ := Finset.mem_sdiff.mp hrsd
+  have hBins : t.sideB = insert r (insert x p) := by
+    refine Finset.eq_of_subset_of_card_le ?_ ?_
+    · intro s hs
+      by_cases hsp : s ∈ insert x p
+      · exact Finset.mem_insert.mpr (Or.inr hsp)
+      · refine Finset.mem_insert.mpr (Or.inl ?_)
+        have hs' : s ∈ t.sideB \ (insert x p) := Finset.mem_sdiff.mpr ⟨hs, hsp⟩
+        rw [hr] at hs'
+        exact Finset.mem_singleton.mp hs'
+    · rw [Finset.card_insert_of_notMem hrnot, hpxc, hB]
+  have hrd : t.sideB \ {r} = insert x p := by
+    rw [Finset.sdiff_singleton_eq_erase, hBins, Finset.erase_insert hrnot]
+  -- 对 `d = r` 用 `stepB` 得 `t.sideB \ {r}` **是**远侧，与 `hndp` 矛盾
+  obtain ⟨pr, hprB, hprc, hrpr, hnpr, hndpr⟩ := badExists r hrB
+  obtain ⟨u2, hu2F, hu2⟩ := stepB r pr hrB hprB hprc hrpr hnpr hndpr
+  exact hndp u2 hu2F (by rw [← hrd]; exact hu2)
+
+/-- ★★★★ **(B2) 的 `4+1` 情形**（`|t.sideA| = 4`、`|t.sideB| = 1`）：由 `(1,4)` 情形经
+`t.swap` ＋ `isDSplit_comm` 归约（与 `not_isDSplit_of_weaklyCompatible_of_card_univ_four` 里
+`(3,1)` 的归约同一手法）。-/
+theorem not_isDSplit_of_weaklyCompatible_of_sideB_card_one_of_sideA_card_four
+    (F : Finset (Split α)) (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hB : t.sideB.card = 1) (hA : t.sideA.card = 4) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  have hsw := not_isDSplit_of_weaklyCompatible_of_sideA_card_one_of_sideB_card_four F w hF
+    (t := t.swap) (by simpa using hts) (by simpa using ht) (by simpa using hB) (by simpa using hA)
+  intro hD
+  refine hsw ?_
+  simpa only [swap_sideA, swap_sideB] using
+    (isDSplit_comm (A := t.sideA) (B := t.sideB) (fun x y => splitMetricSum_symm F w x y)).mp hD
+
+/-- ★★★★★ **(B2) 的 `2+3` 情形**（`|t.sideA| = 2`、`|t.sideB| = 3`，即 `|X| = 5` 的 `2|3`）：
+`F` 弱相容、`w > 0` 于 `F`、`t ∉ F`、`t.swap ∉ F` ⇒ `t` **不是** `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+**证明**（比 `1+3` 短，不用「远侧覆盖」）：`w > 0` ⇒ `min c_P c_X ≥ 0`，故**每个**四元组
+（含非退化者）都满足 `c_W > 0`，即**有成员实现 W-配对**。取三个退化方向的对
+`{b₂,b₃}`、`{b₁,b₃}`、`{b₁,b₂}` 的见证 `u₂₃,u₁₃,u₁₂`：`u` 分离 `{a₁,a₂}` 与 `{bᵢ,bⱼ}`。
+★ **关键**：第三点 `b_k` **不可能**也在 `u` 的「b 侧」——否则 `u` 的两侧就是 `A | B`，
+即 `u = t` 或 `u = t.swap`，与 `ht`、`hts` 矛盾。故 `b_k` 与 `a₁` 同侧 ⇒
+`u_ij.Separates a₁ b_k bᵢ bⱼ` ⇒ 三个成员在 `{a₁,b₁,b₂,b₃}` 上诱导**三个不同**的 2|2
+⇒ `HasConflictingQuartet` ⇒ 与 `hF` 矛盾 ∎ -/
+theorem not_isDSplit_of_weaklyCompatible_of_sideA_card_two_of_sideB_card_three
+    (F : Finset (Split α)) (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hA : t.sideA.card = 2) (hB : t.sideB.card = 3) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  intro hD
+  obtain ⟨a1, a2, ha12, hAeq⟩ := Finset.card_eq_two.mp hA
+  obtain ⟨b1, b2, b3, hb12, hb13, hb23, hBeq⟩ := Finset.card_eq_three.mp hB
+  have ha1 : a1 ∈ t.sideA := by rw [hAeq]; simp
+  have ha2 : a2 ∈ t.sideA := by rw [hAeq]; simp
+  have hb1 : b1 ∈ t.sideB := by rw [hBeq]; simp
+  have hb2 : b2 ∈ t.sideB := by rw [hBeq]; simp
+  have hb3 : b3 ∈ t.sideB := by rw [hBeq]; simp
+  -- ★ `w > 0` ⇒ 每个四元组都有 W-见证
+  have wit : ∀ p ∈ t.sideB, ∀ q ∈ t.sideB, ∃ u ∈ F, qPairW u a1 a2 p q = true := by
+    intro p hp q hq
+    have h := (splitMetricSum_isDSplit_iff F w t.sideA t.sideB).mp hD a1 ha1 a2 ha2 p hp q hq
+    have hP0 : (0 : ℝ) ≤ ∑ u ∈ F.filter (fun u => qPairP u a1 a2 p q = true), w u :=
+      Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have hX0 : (0 : ℝ) ≤ ∑ u ∈ F.filter (fun u => qPairX u a1 a2 p q = true), w u :=
+      Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have hWpos : 0 < ∑ u ∈ F.filter (fun u => qPairW u a1 a2 p q = true), w u := by
+      have h0 : (0 : ℝ) ≤ min (∑ u ∈ F.filter (fun u => qPairP u a1 a2 p q = true), w u)
+          (∑ u ∈ F.filter (fun u => qPairX u a1 a2 p q = true), w u) := le_min hP0 hX0
+      linarith
+    rcases Finset.eq_empty_or_nonempty (F.filter (fun u => qPairW u a1 a2 p q = true)) with hnil | hne
+    · rw [hnil] at hWpos; simp at hWpos
+    · obtain ⟨u, hu⟩ := hne
+      exact ⟨u, (Finset.mem_filter.mp hu).1, (Finset.mem_filter.mp hu).2⟩
+  -- ★ 关键：W-见证把「第三点」送到 `a₁` 那侧
+  have key : ∀ {u : Split α} {p r q : α}, u ∈ F → t.sideB = {p, q, r} →
+      qPairW u a1 a2 p q = true → p ≠ r → q ≠ r → u.Separates a1 r p q := by
+    intro u p r q huF hBs hW hpr hqr
+    have hsep := (qPairW_eq_true_iff u a1 a2 p q).mp hW
+    rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+    · -- `a₁,a₂ ∈ u.sideA`、`p,q ∈ u.sideB`
+      by_cases hr : r ∈ u.sideA
+      · exact Or.inl ⟨h1, hr, h3, h4⟩
+      · exfalso
+        have hrB : r ∈ u.sideB := u.mem_sideB_of_not_mem_sideA hr
+        have hAsub : t.sideA ⊆ u.sideA := by
+          rw [hAeq]
+          intro z hz
+          rcases Finset.mem_insert.mp hz with rfl | hz'
+          · exact h1
+          · rw [Finset.mem_singleton] at hz'
+            rw [hz']; exact h2
+        have hBsub : t.sideB ⊆ u.sideB := by
+          rw [hBs]
+          intro z hz
+          rcases Finset.mem_insert.mp hz with rfl | hz
+          · exact h3
+          rcases Finset.mem_insert.mp hz with rfl | hz
+          · exact h4
+          · rw [Finset.mem_singleton] at hz
+            rw [hz]; exact hrB
+        have htu : t = u := eq_of_le_sides hAsub hBsub
+        exact ht (by rw [htu]; exact huF)
+    · -- `a₁,a₂ ∈ u.sideB`、`p,q ∈ u.sideA`
+      by_cases hr : r ∈ u.sideB
+      · exact Or.inr ⟨h1, hr, h3, h4⟩
+      · exfalso
+        have hrA : r ∈ u.sideA := u.mem_sideA_of_not_mem_sideB hr
+        have hAsub : t.sideA ⊆ u.swap.sideA := by
+          rw [swap_sideA, hAeq]
+          intro z hz
+          rcases Finset.mem_insert.mp hz with rfl | hz'
+          · exact h1
+          · rw [Finset.mem_singleton] at hz'
+            rw [hz']; exact h2
+        have hBsub : t.sideB ⊆ u.swap.sideB := by
+          rw [swap_sideB, hBs]
+          intro z hz
+          rcases Finset.mem_insert.mp hz with rfl | hz
+          · exact h3
+          rcases Finset.mem_insert.mp hz with rfl | hz
+          · exact h4
+          · rw [Finset.mem_singleton] at hz
+            rw [hz]; exact hrA
+        have htu : t.swap = u := by rw [eq_of_le_sides hAsub hBsub, swap_swap]
+        exact hts (by rw [htu]; exact huF)
+  have hBeq231 : t.sideB = {b2, b3, b1} := by
+    rw [hBeq]
+    ext z
+    simp only [Finset.mem_insert, Finset.mem_singleton]
+    tauto
+  have hBeq132 : t.sideB = {b1, b3, b2} := by
+    rw [hBeq]
+    ext z
+    simp only [Finset.mem_insert, Finset.mem_singleton]
+    tauto
+  obtain ⟨u23, hu23F, hu23⟩ := wit b2 hb2 b3 hb3
+  obtain ⟨u13, hu13F, hu13⟩ := wit b1 hb1 b3 hb3
+  obtain ⟨u12, hu12F, hu12⟩ := wit b1 hb1 b2 hb2
+  exact hF ⟨a1, b1, b2, b3,
+    ⟨u23, by simpa using hu23F, key hu23F hBeq231 hu23 hb12.symm hb13.symm⟩,
+    ⟨u13, by simpa using hu13F, key hu13F hBeq132 hu13 hb12 hb23.symm⟩,
+    ⟨u12, by simpa using hu12F, key hu12F hBeq hu12 hb13 hb23⟩⟩
+
+/-- ★★★★ **(B2) 的 `3+2` 情形**（`|t.sideA| = 3`、`|t.sideB| = 2`）：由 `2+3` 经 `t.swap`
+＋ `isDSplit_comm` 归约。 -/
+theorem not_isDSplit_of_weaklyCompatible_of_sideA_card_three_of_sideB_card_two
+    (F : Finset (Split α)) (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hA : t.sideA.card = 3) (hB : t.sideB.card = 2) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  have hsw := not_isDSplit_of_weaklyCompatible_of_sideA_card_two_of_sideB_card_three F w hF hw
+    (t := t.swap) (by simpa using hts) (by simpa using ht) (by simpa using hB) (by simpa using hA)
+  intro hD
+  refine hsw ?_
+  simpa only [swap_sideA, swap_sideB] using
+    (isDSplit_comm (A := t.sideA) (B := t.sideB) (fun x y => splitMetricSum_symm F w x y)).mp hD
+
+/-- ★★★★★ **(B2) 在 `|X| = 5` 上**完全证成（`weakCompatibilityRealization_gap` 的非成员半边，
+`Fintype.card α = 5` 情形）：`F` 弱相容、`w > 0` 于 `F`、`t ∉ F`、`t.swap ∉ F`
+⇒ `t` 不是 `δ = Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+**证明**：两侧非空、并为全集 ⇒ `(|t.sideA|, |t.sideB|) ∈ {(1,4), (2,3), (3,2), (4,1)}`，
+四条分别是 §7.3.2a 的 `(1,4)`、`(4,1)` 与本节新增的 `(2,3)`、`(3,2)` ∎ -/
+theorem not_isDSplit_of_weaklyCompatible_of_card_univ_five (F : Finset (Split α))
+    (w : Split α → ℝ) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hw : ∀ s ∈ F, 0 < w s) {t : Split α} (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hcard : Fintype.card α = 5) :
+    ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  classical
+  have hApos : 0 < t.sideA.card := Finset.card_pos.mpr (t.nonempty 0)
+  have hBpos : 0 < t.sideB.card := Finset.card_pos.mpr (t.nonempty 1)
+  have hsum : t.sideA.card + t.sideB.card = 5 := by
+    have h := Finset.card_union_of_disjoint t.disjoint_sides
+    rw [t.union_sides, Finset.card_univ, hcard] at h
+    omega
+  rcases Nat.lt_or_ge t.sideA.card 2 with h | h
+  · -- `|A| = 1`，`|B| = 4`
+    have hA1 : t.sideA.card = 1 := by omega
+    exact not_isDSplit_of_weaklyCompatible_of_sideA_card_one_of_sideB_card_four F w hF
+      ht hts hA1 (by omega)
+  · rcases Nat.lt_or_ge t.sideA.card 3 with h2 | h2
+    · -- `|A| = 2`，`|B| = 3`
+      exact not_isDSplit_of_weaklyCompatible_of_sideA_card_two_of_sideB_card_three F w hF hw
+        ht hts (by omega) (by omega)
+    · rcases Nat.lt_or_ge t.sideA.card 4 with h3 | h3
+      · -- `|A| = 3`，`|B| = 2`
+        exact not_isDSplit_of_weaklyCompatible_of_sideA_card_three_of_sideB_card_two F w hF hw
+          ht hts (by omega) (by omega)
+      · -- `|A| = 4`，`|B| = 1`
+        have hA4 : t.sideA.card = 4 := by omega
+        exact not_isDSplit_of_weaklyCompatible_of_sideB_card_one_of_sideA_card_four F w hF
+          ht hts (by omega) hA4
+
+/-! ### 7.3.2b 边界：`|X| ≥ 6` 仍缺的**具名器材**
+
+**(B2-core)** 全一般形态**仍未证**。已证的四块（均零 `sorry`）：
+
+| `(|t.sideA|, |t.sideB|)` | 定理 | 机制 |
+|---|---|---|---|
+| `(2,2)` | `not_isDSplit_of_weaklyCompatible_of_sideA_card_two`（§7.3） | 退化：四元组唯一 ⇒ `c_W = 0` |
+| `(1,3)` | `not_isDSplit_of_weaklyCompatible_of_sideA_card_one`（§7.3.1） | 三点覆盖 ⇒ 冲突 |
+| `(1,4)`、`(4,1)` | `..._sideA_card_one_of_sideB_card_four`、`..._sideB_card_one_of_sideA_card_four`（§7.3.2a） | `farSide` ＋ 第三点刚性（`stepA`/`stepB`） |
+| `(2,3)`、`(3,2)` | `..._sideA_card_two_of_sideB_card_three`、`..._sideA_card_three_of_sideB_card_two`（§7.3.2a） | 非退化四元组的 W-见证 ＋ `key`（第三点不能在 b 侧） |
+
+⇒ `not_isDSplit_of_weaklyCompatible_of_card_univ_five`（§7.3.2a）：**`|X| = 5` 全收口**
+（`|X| = 4` 已在上一轮收口）。**剩 `|X| ≥ 6`。**
+
+#### 缺的那件具名器材：「远侧覆盖引理（一般 `|B|`）」
+
+> **FarSideCovering (★)**：`|A| = 1`、`B = t.sideB`，若对每个二元 `p ⊆ B` 都存在成员 `u ∈ F`
+> 使 `p ⊆ farSide u a`（且 `farSide u a ⊂ B`），则 `HasConflictingQuartet F`。
+
+它应当为真（BdD Theorem 3，md `:1683-1699`）。现有两个证法都用到了 `|B|` 小：
+`|B| = 3`（§7.3.1）靠 `farSide ∩ S` 只能是 `p`；`|B| = 4`（§7.3.2a）靠**第三点只能落在
+`B \ p` 的两点上**（`stepA`）；`|B| ≥ 5` 时候选第三点 `≥ 3` 个 ⇒ 需**选择型**论证
+（对 `B` 三元子集做极值/递归），不是卡数硬逼。
+
+#### 机检留证（**未**形式化；供下一轮快速定型）
+
+1. `FarSideCovering` 在 `|B| = 4`、`5` 上**穷举无反例**（就包含含含... 每个覆盖族都有冲突）
+   ⇒ 它很可能就是对的，只是一般 `|B|` 的证法未找到。
+2. `(2,3)` 的**退化二元组支持条件**（§上的 `(F1)`：`a` 与 `B` 的每对分离；`(F2)`：`{a₁,a₂}` 与每个
+   `b` 分离）**与弱相容联合可满足**（`X = 5` 上 3671 个族，如 `F = {{a₁}|rest, {a₂}|rest}`）
+   ⇒ `(2,3)` **不能**只靠「覆盖 ＋ 弱相容」；必须用**非退化四元组**的支持约束
+   （`c_W > min c_P c_X ≥ 0` ⇒ `c_W > 0` ⇒ W 被实现）——这就是上面 `key` 的来源。
+   同样机检：仅 `(F1)+(F2)` 的弱相容族有 3671 个，而加上「每个四元组 W 被实现」后为 **0** 个。
+3. 不要重试的捷径：`c_W = 0`（`_of_no_qPairW`）—— §7.3 头部的 `|X| = 6` 手算反例已否掉它。
+
+#### 下一步建议（按代价排序）
+
+1. `|A| = 1`、`|B| = 5`（`|X| = 6`）：只需 `FarSideCovering(|B|=5)`，机检已确认无反例；
+2. `|B| ≥ 5` 的一般形式（选择型论证），它会一次性收掉所有 `|A| = 1` 情形；
+3. `|A| ≥ 2` 且 `|B| ≥ 4`：需把上面 `key` 的「第三点不能在 b 侧」推广成
+   「`B \ {bᵢ,bⱼ}` 中至少一点在 a 侧」，再配 `farSide` 的刚性 —— 当前两个机制的**合体**。 -/
+
+/-! ### 7.3.2c ★★★★★ `weakCompatibilityRealization_gap` 在 `|X| = 5` 上**整体收口**
+
+与 `weakCompatibilityRealization_gap_card_four`（§7.3.2）逐字对应：把非成员半边换成
+`not_isDSplit_of_weaklyCompatible_of_card_univ_five` 即可。
+
+★ 这是「`n = 4` 已无缺口」的下一级模板：凡把 `card_univ_five` 换成全一般的
+非成员半边，本定理即升为全一般 `weakCompatibilityRealization_gap`（见 `:562`）。 -/
+theorem weakCompatibilityRealization_gap_card_five {α : Type*} [Fintype α] [DecidableEq α]
+    (hcard : Fintype.card α = 5) (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ s ∈ F, 0 < w s) :
+    ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
+      ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s := by
+  classical
+  refine ⟨fun x y => ∑ u ∈ F, w u * SplitMetric u x y, fun x y => splitMetricSum_symm F w x y,
+    fun s => ?_⟩
+  constructor
+  · intro hD
+    by_contra hcon
+    have hs : s ∉ F := fun h => hcon ⟨s, h, Or.inl rfl⟩
+    have hss : s.swap ∉ F := fun h => hcon ⟨s.swap, h, Or.inr (by simp)⟩
+    exact not_isDSplit_of_weaklyCompatible_of_card_univ_five F w hF hw hs hss hcard hD
+  · rintro ⟨t, htF, h | h⟩
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inl (h ▸ htF))
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inr (by rw [show s.swap = t by rw [← h, swap_swap]]; exact htF))
 
 /-! ### 7.3.2 ★★★★★ `weakCompatibilityRealization_gap` 在 `|X| = 4` 上**整体收口**
 
