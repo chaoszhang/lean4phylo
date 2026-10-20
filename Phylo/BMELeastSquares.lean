@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.AttesonRadius
+import Mathlib.Combinatorics.SimpleGraph.Star
 
 /-!
 # `Phylo.BMELeastSquares` —— BME（平衡最小演化）与加权最小二乘（W11g · D3）
@@ -896,4 +897,336 @@ theorem bme_consistency_of_gap_bmeCoeff {ι : Type*} (p : ι → X → X → ℕ
 
 end Dissimilarity
 
+end NJ
+
+/-! ## 14. ★★★ W26-B 判定（老师单审条目）：原形态**证伪** ＋ 二叉**忠实形态**（新名）
+
+### 【改命题四要素】（老师 W26 §C 口径）
+
+| 要素 | 内容 |
+| - | - |
+| **① 旧形态**（逐字未动） | `bme_pauplin_identity_gap`（`:380`）与其归约目标 `BmePauplinNormalization`（`:458`）。被判为**假**的是它们的**全称闭包** `∀ T : Phylogram (Fin 4), BmePauplinNormalization T`。 |
+| **② 新形态**（新名字） | `bme_pauplin_identity_gap_binary δ T`：把 `T.IsBinary` 放进**数据**（合取项，**不是**定理假设），其余内容与 `BmePauplinNormalization` **逐字相同**。 |
+| **③ 文献 `文件:行号`** | `references/md/DesperGascuel2004_BalancedMinimumEvolution.md:381`「if one of the two, say **B, is made of two subtrees denoted as B1 and B2**, then `dT_AB = (dT_AB1 + dT_AB2)/2`」；`:2003` 式 (7) `Σ 2^{r_AB}·p_ab = 1`（建立其上）；`:2026–2027` 式 (9) `SᵗF = 1`。 |
+| **④ 理由** | 文献**没有**把 "binary" 写进任何定理假设，但**平衡平均的构造只对「两个子树」递归定义** ⇒ 式 (7)(9) 的成立范围本身就是 **binary 型构造**。多分叉顶点 `c` 上 `D_e(c) = (deg c − 1)/2`，故 plane 和 `= deg c − 1 ≠ 2`（只有 `deg = 3` 才 `= 2`）。⇒ 按老师口径（文献不显式限定 ⇒ 是数学事实）：**证伪原形态的全称闭包 ＋ 另立忠实形态**，而**不是**给旧 `def` 悄悄加前提。 |
+
+### 反例（本节落地的机器核验）
+
+`star4Tree : Phylogram (Fin 4)` —— 顶点 `Option (Fin 4)`、图 `SimpleGraph.starGraph none`、边权全 `1`：
+
+* 中心 `none` 度 **4**、叶 `some i` 度 1 ⇒ `no_degree_two`（只排度 2）**满足** ⇒ 合法 `Cladogram (Fin 4)`；
+* 但 `¬ star4Tree.IsBinary`（★★ `star4Tree_not_binary`）；
+* 取挂边 `e = s(some 0, none)`：星形树上 `p_ij = 0`（`i = j`）／`= 2`（`i ≠ j`），
+  `2^{1−p} = 1/2`，且 `e ∈ P_ij` 恰在 `i = 0 ∨ j = 0`（`i ≠ j`）时成立 ⇒ 共 6 项 ⇒
+  plane 和 `= 6 · bmeCoeff 2 = 3 ≠ 2`（★★★ `star4Tree_plane_sum`）⇒
+  ★★★ `star4Tree_not_normalization : ¬ BmePauplinNormalization star4Tree`。
+
+⇒ ★★★ `bme_pauplin_identity_gap_refuted`（形态 = **某实例（谓词式）**；
+等价地 **全称闭包为假** = ★★ `bme_pauplin_identity_gap_not_universal`）。
+
+⚠ **边界如实**：被证伪的**不是** `def bme_pauplin_identity_gap` 本体（它以 `δ` 为参数、**仍未决**），
+而是它的**归约目标**（§9 的 `hnorm`）的**全称闭包**；缺口本体仍缺「**二叉**实现树」这一件器材
+（见 §12 器材 2：`exists_binary_realizing_phylogram`，库内**无** ✗）。 -/
+
+namespace NJ
+namespace Dissimilarity
+
+open SimpleGraph
+
+/-- ★★ **星形中心度**：`starGraph none` 上中心 `none` 的度是 `4`（`|Option (Fin 4)| − 1`）。 -/
+theorem star4Tree_degree_none : (starGraph (none : Option (Fin 4))).degree none = 4 := by
+  rw [degree_starGraph_center]
+  simp
+
+/-- ★★ **星形叶度**：`starGraph none` 上每片叶 `some i` 的度是 `1`。 -/
+theorem star4Tree_degree_some (i : Fin 4) :
+    (starGraph (none : Option (Fin 4))).degree (some i) = 1 :=
+  degree_starGraph_of_ne_center (by simp)
+
+/-- ★★★ **4 叶星形 phylogram**（**多分叉**实例）：顶点 `Option (Fin 4)`、图 `starGraph none`、
+叶嵌入 `i ↦ some i`、边权全 `1`。
+
+中心 `none` 度 `4`（**不是** 3）、叶度 1 ⇒ `no_degree_two` 满足（它只排度 2）⇒ 这是
+**合法**的 `Phylogram (Fin 4)`，但**不是二叉的**（★★ `star4Tree_not_binary`）。
+这正是 §12 的算术反例 `star4_plane_sum`（`3 ≠ 2`）所对应的**真实载体**。 -/
+abbrev star4Tree : Phylogram (Fin 4) where
+  V := Option (Fin 4)
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := starGraph none
+  decAdj := inferInstance
+  isTree := isTree_starGraph none
+  leaf := ⟨some, fun a b h => by simpa using h⟩
+  leaf_iff_degree_one := by
+    intro v
+    rcases v with _ | i
+    · constructor
+      · rintro ⟨x, hx⟩
+        exact (Option.some_ne_none x hx).elim
+      · intro h
+        rw [star4Tree_degree_none] at h
+        exact absurd h (by norm_num)
+    · constructor
+      · intro _
+        exact star4Tree_degree_some i
+      · intro _
+        exact ⟨i, rfl⟩
+  no_degree_two := by
+    intro v
+    rcases v with _ | i
+    · rw [star4Tree_degree_none]
+      norm_num
+    · rw [star4Tree_degree_some]
+      norm_num
+  w := fun _ => 1
+  w_nonneg := fun _ => by norm_num
+
+/-- ★★ 星形树的邻接（叶 → 中心）。 -/
+theorem star4Tree_adj_leaf_center (i : Fin 4) :
+    (starGraph (none : Option (Fin 4))).Adj (some i) none := by simp
+
+/-- ★★ 星形树的邻接（中心 → 叶）。 -/
+theorem star4Tree_adj_center_leaf (i : Fin 4) :
+    (starGraph (none : Option (Fin 4))).Adj none (some i) := by simp
+
+/-- ★★ 挂边 `s(some i, none)` 确实是边（`edgeSet` 成员）。 -/
+theorem star4Tree_mem_edgeSet (i : Fin 4) :
+    s(some i, none) ∈ (starGraph (none : Option (Fin 4))).edgeSet := by simp
+
+/-- ★★★ **`star4Tree` 不是二叉的**：`IsBinary` 要求内部顶点度 `3`，而中心 `none` 度 `4`。
+⇒ 这正是 `BmePauplinNormalization` 缺 `T.IsBinary` 的**具名反例**。 -/
+theorem star4Tree_not_binary : ¬ star4Tree.IsBinary := by
+  intro h
+  have h3 : star4Tree.graph.degree none = 3 := h none (by
+    rintro ⟨x, hx⟩
+    exact Option.some_ne_none x hx)
+  have h4 : (starGraph (none : Option (Fin 4))).degree none = 3 := h3
+  rw [star4Tree_degree_none] at h4
+  norm_num at h4
+
+/-- ★★ **星形树上 `some i → none → some j` 是一条路径**（`i ≠ j`）：与 §12 的「唯一路径」衔接。 -/
+theorem star4Tree_cons_path {i j : Fin 4} (hij : i ≠ j) :
+    (Walk.cons (star4Tree_adj_leaf_center i)
+      (Walk.cons (star4Tree_adj_center_leaf j) Walk.nil)).IsPath := by
+  have h2 : (Walk.cons (star4Tree_adj_center_leaf j) Walk.nil).IsPath := by
+    refine Walk.IsPath.cons Walk.IsPath.nil ?_
+    simp
+  refine Walk.IsPath.cons h2 ?_
+  simp [hij]
+
+/-- ★★★ **星形树上两片叶（`i ≠ j`）之间的唯一路径**恰为 `some i → none → some j`
+（由 `existsUnique_path` 的唯一性 + `star4Tree_cons_path`）。 -/
+theorem star4Tree_pathOf_leaf_ne {i j : Fin 4} (hij : i ≠ j) :
+    star4Tree.pathOf (some i) (some j) =
+      Walk.cons (star4Tree_adj_leaf_center i)
+        (Walk.cons (star4Tree_adj_center_leaf j) Walk.nil) := by
+  refine ((star4Tree.existsUnique_path (some i) (some j)).choose_spec.2 _
+    (star4Tree_cons_path hij)).symm
+
+/-- ★★★ **路径的边表**：`i ≠ j` 时 `P_ij = [s(i, c), s(c, j)]`。 -/
+theorem star4Tree_edges_leaf_ne {i j : Fin 4} (hij : i ≠ j) :
+    (star4Tree.pathOf (some i) (some j)).edges = [s(some i, none), s(none, some j)] := by
+  rw [star4Tree_pathOf_leaf_ne hij, Walk.edges_cons, Walk.edges_cons]
+  rfl
+
+/-- ★★ **对角路径的边表为空**（`i = j` 时唯一路径是 `nil`）。 -/
+theorem star4Tree_edges_leaf_self (i : Fin 4) :
+    (star4Tree.pathOf (some i) (some i)).edges = [] := by
+  have h : star4Tree.pathOf (some i) (some i) = Walk.nil :=
+    ((star4Tree.existsUnique_path (some i) (some i)).choose_spec.2 Walk.nil
+      Walk.IsPath.nil).symm
+  rw [h]
+  rfl
+
+/-- ★★★ **星形拓扑距离**：`p_ij = 0`（`i = j`）／`= 2`（`i ≠ j`）。 -/
+theorem star4Tree_pathlen (i j : Fin 4) :
+    (star4Tree.pathOf (some i) (some j)).edges.length = if i = j then 0 else 2 := by
+  by_cases hij : i = j
+  · subst hij
+    rw [star4Tree_edges_leaf_self]
+    simp
+  · rw [star4Tree_edges_leaf_ne hij]
+    simp [hij]
+
+/-- ★★★ **BME 系数取值**：`bmeCoeff p_ij = 2`（`i = j`，`p = 0`）／`= 1/2`（`i ≠ j`，`p = 2`）。 -/
+theorem star4Tree_bmeCoeff_pathlen (i j : Fin 4) :
+    bmeCoeff ((star4Tree.pathOf (some i) (some j)).edges.length) =
+      if i = j then 2 else 1 / 2 := by
+  rw [star4Tree_pathlen i j]
+  by_cases hij : i = j
+  · simp [hij, bmeCoeff]
+  · simp [hij, bmeCoeff]
+    norm_num
+
+/-- ★ 挂边 `s(some x, none)` 与 `s(some i, none)` 相等 ⟺ `x = i`。 -/
+theorem star4Tree_eq_leaf_first {x i : Fin 4} :
+    s(some x, none) = s(some i, none) ↔ x = i := by
+  rw [Sym2.eq_iff]
+  constructor
+  · rintro (⟨h, -⟩ | ⟨h, -⟩)
+    · simpa using h
+    · exact absurd h (Option.some_ne_none x)
+  · intro h
+    exact Or.inl ⟨by rw [h], rfl⟩
+
+/-- ★ 挂边 `s(some x, none)` 与 `s(none, some j)` 相等 ⟺ `x = j`。 -/
+theorem star4Tree_eq_leaf_second {x j : Fin 4} :
+    s(some x, none) = s(none, some j) ↔ x = j := by
+  rw [Sym2.eq_iff]
+  constructor
+  · rintro (⟨h, -⟩ | ⟨h, -⟩)
+    · exact absurd h (Option.some_ne_none x)
+    · simpa using h
+  · intro h
+    exact Or.inr ⟨by rw [h], rfl⟩
+
+/-- ★★★ **路径经过挂边的判据**：`s(some x, none) ∈ P_ij ⟺ i ≠ j ∧ (x = i ∨ x = j)`
+（星形树上，挂边 `x` 只被「一端是 `x`」的非平凡对经过）。 -/
+theorem star4Tree_mem_edges_iff (x i j : Fin 4) :
+    s(some x, none) ∈ (star4Tree.pathOf (some i) (some j)).edges ↔
+      i ≠ j ∧ (x = i ∨ x = j) := by
+  by_cases hij : i = j
+  · subst hij
+    rw [star4Tree_edges_leaf_self]
+    simp
+  · rw [star4Tree_edges_leaf_ne hij]
+    simp only [List.mem_cons, star4Tree_eq_leaf_first, star4Tree_eq_leaf_second,
+      List.not_mem_nil, or_false]
+    constructor
+    · intro h
+      exact ⟨hij, h⟩
+    · intro h
+      exact h.2
+
+/-- ★★ **指示函数的化简**：`[e ∈ P_ij] = [i ≠ j ∧ (x = i ∨ x = j)]`（0/1 形式）。 -/
+theorem star4Tree_indicator (x i j : Fin 4) :
+    (if s(some x, none) ∈ (star4Tree.pathOf (some i) (some j)).edges then (1 : ℝ) else 0)
+      = if i ≠ j ∧ (x = i ∨ x = j) then (1 : ℝ) else 0 := by
+  by_cases h : s(some x, none) ∈ (star4Tree.pathOf (some i) (some j)).edges
+  · have h' : i ≠ j ∧ (x = i ∨ x = j) := (star4Tree_mem_edges_iff x i j).mp h
+    simp [h, h']
+  · have h' : ¬(i ≠ j ∧ (x = i ∨ x = j)) :=
+      fun hh => h ((star4Tree_mem_edges_iff x i j).mpr hh)
+    simp [h, h']
+
+/-- ★★ **计数引理**：`plane` 中满足 `i ≠ j ∧ (x = i ∨ x = j)` 的有序对恰 `6 = 2·(4−1)` 个
+（`fin_cases + decide` 直出；`Fin 4` 上全部 16 个有序对可判定）。 -/
+theorem star4Tree_card (x : Fin 4) :
+    ((plane (X := Fin 4)).filter
+      (fun p : Fin 4 × Fin 4 => p.1 ≠ p.2 ∧ (x = p.1 ∨ x = p.2))).card = 6 := by
+  fin_cases x <;> decide
+
+/-- ★★★ **指示和 = 6**（`Σ_{i,j} [i ≠ j ∧ (x = i ∨ x = j)] = 6`，由 `star4Tree_card` 与
+`Finset.sum_filter`／`Finset.sum_boole` 形态的桥）。 -/
+theorem star4Tree_indicator_sum (x : Fin 4) :
+    ∑ p ∈ (plane (X := Fin 4)),
+      (if p.1 ≠ p.2 ∧ (x = p.1 ∨ x = p.2) then (1 : ℝ) else 0) = 6 := by
+  have h2 : ∑ p ∈ (plane (X := Fin 4)),
+      (if p.1 ≠ p.2 ∧ (x = p.1 ∨ x = p.2) then (1 : ℝ) else 0)
+      = (((plane (X := Fin 4)).filter
+        (fun p : Fin 4 × Fin 4 => p.1 ≠ p.2 ∧ (x = p.1 ∨ x = p.2))).card : ℝ) := by
+    rw [← Finset.sum_filter]
+    simp
+  rw [h2, star4Tree_card x]
+  norm_num
+
+/-- ★★★★ **星形树的 plane 和 `= 3`**（§12 算术反例 `star4_plane_sum` 的**树级**版本）：
+挂边 `s(some x, none)` 上
+
+　`Σ_{(i,j) ∈ plane} 2^{1−p_ij}·[s(x,c) ∈ P_ij] = 6 · bmeCoeff 2 = 3 ≠ 2`。
+
+⇒ `BmePauplinNormalization star4Tree` **为假**（★★★ `star4Tree_not_normalization`）。 -/
+theorem star4Tree_plane_sum (x : Fin 4) :
+    ∑ p ∈ plane,
+      bmeCoeff ((star4Tree.pathOf (some p.1) (some p.2)).edges.length)
+        * (if s(some x, none) ∈ (star4Tree.pathOf (some p.1) (some p.2)).edges
+           then (1 : ℝ) else 0) = 3 := by
+  have hstep : ∀ p ∈ plane,
+      bmeCoeff ((star4Tree.pathOf (some p.1) (some p.2)).edges.length)
+        * (if s(some x, none) ∈ (star4Tree.pathOf (some p.1) (some p.2)).edges
+           then (1 : ℝ) else 0)
+      = (1 / 2) * (if p.1 ≠ p.2 ∧ (x = p.1 ∨ x = p.2) then (1 : ℝ) else 0) := by
+    intro p _
+    rw [star4Tree_bmeCoeff_pathlen p.1 p.2, star4Tree_indicator x p.1 p.2]
+    by_cases hp : p.1 = p.2
+    · simp [hp]
+    · by_cases hx : x = p.1 ∨ x = p.2 <;> simp [hp, hx]
+  refine (Finset.sum_congr rfl hstep).trans ?_
+  rw [← Finset.mul_sum]
+  rw [star4Tree_indicator_sum x]
+  norm_num
+
+/-- ★★★ **与 `BmePauplinNormalization` 同形**（`T.leaf` 形态）的 plane 和 `= 3`。 -/
+theorem star4Tree_plane_sum_leaf (x : Fin 4) :
+    ∑ p ∈ plane,
+      bmeCoeff ((star4Tree.pathOf (star4Tree.leaf p.1) (star4Tree.leaf p.2)).edges.length)
+        * (if s(some x, none) ∈
+            (star4Tree.pathOf (star4Tree.leaf p.1) (star4Tree.leaf p.2)).edges
+           then (1 : ℝ) else 0) = 3 :=
+  star4Tree_plane_sum x
+
+/-- ★★★★ **反例判定**：`¬ BmePauplinNormalization star4Tree` —— 4 叶星形（**合法**的
+`Phylogram (Fin 4)`）上 Pauplin 归一化**为假**（`3 ≠ 2`）。
+
+⇒ §9 的归约定理 `bme_pauplin_identity_gap_of_normalization` 的 `hnorm` **不能**对任意实现树
+实例化；缺的正是 `T.IsBinary`（§12 器材 1/2）。 -/
+theorem star4Tree_not_normalization : ¬ BmePauplinNormalization star4Tree := by
+  intro h
+  have hmem : s(some 0, none) ∈ star4Tree.graph.edgeSet := star4Tree_mem_edgeSet 0
+  have h3 := h (s(some 0, none)) hmem
+  rw [star4Tree_plane_sum_leaf 0] at h3
+  norm_num at h3
+
+/-- ★★★★ **原形态证伪（形态 = 某实例）**：存在一棵**合法**的 `Phylogram (Fin 4)` 使
+`BmePauplinNormalization` 为**假** —— 见证 = `star4Tree`（4 叶星形，plane 和 `3 ≠ 2`）。
+
+⚠ 被证伪的**不是** `def bme_pauplin_identity_gap` 本体（以 `δ` 为参数、仍未决），
+而是**其归约目标** `BmePauplinNormalization` 的**全称闭包**（见 ★★
+`bme_pauplin_identity_gap_not_universal`）。 -/
+theorem bme_pauplin_identity_gap_refuted :
+    ∃ T : Phylogram.{0, 0} (Fin 4), ¬ BmePauplinNormalization T :=
+  ⟨star4Tree, star4Tree_not_normalization⟩
+
+/-- ★★★ **原形态证伪（形态 = 全称闭包为假）**：`∀ T, BmePauplinNormalization T` **不成立**
+（4 叶星形 `star4Tree` 是反例）。 -/
+theorem bme_pauplin_identity_gap_not_universal :
+    ¬ ∀ T : Phylogram.{0, 0} (Fin 4), BmePauplinNormalization T :=
+  fun h => star4Tree_not_normalization (h star4Tree)
+
+section BinaryShape
+
+universe u
+
+variable {X : Type u} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **忠实形态（W26-B 新名；旧 `def` 逐字未动）**：`T` 是 `δ` 的**二叉**实现树
+（`T.IsBinary`，`Phylo/Core.lean:93`）**且**满足 Pauplin 归一化（式 (9)，`:2027`）。
+
+★ 与 `BmePauplinNormalization` 的关系：**内容逐字相同**，只把 `T.IsBinary` 放进**数据**
+（合取项）—— 依据 `references/md/DesperGascuel2004_BalancedMinimumEvolution.md:381`：
+平衡平均 `dT_AB` 只在「`A`、`B` 各由**两个子树**组成」时递归定义 ⇒ 式 (7)（`:2003`）与
+式 (9)（`:2026–2027`）的成立范围是 **binary 型构造**。
+
+★ 为什么**不是**给旧 `def` 加前提：文献未把 "binary" 写进定理假设，而多分叉时该恒等式
+**是假的**（★★ `star4Tree_not_normalization`）⇒ 按老师口径这是**数学事实**，
+故旧形态由 ★★★ `bme_pauplin_identity_gap_refuted` **证伪**、忠实形态在此**另立新名**。 -/
+def bme_pauplin_identity_gap_binary (δ : Dissimilarity X) (T : Phylogram X) : Prop :=
+  T.IsBinary ∧
+    (∀ i j : X, T.dist (T.leaf i) (T.leaf j) = δ.val i j) ∧
+    BmePauplinNormalization T
+
+omit [DecidableEq X] in
+/-- ★★★ **归约定理按新形态重述**（旧 `bme_pauplin_identity_gap_of_normalization`（`:536`）
+**一字未动**）：二叉忠实形态 ⟹ 原缺口 `bme_pauplin_identity_gap δ`。
+
+⇒ 新形态是原缺口的**充分条件**（不是削弱）：一旦补上「二叉实现树」（§12 器材 2
+`exists_binary_realizing_phylogram`）与二叉上的 `D_e = 1`（§12 器材 3），
+`bme_pauplin_identity_gap` 即随之落地。 -/
+theorem bme_pauplin_identity_gap_of_binary (δ : Dissimilarity X) (T : Phylogram X)
+    (h : bme_pauplin_identity_gap_binary δ T) : bme_pauplin_identity_gap δ :=
+  bme_pauplin_identity_gap_of_normalization δ T h.2.1 h.2.2
+
+end BinaryShape
+
+end Dissimilarity
 end NJ
