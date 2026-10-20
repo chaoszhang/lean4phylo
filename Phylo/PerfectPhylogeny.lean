@@ -582,3 +582,408 @@ theorem fitchMeachamF3_no_pairwise_disjoint (A B C : Finset (Fin 5))
   · exact h h1
   · exact h h2
   · exact h h3
+
+/-! ### G2 的**树引理**（W26 泳道 e）：状态类纤维 ⇒ 二元类是某条边的叶侧
+
+W25 已把 `MultiStatePairwiseInsufficiencyGap` 的「整体不可解」半里**与树无关**的组合内核
+证掉（上面 `fitchMeachamF3_options_meet` / `fitchMeachamF3_no_pairwise_disjoint`）。
+本节补上**唯一缺的树侧器材**，并把该半**整条收口**为定理 `not_exists_displays_all_fitchMeachamF3`。
+
+**要证的树引理**：若 `T` 展示 `F₃` 的第 `i` 个字符（`DisplaysMultiState`：存在 `ℓ : T.V → Fin 3`，
+三个状态类都**连通**且叶上等于 `χ`），则其两个**二元**状态类中**至少一个**是 `T` 某条边的
+**叶侧**（`Cladogram.sideLeaves`）。
+
+★ **为什么不走「商树计数」**（W25 备忘的路线：三块连通 ⇒ 跨块边 = 类数 − 1 ⇒ 商图是树）：
+那条路线要数 `|E| = |V| - 1` 与「诱导子图是树」（`SimpleGraph.IsTree.card_edgeFinset`
+＋边集分划记账），代价高。**等价而更短**的路线只用两条初等事实：
+
+1. **有边则并连通**：两块连通集若之间有边，则并集连通（两条 walk 用该边接起来）；
+2. **并连通则有边**：并集连通则两块之间**必**有边（跨界 walk 必有跨界边）。
+
+于是三块 `C_p, C_q, C_r` 连通时：若 `C_p ∪ C_r` 与 `C_q ∪ C_r` **都**不连通，则 `C_r` 与
+`C_p`、`C_r` 与 `C_q` 之间都没有边 ⇒ `C_r` 的邻居全在 `C_r` 内 ⇒ `C_r` 对邻接封闭 ⇒
+（沿 walk 归纳，用 `T` 连通）`C_r = univ`；但 `C_p` 含叶（`T.leaf x_p`）而 `ℓ` 在该叶上
+`= p ≠ r`，矛盾。故 `C_p ∪ C_r` 或 `C_q ∪ C_r` 连通 —— 即某个**二元类**的**补也连通**。
+
+最后一步：若 `C` 与 `Cᶜ` 都连通，取跨界边 `x—y`（`x ∈ C`, `y ∉ C`），则
+`C = {z | T.inSide s(x,y) z x}`（两侧各用「连通 walk 绕开 `x—y`」，再用「边是桥」
+`not_reachable_deleteEdges_of_adj` 收口；与 `Phylo.Connectivity` 的
+`inSide_iff_of_isConnectedSet` 同一论证），于是 `T.sideLeaves s(x,y) x = filter (χ · = s)`。
+
+⚠️ **import 方向**：`Phylo/Connectivity.lean` **import 本文件**，故本文件用不到它的
+`SimpleGraph.exists_adj_crossing` / `inSide_iff_of_isConnectedSet`。下面 `MultiStateTree`
+命名空间前置这两件**最小**引擎（论证与下游同源，命名避开了下游的同名声明）；
+其余一律复用 `Phylo/Split.lean` 的 `sideLeaves` / `inSide` / `not_reachable_deleteEdges_of_adj` /
+`sidesCompatible_sideLeaves`。 -/
+
+namespace MultiStateTree
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **跨界 walk 必有跨界边**（`Walk.recOn` 一次归纳；与 `Phylo.Connectivity` 的
+`SimpleGraph.exists_adj_crossing` 同一论证 —— 该文件 import 本文件，故此处前置一份）。 -/
+theorem exists_adj_crossing {V : Type*} {G : SimpleGraph V} {U : Set V} {a b : V}
+    (p : G.Walk a b) (ha : a ∈ U) (hb : b ∉ U) :
+    ∃ x ∈ p.support, ∃ y ∈ p.support, G.Adj x y ∧ x ∈ U ∧ y ∉ U := by
+  refine Walk.recOn (motive := fun u v q => u ∈ U → v ∉ U →
+      ∃ x ∈ q.support, ∃ y ∈ q.support, G.Adj x y ∧ x ∈ U ∧ y ∉ U) p ?_ ?_ ha hb
+  · intro u hu hnu
+    exact absurd hu hnu
+  · intro u v ww hadj q ih hu hnw
+    by_cases hc : v ∈ U
+    · obtain ⟨x, hx, y, hy, hadj', hxU, hyU⟩ := ih hc hnw
+      exact ⟨x, List.mem_cons_of_mem _ hx, y, List.mem_cons_of_mem _ hy, hadj', hxU, hyU⟩
+    · exact ⟨u, Walk.start_mem_support _, v, List.mem_cons_of_mem _ (Walk.start_mem_support q),
+        hadj, hu, hc⟩
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **避开边 `e` 的 walk 落在 `T - e` 里** ⟹ `u` 与 `v` 同侧（`Walk.toDeleteEdge`）。 -/
+theorem inSide_of_walk_edges_notMem (T : Cladogram.{u, u} X) {e : Sym2 T.V} {u v : T.V}
+    (p : T.graph.Walk u v) (h : e ∉ p.edges) : T.inSide e u v :=
+  (p.toDeleteEdge e h).reachable
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **两块连通 + 之间有边 ⇒ 并集连通**（两条 walk 用该边 `cons`/`append` 接起来）。 -/
+theorem isConnectedSet_union_of_adj (T : Cladogram.{u, u} X) {A B : Set T.V}
+    (hA : IsConnectedSet T.graph A) (hB : IsConnectedSet T.graph B)
+    {x y : T.V} (hxy : T.graph.Adj x y) (hxA : x ∈ A) (hyB : y ∈ B) :
+    IsConnectedSet T.graph (A ∪ B) := by
+  intro u hu v hv
+  rw [Set.mem_union] at hu hv
+  rcases hu with hu | hu <;> rcases hv with hv | hv
+  · obtain ⟨p, hp⟩ := hA u hu v hv
+    exact ⟨p, fun w hw => Or.inl (hp w hw)⟩
+  · obtain ⟨p, hp⟩ := hA u hu x hxA
+    obtain ⟨q, hq⟩ := hB y hyB v hv
+    refine ⟨p.append (Walk.cons hxy q), fun w hw => ?_⟩
+    rw [Walk.mem_support_append_iff] at hw
+    rcases hw with hw | hw
+    · exact Or.inl (hp w hw)
+    · rw [Walk.support_cons, List.mem_cons] at hw
+      rcases hw with hwx | hw
+      · rw [hwx]; exact Or.inl hxA
+      · exact Or.inr (hq w hw)
+  · obtain ⟨p, hp⟩ := hB u hu y hyB
+    obtain ⟨q, hq⟩ := hA x hxA v hv
+    refine ⟨p.append (Walk.cons hxy.symm q), fun w hw => ?_⟩
+    rw [Walk.mem_support_append_iff] at hw
+    rcases hw with hw | hw
+    · exact Or.inr (hp w hw)
+    · rw [Walk.support_cons, List.mem_cons] at hw
+      rcases hw with hwy | hw
+      · rw [hwy]; exact Or.inr hyB
+      · exact Or.inl (hq w hw)
+  · obtain ⟨p, hp⟩ := hB u hu v hv
+    exact ⟨p, fun w hw => Or.inr (hp w hw)⟩
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★ **并集连通 ⇒ 两块之间有边**（跨界 walk 必有跨界边）。 -/
+theorem exists_adj_between (T : Cladogram.{u, u} X) {A B : Set T.V}
+    (hdisj : ∀ z : T.V, z ∈ A → z ∈ B → False)
+    (h : IsConnectedSet T.graph (A ∪ B)) {u v : T.V} (hu : u ∈ A) (hv : v ∈ B) :
+    ∃ x ∈ A, ∃ y ∈ B, T.graph.Adj x y := by
+  have hvA : v ∉ A := fun hv' => hdisj v hv' hv
+  obtain ⟨p, hp⟩ := h u (Or.inl hu) v (Or.inr hv)
+  obtain ⟨x, hx, y, hy, hadj, hxA, hyA⟩ := exists_adj_crossing p hu hvA
+  exact ⟨x, hxA, y, (hp y hy).resolve_left hyA, hadj⟩
+
+/-- ★★ **`C` 与 `Cᶜ` 都连通 ⟹ `C` 恰是跨界边 `x—y` 的 `x` 一侧**。
+
+（与 `Phylo.Connectivity` 的 `inSide_iff_of_isConnectedSet` 同一论证，此处以 `Set` 表述，
+省掉 `Bool` 纤维的来回换算：`→` 用 `C` 的连通 walk，`←` 用 `Cᶜ` 的连通 walk，两侧都绕开 `x—y`。） -/
+theorem inSide_iff_mem_of_isConnectedSet (T : Cladogram.{u, u} X) {C : Set T.V}
+    (hC : IsConnectedSet T.graph C) (hCc : IsConnectedSet T.graph Cᶜ)
+    {x y : T.V} (hxy : T.graph.Adj x y) (hx : x ∈ C) (hy : y ∉ C) :
+    ∀ z : T.V, (z ∈ C ↔ T.inSide s(x, y) z x) := by
+  intro z
+  constructor
+  · intro hz
+    obtain ⟨p, hp⟩ := hC z hz x hx
+    have hnot : s(x, y) ∉ p.edges := by
+      intro hmem
+      have hy' : y ∈ p.support :=
+        Walk.mem_support_of_mem_edges hmem (by rw [Sym2.mem_iff]; exact Or.inr rfl)
+      exact hy (hp y hy')
+    exact inSide_of_walk_edges_notMem T p hnot
+  · intro hz
+    by_contra hzc
+    have hzc' : z ∈ Cᶜ := hzc
+    obtain ⟨q, hq⟩ := hCc z hzc' y hy
+    have hnot : s(x, y) ∉ q.edges := by
+      intro hmem
+      have hx' : x ∈ q.support :=
+        Walk.mem_support_of_mem_edges hmem (by rw [Sym2.mem_iff]; exact Or.inl rfl)
+      exact (hq x hx') hx
+    have hzy : T.inSide s(x, y) z y := inSide_of_walk_edges_notMem T q hnot
+    exact T.not_reachable_deleteEdges_of_adj hxy (((T.inSide_comm _ _ _).mp hz).trans hzy)
+
+/-- **若 `C` 的补也连通，则 `C` 是某条边的叶侧**（以 `inSide` 刻画给出）。 -/
+theorem exists_inSide_iff_of_compl_connected (T : Cladogram.{u, u} X) (C : Set T.V)
+    (hC : IsConnectedSet T.graph C) (hCc : IsConnectedSet T.graph Cᶜ)
+    {u v : T.V} (hu : u ∈ C) (hv : v ∉ C) :
+    ∃ (a b : T.V) (_ : T.graph.Adj a b) (w : T.V),
+      ∀ z : T.V, (z ∈ C ↔ T.inSide s(a, b) z w) := by
+  obtain ⟨p⟩ := T.isTree.connected u v
+  obtain ⟨x, -, y, -, hxy, hxC, hyC⟩ := exists_adj_crossing p hu hv
+  exact ⟨x, y, hxy, x, inSide_iff_mem_of_isConnectedSet T hC hCc hxy hxC hyC⟩
+
+/-- `Fin 3` 的三分（`Fin` 上没有 `omega`；`fin_cases` 一次拆完）。 -/
+theorem fin_three_cases (s : Fin 3) : s = 0 ∨ s = 1 ∨ s = 2 := by
+  fin_cases s <;> simp
+
+/-- 把「`C` 是边侧」落到 `Finset`：`sideLeaves` = 状态滤波器。 -/
+theorem sideLeaves_eq_filter_of_iff (T : Cladogram.{0, 0} (Fin 5)) (ℓ : T.V → Fin 3)
+    (s : Fin 3) {a b w : T.V}
+    (hiff : ∀ z : T.V, (z ∈ {v : T.V | ℓ v = s} ↔ T.inSide s(a, b) z w)) :
+    T.sideLeaves s(a, b) w = Finset.univ.filter (fun x : Fin 5 => ℓ (T.leaf x) = s) := by
+  ext x
+  rw [T.mem_sideLeaves_iff_inSide, Finset.mem_filter]
+  constructor
+  · intro h
+    exact ⟨Finset.mem_univ _, (hiff (T.leaf x)).mpr ((T.inSide_comm _ _ _).mpr h)⟩
+  · rintro ⟨-, h⟩
+    exact (T.inSide_comm _ _ _).mp ((hiff (T.leaf x)).mp h)
+
+/-- ★★ **三块连通纤维（状态 `p, q, r`）：`{ℓ=p} ∪ {ℓ=r}` 或 `{ℓ=q} ∪ {ℓ=r}` 必有一个连通**
+（即「某个二元类的补也连通」）。证明路线见本节开头。 -/
+theorem union_pq_or_pr (T : Cladogram.{0, 0} (Fin 5)) (ℓ : T.V → Fin 3) (p q r : Fin 3)
+    (hpr : p ≠ r) (htri : ∀ s : Fin 3, s = p ∨ s = q ∨ s = r)
+    (hcon : ∀ s : Fin 3, IsConnectedSet T.graph {v : T.V | ℓ v = s})
+    (hp : ∃ x : Fin 5, ℓ (T.leaf x) = p) (hr : ∃ x : Fin 5, ℓ (T.leaf x) = r) :
+    IsConnectedSet T.graph ({v : T.V | ℓ v = p} ∪ {v : T.V | ℓ v = r}) ∨
+      IsConnectedSet T.graph ({v : T.V | ℓ v = q} ∪ {v : T.V | ℓ v = r}) := by
+  by_contra h
+  rw [not_or] at h
+  obtain ⟨hA, hB⟩ := h
+  obtain ⟨xp, hxp⟩ := hp
+  obtain ⟨xr, hxr⟩ := hr
+  have hnoA : ∀ x : T.V, ℓ x = p → ∀ y : T.V, ℓ y = r → ¬ T.graph.Adj x y := by
+    intro x hx y hy hadj
+    exact hA (isConnectedSet_union_of_adj T (hcon p) (hcon r) hadj hx hy)
+  have hnoB : ∀ x : T.V, ℓ x = q → ∀ y : T.V, ℓ y = r → ¬ T.graph.Adj x y := by
+    intro x hx y hy hadj
+    exact hB (isConnectedSet_union_of_adj T (hcon q) (hcon r) hadj hx hy)
+  have hclosed : ∀ v : T.V, ℓ v = r → ∀ w : T.V, T.graph.Adj v w → ℓ w = r := by
+    intro v hv w hadj
+    rcases htri (ℓ w) with h | h | h
+    · exact absurd hadj.symm (hnoA w h v hv)
+    · exact absurd hadj.symm (hnoB w h v hv)
+    · exact h
+  have hreach : ∀ v : T.V, T.graph.Reachable (T.leaf xr) v → ℓ v = r := by
+    intro v hr'
+    obtain ⟨w⟩ := hr'
+    refine Walk.recOn (motive := fun u v _ => ℓ u = r → ℓ v = r) w ?_ ?_ hxr
+    · intro u hu
+      exact hu
+    · intro u v ww hadj q ih hu
+      exact ih (hclosed u hu v hadj)
+  have hall : ℓ (T.leaf xp) = r :=
+    hreach (T.leaf xp) (T.isTree.connected (T.leaf xr) (T.leaf xp))
+  rw [hxp] at hall
+  exact hpr hall
+
+/-- ★★★ **树引理（G2 收口用）**：展示 `F₃` 第 `i` 个字符的树上，其两个**二元**状态类
+（状态 `p` 与 `q`；`r` 是单元类）中**至少一个**是某条边的叶侧。 -/
+theorem exists_binary_side_of_display (T : Cladogram.{0, 0} (Fin 5)) (i : Fin 3)
+    (p q r : Fin 3) (hpq : p ≠ q) (hpr : p ≠ r) (hrq : r ≠ q)
+    (htri : ∀ s : Fin 3, s = p ∨ s = q ∨ s = r)
+    (ℓ : T.V → Fin 3) (hleaf : ∀ x : Fin 5, ℓ (T.leaf x) = fitchMeachamF3 i x)
+    (hcon : ∀ s : Fin 3, IsConnectedSet T.graph {v : T.V | ℓ v = s}) :
+    ∃ (a b : T.V) (_ : T.graph.Adj a b) (w : T.V),
+      T.sideLeaves s(a, b) w = Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 i x = p) ∨
+      T.sideLeaves s(a, b) w = Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 i x = q) := by
+  have hex : ∀ s : Fin 3, ∃ x : Fin 5, fitchMeachamF3 i x = s := by
+    intro s
+    fin_cases i <;> fin_cases s <;> decide
+  have hp : ∃ x : Fin 5, ℓ (T.leaf x) = p := by
+    obtain ⟨x, hx⟩ := hex p
+    exact ⟨x, by rw [hleaf]; exact hx⟩
+  have hq : ∃ x : Fin 5, ℓ (T.leaf x) = q := by
+    obtain ⟨x, hx⟩ := hex q
+    exact ⟨x, by rw [hleaf]; exact hx⟩
+  have hr : ∃ x : Fin 5, ℓ (T.leaf x) = r := by
+    obtain ⟨x, hx⟩ := hex r
+    exact ⟨x, by rw [hleaf]; exact hx⟩
+  have hpp : ∃ x : Fin 5, ℓ (T.leaf x) = p := hp
+  have hrr : ∃ x : Fin 5, ℓ (T.leaf x) = r := hr
+  obtain ⟨xp, hxp⟩ := hp
+  obtain ⟨xq, hxq⟩ := hq
+  obtain ⟨xr, hxr⟩ := hr
+  have hfilter : ∀ s : Fin 3,
+      Finset.univ.filter (fun x : Fin 5 => ℓ (T.leaf x) = s) =
+        Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 i x = s) := by
+    intro s
+    refine Finset.filter_congr ?_
+    intro x _
+    rw [hleaf x]
+  have hsetq : ({v : T.V | ℓ v = q}ᶜ : Set T.V) = {v : T.V | ℓ v = p} ∪ {v : T.V | ℓ v = r} := by
+    ext z
+    show ¬ (ℓ z = q) ↔ (ℓ z = p ∨ ℓ z = r)
+    constructor
+    · intro hz
+      rcases htri (ℓ z) with h | h | h
+      · exact Or.inl h
+      · exact absurd h hz
+      · exact Or.inr h
+    · rintro (h | h) hz
+      · exact hpq (h.symm.trans hz)
+      · exact hrq (h.symm.trans hz)
+  have hsetp : ({v : T.V | ℓ v = p}ᶜ : Set T.V) = {v : T.V | ℓ v = q} ∪ {v : T.V | ℓ v = r} := by
+    ext z
+    show ¬ (ℓ z = p) ↔ (ℓ z = q ∨ ℓ z = r)
+    constructor
+    · intro hz
+      rcases htri (ℓ z) with h | h | h
+      · exact absurd h hz
+      · exact Or.inl h
+      · exact Or.inr h
+    · rintro (h | h) hz
+      · exact hpq (hz.symm.trans h)
+      · exact hpr (hz.symm.trans h)
+  rcases union_pq_or_pr T ℓ p q r hpr htri hcon hpp hrr with hA | hA
+  · -- `{ℓ=p} ∪ {ℓ=r}` 连通 ⇒ `{ℓ=q}` 的补连通 ⇒ 状态 `q` 类是边侧
+    have hCc : IsConnectedSet T.graph ({v : T.V | ℓ v = q}ᶜ) := by
+      rw [hsetq]; exact hA
+    have hvp : T.leaf xp ∉ ({v : T.V | ℓ v = q} : Set T.V) := by
+      intro h
+      change ℓ (T.leaf xp) = q at h
+      rw [hxp] at h
+      exact hpq h
+    obtain ⟨a, b, hab, w, hiff⟩ :=
+      exists_inSide_iff_of_compl_connected T {v : T.V | ℓ v = q} (hcon q) hCc
+        (u := T.leaf xq) (v := T.leaf xp) hxq hvp
+    refine ⟨a, b, hab, w, Or.inr ?_⟩
+    rw [sideLeaves_eq_filter_of_iff T ℓ q hiff, hfilter q]
+  · -- `{ℓ=q} ∪ {ℓ=r}` 连通 ⇒ `{ℓ=p}` 的补连通 ⇒ 状态 `p` 类是边侧
+    have hCc : IsConnectedSet T.graph ({v : T.V | ℓ v = p}ᶜ) := by
+      rw [hsetp]; exact hA
+    have hvq : T.leaf xq ∉ ({v : T.V | ℓ v = p} : Set T.V) := by
+      intro h
+      change ℓ (T.leaf xq) = p at h
+      rw [hxq] at h
+      exact hpq h.symm
+    obtain ⟨a, b, hab, w, hiff⟩ :=
+      exists_inSide_iff_of_compl_connected T {v : T.V | ℓ v = p} (hcon p) hCc
+        (u := T.leaf xp) (v := T.leaf xq) hxp hvq
+    refine ⟨a, b, hab, w, Or.inl ?_⟩
+    rw [sideLeaves_eq_filter_of_iff T ℓ p hiff, hfilter p]
+
+/-! #### 组合收口：三个二元叶侧两两 `SidesCompatible`，但与 `F₃` 的候选集矛盾 -/
+
+/-- `Fin 5` 上两个**二元**集若相交且相异，则**不相容**（`SidesCompatible` 四支逐一排除）。 -/
+theorem not_sidesCompatible_of_binary_meet {A B : Finset (Fin 5)}
+    (hA : A.card = 2) (hB : B.card = 2) (hne : A ≠ B) (hmeet : A ∩ B ≠ ∅) :
+    ¬ SidesCompatible A B := by
+  intro h
+  unfold SidesCompatible at h
+  rcases h with h | h | h | h
+  · exact hne (Finset.eq_of_subset_of_card_le h (by omega))
+  · exact hne (Finset.eq_of_subset_of_card_le h (by omega)).symm
+  · exact hmeet (Finset.disjoint_iff_inter_eq_empty.mp h)
+  · have h1 : (A ∪ B).card = 5 := by rw [h, Finset.card_univ]; simp
+    have h2 : (A ∪ B).card ≤ A.card + B.card := Finset.card_union_le A B
+    omega
+
+/-- 候选叶侧集的基数都是 2（`a` 列）。 -/
+theorem card_two_of_optionA {A : Finset (Fin 5)} (h : A = {0, 2} ∨ A = {1, 4}) :
+    A.card = 2 := by
+  rcases h with h | h <;> rw [h] <;> decide
+
+/-- 候选叶侧集的基数都是 2（`b` 列）。 -/
+theorem card_two_of_optionB {B : Finset (Fin 5)} (h : B = {1, 2} ∨ B = {0, 3}) :
+    B.card = 2 := by
+  rcases h with h | h <;> rw [h] <;> decide
+
+/-- 候选叶侧集的基数都是 2（`c` 列）。 -/
+theorem card_two_of_optionC {C : Finset (Fin 5)} (h : C = {1, 3} ∨ C = {0, 4}) :
+    C.card = 2 := by
+  rcases h with h | h <;> rw [h] <;> decide
+
+/-- 不同字符的候选叶侧**必不相等**（三列候选两两无交集）。 -/
+theorem optionA_ne_optionB {A B : Finset (Fin 5)} (hA : A = {0, 2} ∨ A = {1, 4})
+    (hB : B = {1, 2} ∨ B = {0, 3}) : A ≠ B := by
+  intro hAB
+  rcases hA with hA | hA <;> rcases hB with hB | hB <;> rw [hA, hB] at hAB
+  all_goals exact absurd hAB (by decide)
+
+/-- 不同字符的候选叶侧**必不相等**。 -/
+theorem optionA_ne_optionC {A C : Finset (Fin 5)} (hA : A = {0, 2} ∨ A = {1, 4})
+    (hC : C = {1, 3} ∨ C = {0, 4}) : A ≠ C := by
+  intro hAC
+  rcases hA with hA | hA <;> rcases hC with hC | hC <;> rw [hA, hC] at hAC
+  all_goals exact absurd hAC (by decide)
+
+/-- 不同字符的候选叶侧**必不相等**。 -/
+theorem optionB_ne_optionC {B C : Finset (Fin 5)} (hB : B = {1, 2} ∨ B = {0, 3})
+    (hC : C = {1, 3} ∨ C = {0, 4}) : B ≠ C := by
+  intro hBC
+  rcases hB with hB | hB <;> rcases hC with hC | hC <;> rw [hB, hC] at hBC
+  all_goals exact absurd hBC (by decide)
+
+end MultiStateTree
+
+open MultiStateTree in
+/-- ★★★★ **`MultiStatePairwiseInsufficiencyGap` 的「整体不可解」半（`F₃` 实例）**
+
+`fitchMeachamF3` 的三个字符**同时**被一棵 `Cladogram (Fin 5)` 展示是**不可能**的
+（Gusfield 条件 (3) 的「连通子树」语义）。证明链：
+
+1. 逐字符取树引理 `exists_binary_side_of_display`：每个字符有一个**二元状态类是边侧**；
+2. 同一棵树上三条边侧两两 `SidesCompatible`（`Cladogram.sidesCompatible_sideLeaves`）；
+3. 但 `F₃` 的三列候选叶侧**任取三个必有一对相交**（`fitchMeachamF3_options_meet`），
+   而 `Fin 5` 上相交且相异的二元集**不相容**（`not_sidesCompatible_of_binary_meet`）—— 矛盾。
+
+⇒ 这就是 `MultiStatePairwiseInsufficiencyGap` 里的第二个合取项（取 `M := fitchMeachamF3`）；
+缺口本体还差**两两可解**那一半（每对字符的一棵具体 `Cladogram`，需 `Cladogram` 构造 + 展示证明）。 -/
+theorem not_exists_displays_all_fitchMeachamF3 :
+    ¬ (∃ T : Cladogram.{0, 0} (Fin 5), ∀ i : Fin 3, DisplaysMultiState T (fitchMeachamF3 i)) := by
+  rintro ⟨T, hdisp⟩
+  obtain ⟨ℓ0, hleaf0, hcon0⟩ := hdisp 0
+  obtain ⟨ℓ1, hleaf1, hcon1⟩ := hdisp 1
+  obtain ⟨ℓ2, hleaf2, hcon2⟩ := hdisp 2
+  have e00 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 0 x = 0)) = ({0, 2} : Finset (Fin 5)) :=
+    fitchMeachamF3_stateClasses.1
+  have e01 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 0 x = 1)) = {1, 4} :=
+    fitchMeachamF3_stateClasses.2.1
+  have e10 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 1 x = 0)) = {1, 2} :=
+    fitchMeachamF3_stateClasses.2.2.2.1
+  have e12 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 1 x = 2)) = {0, 3} :=
+    fitchMeachamF3_stateClasses.2.2.2.2.2.1
+  have e20 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 2 x = 0)) = {1, 3} :=
+    fitchMeachamF3_stateClasses.2.2.2.2.2.2.1
+  have e21 : (Finset.univ.filter (fun x : Fin 5 => fitchMeachamF3 2 x = 1)) = {0, 4} :=
+    fitchMeachamF3_stateClasses.2.2.2.2.2.2.2.1
+  obtain ⟨a0, b0, hab0, w0, h0⟩ :=
+    exists_binary_side_of_display T 0 0 1 2 (by decide) (by decide) (by decide) (by decide)
+      ℓ0 hleaf0 hcon0
+  obtain ⟨a1, b1, hab1, w1, h1⟩ :=
+    exists_binary_side_of_display T 1 0 2 1 (by decide) (by decide) (by decide) (by decide)
+      ℓ1 hleaf1 hcon1
+  obtain ⟨a2, b2, hab2, w2, h2⟩ :=
+    exists_binary_side_of_display T 2 0 1 2 (by decide) (by decide) (by decide) (by decide)
+      ℓ2 hleaf2 hcon2
+  have hAopt : T.sideLeaves s(a0, b0) w0 = {0, 2} ∨ T.sideLeaves s(a0, b0) w0 = {1, 4} := by
+    rcases h0 with h | h
+    · left; rw [h, e00]
+    · right; rw [h, e01]
+  have hBopt : T.sideLeaves s(a1, b1) w1 = {1, 2} ∨ T.sideLeaves s(a1, b1) w1 = {0, 3} := by
+    rcases h1 with h | h
+    · left; rw [h, e10]
+    · right; rw [h, e12]
+  have hCopt : T.sideLeaves s(a2, b2) w2 = {1, 3} ∨ T.sideLeaves s(a2, b2) w2 = {0, 4} := by
+    rcases h2 with h | h
+    · left; rw [h, e20]
+    · right; rw [h, e21]
+  have hAB : SidesCompatible (T.sideLeaves s(a0, b0) w0) (T.sideLeaves s(a1, b1) w1) :=
+    T.sidesCompatible_sideLeaves hab0 hab1 w0 w1
+  have hAC : SidesCompatible (T.sideLeaves s(a0, b0) w0) (T.sideLeaves s(a2, b2) w2) :=
+    T.sidesCompatible_sideLeaves hab0 hab2 w0 w2
+  have hBC : SidesCompatible (T.sideLeaves s(a1, b1) w1) (T.sideLeaves s(a2, b2) w2) :=
+    T.sidesCompatible_sideLeaves hab1 hab2 w1 w2
+  rcases fitchMeachamF3_options_meet (T.sideLeaves s(a0, b0) w0) (T.sideLeaves s(a1, b1) w1)
+    (T.sideLeaves s(a2, b2) w2) hAopt hBopt hCopt with hm | hm | hm
+  · exact not_sidesCompatible_of_binary_meet (card_two_of_optionA hAopt)
+      (card_two_of_optionB hBopt) (optionA_ne_optionB hAopt hBopt) hm hAB
+  · exact not_sidesCompatible_of_binary_meet (card_two_of_optionA hAopt)
+      (card_two_of_optionC hCopt) (optionA_ne_optionC hAopt hCopt) hm hAC
+  · exact not_sidesCompatible_of_binary_meet (card_two_of_optionB hBopt)
+      (card_two_of_optionC hCopt) (optionB_ne_optionC hBopt hCopt) hm hBC
