@@ -67,6 +67,7 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | **§14.2–§14.3 ★★★** | **`card_cladesOf`** ＋ **`card_filter_nonsingleton_cladesOf`** ＋ **`existsUnique_creation_level`** ＋ `children_fiberOf_chainMap_succ` | **层分解无重（全局版）**：`|cladesOf n f| = 2n-1`、非单点 clade 恰 `n-1` 个、每个非单点 clade 的**创建步唯一**且 `children` 恰为该步被合并的两块 —— (O1) 具名缺件 ① 已落地（W26 泳道 b） |
 | §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
 | **§14.4–§14.5 ★★★★** | **`reconstruct`** ＋ **`reconstructStep_eq`** ＋ **`reconstruct_newClade_eq`** ＋ **`cladesOf_reconstruct_newClade`** ＋ **`eq_of_newClade_eq`** ＋ **`image_newClade`** / **`existsUnique_newClade`** | **(O1) 重建映射**：由「clade 集 ＋ 创建块」按最小元读出合并对，重建出的合并史**就是** `f`（左逆），故 `cladesOf` 复原、`f ↦ (cladesOf, newClade)` **单射**；且 `k ↦ newClade f k` **恰枚举**非单点 clade（**满射**）—— (O1) 的「纤维 ↪ 创建序」两向已通（W26 泳道 f） |
+| **§15 ★★★** | **`LinExt`** ＋ `LinExt_eq_one_of_hook_eq_zero` ＋ 2 条 `example` | **线性扩展数（(O1) 计数一侧的语义对象）**：`internalBelow T C` 在 `⊊` 下的线性扩展数（`decide` 可算 ⇒ `n = 4` 取值 `Tcat = 1` / `Tbal = 2`，与 §10.1 的 `LE` 及纤维数对上）。⬜ 交错引理 `LinExt = multinomial · ∏ LinExt 孩子` **未证**（W26 泳道 f） |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
 **✅ (i) 已收口（第八轮）**：hook-length 公式本体
@@ -2454,5 +2455,60 @@ theorem existsUnique_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
     exact Finset.mem_filter.mpr ⟨hC, h2⟩
   obtain ⟨k, -, hk⟩ := Finset.mem_image.mp hmem
   exact ⟨k, hk, fun k' hk' => newClade_injective hf (hk'.trans hk.symm)⟩
+
+
+/-! ### §15 ★★★ 线性扩展数 `LinExt` —— (O1) 计数一侧的**具名器材**
+
+§14.5 末尾把 (O1) 的剩余内容精确成两件。本小节补上第 2 件的**语义对象**：
+簇偏序 `(internalBelow T C, ⊊)` 的**线性扩展数**（= 合法创建序的个数）。
+
+背景（§8 已记录的三次 `grep`）：Mathlib **没有**线性扩展的**计数** ——
+`Mathlib/Order/Extension/Linear.lean` 只有 `LinearExtension` 类型别名与存在性
+`extend_partialOrder`。故这里**自造**，且刻意不写 `Fintype.card (LinearExtension _)`
+（那要走子类型上的 `PartialOrder` 实例，内核不化），而用「**下标枚举 ＋ 过滤**」，
+使 `LinExt` 是**可计算**的 `def`（`decide` 能直接算出具体值，见 §15.1）。
+
+⬜ **仍未做（本节的诚实边界）**：**交错引理**
+`LinExt T C = multinomial(hook 孩子) · ∏ LinExt 孩子` —— 即 §8 `LE_eq` 的语义版
+（孩子子树的线性扩展在**块间插空**的洗牌双射）。本节**没有**给出它，
+故「`LinExt = LE`」**仍开着**，§15.1 只给 `n = 4` 的数值对照。 -/
+
+/-- **`C` 之下内部结点偏序的线性扩展数**。
+
+`internalBelow T C` = `T` 中非单点且 `⊆ C` 的簇（含 `C` 自己，当 `2 ≤ |C|` 时），
+元素个数恰为 `hook T C`。一个**线性扩展**就是一个枚举
+`σ : Fin (hook T C) → internalBelow T C` —— 因 `hook T C` 恰是元素数，
+「单射」即「双射」—— 并且**下标越大者越大**：
+`i < j ⇒ σ i` 不是 `σ j` 的真子集，即 `¬ ((σ j).1 ⊂ (σ i).1)`。
+
+这正是 §14.5 所缺的「合法创建序的个数」：§14.4 的 `reconstruct` 把创建序读成合并史，
+本定义数的是**候选创建序**。 -/
+def LinExt (T : Finset (Finset α)) (C : Finset α) : ℕ :=
+  (Finset.univ.filter fun σ : Fin (hook T C) → {D // D ∈ internalBelow T C} =>
+      (∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j) ∧
+      (∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)).card
+
+/-- 钩长为 `0`（`C` 不是 `T` 中的非单点簇）时内部结点偏序**空**，线性扩展恰 `1` 个
+（唯一的空枚举）。与 §8 的 `LE_eq_one_of_card_le_one` 同值 —— 但这里走的是**计数**定义。 -/
+theorem LinExt_eq_one_of_hook_eq_zero {T : Finset (Finset α)} {C : Finset α}
+    (h : hook T C = 0) : LinExt T C = 1 := by
+  rw [LinExt, h]
+  simp
+
+/-! #### §15.1 取值锚点：`n = 4` 的两棵拓扑（与 §10.1 的 `LE` 及既有纤维数三向对上）
+
+| 拓扑 | `internalBelow` | `hook univ` | `LE univ`（§10.1） | 纤维（既有） | **`LinExt univ`（本节）** |
+|---|---|---|---|---|---|
+| caterpillar `Tcat` | `{0,1} ⊊ {0,1,2} ⊊ univ`（全序） | `3` | `1` | `1` | **`1`** |
+| balanced `Tbal` | `{0,1}`、`{2,3}` 互不可比，均 `⊊ univ` | `3` | `2` | `2` | **`2`** |
+
+⚠️ 这只是 `n = 4` 的**数值**对照（`decide` 穷举 `3^3 = 27` 个枚举），
+**不是**一般 `n` 的 `LinExt = LE`（那需要上面的交错引理）。 -/
+
+-- caterpillar：内部结点偏序是全序 ⇒ 唯一线性扩展
+example : LinExt Tcat (Finset.univ : Finset (Fin 4)) = 1 := by decide
+
+-- balanced：两个孩子可互换 ⇒ 两个线性扩展
+example : LinExt Tbal (Finset.univ : Finset (Fin 4)) = 2 := by decide
 
 end Phylo.Stat.HookLength
