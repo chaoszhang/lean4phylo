@@ -93,6 +93,10 @@ import Mathlib.Data.ZMod.Basic
 | `toricIdeal_ne_top` | ★★ 反空真：toric 理想是**真**理想（φ 不是零映射） |
 | `balanced_hypothesis_nonvacuous` | ★★ 反空真：平衡条件是**可满足且非平凡**的 |
 | `toricIdeal_generated_in_degree_le_four_gap` | **缺口**：生成元次数 ≤ 4（Theorem 2 / 21 / 24） |
+| `toricIdeal_generated_in_degree_le_four_gap_one` | ★★★ **缺口在 `m = 1` 成立**（`toricIdeal 1 = ⊥`） |
+| `toricIdeal_generated_in_degree_le_four_gap_two` | ★★★ **缺口在 `m = 2` 成立**（`toricIdeal 2 = ⊥`） |
+| `phi_one_injective` / `phi_two_injective` | ★★ `m ≤ 2` 时 `phi m` **单射**（显式左逆 `retrOne` / `retrTwo`） |
+| `cubic_ne_zero` / `toricIdeal_three_ne_bot` | ★★★ **`m = 3` 已非平凡**（`toricIdeal 3 ≠ ⊥`，见 §8） |
 
 ## 反例检查（★B）
 
@@ -112,6 +116,13 @@ import Mathlib.Data.ZMod.Basic
 
 ## 诚实边界
 
+* **已证（W26 泳道 f，`m ≤ 2` 特化）**：`toricIdeal 1 = ⊥`、`toricIdeal 2 = ⊥`
+  （`phi 1` / `phi 2` 有**显式左逆** `retrOne` / `retrTwo` ⇒ 单射），故缺口在 `m ≤ 2`
+  **成立**（见 §7），且**任何反例必须满足 `m ≥ 3`**。`m ≤ 2` 的成立是**退化**的
+  （理想为 `⊥`），**不构成**对一般 `m` 的证据。`m = 3` 是**第一个非平凡情形**：
+  §8 的 `toricIdeal_three_ne_bot` 证明 `toricIdeal 3 ≠ ⊥`（§4.2 的三次式非零，`cubic_ne_zero`），
+  与 SS2005 §6.3（2242–2258 行）「`K₁,₃` 上第一个非平凡次数 = 3」一致。
+  缺口在 `m = 3` 究竟成不成立，本文件**不**表态（仍缺 §4–§5 的 Gröbner/Markov 基机器）。
 * **未证（核心缺口）**：`toricIdeal_generated_in_degree_le_four_gap` —— 「toric 理想**由**这些
   （局部二次 + 局部三次，SS2005 Lemma 17/22 + Theorem 21/24）二项式**生成**」。
   这需要 Gröbner 基 / Markov 基理论（SS2005 §4–§5），当前库内无此器材。
@@ -499,5 +510,236 @@ theorem toricIdeal_gap_forward (m : ℕ) :
     Ideal.span {g : MvPolynomial (Coord m) ℝ | g ∈ toricIdeal m ∧ g.totalDegree ≤ 4}
       ≤ toricIdeal m :=
   Ideal.span_le.mpr fun _ hg => hg.1
+
+/-! ## 7. ★★ 可证的特化：`m ≤ 2` 时缺口**成立**（toric 理想平凡）
+
+本节把缺口 `toricIdeal_generated_in_degree_le_four_gap` 在 **`m = 1` 与 `m = 2`** 上**证成**
+（这是 W26 泳道 f 的产出：缺口本身的**可证特化**，不是又一次「忠实性核查」）。
+
+**数学事实**：`m ≤ 2` 时 `phi m` 是**单射**，故 `toricIdeal m = ⊥`，而 `⊥` 当然由次数 ≤ 4
+的元素生成（由空集生成），缺口**平凡成立**。
+
+* `m = 1`：`Coord 1` 只有一个元素（`∑_{i∈Fin 1} g i = g 0 = 0`），`phi 1` 把它送到单项式
+  `Y(0,0)`。取「收缩」`ψ`：`Y(0,0) ↦ q`、其余 `Y ↦ 1`，则 `ψ ∘ phi = id`（在生成元上验证，
+  再用 `algHom_ext`）⇒ `phi 1` 单射。
+* `m = 2`：`G4 = Z₂ × Z₂` **特征 2**（`χ + χ = 0`），故 `Coord 2 = {(χ,χ) | χ : G4}`
+  （`g 1 = −g 0 = g 0`）—— **4 个坐标**、两列**支撑不交**。`phi 2` 把 `q_{(χ,χ)}` 送到
+  `Y(0,χ)·Y(1,χ)`。取收缩 `ψ`：`Y(0,χ) ↦ q_{(χ,χ)}`、`Y(1,χ) ↦ 1`，同样得到
+  `ψ ∘ phi = id` ⇒ `phi 2` 单射。
+
+**意义（为什么这有用）**：任何**反例**（即缺口失效的 `m`）必须满足 **`m ≥ 3`**。
+`m = 3` 是第一个非平凡情形：`Coord 3` 有 16 个元素、理想非平凡 —— 这与 SS2005 §6.3
+（2242–2258 行，`K₁,₃` 上模去线性不变量后由**一个三次式**生成）的「第一个非平凡次数 = 3」
+一致，也解释了为什么 `m ≥ 3` 才是 §4–§5 的 Gröbner/Markov 基机器真正要吃的东西。
+**这不构成对一般 `m` 的任何证据**：`m ≤ 2` 的缺口是**退化**的（理想本身为 `⊥`）。 -/
+
+/-- `G4 = Z₂ × Z₂` 的**特征 2**：`χ + χ = 0`。 -/
+theorem G4_add_self_eq_zero (χ : G4) : χ + χ = 0 :=
+  CharTwo.add_self_eq_zero χ
+
+/-! ### 7.1 `m = 1`：`toricIdeal 1 = ⊥` -/
+
+/-- `Coord 1` 的唯一元素（`Fin 1` 上求和就是 `g 0`，故 `g 0 = 0`）。 -/
+def coordOneUnit : Coord 1 := ⟨fun _ => 0, by simp⟩
+
+theorem coordOneUnit_val (i : Fin 1) : (coordOneUnit : Coord 1).1 i = 0 := rfl
+
+/-- `Coord 1` 是**单点**：`g = coordOneUnit`。 -/
+theorem coord_one_eq (g : Coord 1) : g = coordOneUnit := by
+  apply Subtype.ext
+  funext i
+  rw [Subsingleton.elim i 0]
+  have h0 : g.1 0 = 0 := by simpa using g.2
+  show g.1 0 = 0
+  exact h0
+
+/-- `phi 1` 的**收缩**：`Y(0,0) ↦ q`、其余 `Y ↦ 1`。 -/
+noncomputable def retrOne : MvPolynomial (Param 1) ℝ →ₐ[ℝ] MvPolynomial (Coord 1) ℝ :=
+  MvPolynomial.aeval fun p : Param 1 =>
+    if p.2 = 0 then (MvPolynomial.X coordOneUnit : MvPolynomial (Coord 1) ℝ) else 1
+
+/-- ★ 收缩是**左逆**：`retrOne ∘ phi 1 = id`（在生成元上验证，再用 `algHom_ext`）。 -/
+theorem retrOne_comp_phi :
+    (retrOne.comp (phi 1)) = AlgHom.id ℝ (MvPolynomial (Coord 1) ℝ) := by
+  apply MvPolynomial.algHom_ext
+  intro g
+  show retrOne (phi 1 (MvPolynomial.X g)) = MvPolynomial.X g
+  have hg : g = coordOneUnit := coord_one_eq g
+  rw [hg]
+  rw [phi_X, monomialOf, Fin.prod_univ_one]
+  simp [retrOne, coordOneUnit_val]
+
+/-- ★★ `phi 1` **单射**（有左逆）。 -/
+theorem phi_one_injective : Function.Injective (phi 1) := by
+  intro p q hpq
+  have hp : retrOne (phi 1 p) = p := by
+    have h := AlgHom.congr_fun retrOne_comp_phi p
+    simpa using h
+  have hq : retrOne (phi 1 q) = q := by
+    have h := AlgHom.congr_fun retrOne_comp_phi q
+    simpa using h
+  rw [← hp, ← hq, hpq]
+
+/-- ★★ **`m = 1` 时 toric 理想平凡**。 -/
+theorem toricIdeal_one_eq_bot : toricIdeal 1 = ⊥ := by
+  refine le_antisymm ?_ bot_le
+  intro p hp
+  rw [toricIdeal, RingHom.mem_ker] at hp
+  rw [Submodule.mem_bot]
+  exact phi_one_injective (by rw [map_zero]; exact hp)
+
+/-- ★★★ **缺口在 `m = 1` 成立**（`⊥` 由空集生成，更由其次数 ≤ 4 的元素生成）。 -/
+theorem toricIdeal_generated_in_degree_le_four_gap_one :
+    toricIdeal_generated_in_degree_le_four_gap 1 := by
+  rw [toricIdeal_generated_in_degree_le_four_gap, toricIdeal_one_eq_bot]
+  refine le_antisymm bot_le ?_
+  refine Ideal.span_le.mpr ?_
+  intro x hx
+  simpa [Submodule.mem_bot] using hx.1
+
+/-! ### 7.2 `m = 2`：`toricIdeal 2 = ⊥`（`G4` 特征 2 ⟹ 两列支撑不交） -/
+
+/-- `Coord 2` 的元素由第一个分量唯一决定：`χ ↦ (χ, χ)`
+（因为 `g 1 = −g 0`，而 `G4` 特征 2 有 `−χ = χ`）。 -/
+def coordTwoOf (χ : G4) : Coord 2 := ⟨![χ, χ], by
+  rw [Fin.sum_univ_two]
+  exact G4_add_self_eq_zero χ⟩
+
+/-- ★ `Coord 2` 的元素正是 `(χ, χ)`。 -/
+theorem coord_two_eq (g : Coord 2) : coordTwoOf (g.1 0) = g := by
+  apply Subtype.ext
+  funext i
+  fin_cases i
+  · rfl
+  · show g.1 0 = g.1 1
+    have h : g.1 0 + g.1 1 = 0 := by simpa using g.2
+    have h2 : g.1 0 + g.1 1 = g.1 0 + g.1 0 := by rw [h, G4_add_self_eq_zero]
+    exact (add_left_cancel h2).symm
+
+/-- `phi 2` 的**收缩**：`Y(0,χ) ↦ q_{(χ,χ)}`、`Y(1,χ) ↦ 1`。 -/
+noncomputable def retrTwo : MvPolynomial (Param 2) ℝ →ₐ[ℝ] MvPolynomial (Coord 2) ℝ :=
+  MvPolynomial.aeval fun p : Param 2 =>
+    if p.1 = 0 then (MvPolynomial.X (coordTwoOf p.2) : MvPolynomial (Coord 2) ℝ) else 1
+
+/-- ★ 收缩是**左逆**：`retrTwo ∘ phi 2 = id`。 -/
+theorem retrTwo_comp_phi :
+    (retrTwo.comp (phi 2)) = AlgHom.id ℝ (MvPolynomial (Coord 2) ℝ) := by
+  apply MvPolynomial.algHom_ext
+  intro g
+  show retrTwo (phi 2 (MvPolynomial.X g)) = MvPolynomial.X g
+  have hg : coordTwoOf (g.1 0) = g := coord_two_eq g
+  rw [← hg]
+  rw [phi_X, monomialOf, Fin.prod_univ_two]
+  simp [retrTwo, coord_two_eq]
+
+/-- ★★ `phi 2` **单射**（有左逆）。 -/
+theorem phi_two_injective : Function.Injective (phi 2) := by
+  intro p q hpq
+  have hp : retrTwo (phi 2 p) = p := by
+    have h := AlgHom.congr_fun retrTwo_comp_phi p
+    simpa using h
+  have hq : retrTwo (phi 2 q) = q := by
+    have h := AlgHom.congr_fun retrTwo_comp_phi q
+    simpa using h
+  rw [← hp, ← hq, hpq]
+
+/-- ★★ **`m = 2` 时 toric 理想平凡**。 -/
+theorem toricIdeal_two_eq_bot : toricIdeal 2 = ⊥ := by
+  refine le_antisymm ?_ bot_le
+  intro p hp
+  rw [toricIdeal, RingHom.mem_ker] at hp
+  rw [Submodule.mem_bot]
+  exact phi_two_injective (by rw [map_zero]; exact hp)
+
+/-- ★★★ **缺口在 `m = 2` 成立**（`⊥` 由其次数 ≤ 4 的元素生成）。 -/
+theorem toricIdeal_generated_in_degree_le_four_gap_two :
+    toricIdeal_generated_in_degree_le_four_gap 2 := by
+  rw [toricIdeal_generated_in_degree_le_four_gap, toricIdeal_two_eq_bot]
+  refine le_antisymm bot_le ?_
+  refine Ideal.span_le.mpr ?_
+  intro x hx
+  simpa [Submodule.mem_bot] using hx.1
+
+/-! ## 8. ★★ `m = 3` 已**非平凡**：缺口只在 `m ≥ 3` 才有内容
+
+§7 说明 `m ≤ 2` 时 `toricIdeal m = ⊥`（缺口退化成立）。本节补上**另一侧**：
+`m = 3` 时 `toricIdeal 3 ≠ ⊥` —— 文件里已有的三次式（§4.2，SS2005 2242–2258 行的合法提升）
+是**非零**的，故它确实落在理想里且不是 `0`。
+
+⇒ 合起来：**缺口在 `m ≤ 2` 平凡成立；反例（若存在）必须 `m ≥ 3`；而 `m = 3` 已经非平凡。**
+这与 SS2005 §6.3「`K₁,₃` 上第一个非平凡次数 = 3」（2242–2258 行）在**次数**上一致。
+（本节**不**声称缺口在 `m = 3` 成立或失效 —— 那是 §4–§5 的 Gröbner/Markov 基机器才算得出来的。） -/
+
+/-- 用于**分离**三次式两边的具体赋值：`q_abc ↦ 2`、`q_bca ↦ 3`、`q_0cc ↦ 2`、
+`q_a0a ↦ 3`、`q_bb0 ↦ 5`，其余坐标（含 `q000`）`↦ 1`
+（左边取值 `1·2·3 = 6`，右边 `2·3·5 = 30`）。
+（注意：不能用 `φ` 来分离 —— 平衡条件说的正是两边 **`φ`-像相同**。） -/
+def cubicPoint : Coord 3 → ℝ := fun g =>
+  if g = q_abc then 2
+  else if g = q_bca then 3
+  else if g = q_0cc then 2
+  else if g = q_a0a then 3
+  else if g = q_bb0 then 5
+  else 1
+
+theorem cubicPoint_q000 : cubicPoint q000 = 1 := by
+  have h1 : q000 ≠ q_abc := by decide
+  have h2 : q000 ≠ q_bca := by decide
+  have h3 : q000 ≠ q_0cc := by decide
+  have h4 : q000 ≠ q_a0a := by decide
+  have h5 : q000 ≠ q_bb0 := by decide
+  simp [cubicPoint, h1, h2, h3, h4, h5]
+
+theorem cubicPoint_q_abc : cubicPoint q_abc = 2 := by simp [cubicPoint]
+
+theorem cubicPoint_q_bca : cubicPoint q_bca = 3 := by
+  have h1 : q_bca ≠ q_abc := by decide
+  simp [cubicPoint, h1]
+
+theorem cubicPoint_q_0cc : cubicPoint q_0cc = 2 := by
+  have h1 : q_0cc ≠ q_abc := by decide
+  have h2 : q_0cc ≠ q_bca := by decide
+  simp [cubicPoint, h1, h2]
+
+theorem cubicPoint_q_a0a : cubicPoint q_a0a = 3 := by
+  have h1 : q_a0a ≠ q_abc := by decide
+  have h2 : q_a0a ≠ q_bca := by decide
+  have h3 : q_a0a ≠ q_0cc := by decide
+  simp [cubicPoint, h1, h2, h3]
+
+theorem cubicPoint_q_bb0 : cubicPoint q_bb0 = 5 := by
+  have h1 : q_bb0 ≠ q_abc := by decide
+  have h2 : q_bb0 ≠ q_bca := by decide
+  have h3 : q_bb0 ≠ q_0cc := by decide
+  have h4 : q_bb0 ≠ q_a0a := by decide
+  simp [cubicPoint, h1, h2, h3, h4]
+
+/-- ★★ **§4.2 的三次式非零**（在 `cubicPoint` 下取值为 `6 − 30 = −24 ≠ 0`）。 -/
+theorem cubic_ne_zero :
+    (MvPolynomial.X q000 * MvPolynomial.X q_abc * MvPolynomial.X q_bca
+      - MvPolynomial.X q_0cc * MvPolynomial.X q_a0a * MvPolynomial.X q_bb0
+      : MvPolynomial (Coord 3) ℝ) ≠ 0 := by
+  intro h
+  have h2 : MvPolynomial.eval cubicPoint
+      ((MvPolynomial.X q000 * MvPolynomial.X q_abc * MvPolynomial.X q_bca
+        - MvPolynomial.X q_0cc * MvPolynomial.X q_a0a * MvPolynomial.X q_bb0
+        : MvPolynomial (Coord 3) ℝ)) = 0 := by
+    rw [h, map_zero]
+  rw [map_sub, map_mul, map_mul, map_mul, map_mul,
+    MvPolynomial.eval_X, MvPolynomial.eval_X, MvPolynomial.eval_X,
+    MvPolynomial.eval_X, MvPolynomial.eval_X, MvPolynomial.eval_X,
+    cubicPoint_q000, cubicPoint_q_abc, cubicPoint_q_bca,
+    cubicPoint_q_0cc, cubicPoint_q_a0a, cubicPoint_q_bb0] at h2
+  norm_num at h2
+
+/-- ★★★ **`m = 3` 时 toric 理想非平凡**（`toricIdeal 3 ≠ ⊥`）：与 `m ≤ 2` 的平凡性对照，
+说明缺口的内容**只**从 `m ≥ 3` 开始。 -/
+theorem toricIdeal_three_ne_bot : toricIdeal 3 ≠ ⊥ := by
+  intro h
+  have hmem : (MvPolynomial.X q000 * MvPolynomial.X q_abc * MvPolynomial.X q_bca
+      - MvPolynomial.X q_0cc * MvPolynomial.X q_a0a * MvPolynomial.X q_bb0
+      : MvPolynomial (Coord 3) ℝ) ∈ toricIdeal 3 := cubic_mem_toricIdeal
+  rw [h] at hmem
+  exact cubic_ne_zero (by simpa [Submodule.mem_bot] using hmem)
 
 end Phylo.Stat.ToricIdeals
