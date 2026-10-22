@@ -3973,6 +3973,19 @@ P k :  { fiberOf (chainMap n g k) v | v }  =  frontier(σ, k)
 
 ⚠️ 以上是本轮**如实**的卡点：不是缺引理的「口径」，而是缺一件**新的定义层**（`parent` ＋ `frontier`）
 与一条**跨 `chainMap`/`fiberOf` 的不变式归纳**（约 300–500 行）。本轮 60 分钟盒内**未**做。
+**剩下就只差一句装配**（(a) 落地后立即收口）：
+
+```text
+theorem rankedFiberCount_gap_holds : rankedFiberCount_gap := by
+  intro n f hf
+  rcases Nat.lt_or_ge 2 n with h | h
+  · exact rankedFiberCount_gap_of_surj h (★这里就是 (a)，见本节逐字陈述★) f hf
+  · exact rankedFiberCount_gap_small n (by omega) f hf      -- ✅ 已证（退化支）
+```
+
+即：(a) 一旦成立，`rankedFiberCount_gap_holds` 就是上面三行（`h2` 用 §20，`h1` 用 §21 的归约，
+`n ≤ 1` 用本节末尾的 `rankedFiberCount_gap_small`）。
+
 ⚠️ `def rankedFiberCount_gap` 逐字未动；本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）。 -/
 
 /-- ★★ **(O1) 的「≥」半的归约**：一旦 (a)（`Φ` 的满射性，见 §21 的逐字陈述）成立，
@@ -4139,7 +4152,25 @@ theorem reconstruct_eq_comp {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
     rw [hstep]
     exact congrFun (reconstruct_newClade_eq hf d) (τ k)
 
+/-- ★ **`n ≤ 1` 的退化支**（最终装配需要：`rankedFiberCount_gap` 对**所有** `n` 陈述，
+而本库的强归纳只在 `2 ≤ n` 上工作）。此时 `Fin (n - 1)` 为空，`f` 唯一，两边都等于 `1`。 -/
+theorem rankedFiberCount_gap_small (n : ℕ) (hn : n ≤ 1) :
+    ∀ (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
+      ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+        = (n - 1).factorial
+          / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) := by
+  intro f _
+  have hn' : n = 0 ∨ n = 1 := by omega
+  rcases hn' with rfl | rfl
+  · have hf0 : f = fun i => i.elim0 := funext fun i => i.elim0
+    rw [hf0]
+    decide
+  · have hf0 : f = fun i => i.elim0 := funext fun i => i.elim0
+    rw [hf0]
+    decide
+
 end Phylo.Stat.HookLength
+
 
 
 
