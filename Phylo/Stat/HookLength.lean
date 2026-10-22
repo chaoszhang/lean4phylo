@@ -4253,4 +4253,99 @@ theorem blockAt_mono {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k k' : ℕ
   · rw [hwz]; exact mem_blockAt σ k' z
   · exact subset_blockAt σ (procClades_mono σ h hC) hzC hwC
 
+/-- ★ **嵌嵌性 ＋ 线性扩展序 ⇒ 「已创建的含 `z` 的 clade」都落在后来的 `σ k` 里**。 -/
+theorem subset_of_mem_procClades {n : ℕ} {T : Finset (Finset (Fin n))}
+    {σ : Fin (n - 1) → Finset (Fin n)} (hl : LaminarFamily T)
+    (hσT : ∀ j, σ j ∈ T) (hinj : Function.Injective σ)
+    (hord : ∀ i j, σ i ⊂ σ j → i < j)
+    {k : ℕ} (hk : k < n - 1) {C : Finset (Fin n)} (hC : C ∈ procClades σ k)
+    {z : Fin n} (hzC : z ∈ C) (hzk : z ∈ σ ⟨k, hk⟩) :
+    C ⊆ σ ⟨k, hk⟩ := by
+  obtain ⟨j, hj, rfl⟩ := (mem_procClades σ).mp hC
+  have hjlt : j < (⟨k, hk⟩ : Fin (n - 1)) := by
+    rw [Fin.lt_def]
+    simpa using hj
+  rcases hl (σ j) (hσT j) (σ ⟨k, hk⟩) (hσT _) with h | h | hdisj
+  · exact h
+  · by_cases heq : σ ⟨k, hk⟩ = σ j
+    · exact absurd (hinj heq).symm (ne_of_lt hjlt)
+    · exact absurd (hord ⟨k, hk⟩ j (Finset.ssubset_iff_subset_ne.mpr ⟨h, heq⟩))
+        (not_lt_of_ge hjlt.le)
+  · exact absurd hzk (Finset.disjoint_left.mp hdisj hzC)
+
+/-- ★★ **第 `k+1` 步后，含 `z ∈ σ k` 的块就是 `σ k`**（不变式的一步）。 -/
+theorem blockAt_succ_of_mem {n : ℕ} {T : Finset (Finset (Fin n))}
+    {σ : Fin (n - 1) → Finset (Fin n)} (hl : LaminarFamily T)
+    (hσT : ∀ j, σ j ∈ T) (hinj : Function.Injective σ)
+    (hord : ∀ i j, σ i ⊂ σ j → i < j)
+    {k : ℕ} (hk : k < n - 1) {z : Fin n} (hz : z ∈ σ ⟨k, hk⟩) :
+    blockAt σ (k + 1) z = σ ⟨k, hk⟩ := by
+  ext w
+  constructor
+  · intro hw
+    have hw' : w = z ∨ ∃ C, (C ∈ procClades σ (k + 1) ∧ z ∈ C) ∧ w ∈ C := by
+      simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+    rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+    · rw [hwz]
+      exact hz
+    · rw [procClades_succ σ hk, Finset.mem_insert] at hC
+      rcases hC with rfl | hC
+      · exact hwC
+      · exact subset_of_mem_procClades hl hσT hinj hord hk hC hzC hz hwC
+  · intro hw
+    exact subset_blockAt σ ((mem_procClades σ).mpr ⟨⟨k, hk⟩, by simp, rfl⟩) hz hw
+
+/-- 若 `z ∉ σ k`，则第 `k+1` 步后的块与第 `k` 步相同。 -/
+theorem blockAt_succ_of_not_mem {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ}
+    (hk : k < n - 1) {z : Fin n} (hz : z ∉ σ ⟨k, hk⟩) :
+    blockAt σ (k + 1) z = blockAt σ k z := by
+  ext w
+  constructor
+  · intro hw
+    have hw' : w = z ∨ ∃ C, (C ∈ procClades σ (k + 1) ∧ z ∈ C) ∧ w ∈ C := by
+      simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+    rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+    · rw [hwz]
+      exact mem_blockAt σ k z
+    · rw [procClades_succ σ hk, Finset.mem_insert] at hC
+      rcases hC with rfl | hC
+      · exact absurd hzC hz
+      · exact subset_blockAt σ hC hzC hwC
+  · intro hw
+    have hw' : w = z ∨ ∃ C, (C ∈ procClades σ k ∧ z ∈ C) ∧ w ∈ C := by
+      simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+    rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+    · rw [hwz]
+      exact mem_blockAt σ (k + 1) z
+    · exact subset_blockAt σ (procClades_mono σ (by omega) hC) hzC hwC
+
+/-- ★ **若 `z ∉ σ k`，则含 `z` 的已创建 clade 与 `σ k` 不交**（故块也不交）。 -/
+theorem disjoint_blockAt_of_not_mem {n : ℕ} {T : Finset (Finset (Fin n))}
+    {σ : Fin (n - 1) → Finset (Fin n)} (hl : LaminarFamily T)
+    (hσT : ∀ j, σ j ∈ T) (_hinj : Function.Injective σ)
+    (hord : ∀ i j, σ i ⊂ σ j → i < j)
+    {k : ℕ} (hk : k < n - 1) {z : Fin n} (hz : z ∉ σ ⟨k, hk⟩) :
+    Disjoint (blockAt σ k z) (σ ⟨k, hk⟩) := by
+  rw [Finset.disjoint_left]
+  intro w hw hwk
+  have hw' : w = z ∨ ∃ C, (C ∈ procClades σ k ∧ z ∈ C) ∧ w ∈ C := by
+    simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+  rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+  · rw [hwz] at hwk
+    exact hz hwk
+  · obtain ⟨j, hj, rfl⟩ := (mem_procClades σ).mp hC
+    rcases hl (σ j) (hσT j) (σ ⟨k, hk⟩) (hσT _) with h | h | hdisj
+    · exact hz (h hzC)
+    · -- σ k ⊆ σ j
+      have hjlt : j < (⟨k, hk⟩ : Fin (n - 1)) := by
+        rw [Fin.lt_def]
+        simpa using hj
+      by_cases heq : σ ⟨k, hk⟩ = σ j
+      · exact hz (heq ▸ hzC)
+      · exact absurd (hord ⟨k, hk⟩ j (Finset.ssubset_iff_subset_ne.mpr ⟨h, heq⟩))
+          (not_lt_of_ge hjlt.le)
+    · exact absurd hwk (Finset.disjoint_left.mp hdisj hwC)
+
 end Phylo.Stat.HookLength
+
+
