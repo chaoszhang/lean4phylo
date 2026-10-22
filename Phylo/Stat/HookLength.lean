@@ -3145,7 +3145,141 @@ theorem linExt_positions_card {T : Finset (Finset α)} {A B C : Finset α}
     rw [← himg, Finset.card_image_of_injOn hinjS]
   simpa [hook] using hgoal
 
+/-! ### §19.3 ★★★ 洗牌双射的构造部分
+
+`σ`（`Fin (hook T C)` 上的线性扩展）拆成三块：**末位 = `C`**（§19.2）、
+**`S`-位置填 `τ`**（`A`-子树的线性扩展）、**其余非末位填 `ρ`**（`B`-子树）。
+本节给出「拼接」方向的函数与它保持两条线性扩展条件的证明。 -/
+
+/-- 两个不交孩子的 `internalBelow` **不交**（否则某个非空的 `D` 落在 `A ∩ B` 里）。 -/
+theorem internalBelow_pair_disjoint {T : Finset (Finset α)} {A B : Finset α}
+    (hdisj : Disjoint A B) : Disjoint (internalBelow T A) (internalBelow T B) := by
+  rw [Finset.disjoint_left]
+  intro D hDA hDB
+  have h2 : 2 ≤ D.card := (mem_internalBelow.mp hDA).2.1
+  have hsub : D ⊆ A ∩ B :=
+    Finset.subset_inter (mem_internalBelow.mp hDA).2.2 (mem_internalBelow.mp hDB).2.2
+  have hinter : A ∩ B = ∅ := Finset.disjoint_iff_inter_eq_empty.mp hdisj
+  rw [hinter] at hsub
+  have hemp : D = ∅ := Finset.eq_empty_iff_forall_notMem.mpr (fun x hx => by simpa using hsub hx)
+  rw [hemp] at h2
+  simp at h2
+
+/-- **`B`-位置集**：除末位外、不在 `S` 里的位置。 -/
+def bPos {m : ℕ} (last : Fin m) (S : Finset (Fin m)) : Finset (Fin m) :=
+  (Finset.univ.erase last) \ S
+
+/-- `bPos` 的成员刻画。 -/
+theorem mem_bPos {m : ℕ} {last : Fin m} {S : Finset (Fin m)} {i : Fin m} :
+    i ∈ bPos last S ↔ i ≠ last ∧ i ∉ S := by
+  simp [bPos]
+
+/-- `bPos` 的基数：`(m - 1) - |S|`。 -/
+theorem bPos_card {m : ℕ} (last : Fin m) (S : Finset (Fin m)) (hS : last ∉ S) :
+    (bPos last S).card = (m - 1) - S.card := by
+  have hsub : S ⊆ (Finset.univ : Finset (Fin m)).erase last :=
+    Finset.subset_erase.mpr ⟨Finset.subset_univ S, hS⟩
+  have hcardE : ((Finset.univ : Finset (Fin m)).erase last).card = m - 1 := by
+    rw [Finset.card_erase_of_mem (Finset.mem_univ last), Finset.card_univ, Fintype.card_fin]
+  have hinter : S ∩ (Finset.univ : Finset (Fin m)).erase last = S := by
+    ext x
+    simp only [Finset.mem_inter]
+    exact ⟨fun h => h.1, fun h => ⟨h, hsub h⟩⟩
+  rw [bPos, Finset.card_sdiff, hcardE, hinter]
+
+/-- ★ **拼接函数**：末位填 `C`、`S`-位置按升序填 `τ`、
+其余非末位按升序填 `ρ`。
+
+（`hB` 是 `B`-位置集的基数证据，用于把它读成 `Fin sB`；
+`hAIC`/`hBIC` 把两个子树的内部结点嵌回 `internalBelow T C`。） -/
+noncomputable def linExtShuffle {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C) :
+    Fin m → {D // D ∈ internalBelow T C} :=
+  fun i =>
+    if hi : i = last then cC
+    else if h : i ∈ S then
+      ⟨(τ ((S.orderIsoOfFin hS).symm ⟨i, h⟩)).1,
+        hAIC (τ ((S.orderIsoOfFin hS).symm ⟨i, h⟩)).2⟩
+    else
+      ⟨(ρ (((bPos last S).orderIsoOfFin hB).symm
+            ⟨i, by rw [mem_bPos]; exact ⟨hi, h⟩⟩)).1,
+        hBIC (ρ (((bPos last S).orderIsoOfFin hB).symm
+            ⟨i, by rw [mem_bPos]; exact ⟨hi, h⟩⟩)).2⟩
+
+/-- ★★ **线性扩展在任意位置子集上的限制仍是线性扩展**（位置子集按升序编号）。
+
+这一条**同时服务 `S`-位置与 `B`-位置**（两者都是位置子集）。 -/
+theorem linExt_restrict {T : Finset (Finset α)} {C : Finset α} {n k : ℕ}
+    (f : Fin n → {D // D ∈ internalBelow T C}) (U : Finset (Fin n)) (hU : U.card = k)
+    (hinj : ∀ i j : Fin n, i ≠ j → f i ≠ f j)
+    (hord : ∀ i j : Fin n, i < j → ¬ (f j).1 ⊂ (f i).1) :
+    (∀ i j : Fin k, i ≠ j → f (U.orderIsoOfFin hU i) ≠ f (U.orderIsoOfFin hU j)) ∧
+    (∀ i j : Fin k, i < j → ¬ (f (U.orderIsoOfFin hU j)).1 ⊂ (f (U.orderIsoOfFin hU i)).1) := by
+  constructor
+  · intro i j hij hcontra
+    have hne : U.orderIsoOfFin hU i ≠ U.orderIsoOfFin hU j := by
+      intro hEq
+      exact hij ((U.orderIsoOfFin hU).injective hEq)
+    have hne' : Subtype.val ((U.orderIsoOfFin hU) i) ≠ Subtype.val ((U.orderIsoOfFin hU) j) :=
+      fun h => hne (Subtype.ext h)
+    exact hinj _ _ hne' hcontra
+  · intro i j hij hcontra
+    have hlt : (U.orderIsoOfFin hU i : Fin n) < U.orderIsoOfFin hU j :=
+      (U.orderIsoOfFin hU).lt_iff_lt.mpr hij
+    exact hord _ _ hlt hcontra
+
+/-- 拼接函数在**末位**取 `C`。 -/
+theorem linExtShuffle_last {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C) :
+    linExtShuffle last S hS hB cC τ ρ hAIC hBIC last = cC := by
+  simp [linExtShuffle]
+
+/-- 拼接函数在 **`S`-位置**取 `τ` 的值（需 `last ∉ S`）。 -/
+theorem linExtShuffle_mem_S {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    (hSl : last ∉ S) {i : Fin m} (hi : i ∈ S) :
+    linExtShuffle last S hS hB cC τ ρ hAIC hBIC i
+      = ⟨(τ ((S.orderIsoOfFin hS).symm ⟨i, hi⟩)).1,
+          hAIC (τ ((S.orderIsoOfFin hS).symm ⟨i, hi⟩)).2⟩ := by
+  have hne : ¬ (i = last) := fun h => hSl (h ▸ hi)
+  simp only [linExtShuffle]
+  rw [dite_eq_right hne, dite_eq_left hi]
+
+/-- 拼接函数在 **`B`-位置**（非末位、不在 `S`）取 `ρ` 的值。 -/
+theorem linExtShuffle_mem_B {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    {i : Fin m} (hi : i ∉ S) (hne : i ≠ last) :
+    linExtShuffle last S hS hB cC τ ρ hAIC hBIC i
+      = ⟨(ρ (((bPos last S).orderIsoOfFin hB).symm
+            ⟨i, by rw [mem_bPos]; exact ⟨hne, hi⟩⟩)).1,
+          hBIC (ρ (((bPos last S).orderIsoOfFin hB).symm
+            ⟨i, by rw [mem_bPos]; exact ⟨hne, hi⟩⟩)).2⟩ := by
+  simp only [linExtShuffle]
+  rw [dite_eq_right hne, dite_eq_right hi]
+
 end Phylo.Stat.HookLength
+
+
 
 
 
