@@ -1748,6 +1748,63 @@ theorem peelStep {α : Type*} [Fintype α] [DecidableEq α]
    peelMetric_triangle hδ hdiag htri (s.nonempty 0) (s.nonempty 1),
    peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1)⟩
 
+
+/-! ## 8.7 ★★★ W27 泳道 e：`_v2` 结论的**两整类非空真实例** ＋ 归纳步的封闭性
+
+`§8.6` 给的是**剥离一步**的度量保形（存在性 ① 的器材）。本节给 `canonicalSplitDecomposition_gap_faithful_v2`
+（`:1154`，**def 未改**）的**结论**（`∃ F c δ₀, …`）的两整类真实例，用来排除「`_v2` 也像 v1 一样为假」的可能
+（v1 已被 `not_canonicalSplitDecomposition_gap_faithful`（`:1368`）机器证伪）：
+
+1. `splitPrimeFaithfulPartition_zero`：残差取 `0` 时划分版 split-prime 成立；
+2. `…_v2_conclusion_of_splitMetricSum`：**`δ` = 正系数 split 度量之和**（= 树度量类，含全部树度量）
+   取 `F` = 支撑、`c` = 系数、`δ₀ = 0` 即满足结论；
+3. `…_v2_conclusion_of_splitPrime`：**`δ` 本身划分版 split-prime**（非负、对角 `0`）取
+   `F = ∅`、`c = 0`、`δ₀ = δ` 即满足结论（= 剥离到 `F = ∅` 的终止态）。
+
+★ 这四条合起来把 ① 的缺口**精确定位**成一条：剥离链的**终止性**（(P1) 的全局下降 ＋ (P2) 的测度）。
+不带任何数学假设，也不碰 `def`。 -/
+
+/-- 残差为 `0` 时划分版 split-prime 成立（`0` 的每个四元组亏损都是 `0`，不可能严格为正）。 -/
+theorem splitPrimeFaithfulPartition_zero {α : Type*} [Fintype α] [DecidableEq α] :
+    SplitPrimeFaithfulPartition (fun _ _ : α => (0 : ℝ)) := by
+  intro A B hA hB _ _ hds
+  obtain ⟨a, ha⟩ := hA
+  obtain ⟨b, hb⟩ := hB
+  have h := hds a ha a ha b hb b hb
+  simp at h
+
+/-- ★★★ **`_v2` 结论的一整类非空真实例**：`δ` 是**正系数 split 度量之和**时，
+取 `F` = 支撑、`c` = 系数、`δ₀ = 0` 即满足 `canonicalSplitDecomposition_gap_faithful_v2` 的结论。
+
+（含**全部树度量**：BdD md `:1245-1253` 的 split 度量正是树的边权展开。） -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitMetricSum
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} {F : Finset (Split α)}
+    {c : Split α → ℝ} (hpos : ∀ s ∈ F, 0 < c s)
+    (hδ : ∀ x y, δ x y = ∑ s ∈ F, c s * SplitMetric s x y) :
+    ∃ (F' : Finset (Split α)) (c' : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F', 0 < c' s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F', c' s * SplitMetric s x y :=
+  ⟨F, c, fun _ _ : α => (0 : ℝ), hpos, splitPrimeFaithfulPartition_zero,
+   fun _ => rfl, fun _ _ => le_refl 0, by
+     intro x y
+     rw [hδ x y]
+     simp⟩
+
+/-- ★★★ **`_v2` 结论的另一整类非空真实例**：`δ` 本身**划分版 split-prime**（非负、对角 `0`）时，
+取 `F = ∅`、`c = 0`、`δ₀ = δ` 即满足结论（= 剥离到 `F = ∅` 的终止态）。 -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ}
+    (hsp : SplitPrimeFaithfulPartition δ) (hdiag : ∀ x, δ x x = 0) (hnn : ∀ x y, 0 ≤ δ x y) :
+    ∃ (F' : Finset (Split α)) (c' : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F', 0 < c' s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F', c' s * SplitMetric s x y :=
+  ⟨∅, fun _ => 0, δ,
+   (fun s hs => by simp at hs),
+   hsp, hdiag, hnn, by
+     intro x y
+     simp⟩
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
 **目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
