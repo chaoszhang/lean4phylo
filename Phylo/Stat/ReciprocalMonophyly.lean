@@ -1965,7 +1965,8 @@ theorem isClanMinusRoot_compl {X : Type} [Fintype X] [DecidableEq X]
 
 | docstring 的条目 | 现状 |
 | --- | --- |
-| ② 去根载体桥 `rootedToCladogram` | ✅ **本节**：`realLeaves` ＋ `IsClanMinusRoot` ＋ ★★★ `isClanMinusRoot_iff`（＝ Lemma 6.1），**不构造新树** |
+| ②(a) split 层的**数学内容**（Lemma 6.1） | ✅ **本节**：`realLeaves` ＋ `IsClanMinusRoot` ＋ ★★★ `isClanMinusRoot_iff`（＝ Lemma 6.1）。**不构造 `T − ρ`** 对 (a) 是正当的设计选择 —— 抑制 ρ 产生的新 split，其两侧**恰是**被并两条边各自一侧的真叶集 |
+| ②(b) **载体映射** `rootedToCladogram`（`Cladogram (X ⊕ Unit) → Cladogram X`） | ❌ **未交**。★ **更正**：本节首版把 ② 整体记成 ✅ 是 **overclaim**。缺口要的 `tree : Ω → Cladogram (Fin n)` 与本节全部器材所在的 `Cladogram (Fin n ⊕ Unit)` 之间**必须有这台映射**；对 (a) 可省，对**填缺口的 `tree` 槽不可省** |
 | ③ Lemma 6.1 的**概率层** | ✅ 代数侧已有 `clanProb_eq_inclusionExclusion`（`:404`）；❌ **概率**侧仍缺（见下） |
 | ① 一般 `n` 的 YHK 权重函数 | ❌ 仍缺 |
 | ④ (EP) 的群作用实现 | ❌ 仍缺（`TwoClanLawGap` 的 `a+b<n` 支还要 Theorem 6.3(ii) 的三事件分解） |
@@ -1982,6 +1983,41 @@ theorem isClanMinusRoot_compl {X : Type} [Fintype X] [DecidableEq X]
 4. `TwoClanLawGap` 另需 Theorem 4.5 的**六情形级联概率层**（`pnPair`，`:452-475`）
    ＋ Theorem 6.3(ii) 的三事件分解（`:1112-1145`）。
 
-⇒ 本节把「**形状侧**」全部做完：缺口剩下的**纯粹是概率层**（有根 YHK 律 ＋ 两条溯祖计算）。 -/
+⇒ 本节把「**形状侧的数学内容**」做完（Lemma 6.1），但**未**做完「形状侧的**载体**」：缺 `rootedToCladogram`。
+故缺口剩下的是 **① 载体映射 ＋ ② 概率层**（有根 YHK 律 ＋ `M1`/`M2`），**不是**「纯粹概率层」—— 首版这句也是 overclaim，一并更正。 -/
+
+/-! ### 9.3 ★ 接手路线（W27 收档时由泳道 d 给出，**代价从小到大**；不是承诺，是验证过的路线）
+
+**第 1 步：`rootedToCladogram`（估 2–4 h；最便宜的路线**不是**图手术）**
+
+用 `Cladogram.ofCompatibleSplits`（`CladogramBuild.lean:204`）造目标树，而不是抑制图：
+
+```
+fam := (U.nontrivialSplits).image splitRestrict        -- U : Cladogram (X ⊕ Unit)
+splitRestrict s : Split X                              -- 两侧取 (realLeaves s.sideA)ᶜ 与 realLeaves s.sideA
+```
+
+需要三件（库内都**没有**，得新写）：
+1. **`Split X` 的构造器**：从「两侧非空、不交、并为全集」造 `Split X`（`grep` 未找到现成的）；
+2. **`Split.Compatible` 在限制到真叶集下保持**（有 `A ∪ B = univ` 则 `realA ∪ realB = X`，可证）；
+3. **限制与 `swap` 交换**。
+拿到后 `isSplitOf_ofCompatibleSplits`（`CladogramBuild.lean:204`）直接给刻画 ⇒ 与
+★★★ `isClanMinusRoot_iff` 对接，得到 `(rootedToCladogram U).IsClade A ↔ IsClanMinusRoot U A`。
+
+**第 2 步：`M1 rootedCladeProb`** —— 一般 `n` **有根** YHK 律下 `P(A clade) = pn n A.card`（文献 Lemma 4.2，`:294-317`）。
+前提是一件**库内不存在**的东西：一般 `n` 的**有根拓扑律**（`MSCTreeLaw` 只装无根、非空实例仅 `yhkLawFour`；
+`Coalescent.mergePairsFinset` 只给一步合并均匀；`KingmanLaw` 是测度论连续时间）。
+
+**第 3 步：`M2 rootedCladePairProb`** —— `P(A 与 X−A 同为 clade) = pnHatExh n A.card`（Lemma 4.3，`:369-385`）。
+
+**装配**：1+2+3 ⇒ `YHKClanLawGap` ＝ `isClanMinusRoot_iff` ＋ `clanProb_eq_inclusionExclusion`（`:404`，签名
+`{n a} (h1 : 1 ≤ a) (ha : a < n) : clanProb n a = pn n a + pn n (n-a) - pnHatExh n a`，**合型、不是卡点**）
+一步收口（文献 Lemma 6.2 的证明 `:1038-1044` 正是这个包含-排除）。
+`TwoClanLawGap` 再加 Theorem 4.5 六情形级联概率层（`:452-475`）＋ Thm 6.3(ii) 三事件（`:1112-1145`）。
+
+★ **反面记录（免得下一个人重走）**：把假设写成 `YHKClanLawModel : Prop` 再证 `…Model → YHKClanLawGap`
+**逃不掉** —— 若 `Model` 陈述在 `Cladogram (Fin n)` 上带 clan 等式，它**就是** `YHKClanLawGap`（同义反复）；
+若陈述在 `Cladogram (Fin n ⊕ Unit)` 上带 `IsClanMinusRoot`，则 `…Model → YHKClanLawGap` **恰好就是**被卡住的那一步。
+-/
 
 end Phylo.Stat.ReciprocalMonophyly
