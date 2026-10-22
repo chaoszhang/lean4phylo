@@ -2633,4 +2633,103 @@ example : LinExt Tcat (Finset.univ : Finset (Fin 4)) = 1 := by decide
 -- balanced：两个孩子可互换 ⇒ 两个线性扩展
 example : LinExt Tbal (Finset.univ : Finset (Fin 4)) = 2 := by decide
 
+/-! ### §16 ★★★ (O1) 的「≤」半：纤维 ↪ 创建序（创建序的宜归属上界是 `LinExt`）
+
+§14.7 证了「创建序是线性扩展」。本小节把它提升成**基数不等式**：
+
+> 纤维中的合并史 ➦ 它的创建序，是一个**单射**，且像落在§15 `LinExt`
+> 所数的那个集合里（`= { σ | σ 单射 ∧ i < j ⇒ ─ (σ j ⊂ σ i) }`）
+> ⇒ `|纤维| ≤ LinExt (cladesOf n f) univ`。
+
+三件取证都已在库内：单射性 = `eq_of_newClade_eq`（§14.4）；
+σ 本身单射 = `newClade_injective`（§14.5）；序条件 = §14.7 的
+`newClade_not_ssubset_of_lt`。故本小节只是把这三件装配起来（`Finset.card_le_card_of_injOn`）。
+
+⚠️ 这**只**是 (O1) 的一侧（≤）：「≥」半需要「任意线性扩展都能被
+`reconstruct` 读成合法合并史」（即 ② 的「⟸」半），**本小节未做**。
+故 `rankedFiberCount_gap` 仍然开着—— 它是 SD2012 的 **Remark 6**，而 Remark 6 在该文是**转引**：
+正文明写 "A proof can be found in [26]"，[26] = Semple & Steel, *Phylogenetics*（Oxford），**该书不在库**。 -/
+
+/-- ★★ `LinExt` 的**翻译引理**：把它的类型参数 `Fin (hook T C)`、
+`{D // D ∈ internalBelow T C}` 换成**任意** `Fin m`、`{D // D ∈ A}`。 -/
+theorem LinExt_eq_filter_card {T : Finset (Finset α)} {C : Finset α} {m : ℕ}
+    (h : hook T C = m) {A : Finset (Finset α)} (hA : internalBelow T C = A) :
+    LinExt T C = (Finset.univ.filter (fun σ : Fin m → {D // D ∈ A} =>
+      (∀ i j : Fin m, i ≠ j → σ i ≠ σ j) ∧
+      (∀ i j : Fin m, i < j → ¬ (σ j).1 ⊂ (σ i).1))).card := by
+  rw [LinExt, h, hA]
+
+/-- ★★★ **(O1) 的「≤」半**：纤维的基数不超过「合法创建序」的个数
+
+（右端写成 `Fin (n - 1)` 形式以免去 `Fin (hook · univ) → Fin (n - 1)` 的类型搬运，
+两者的等价由 `LinExt_eq_filter_card` 在下一条里给出。） -/
+theorem card_fiber_le_creationOrders {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+      ≤ (Finset.univ.filter (fun σ : Fin (n - 1) →
+            {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)} =>
+          (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) ∧
+          (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1))).card := by
+  classical
+  have hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f := univ_mem_cladesOf (by omega) hf
+  have huniv2 : 2 ≤ (Finset.univ : Finset (Fin n)).card := by simpa using hn
+  set S : Finset (Fin (n - 1) → Fin n × Fin n) :=
+    (mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f) with hSdef
+  set W : Finset (Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}) :=
+    Finset.univ.filter (fun σ => (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) ∧
+      (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1)) with hWdef
+  set Φ : (Fin (n - 1) → Fin n × Fin n) →
+      (Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}) :=
+    fun g => if hg : g ∈ S then
+        (fun k => ⟨newClade g k, by
+          have h1 := mem_filter_newClade (n := n) (f := g)
+            ((mem_mergeHistories g).mp (Finset.mem_filter.mp hg).1) k
+          rwa [(Finset.mem_filter.mp hg).2] at h1⟩)
+      else fun _ => ⟨Finset.univ, Finset.mem_filter.mpr ⟨hU, huniv2⟩⟩ with hΦdef
+  have hmaps : Set.MapsTo Φ ↑S ↑W := by
+    intro g hg
+    have hgS : g ∈ S := by simpa using hg
+    have hgi : IsMergeHistory n g := (mem_mergeHistories g).mp (Finset.mem_filter.mp hgS).1
+    have hmem : Φ g ∈ W := by
+      rw [hΦdef]
+      simp only [dite_eq_left hgS]
+      rw [hWdef]
+      refine Finset.mem_filter.mpr ⟨Finset.mem_univ _, ?_, ?_⟩
+      · intro i j hij hEq
+        exact hij (newClade_injective hgi (congrArg Subtype.val hEq))
+      · intro i j hij hsub
+        exact newClade_not_ssubset_of_lt hgi hij hsub
+    exact hmem
+  have hinj : Set.InjOn Φ ↑S := by
+    intro g hg g₂ hg₂ hEq
+    have hgS : g ∈ S := by simpa using hg
+    have hgS₂ : g₂ ∈ S := by simpa using hg₂
+    have h1 : IsMergeHistory n g := (mem_mergeHistories g).mp (Finset.mem_filter.mp hgS).1
+    have h2 : IsMergeHistory n g₂ := (mem_mergeHistories g₂).mp (Finset.mem_filter.mp hgS₂).1
+    have hS1 : cladesOf n g = cladesOf n f := (Finset.mem_filter.mp hgS).2
+    have hS2 : cladesOf n g₂ = cladesOf n f := (Finset.mem_filter.mp hgS₂).2
+    refine eq_of_newClade_eq h1 h2 (hS1.trans hS2.symm) (fun k => ?_)
+    have hk := congrFun hEq k
+    rw [hΦdef] at hk
+    simp only [dite_eq_left hgS, dite_eq_left hgS₂] at hk
+    exact congrArg Subtype.val hk
+  exact Finset.card_le_card_of_injOn Φ hmaps hinj
+
+/-- ★★★★ **(O1) 的「≤」半（`LinExt` 形式）**：
+`|纤维| ≤ LinExt (cladesOf n f) univ` —— 即 `§13` 的 `rankedFiberCount_gap_of_LE` 所需的那个等式的**一侧**。 -/
+theorem card_fiber_le_LinExt {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f) :
+    ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+      ≤ LinExt (cladesOf n f) (Finset.univ : Finset (Fin n)) := by
+  have hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f := univ_mem_cladesOf (by omega) hf
+  have hhook : hook (cladesOf n f) (Finset.univ : Finset (Fin n)) = n - 1 := by
+    simpa using hook_cladesOf_eq_card_sub_one f hf Finset.univ hU (by simpa using hn)
+  have hinternal : internalBelow (cladesOf n f) (Finset.univ : Finset (Fin n))
+      = (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+    ext D
+    simp [mem_internalBelow]
+  rw [LinExt_eq_filter_card (C := Finset.univ) hhook hinternal]
+  exact card_fiber_le_creationOrders hn hf
+
 end Phylo.Stat.HookLength
+
