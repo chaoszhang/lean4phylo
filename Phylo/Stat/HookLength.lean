@@ -4384,10 +4384,8 @@ blockAt_eq_child (hn : 2 ≤ n) (hf) (σ) (hinj) (hord)
 ⚠️ Lean 坑：`children_maximal` 的结论是 `¬ D ⊂ C`，因此第三个参数必须是 **`⊂`**（用
 `Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩`）而不是 `⊆`；且 `hne` 的方向是 `B ≠ D`。
 
-2. **`reconstructStep` 的语义识别**（⚠️ 本轮尝试了一次：用库内 `reconstructStep_eq` 兑九个前提可行，
-   但「`∃ a b (hbne : b.Nonempty), … ∧ (reconstructStep …).2 = b.min' hbne」这种**依赖型 `∃`** 在 Lean 里反复报
-   「期望 `(↑(σ k)).Nonempty`」；建议下一轮**把 `a, b, hbne` 提成定理的显式参数**（不要放进 `∃`），
-   调用处对 `x ∈ A ∨ x ∈ B` 分两次用。）：
+2. **`reconstructStep` 的语义识别** —— ✅ **已证**（`reconstructStep_eq_children`）：
+   `reconstructStep S C d = (C.min', b.min')`，全部参数显式（按派单修法，不用依赖型 `∃`）：
 
 ```text
 reconstructStep_snd_eq (孩子为 {A, B}) :
@@ -4397,7 +4395,19 @@ reconstructStep_snd_eq (孩子为 {A, B}) :
 
 （即「另一个孩子的最小元」；需要 `children T (σ k).1 = {A,B}` 与 `x = min' (σ k).1 只在一个孩子里`。）
 
-3. **取值不变式**：
+3. **取值不变式** —— ✅ **已证**（`chainMap_reconstruct_eq_min`，上方）：
+
+```text
+chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z
+  = (blockAt (fun j => (σ j).1) k z).min'          　(k ≤ n-1)
+```
+
+还附带了一条工程必需的桥：`blockAt_min'_eq`（块相等 ⇒ 最小元相等，用
+`Finset.min'_le` 两侧夹，避开 `min'` 证明参数的依赖重写）。
+
+**原先列的“取值不变式”感想现已为实体。**剩下唯一一件如下。
+
+4. **取出层**（⚠️ 本轮**未做**，但所需砖已全就位）：
 
 ```text
 chainMap_eq_blockMin : ∀ k z,
@@ -4409,12 +4419,25 @@ chainMap_eq_blockMin : ∀ k z,
 `z ∉ σ k`（不变）；用 1、2 与 `blockAt_succ_of_mem` / `blockAt_succ_of_not_mem` /
 `disjoint_blockAt_of_not_mem`。
 
-4. **取出 `IsMergeHistory` 与 `newClade` / `cladesOf`**：
-   * `IsStep`：由 3 得 `chainMap n g k x = x`、`chainMap n g k y = y`（`x = (g k).1 = min' (σ k)` 恰是块 `a` 的最小元），
-     `x < y` 由 `y ∈ (σ k).1`、`y ≠ x`、`x = min' (σ k).1`；
-   * 末步恒常：`k = n-1` 时所有 clade 已创建 ⇒ `blockAt = univ`（`univ_mem_cladesOf`）⇒ `chainMap` 恒为 `min' univ`；
-   * `cladesOf n g = cladesOf n f`：由 3、取每层的块 = 已创建集合 （故 `cladesOf g = {σ j} ∪ 单点 = T`）；
-   * `newClade g k = (σ k).1`：由 3 得两个孩子块的最小元恰为 `x, y`，故并起来是 `(σ k).1`。
+4. **取出 `IsMergeHistory` 与 `newClade` / `cladesOf`**（⚠️ 本轮**未做**，但所需砖已全就位）：
+
+```text
+surj_reconstruct (hn : 2 ≤ n) (hf) (σ) (hinj) (hord) (d) :
+  IsMergeHistory n (reconstruct (cladesOf n f) (fun j => (σ j).1) d)
+  ∧ cladesOf n (reconstruct …) = cladesOf n f
+  ∧ ∀ k, newClade (reconstruct …) k = (σ k).1
+```
+
+实现路径（每一步的砖都已经在库里）：
+   * `IsStep`：`x = (g k).1 = C.min' 恰是孩子 `a` 的最小元` ⇒ 用 3 得 `chainMap n g k x = min' (blockAt k x) = min' a = x`（`blockAt_eq_child`）；
+     `y = b.min'` 同理；`x < y` 用 `reconstructStep_eq_children` 内部的 `lt_of_le_of_ne`；
+   * 末步恒常：`k = n-1` 时 `univ ∈ procClades σ (n-1)`（需一次「σ 满射到非单点 clade 集」，同 `exists_lt_of_mem_children` 里的 `hsurj`，~15 行）
+     ⇒ `blockAt = univ` ⇒ `chainMap` 恒为 `min' univ`；
+   * `cladesOf n g = T`：`blocksOf n r = univ.image (fun w => univ.filter (fun z => r z = r w))`（库内）⇒ 每层的块集 = `{blockAt σ L z}`，
+     需一条**划分引理** `blockAt_eq_of_mem : w ∈ blockAt σ k z → blockAt σ k w = blockAt σ k z`（嵌嵌性加链，~45 行）
+     才能把 `fiberOf (chainMap n g L) v` 写成块；
+   * `newClade g k = (σ k).1`：用 `newClade_eq_fiberOf_succ`（库内）把它变成单个纤维，再用 3 +
+     `blockAt_succ_of_mem` / `disjoint_blockAt_of_not_mem` 两个方向夹出来（~30 行）。
 
 ⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）；`rankedFiberCount_gap_holds` **未**落地。 -/
 
