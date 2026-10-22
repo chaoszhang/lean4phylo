@@ -1918,6 +1918,147 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_add_split
     intro x y
     rw [heq x y]
     linarith [sum_splitMetric_add_not_mem hmem c c₀ x y]
+
+/-! ## 8.9 ★★★ W27 泳道 e：(P1) 的**相容部分** —— 剥离只毁掉与 `s` 不相容的 d-split
+
+`§8.6` 的 (P1)（Thm 2 的 `α'_{A,B} = α_{A,B} - λ_{A,B}`，对**所有**对）在一般情况下不可逐点加，
+因为 `pd` 的差按四元组相对 `s` 的**五种模式**取 `0 / 0 / -2c / 可正可负`。本节证明：
+**「可正可负」的两模式恰是 `s` 与 `t` 不相容的情形** ⇒ 只要 `t` 与 `s` 相容，`pd` 就单调不减。
+
+### 机器结论
+
+1. `splitMetric_le_one`：`δ_{s} ≤ 1`；
+2. `splitMetric_compat_sum_le_one`：★★ `s` 与 `t` 相容、`a,a' ∈ t.sideA`、`b,b' ∈ t.sideB` ⇒
+   `δ_s(a,a') + δ_s(b,b') ≤ 1`（四个交必有一个空 ⇒ `t` 的某一段整体落在 `s` 的同一侧）；
+3. `splitMetric_pairing_eq` / `splitMetric_self_sum_le_pair`：在同一条 `≤ 1` 下，
+   两种配对的交叉数相等（`u = v`）且 `w ≤ u`（16 情形逐个核对）；
+4. `eq_peelMetric_add`：`δ = δ' + c·δ_s`（`δ' = peelMetric δ s` 的反向展开）；
+5. ★★★ `isDSplit_of_isDSplit_peelMetric`：**相容的 d-split 在剥离下存活** ——
+   `0 ≤ c`、`s` 与 `t` 相容、`t` 是 `δ'` 的 d-split ⇒ `t` 是 `δ` 的 d-split。
+
+### 缺的那一半（(P1) 剩余的**具名**缺件）
+
+`t` 与 `s` **不相容**时 `u ≠ v`（模式 `(2,0,2)` / `(0,2,2)`），`pd` 之差可正可负 ⇒ 需要 BdD 的
+**弱相容 / `s(S)`-cluster 结构**（Lemma 3–6，md `:5581/:6094/:6159/:6504`）才能推出
+「`δ'` 的 d-split 集合 ⊆ `δ` 的 d-split 集合」。★ 注意 `weaklyCompatible_of_isDSplit`
+（`Phylo/SplitWeak.lean`）已给出「全体 d-split 弱相容」，所以这部分不是无从下手，而是**需要 cluster 层**。 -/
+
+/-- `SplitMetric ≤ 1`（`0/1` 值）。 -/
+theorem splitMetric_le_one {α : Type*} [Fintype α] [DecidableEq α] (s : Split α) (x y : α) :
+    SplitMetric s x y ≤ 1 := by
+  unfold SplitMetric
+  split_ifs <;> norm_num
+
+/-- ★★ **相容性禁止 `w = 2`**：`s` 与 `t` 相容、`a,a' ∈ t.sideA`、`b,b' ∈ t.sideB` ⇒
+`δ_s(a,a') + δ_s(b,b') ≤ 1`。
+
+四个交（`A_s∩A_t`、`A_s∩B_t`、`B_s∩A_t`、`B_s∩B_t`）必有一个空；每个空交都强制
+「`t` 的 `A` 段整体在 `s` 同侧」或「`t` 的 `B` 段整体在 `s` 同侧」⇒ 对应 `δ_s = 0`。 -/
+theorem splitMetric_compat_sum_le_one {α : Type*} [Fintype α] [DecidableEq α] {s t : Split α}
+    (hst : s.Compatible t) {a a' b b' : α}
+    (ha : a ∈ t.sideA) (ha' : a' ∈ t.sideA) (hb : b ∈ t.sideB) (hb' : b' ∈ t.sideB) :
+    SplitMetric s a a' + SplitMetric s b b' ≤ 1 := by
+  have h1 := splitMetric_le_one s a a'
+  have h2 := splitMetric_le_one s b b'
+  rcases hst with h | h | h | h
+  · have haB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr (Finset.disjoint_right.mp h ha)
+    have ha'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr (Finset.disjoint_right.mp h ha')
+    have hz : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideB haB ha'B
+    linarith
+  · have hbB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr (Finset.disjoint_right.mp h hb)
+    have hb'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr (Finset.disjoint_right.mp h hb')
+    have hz : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB hbB hb'B
+    linarith
+  · have haA : a ∈ s.sideA := by
+      by_contra hc
+      exact Finset.disjoint_left.mp h ((mem_sideB_iff_not_mem_sideA s a).mpr hc) ha
+    have ha'A : a' ∈ s.sideA := by
+      by_contra hc
+      exact Finset.disjoint_left.mp h ((mem_sideB_iff_not_mem_sideA s a').mpr hc) ha'
+    have hz : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA haA ha'A
+    linarith
+  · have hbA : b ∈ s.sideA := by
+      by_contra hc
+      exact Finset.disjoint_left.mp h ((mem_sideB_iff_not_mem_sideA s b).mpr hc) hb
+    have hb'A : b' ∈ s.sideA := by
+      by_contra hc
+      exact Finset.disjoint_left.mp h ((mem_sideB_iff_not_mem_sideA s b').mpr hc) hb'
+    have hz : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideA hbA hb'A
+    linarith
+
+/-- ★★ 在 `w ≤ 1` 下两种配对的交叉数相等：`u = v`（16 情形逐个核对）。 -/
+theorem splitMetric_pairing_eq {α : Type*} [Fintype α] [DecidableEq α] {s : Split α}
+    {a a' b b' : α} (hw : SplitMetric s a a' + SplitMetric s b b' ≤ 1) :
+    SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a b' + SplitMetric s a' b := by
+  by_cases h1 : a ∈ s.sideA <;> by_cases h2 : a' ∈ s.sideA <;>
+    by_cases h3 : b ∈ s.sideA <;> by_cases h4 : b' ∈ s.sideA <;>
+    simp only [SplitMetric, mem_sideB_iff_not_mem_sideA, h1, h2, h3, h4] at * <;>
+    norm_num at *
+
+/-- ★★ 在 `w ≤ 1` 下 `w ≤ u`（16 情形逐个核对）。 -/
+theorem splitMetric_self_sum_le_pair {α : Type*} [Fintype α] [DecidableEq α] {s : Split α}
+    {a a' b b' : α} (hw : SplitMetric s a a' + SplitMetric s b b' ≤ 1) :
+    SplitMetric s a a' + SplitMetric s b b' ≤ SplitMetric s a b + SplitMetric s a' b' := by
+  by_cases h1 : a ∈ s.sideA <;> by_cases h2 : a' ∈ s.sideA <;>
+    by_cases h3 : b ∈ s.sideA <;> by_cases h4 : b' ∈ s.sideA <;>
+    simp only [SplitMetric, mem_sideB_iff_not_mem_sideA, h1, h2, h3, h4] at * <;>
+    norm_num at *
+
+/-- `δ = δ' + c·δ_s`（`peelMetric` 的**反向**展开，逐点）。 -/
+theorem eq_peelMetric_add {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (s : Split α) (x y : α) :
+    δ x y = peelMetric δ s x y + peelCoeff δ s * SplitMetric s x y := by
+  rw [peelMetric_apply]
+  ring
+
+/-- ★★★ **(P1) 的相容部分：相容的 d-split 在剥离下存活**。
+
+`0 ≤ c`（`s` 是 d-split 时 `c > 0` 由 `peelCoeff_pos` 给）、`s` 与 `t` 相容、
+`t` 是 `δ' := δ - c·δ_s` 的 d-split ⇒ `t` 也是 `δ` 的 d-split。
+
+★ 证明要点：相容 ⇒ `w = δ_s(a,a') + δ_s(b,b') ≤ 1` ⇒ `u = v` 且 `w ≤ u` ⇒
+`pd(δ,q) = pd(δ',q) + c·(u-w) ≥ pd(δ',q)`。 -/
+theorem isDSplit_of_isDSplit_peelMetric {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s t : Split α} (hc : 0 ≤ peelCoeff δ s) (hst : s.Compatible t)
+    (h : IsDSplit (peelMetric δ s) t.sideA t.sideB) :
+    IsDSplit δ t.sideA t.sideB := by
+  intro a ha a' ha' b hb b' hb'
+  have hp : 0 < pairDeficit (peelMetric δ s) a a' b b' := by
+    simp only [pairDeficit, sub_pos]
+    exact h a ha a' ha' b hb b' hb'
+  have hw1 : SplitMetric s a a' + SplitMetric s b b' ≤ 1 :=
+    splitMetric_compat_sum_le_one hst ha ha' hb hb'
+  have huv := splitMetric_pairing_eq hw1
+  have hwu := splitMetric_self_sum_le_pair hw1
+  have key : pairDeficit δ a a' b b' = pairDeficit (peelMetric δ s) a a' b b'
+      + peelCoeff δ s * ((SplitMetric s a b + SplitMetric s a' b')
+          - (SplitMetric s a a' + SplitMetric s b b')) := by
+    unfold pairDeficit
+    rw [peelMetric_apply, peelMetric_apply, peelMetric_apply, peelMetric_apply,
+      peelMetric_apply, peelMetric_apply]
+    have e1 : (δ a b - peelCoeff δ s * SplitMetric s a b)
+          + (δ a' b' - peelCoeff δ s * SplitMetric s a' b')
+        = (δ a b + δ a' b')
+          - peelCoeff δ s * (SplitMetric s a b + SplitMetric s a' b') := by ring
+    have e2 : (δ a b' - peelCoeff δ s * SplitMetric s a b')
+          + (δ a' b - peelCoeff δ s * SplitMetric s a' b)
+        = (δ a b' + δ a' b)
+          - peelCoeff δ s * (SplitMetric s a b + SplitMetric s a' b') := by
+      rw [huv]
+      ring
+    have e3 : (δ a a' - peelCoeff δ s * SplitMetric s a a')
+          + (δ b b' - peelCoeff δ s * SplitMetric s b b')
+        = (δ a a' + δ b b')
+          - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by ring
+    rw [e1, e2, e3, max_sub_sub_right]
+    ring
+  have hpd : 0 < pairDeficit δ a a' b b' := by
+    rw [key]
+    have hnn : 0 ≤ peelCoeff δ s * ((SplitMetric s a b + SplitMetric s a' b')
+        - (SplitMetric s a a' + SplitMetric s b b')) := mul_nonneg hc (by linarith)
+    linarith
+  simp only [pairDeficit, sub_pos] at hpd
+  exact hpd
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
 **目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
