@@ -1761,4 +1761,227 @@ theorem twoClanLawGap_four_slice :
       rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
       norm_num, qTree, fun A B hd hA hB hc => clanPairEvent_qTree_four A B hd hA hB hc⟩
 
+/-! ## 9. 去根桥：ZDS2011 **Lemma 6.1** 的树层形式（缺口 ② 的器材）
+
+**文献**（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md`
+第 **991–992** 行，逐字）：
+
+> **Lemma 6.1.** Given a rooted binary X–tree, `T`, a set `A` is a clan of `T − ρ` if and only if
+> either `A` is a clade of `T` or `X − A` is a clade of `T`.
+
+同文件第 **977–981** 行另有一句本节的直接推论：
+
+> If we suppress the root `ρ` of a rooted binary phylogenetic X–tree `T`, we obtain an unrooted
+> binary phylogenetic X–tree, which we will denote as `T − ρ`. … Note that **any clade of the
+> rooted tree `T` becomes a clan of `T − ρ`**.
+
+### 表示 —— **不构造 `T − ρ`**
+
+本库的 `Cladogram` 是**无根**载体（`Phylo/Core.lean`）；按 `Phylo/InternalEdge.lean:585-587`
+的术语提示，它的 `IsClade` **就是**学界的 **clan**。有根树用
+`RootedCladogram X = Cladogram (X ⊕ Unit)` 表示（`Phylo/Core.lean` 的
+「有根树的底层实现」一节）：标记叶 `m := Sum.inr ()` 是「名为 `root` 的叶子」，
+它的**唯一邻居**就是 `ρ`。
+
+Lemma 6.1 的三样东西因此各有**不需要造新树**的翻译：
+
+| 文献 | 本库 |
+| --- | --- |
+| `A` 是 `T` 的 **clade** | `U.IsClade (A.image Sum.inl)`（该 split 的一侧**不含** `m`） |
+| `X − A` 是 `T` 的 **clade** | `U.IsClade ((Aᶜ).image Sum.inl)` |
+| `A` 是 `T − ρ` 的 **clan** | `IsClanMinusRoot U A` ＝ `A` 是某条边某一侧的**真叶集** |
+
+★ **为什么不需要造 `T − ρ`**：抑制 `ρ` 只可能影响与 `ρ` 相邻的边。设 `ρ` 在 `U` 中度 `d ≥ 3`
+（`m` 占了 `ρ` 的一条边）。去根后 `ρ` 的度变 `d − 1`：
+
+* 若 `d − 1 = 2`（即 `d = 3`，`T` 二叉）则 `ρ` 被**抑制**，其两条剩余边并成一条 ——
+  但这条新边的一侧恰是 `U` 中那两条边**各自一侧**的真叶集，故「`A` 是某条边一侧的真叶集」
+  这一判据**自动覆盖**了抑制产生的新 split；
+* 若 `d − 1 ≥ 3` 则 `ρ` 直接成活、无需抑制。
+
+**两种情形都被 `realLeaves ⋯ = A` 一条判据一次吞掉**，于是 `IsClanMinusRoot` 无需知道 `d`
+（也无需假设 `T` 二叉）。这条桥因此是**纯 split 层**的，可直接喂给 `MSCTreeLaw` 的概率层。 -/
+
+/-- `B : Finset (X ⊕ Unit)` 的**真叶集**：`B` 里真 taxon（`Sum.inl x`）的那些 `x`。
+
+去根桥的核心坐标：`T − ρ` 的 split 侧 ⟷ `T` 的 split 侧的**真叶集**。 -/
+noncomputable def realLeaves {X : Type} [Fintype X] [DecidableEq X]
+    (B : Finset (X ⊕ Unit)) : Finset X :=
+  Finset.univ.filter (fun x => Sum.inl x ∈ B)
+
+/-- 真叶集的成员刻画。 -/
+theorem mem_realLeaves {X : Type} [Fintype X] [DecidableEq X]
+    {B : Finset (X ⊕ Unit)} {x : X} : x ∈ realLeaves B ↔ Sum.inl x ∈ B := by
+  simp only [realLeaves, Finset.mem_filter, Finset.mem_univ, true_and]
+
+/-- ★★ **真叶集取回真 taxon 集**：`realLeaves (A.image Sum.inl) = A`。 -/
+theorem realLeaves_image_inl {X : Type} [Fintype X] [DecidableEq X] (A : Finset X) :
+    realLeaves (A.image Sum.inl) = A := by
+  ext x
+  rw [mem_realLeaves, Finset.mem_image]
+  constructor
+  · rintro ⟨y, hy, hxy⟩
+    rw [Sum.inl.injEq] at hxy
+    subst hxy
+    exact hy
+  · intro hx
+    exact ⟨x, hx, rfl⟩
+
+/-- ★★ **不含 `m` 的集合由它的真叶集决定**：`realLeaves B = C → Sum.inr () ∉ B → B = C.image Sum.inl`。
+
+（`m := Sum.inr ()` 是根叶；`B` 里没有它时，`B` 完全由真叶集还原。） -/
+theorem eq_image_inl_of_realLeaves {X : Type} [Fintype X] [DecidableEq X]
+    {B : Finset (X ⊕ Unit)} {C : Finset X} (h : realLeaves B = C)
+    (hm : Sum.inr () ∉ B) : B = C.image Sum.inl := by
+  ext z
+  constructor
+  · intro hz
+    cases z with
+    | inl x =>
+        exact Finset.mem_image.mpr ⟨x, h ▸ mem_realLeaves.mpr hz, rfl⟩
+    | inr u =>
+        cases u
+        exact absurd hz hm
+  · rintro hz
+    obtain ⟨x, hx, rfl⟩ := Finset.mem_image.mp hz
+    rw [← mem_realLeaves, h]
+    exact hx
+
+/-- ★★ **另一侧的真叶集是补集**：`realLeaves s.sideA = A → realLeaves s.sideB = Aᶜ`。 -/
+theorem realLeaves_sideB {X : Type} [Fintype X] [DecidableEq X]
+    (s : Split (X ⊕ Unit)) (A : Finset X) (h : realLeaves s.sideA = A) :
+    realLeaves s.sideB = Aᶜ := by
+  have hx : ∀ x : X, Sum.inl x ∈ s.sideA ↔ x ∈ A := fun x => by
+    rw [← mem_realLeaves, h]
+  ext x
+  rw [mem_realLeaves, Split.sideB_eq_compl, Finset.mem_compl, Finset.mem_compl]
+  exact not_congr (hx x)
+
+/-- ★★ **另一侧的真叶集是补集**（`sideB` 版）：`realLeaves s.sideB = A → realLeaves s.sideA = Aᶜ`。 -/
+theorem realLeaves_sideA {X : Type} [Fintype X] [DecidableEq X]
+    (s : Split (X ⊕ Unit)) (A : Finset X) (h : realLeaves s.sideB = A) :
+    realLeaves s.sideA = Aᶜ := by
+  have h' : realLeaves s.swap.sideA = A := by rwa [Split.swap_sideA]
+  have h2 := realLeaves_sideB s.swap A h'
+  rwa [Split.swap_sideB] at h2
+
+/-- **`A` 是 `U` 去根后的 clan**（Semple–Steel 意义；`U` 是「有根树 `T` 补一个根叶 `m`」）。
+
+`A` 只需是**某条边某一侧的真叶集** —— 不构造 `T − ρ`（理由见本节开头）。 -/
+def IsClanMinusRoot {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (A : Finset X) : Prop :=
+  ∃ s : Split (X ⊕ Unit), U.IsSplitOf s ∧ (realLeaves s.sideA = A ∨ realLeaves s.sideB = A)
+
+/-- ★★ **单边引理**：`sideA` 的真叶集是 `A` ⟹ `A` 或 `Aᶜ` 是 `U` 的 clade。 -/
+theorem isClade_or_isClade_compl {X : Type} [Fintype X] [DecidableEq X]
+    {U : Cladogram (X ⊕ Unit)} {s : Split (X ⊕ Unit)} (hs : U.IsSplitOf s) {A : Finset X}
+    (h : realLeaves s.sideA = A) :
+    U.IsClade (A.image Sum.inl) ∨ U.IsClade ((Aᶜ).image Sum.inl) := by
+  have hB : realLeaves s.sideB = Aᶜ := realLeaves_sideB s A h
+  by_cases hm : Sum.inr () ∈ s.sideA
+  · -- `m` 在 `sideA` 侧 ⟹ `sideB` 侧全是真 taxon，且其真叶集是 `Aᶜ`
+    right
+    have hnot : Sum.inr () ∉ s.sideB := by
+      intro hmem
+      rw [Split.sideB_eq_compl, Finset.mem_compl] at hmem
+      exact hmem hm
+    exact ⟨s.swap, U.isSplitOf_swap hs, by
+      rw [Split.swap_sideA]
+      exact eq_image_inl_of_realLeaves hB hnot⟩
+  · -- `m` 不在 `sideA` 侧 ⟹ `sideA` 侧全是真 taxon，且其真叶集是 `A`
+    left
+    exact ⟨s, hs, eq_image_inl_of_realLeaves h hm⟩
+
+/-- ★★★ **ZDS2011 Lemma 6.1**（`…arXiv1101.1311.md:991-992` 逐字）：
+`A` 是 `T − ρ` 的 clan **⟺** `A` 是 `T` 的 clade **或** `X − A` 是 `T` 的 clade。
+
+`U : Cladogram (X ⊕ Unit)` 是「有根树 `T` 补一个根叶 `m = Sum.inr ()`」得到的无根树。
+**无需** `T` 二叉、**无需** `A` 非空或真 —— 等式对所有 `A : Finset X` 成立
+（`A = ∅` 与 `A = X` 两个端点由 `m` 的悬挂边自动配对，见 §9 开头的 `d = 3` 说明）。 -/
+theorem isClanMinusRoot_iff {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (A : Finset X) :
+    IsClanMinusRoot U A ↔
+      U.IsClade (A.image Sum.inl) ∨ U.IsClade ((Aᶜ).image Sum.inl) := by
+  constructor
+  · rintro ⟨s, hs, h | h⟩
+    · exact isClade_or_isClade_compl hs h
+    · have h' : realLeaves s.swap.sideA = A := by rwa [Split.swap_sideA]
+      exact isClade_or_isClade_compl (U.isSplitOf_swap hs) h'
+  · rintro (h | h)
+    · obtain ⟨s, hs, hside⟩ := h
+      exact ⟨s, hs, Or.inl (by rw [hside, realLeaves_image_inl])⟩
+    · obtain ⟨s, hs, hside⟩ := h
+      refine ⟨s, hs, Or.inr ?_⟩
+      rw [realLeaves_sideB s (Aᶜ) (by rw [hside, realLeaves_image_inl]), compl_compl]
+
+/-- ★★ **文献 `:979-980` 的那句推论**：有根树的**每个** clade 都是去根树的 clan。 -/
+theorem isClanMinusRoot_of_isClade {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) {A : Finset X} (h : U.IsClade (A.image Sum.inl)) :
+    IsClanMinusRoot U A :=
+  (isClanMinusRoot_iff U A).mpr (Or.inl h)
+
+/-- ★★ **`∨` 是多余的**：`IsClanMinusRoot` 可以只用 `sideA` 写（用 `s.swap` 换向）。
+这条让下游（概率层）**不必**对两侧各写一次。 -/
+theorem isClanMinusRoot_iff_exists {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (A : Finset X) :
+    IsClanMinusRoot U A ↔ ∃ s : Split (X ⊕ Unit), U.IsSplitOf s ∧ realLeaves s.sideA = A := by
+  constructor
+  · rintro ⟨s, hs, h | h⟩
+    · exact ⟨s, hs, h⟩
+    · exact ⟨s.swap, U.isSplitOf_swap hs, by rwa [Split.swap_sideA]⟩
+  · rintro ⟨s, hs, h⟩
+    exact ⟨s, hs, Or.inl h⟩
+
+/-- ★★ **真叶集是互补的**（**无条件**版）：`realLeaves s.sideB = (realLeaves s.sideA)ᶜ`。
+
+这是去根桥的「`A` 与 `X − A` 只是同一条 split 的两侧」在**真叶集**层的化身。 -/
+theorem realLeaves_sideB_compl {X : Type} [Fintype X] [DecidableEq X]
+    (s : Split (X ⊕ Unit)) : realLeaves s.sideB = (realLeaves s.sideA)ᶜ :=
+  realLeaves_sideB s _ rfl
+
+/-- ★★ **`IsClanMinusRoot` 对补集封闭**：去根树里 `A | X−A` 与 `(X−A) | A` 是**同一条** split，
+故 `A` 是 clan ⟺ `X − A` 是 clan（与 `isClade_compl` 平行的容器版）。 -/
+theorem isClanMinusRoot_compl {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (A : Finset X) :
+    IsClanMinusRoot U A ↔ IsClanMinusRoot U Aᶜ := by
+  rw [isClanMinusRoot_iff, isClanMinusRoot_iff, compl_compl, or_comm]
+
+/-! ### 9.1 端点行为（**诚实登记，不夸大**）
+
+本节的 `IsClanMinusRoot` 允许 `A = ∅` 与 `A = univ`（见证都是 `m` 的**悬挂边**：
+两侧分别是 `{m}` 与 `univ.image Sum.inl`），而**学界定义**的 clan 要求**非空真子集**。因此：
+
+* 文献 Lemma 6.1 的**逐字**版本应把 `A` 限在**非空真子集**上（例如 `A.Nonempty` ＋ `A.card < n`）；
+* ★★ `isClanMinusRoot_iff` 是它在**所有** `A` 上的自然延拓 —— 两侧记账一致，**等式仍成立**
+  （端点不是反例：`A = ∅` 时 RHS 的 `X − A = X` 恰是有根树的 clade，两边同为真）；
+* 下游的两条缺口（`YHKClanLawGap` 要求 `A.Nonempty` ＋ `A.card < n`；`TwoClanLawGap` 要求
+  `A`、`B` 非空且 `A.card + B.card ≤ n`）**自动落在合法范围内** ⇒ 端点不影响任何下游用法。
+-/
+
+/-! ### 9.2 对两条缺口 docstring 的**状态更新**（W27 派单 T4 泳道 d）
+
+`YHKClanLawGap`（§6，`:924`）与 `TwoClanLawGap`（§6，`:977`）的 docstring 里列了四件具名器材，
+其中**第 ② 件（`rootedToCladogram` 去根载体桥 ＋ `IsClade` 对应）已由本节交付**：
+
+| docstring 的条目 | 现状 |
+| --- | --- |
+| ② 去根载体桥 `rootedToCladogram` | ✅ **本节**：`realLeaves` ＋ `IsClanMinusRoot` ＋ ★★★ `isClanMinusRoot_iff`（＝ Lemma 6.1），**不构造新树** |
+| ③ Lemma 6.1 的**概率层** | ✅ 代数侧已有 `clanProb_eq_inclusionExclusion`（`:404`）；❌ **概率**侧仍缺（见下） |
+| ① 一般 `n` 的 YHK 权重函数 | ❌ 仍缺 |
+| ④ (EP) 的群作用实现 | ❌ 仍缺（`TwoClanLawGap` 的 `a+b<n` 支还要 Theorem 6.3(ii) 的三事件分解） |
+
+★ **两条缺口仍未收口**，剩余缺件（**具名、可执行**）：
+
+1. **`rootedCladeProb`**：一般 `n` 的有根 YHK 律下 `P(A 是 clade) = pn n A.card`
+   （文献 Lemma 4.2，`:294-317`）。需要一件**一般 `n` 的有根拓扑律**
+   （库内 `MSCTreeLaw` 只到**无根**、且只有 `Fin 4` 实例；`Coalescent.mergePairsFinset` 只给
+   **一步合并均匀**，不给整条拓扑律）。
+2. **`rootedCladePairProb`**：`P(A 与 X−A 同为 clade) = pnHatExh n A.card`（Lemma 4.3，`:369-385`）。
+3. 前两条 ＋ ★★★ `isClanMinusRoot_iff` ＋ `clanProb_eq_inclusionExclusion`
+   ⇒ `YHKClanLawGap` **一步装配**（Lemma 6.2 的证明在文献 `:1038-1044` 正是这么做的）。
+4. `TwoClanLawGap` 另需 Theorem 4.5 的**六情形级联概率层**（`pnPair`，`:452-475`）
+   ＋ Theorem 6.3(ii) 的三事件分解（`:1112-1145`）。
+
+⇒ 本节把「**形状侧**」全部做完：缺口剩下的**纯粹是概率层**（有根 YHK 律 ＋ 两条溯祖计算）。 -/
+
 end Phylo.Stat.ReciprocalMonophyly
