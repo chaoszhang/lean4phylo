@@ -4510,7 +4510,155 @@ theorem reconstructStep_eq_children {n : ℕ} (S : Finset (Finset (Fin n)))
       exact Finset.disjoint_left.mp hdisj hmem (Finset.min'_mem _ _)
     exact lt_of_le_of_ne hle hne
 
+/-- 若块恰好是 D，则块的最小元就是 D 的最小元。 -/
+theorem blockAt_min'_eq {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ} {z : Fin n}
+    {D : Finset (Fin n)} (hD : D.Nonempty) (h : blockAt σ k z = D) :
+    (blockAt σ k z).min' ⟨z, mem_blockAt σ k z⟩ = D.min' hD := by
+  have hmem : D.min' hD ∈ blockAt σ k z := by rw [h]; exact Finset.min'_mem _ _
+  have hmem2 : (blockAt σ k z).min' ⟨z, mem_blockAt σ k z⟩ ∈ D := by
+    rw [← h]; exact Finset.min'_mem _ _
+  exact le_antisymm (Finset.min'_le _ _ hmem) (Finset.min'_le _ _ hmem2)
+
+/-- ★★★★ **取值不变式**：`reconstruct` 出来的 `chainMap` 在第 `k` 层的取值，**恰是当前块的最小元**。 -/
+theorem chainMap_reconstruct_eq_min {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) :
+    ∀ (k : ℕ), k ≤ n - 1 → ∀ z : Fin n,
+      chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z
+        = (blockAt (fun j => (σ j).1) k z).min' ⟨z, mem_blockAt _ k z⟩ := by
+  -- 由 hord 得到「⊂ ⇒ 位置更早」
+  have hord' : ∀ i j : Fin (n - 1), (σ i).1 ⊂ (σ j).1 → i < j := by
+    intro i j hlt
+    have hji : ¬ (j < i) := fun h => hord j i h (by simpa using hlt)
+    have hne : i ≠ j := fun h => by rw [h] at hlt; exact absurd hlt (lt_irrefl _)
+    exact lt_of_le_of_ne (not_lt.mp hji) hne
+  have hinj' : Function.Injective (fun j => (σ j).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have hσT : ∀ j, (σ j).1 ∈ cladesOf n f := fun j => (Finset.mem_filter.mp (σ j).2).1
+  intro k
+  induction k with
+  | zero =>
+    intro _ z
+    show (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) 0) z
+      = (blockAt (fun j => (σ j).1) 0 z).min' ⟨z, mem_blockAt _ 0 z⟩
+    rw [show (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) 0) z = z from rfl]
+    have hmem := Finset.min'_mem (blockAt (fun j => (σ j).1) 0 z) ⟨z, mem_blockAt _ 0 z⟩
+    have h' : ∀ w ∈ blockAt (fun j => (σ j).1) 0 z, w = z := by
+      intro w hw
+      have hw' : w = z ∨ ∃ C, (C ∈ procClades (fun j => (σ j).1) 0 ∧ z ∈ C) ∧ w ∈ C := by
+        simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+      rcases hw' with hwz | ⟨C, ⟨hC, -⟩, -⟩
+      · exact hwz
+      · obtain ⟨j, hj, -⟩ := (mem_procClades _).mp hC
+        exact absurd hj (by omega)
+    rw [h' _ hmem]
+  | succ k ih =>
+    intro hk1 z
+    have hk : k < n - 1 := by omega
+    have hCcl : (σ ⟨k, hk⟩).1 ∈ cladesOf n f := (Finset.mem_filter.mp (σ ⟨k, hk⟩).2).1
+    have hC2 : 2 ≤ (σ ⟨k, hk⟩).1.card := (Finset.mem_filter.mp (σ ⟨k, hk⟩).2).2
+    have hCne : (σ ⟨k, hk⟩).1.Nonempty :=
+      Finset.card_pos.mp (by show 0 < (σ ⟨k, hk⟩).1.card; omega)
+    obtain ⟨A, B, hAB, hch⟩ := exists_children_pair_cladesOf hf hCcl hC2
+    have hAcl : A ∈ cladesOf n f := children_mem (by rw [hch]; simp)
+    have hBcl : B ∈ cladesOf n f := children_mem (by rw [hch]; simp)
+    have hAne : A.Nonempty := by
+      obtain ⟨j, -, hjA⟩ := mem_cladesOf.mp hAcl
+      exact nonempty_of_mem_blocksOf hjA
+    have hBne : B.Nonempty := by
+      obtain ⟨j, -, hjB⟩ := mem_cladesOf.mp hBcl
+      exact nonempty_of_mem_blocksOf hjB
+    have hcover : (σ ⟨k, hk⟩).1 = A ∪ B := by
+      have h := children_cover hf hCcl hC2
+      rw [hch] at h
+      simpa using h
+    have hdisj : Disjoint A B := children_pair_disjoint (laminarFamily_cladesOf f) hch hAB
+    have hminC_mem : (σ ⟨k, hk⟩).1.min' hCne ∈ (σ ⟨k, hk⟩).1 := Finset.min'_mem _ _
+    suffices key : ∀ (a b : Finset (Fin n)) (ha : a.Nonempty) (hb : b.Nonempty),
+        children (cladesOf n f) (σ ⟨k, hk⟩).1 = {a, b} → a ≠ b →
+        (σ ⟨k, hk⟩).1 = a ∪ b → Disjoint a b → (σ ⟨k, hk⟩).1.min' hCne ∈ a →
+        chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (k + 1) z
+          = (blockAt (fun j => (σ j).1) (k + 1) z).min' ⟨z, mem_blockAt _ (k + 1) z⟩ by
+      have hub : (σ ⟨k, hk⟩).1.min' hCne ∈ A ∪ B := by
+        rw [← hcover]; exact hminC_mem
+      rcases Finset.mem_union.mp hub with hxA | hxB
+      · exact key A B hAne hBne hch hAB hcover hdisj hxA
+      · have hch' : children (cladesOf n f) (σ ⟨k, hk⟩).1 = {B, A} := by
+          rw [hch, Finset.pair_comm]
+        have hcover' : (σ ⟨k, hk⟩).1 = B ∪ A := by rw [hcover, Finset.union_comm]
+        exact key B A hBne hAne hch' hAB.symm hcover' hdisj.symm hxB
+    intro a b ha hb hcha hab hcaba hdisja hxa
+    have hgk : reconstructStep (cladesOf n f) (σ ⟨k, hk⟩).1 d
+        = ((σ ⟨k, hk⟩).1.min' hCne, b.min' hb) :=
+      reconstructStep_eq_children _ _ d ha hb hCne hcaba hdisja hcha hxa
+    have hminA : a.min' ha = (σ ⟨k, hk⟩).1.min' hCne := by
+      refine le_antisymm ?_ ?_
+      · exact Finset.min'_le _ _ hxa
+      · exact Finset.min'_le _ _
+          (by rw [hcaba]; exact Finset.mem_union_left _ (Finset.min'_mem _ _))
+    have hsub_b : b ⊆ (σ ⟨k, hk⟩).1 := by rw [hcaba]; exact Finset.subset_union_right
+    rw [chainMap_succ, dite_eq_left hk,
+      show (reconstruct (cladesOf n f) (fun j => (σ j).1) d ⟨k, hk⟩)
+        = ((σ ⟨k, hk⟩).1.min' hCne, b.min' hb) from hgk]
+    by_cases hzC : z ∈ (σ ⟨k, hk⟩).1
+    · have hsucc : blockAt (fun j => (σ j).1) (k + 1) z = (σ ⟨k, hk⟩).1 :=
+        blockAt_succ_of_mem (laminarFamily_cladesOf f) hσT hinj' hord' hk hzC
+      rcases Finset.mem_union.mp (hcaba ▸ hzC) with hza | hzb
+      · have hbk : blockAt (fun j => (σ j).1) k z = a :=
+          blockAt_eq_child hn hf σ hinj hord hk (by rw [hcha]; simp) hza
+        have hv : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z
+            = (σ ⟨k, hk⟩).1.min' hCne := by
+          rw [ih (by omega) z]
+          exact (blockAt_min'_eq (fun j => (σ j).1) ha hbk).trans hminA
+        have hgoal : (blockAt (fun j => (σ j).1) (k + 1) z).min' ⟨z, mem_blockAt _ (k + 1) z⟩
+            = (σ ⟨k, hk⟩).1.min' hCne :=
+          blockAt_min'_eq (fun j => (σ j).1) hCne hsucc
+        have hne : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z ≠ b.min' hb := by
+          rw [hv]
+          intro hcon
+          have hbC : b.min' hb ∈ a := by rw [← hcon]; exact hxa
+          exact Finset.disjoint_left.mp hdisja hbC (Finset.min'_mem _ _)
+        rw [hgoal, stepMap, ite_eq_right hne]
+        exact hv
+      · have hbk : blockAt (fun j => (σ j).1) k z = b :=
+          blockAt_eq_child hn hf σ hinj hord hk (by rw [hcha]; simp) hzb
+        have hv : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z = b.min' hb := by
+          rw [ih (by omega) z, blockAt_min'_eq (fun j => (σ j).1) hb hbk]
+        have hgoal : (blockAt (fun j => (σ j).1) (k + 1) z).min' ⟨z, mem_blockAt _ (k + 1) z⟩
+            = (σ ⟨k, hk⟩).1.min' hCne :=
+          blockAt_min'_eq (fun j => (σ j).1) hCne hsucc
+        rw [hgoal, stepMap, ite_eq_left hv]
+    · have hsucc : blockAt (fun j => (σ j).1) (k + 1) z = blockAt (fun j => (σ j).1) k z :=
+        blockAt_succ_of_not_mem (fun j => (σ j).1) hk hzC
+      have hv : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z
+          = (blockAt (fun j => (σ j).1) k z).min' ⟨z, mem_blockAt _ k z⟩ := ih (by omega) z
+      have hdj : Disjoint (blockAt (fun j => (σ j).1) k z) (σ ⟨k, hk⟩).1 :=
+        disjoint_blockAt_of_not_mem (laminarFamily_cladesOf f) hσT hinj' hord' hk hzC
+      have hyC : b.min' hb ∈ (σ ⟨k, hk⟩).1 := hsub_b (Finset.min'_mem _ _)
+      have hne : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z ≠ b.min' hb := by
+        rw [hv]
+        intro hcon
+        have hmem : b.min' hb ∈ blockAt (fun j => (σ j).1) k z := by
+          rw [← hcon]
+          exact Finset.min'_mem _ _
+        exact absurd hmem (Finset.disjoint_right.mp hdj hyC)
+      have hstep : stepMap (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k)
+          ((σ ⟨k, hk⟩).1.min' hCne) (b.min' hb) z
+          = chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z := by
+        show (if chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z = b.min' hb
+            then (σ ⟨k, hk⟩).1.min' hCne
+            else chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z)
+          = chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k z
+        exact ite_eq_right hne
+      rw [blockAt_min'_eq (fun j => (σ j).1) ⟨z, mem_blockAt _ k z⟩ hsucc, hstep]
+      exact hv
+
 end Phylo.Stat.HookLength
+
 
 
 
