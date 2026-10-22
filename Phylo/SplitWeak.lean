@@ -2047,6 +2047,501 @@ theorem not_weaklyCompatible_of_forall_sides_eq {F : Finset (Split α)} {A B : F
     · exact Or.inl ⟨h1, h2, h3 b1 hb1 h13, h3 b2 hb2 h23⟩
     · exact Or.inr ⟨h1, h2, h3 b1 hb1 h13, h3 b2 hb2 h23⟩
 
+
+/-! ### 7.5 ★★★★★ W27-b：**一般 `|X|` 的 `weakCompatibilityRealization_gap_holds` 收口**
+
+**路线**（绕开 §7.3.2b 的「远侧覆盖引理一般 `|B|` 版」—— 那条对 `|B| ≥ 5` 是研究级）：
+
+按 `|X|` **强归纳**，把 `F` 限制到 `X \ {b}`（`Del b`）：
+1. **向下转移**：`IsDSplit d A B` ＋ `B' = B \ {b} ⊆ B` ⇒ `IsDSplit (d|_{X∖b}) A B'`（`isDSplit_restrict`）；
+2. **限制族**：非退化成员的限制（像 `rF`）＋ **纤维加权和** `rW`，并证逐点
+   `Σ_{u∈F} w_u δ_u = Σ_{s∈rF} w'_s δ_s`（`sum_eq_rsum`；退化成员一侧只剩 `b`，贡献 `0`）；
+   另证 `rF` 弱相容（`weaklyCompatible_rF`）、`rW > 0` 于 `rF`（`rW_pos`）；
+3. **二分**（`step`）：若限制后的 `t' ∉ rF` 且 `t'.swap ∉ rF` ⇒ **归纳假设**直接给矛盾；
+   否则每个 `b' ∈ t.sideB` 给出成员 `u_{b'}`，其两侧**恰是** `t.sideA ∪ {b'}` 与 `t.sideB \ {b'}`
+   （`sides_eq_of_rst_sideA` / `sides_eq_of_rst_sideB`），三个这样的成员在四点组
+   `(a, b₁, b₂, b₃)` 上就是**冲突四点** ⇒ 与弱相容矛盾
+   （`not_weaklyCompatible_of_forall_sides_eq`，§7.4）；
+4. **基例**：`|X| ≤ 5`（`= 4/5` 用 §7.3 已收口定理；`≤ 3` 用 `base_case`：`|A| = 1`、`|B| ≤ 2`
+   的退化四元组 ＋「远侧只能是 `t.sideB`」）。
+
+⇒ `weakCompatibilityRealization_gap_holds`（**全称 `∀ F w, …`，零额外前提**，原 `def` 逐字未改）。 -/
+
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+abbrev Del (b : α) : Type _ := { x : α // x ≠ b }
+
+def tr (b : α) (u : Split α) : Finset (Del b) :=
+  Finset.univ.filter (fun x => (x : α) ∈ u.sideA)
+
+lemma mem_tr (b : α) {u : Split α} {x : Del b} : x ∈ tr b u ↔ (x : α) ∈ u.sideA := by
+  simp [tr]
+
+lemma mem_compl_tr (b : α) {u : Split α} {x : Del b} :
+    x ∈ (tr b u)ᶜ ↔ (x : α) ∈ u.sideB := by
+  simp only [Finset.mem_compl, mem_tr, mem_sideB_iff_not_mem_sideA]
+
+def Nondeg (b : α) (u : Split α) : Prop := (tr b u).Nonempty ∧ (tr b u)ᶜ.Nonempty
+
+noncomputable def rst (b : α) (u : Split α) (h : Nondeg b u) : Split (Del b) :=
+  ofSideA (tr b u) h.1 h.2
+
+lemma rst_sideA (b : α) (u : Split α) (h : Nondeg b u) : (rst b u h).sideA = tr b u :=
+  ofSideA_sideA _ _ _
+
+lemma rst_sideB (b : α) (u : Split α) (h : Nondeg b u) : (rst b u h).sideB = (tr b u)ᶜ :=
+  ofSideA_sideB _ _ _
+
+lemma mem_rst_sideA (b : α) {u : Split α} (h : Nondeg b u) {x : Del b} :
+    x ∈ (rst b u h).sideA ↔ (x : α) ∈ u.sideA := by
+  rw [rst_sideA, mem_tr]
+
+lemma mem_rst_sideB (b : α) {u : Split α} (h : Nondeg b u) {x : Del b} :
+    x ∈ (rst b u h).sideB ↔ (x : α) ∈ u.sideB := by
+  rw [rst_sideB, mem_compl_tr]
+
+lemma splitMetric_ite (u : Split α) (x y : α) :
+    SplitMetric u x y = if (x ∈ u.sideA) = (y ∈ u.sideA) then 0 else 1 := by
+  by_cases hx : x ∈ u.sideA <;> by_cases hy : y ∈ u.sideA <;>
+    simp [SplitMetric, hx, hy, mem_sideB_iff_not_mem_sideA]
+
+lemma splitMetric_rst (b : α) (u : Split α) (h : Nondeg b u) (x y : Del b) :
+    SplitMetric (rst b u h) x y = SplitMetric u (x : α) (y : α) := by
+  rw [splitMetric_ite, splitMetric_ite]
+  simp only [mem_rst_sideA b h]
+
+lemma separates_rst (b : α) {u : Split α} (h : Nondeg b u) {x y z w : Del b}
+    (hsep : (rst b u h).Separates x y z w) :
+    u.Separates (x : α) (y : α) (z : α) (w : α) := by
+  rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+  · exact Or.inl ⟨(mem_rst_sideA b h).mp h1, (mem_rst_sideA b h).mp h2,
+      (mem_rst_sideB b h).mp h3, (mem_rst_sideB b h).mp h4⟩
+  · exact Or.inr ⟨(mem_rst_sideB b h).mp h1, (mem_rst_sideB b h).mp h2,
+      (mem_rst_sideA b h).mp h3, (mem_rst_sideA b h).mp h4⟩
+
+/-- 一般**纤维分解**：`Σ_u W u · h (g u) = Σ_s (Σ_{u ↦ s} W u) · h s`。 -/
+lemma fiber_sum {γ : Type*} [DecidableEq γ] {δ : Type*} [DecidableEq δ]
+    (S : Finset γ) (g : γ → δ) (W : γ → ℝ) (h : δ → ℝ) :
+    (∑ u ∈ S, W u * h (g u))
+      = ∑ s ∈ S.image g, (∑ u ∈ S.filter (fun u => g u = s), W u) * h s := by
+  classical
+  set fib : δ → Finset γ := fun s => S.filter (fun u => g u = s) with hfib
+  have hdisj : ∀ s ∈ S.image g, ∀ s' ∈ S.image g, s ≠ s' → Disjoint (fib s) (fib s') := by
+    intro s _ s' _ hne
+    rw [Finset.disjoint_left]
+    intro u hu hu'
+    simp only [hfib, Finset.mem_filter] at hu hu'
+    exact hne (hu.2.symm.trans hu'.2)
+  have hU : (S.image g).biUnion fib = S := by
+    ext u
+    simp only [Finset.mem_biUnion, hfib, Finset.mem_filter]
+    constructor
+    · rintro ⟨s, -, hu, -⟩
+      exact hu
+    · intro hu
+      exact ⟨g u, Finset.mem_image_of_mem g hu, hu, rfl⟩
+  conv_lhs => rw [← hU]
+  rw [Finset.sum_biUnion hdisj]
+  refine Finset.sum_congr rfl fun s _ => ?_
+  have hstep : (∑ u ∈ fib s, W u * h (g u)) = ∑ u ∈ fib s, W u * h s := by
+    refine Finset.sum_congr rfl fun u hu => ?_
+    simp only [hfib, Finset.mem_filter] at hu
+    rw [hu.2]
+  rw [hstep, Finset.sum_mul]
+
+/-- 非退化成员构成的子族。 -/
+noncomputable def Fnd (b : α) (F : Finset (Split α)) : Finset (Split α) :=
+  by classical exact F.filter (fun u => Nondeg b u)
+
+lemma mem_Fnd (b : α) (F : Finset (Split α)) {u : Split α} :
+    u ∈ Fnd b F ↔ u ∈ F ∧ Nondeg b u := by
+  classical
+  simp [Fnd]
+
+/-- 非退化成员的限制（定义在 `attach` 上，免去 `Nondeg` 证明的传递）。 -/
+noncomputable def rg (b : α) (F : Finset (Split α)) (u : { u // u ∈ Fnd b F }) :
+    Split (Del b) :=
+  rst b u.1 ((mem_Fnd b F).mp u.2).2
+
+/-- **限制族**：非退化成员的限制的像。 -/
+noncomputable def rF (b : α) (F : Finset (Split α)) : Finset (Split (Del b)) :=
+  (Fnd b F).attach.image (rg b F)
+
+/-- **限制权重**：纤维和。 -/
+noncomputable def rW (b : α) (F : Finset (Split α)) (w : Split α → ℝ)
+    (s : Split (Del b)) : ℝ :=
+  ∑ u ∈ (Fnd b F).attach, if rg b F u = s then w u.1 else 0
+
+lemma rW_eq (b : α) (F : Finset (Split α)) (w : Split α → ℝ) (s : Split (Del b)) :
+    rW b F w s = ∑ u ∈ (Fnd b F).attach.filter (fun u => rg b F u = s), w u.1 := by
+  rw [rW, Finset.sum_filter]
+
+lemma splitMetric_rg (b : α) (F : Finset (Split α)) (u : { u // u ∈ Fnd b F })
+    (x y : Del b) :
+    SplitMetric (rg b F u) x y = SplitMetric u.1 (x : α) (y : α) :=
+  splitMetric_rst b u.1 ((mem_Fnd b F).mp u.2).2 x y
+
+lemma splitMetric_eq_zero_of_not_nondeg (b : α) {u : Split α} (h : ¬ Nondeg b u)
+    (x y : Del b) : SplitMetric u (x : α) (y : α) = 0 := by
+  rw [splitMetric_ite]
+  have htr : tr b u = ∅ ∨ (tr b u)ᶜ = ∅ := by
+    by_cases h1 : (tr b u).Nonempty <;> by_cases h2 : ((tr b u)ᶜ).Nonempty
+    · exact absurd ⟨h1, h2⟩ h
+    · exact Or.inr (Finset.not_nonempty_iff_eq_empty.mp h2)
+    · exact Or.inl (Finset.not_nonempty_iff_eq_empty.mp h1)
+    · exact Or.inr (Finset.not_nonempty_iff_eq_empty.mp h2)
+  rcases htr with h0 | h0
+  · have hx : (x : α) ∉ u.sideA := by
+      rw [← mem_tr b (u := u) (x := x), h0]; simp
+    have hy : (y : α) ∉ u.sideA := by
+      rw [← mem_tr b (u := u) (x := y), h0]; simp
+    simp [hx, hy]
+  · have hx : (x : α) ∈ u.sideA := by
+      by_contra hcon
+      have hmem : x ∈ (tr b u)ᶜ := by
+        simp only [Finset.mem_compl, mem_tr]; exact hcon
+      rw [h0] at hmem; simp at hmem
+    have hy : (y : α) ∈ u.sideA := by
+      by_contra hcon
+      have hmem : y ∈ (tr b u)ᶜ := by
+        simp only [Finset.mem_compl, mem_tr]; exact hcon
+      rw [h0] at hmem; simp at hmem
+    simp [hx, hy]
+
+/-- ★★★★★ **`d|_{X∖{b}}` 的纤维分解**：逐点 `Σ_{u∈F} w_u δ_u = Σ_{s∈F'} w'_s δ_s`。 -/
+theorem sum_eq_rsum (b : α) (F : Finset (Split α)) (w : Split α → ℝ) (x y : Del b) :
+    (∑ u ∈ F, w u * SplitMetric u (x : α) (y : α))
+      = ∑ s ∈ rF b F, rW b F w s * SplitMetric s x y := by
+  classical
+  have hdeg : (∑ u ∈ F.filter (fun u => ¬ Nondeg b u),
+      w u * SplitMetric u (x : α) (y : α)) = 0 := by
+    refine Finset.sum_eq_zero fun u hu => ?_
+    rw [splitMetric_eq_zero_of_not_nondeg b (Finset.mem_filter.mp hu).2 x y, mul_zero]
+  have h1 : (∑ u ∈ F, w u * SplitMetric u (x : α) (y : α))
+      = ∑ u ∈ Fnd b F, w u * SplitMetric u (x : α) (y : α) := by
+    have hsplit := Finset.sum_filter_add_sum_filter_not (s := F)
+      (p := fun u => Nondeg b u) (f := fun u => w u * SplitMetric u (x : α) (y : α))
+    rw [hdeg] at hsplit
+    simp only [Fnd] at hsplit ⊢
+    linarith
+  rw [h1, ← Finset.sum_attach]
+  have hstep : (∑ u ∈ (Fnd b F).attach, w u.1 * SplitMetric u.1 (x : α) (y : α))
+      = ∑ u ∈ (Fnd b F).attach, w u.1 * SplitMetric (rg b F u) x y := by
+    refine Finset.sum_congr rfl fun u _ => ?_
+    rw [splitMetric_rg]
+  rw [hstep,
+    fiber_sum ((Fnd b F).attach) (rg b F) (fun u => w u.1) (fun s => SplitMetric s x y)]
+  simp only [rF, rW_eq]
+
+
+/--   在  ∈ t.sideB（且 |t.sideB| ≥ 2）时**非退化**。 -/
+lemma nondeg_of_mem_sideB {t : Split α} {b : α} (hb : b ∈ t.sideB) (h2 : 2 ≤ t.sideB.card) :
+    Nondeg b t := by
+  constructor
+  · obtain ⟨a, ha⟩ := t.nonempty 0
+    have hab : a ≠ b := by
+      rintro rfl
+      exact (Finset.disjoint_left.mp t.disjoint_sides) ha hb
+    exact ⟨⟨a, hab⟩, (mem_tr b).mpr ha⟩
+  · obtain ⟨b1, hb1, b2, hb2, hne⟩ := Finset.one_lt_card.mp (by omega : 1 < t.sideB.card)
+    have hex : ∃ z ∈ t.sideB, z ≠ b := by
+      rcases eq_or_ne b1 b with h | h
+      · exact ⟨b2, hb2, fun hc => hne (h.trans hc.symm)⟩
+      · exact ⟨b1, hb1, h⟩
+    obtain ⟨z, hzB, hzb⟩ := hex
+    refine ⟨⟨z, hzb⟩, ?_⟩
+    rw [mem_compl_tr]
+    simpa using hzB
+
+/-- ★★★ **IsDSplit 向下转移**：A|B 是 d-split ⇒ 限制后仍是限制度量的 d-split。 -/
+lemma isDSplit_restrict (b : α) (F : Finset (Split α)) (w : Split α → ℝ) {t : Split α}
+    (hnd : Nondeg b t)
+    (hD : IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB) :
+    IsDSplit (fun x y : Del b => ∑ u ∈ F, w u * SplitMetric u (x : α) (y : α))
+      (rst b t hnd).sideA (rst b t hnd).sideB := by
+  intro p hp p' hp' q hq q' hq'
+  exact hD (p : α) ((mem_rst_sideA b hnd).mp hp) (p' : α) ((mem_rst_sideA b hnd).mp hp')
+    (q : α) ((mem_rst_sideB b hnd).mp hq) (q' : α) ((mem_rst_sideB b hnd).mp hq')
+
+/-- 迹相同（第一侧）⇒ `u` 的两侧被钉死为 `t.sideA ∪ {b}` 与 `t.sideB \ {b}`。 -/
+lemma sides_eq_of_rst_sideA {u t : Split α} {b : α} (hu : Nondeg b u) (ht : Nondeg b t)
+    (hbA : b ∉ t.sideA) (htu : u ≠ t)
+    (h : (rst b u hu).sideA = (rst b t ht).sideA) :
+    u.sideA = t.sideA ∪ {b} ∧ u.sideB = t.sideB \ {b} := by
+  have hsub : u.sideA ⊆ t.sideA ∪ {b} := by
+    intro x hx
+    by_cases hxb : x = b
+    · rw [hxb]; exact Finset.mem_union_right _ (Finset.mem_singleton_self b)
+    · exact Finset.mem_union_left _
+        ((mem_rst_sideA b ht (x := ⟨x, hxb⟩)).mp (by
+          rw [← h]
+          exact (mem_rst_sideA b hu (x := ⟨x, hxb⟩)).mpr hx))
+  have hBsub : t.sideA ⊆ u.sideA := by
+    intro x hx
+    have hxb : x ≠ b := fun hc => hbA (hc ▸ hx)
+    exact (mem_rst_sideA b hu (x := ⟨x, hxb⟩)).mp (by
+      rw [h]
+      exact (mem_rst_sideA b ht (x := ⟨x, hxb⟩)).mpr hx)
+  have hb : b ∈ u.sideA := by
+    by_contra hc
+    have heq : u.sideA = t.sideA := by
+      refine Finset.Subset.antisymm ?_ hBsub
+      intro x hx
+      rcases Finset.mem_union.mp (hsub hx) with h' | h'
+      · exact h'
+      · rw [Finset.mem_singleton] at h'
+        exact absurd (h' ▸ hx) hc
+    exact htu (eq_of_sideA_eq heq)
+  have key : u.sideA = t.sideA ∪ {b} := by
+    refine Finset.Subset.antisymm hsub ?_
+    intro x hx
+    rcases Finset.mem_union.mp hx with h' | h'
+    · exact hBsub h'
+    · rw [Finset.mem_singleton] at h'
+      rw [h']; exact hb
+  refine ⟨key, ?_⟩
+  rw [Split.sideB_eq_compl (s := u), Split.sideB_eq_compl (s := t), key]
+  ext x
+  simp only [Finset.mem_compl, Finset.mem_union, Finset.mem_singleton, Finset.mem_sdiff]
+  tauto
+
+/-- 迹相同（两侧互换）⇒ `u` 的两侧被钉死为 `t.sideB \ {b}` 与 `t.sideA ∪ {b}`。 -/
+lemma sides_eq_of_rst_sideB {u t : Split α} {b : α} (hu : Nondeg b u) (ht : Nondeg b t)
+    (hbB : b ∈ t.sideB) (htus : u ≠ t.swap)
+    (h : (rst b u hu).sideA = (rst b t ht).sideB) :
+    u.sideA = t.sideB \ {b} ∧ u.sideB = t.sideA ∪ {b} := by
+  have hsub : u.sideA ⊆ t.sideB := by
+    intro x hx
+    by_cases hxb : x = b
+    · rw [hxb]; exact hbB
+    · exact (mem_rst_sideB b ht (x := ⟨x, hxb⟩)).mp (by
+        rw [← h]
+        exact (mem_rst_sideA b hu (x := ⟨x, hxb⟩)).mpr hx)
+  have hBsub : t.sideB \ {b} ⊆ u.sideA := by
+    intro x hx
+    obtain ⟨hxB, hxb⟩ := Finset.mem_sdiff.mp hx
+    have hxb' : x ≠ b := by simpa using hxb
+    exact (mem_rst_sideA b hu (x := ⟨x, hxb'⟩)).mp (by
+      rw [h]
+      exact (mem_rst_sideB b ht (x := ⟨x, hxb'⟩)).mpr hxB)
+  have hb : b ∉ u.sideA := by
+    by_contra hc
+    have heq : u.sideA = t.swap.sideA := by
+      rw [Split.swap_sideA]
+      refine Finset.Subset.antisymm hsub ?_
+      intro x hx
+      by_cases hxb : x = b
+      · rw [hxb]; exact hc
+      · exact hBsub (Finset.mem_sdiff.mpr ⟨hx, by simpa using hxb⟩)
+    exact htus (eq_of_sideA_eq heq)
+  have key : u.sideA = t.sideB \ {b} := by
+    refine Finset.Subset.antisymm ?_ hBsub
+    intro x hx
+    exact Finset.mem_sdiff.mpr ⟨hsub hx, fun hc => hb ((Finset.mem_singleton.mp hc) ▸ hx)⟩
+  refine ⟨key, ?_⟩
+  rw [Split.sideB_eq_compl (s := u), key, Split.sideB_eq_compl (s := t)]
+  ext x
+  simp only [Finset.mem_compl, Finset.mem_union, Finset.mem_singleton, Finset.mem_sdiff]
+  tauto
+
+/-- 限制族的**弱相容性**继承。 -/
+lemma weaklyCompatible_rF (b : α) (F : Finset (Split α))
+    (hF : WeaklyCompatible (↑F : Set (Split α))) :
+    WeaklyCompatible (↑(rF b F) : Set (Split (Del b))) := by
+  rintro ⟨x, y, z, w, ⟨s1, hs1, hsep1⟩, ⟨s2, hs2, hsep2⟩, ⟨s3, hs3, hsep3⟩⟩
+  obtain ⟨u1, hu1, hg1⟩ := Finset.mem_image.mp (show s1 ∈ rF b F from hs1)
+  obtain ⟨u2, hu2, hg2⟩ := Finset.mem_image.mp (show s2 ∈ rF b F from hs2)
+  obtain ⟨u3, hu3, hg3⟩ := Finset.mem_image.mp (show s3 ∈ rF b F from hs3)
+  rw [← hg1] at hsep1
+  rw [← hg2] at hsep2
+  rw [← hg3] at hsep3
+  exact hF ⟨(x : α), (y : α), (z : α), (w : α),
+    ⟨u1.1, ((mem_Fnd b F).mp u1.2).1, separates_rst b ((mem_Fnd b F).mp u1.2).2 hsep1⟩,
+    ⟨u2.1, ((mem_Fnd b F).mp u2.2).1, separates_rst b ((mem_Fnd b F).mp u2.2).2 hsep2⟩,
+    ⟨u3.1, ((mem_Fnd b F).mp u3.2).1, separates_rst b ((mem_Fnd b F).mp u3.2).2 hsep3⟩⟩
+
+/-- 限制权重在像上**严格正**。 -/
+lemma rW_pos (b : α) (F : Finset (Split α)) (w : Split α → ℝ)
+    (hw : ∀ s ∈ F, 0 < w s) {s : Split (Del b)} (hs : s ∈ rF b F) : 0 < rW b F w s := by
+  classical
+  rw [rW_eq]
+  obtain ⟨u, hu, hgu⟩ := Finset.mem_image.mp hs
+  have hmem : u ∈ (Fnd b F).attach.filter (fun u => rg b F u = s) :=
+    Finset.mem_filter.mpr ⟨Finset.mem_attach (Fnd b F) u, hgu⟩
+  refine Finset.sum_pos (fun v _ => ?_) ⟨u, hmem⟩
+  exact hw v.1 ((mem_Fnd b F).mp v.2).1
+
+/-- ★★★★ 归纳步：`|t.sideB| ≥ 3` 时归结到「限制族 + 归纳假设」或「三个成员 ⇒ 冲突四点」。 -/
+theorem step (F : Finset (Split α)) {t : Split α}
+    (hB3 : 3 ≤ t.sideB.card) (ht : t ∉ F) (hts : t.swap ∉ F)
+    (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hIH : ∀ (b' : α) (hnd' : Nondeg b' t), rst b' t hnd' ∉ rF b' F →
+      (rst b' t hnd').swap ∉ rF b' F → False) : False := by
+  classical
+  have key : ∀ b' ∈ t.sideB, ∃ u ∈ F,
+      (u.sideA = t.sideA ∪ {b'} ∧ u.sideB = t.sideB \ {b'}) ∨
+        (u.sideA = t.sideB \ {b'} ∧ u.sideB = t.sideA ∪ {b'}) := by
+    intro b' hb'
+    have hbA : b' ∉ t.sideA := fun hc => (Finset.disjoint_left.mp t.disjoint_sides) hc hb'
+    have hnd' : Nondeg b' t := nondeg_of_mem_sideB hb' (by omega)
+    by_cases hin : rst b' t hnd' ∈ rF b' F
+    · obtain ⟨u, hu, hgu⟩ := Finset.mem_image.mp hin
+      have huF : u.1 ∈ F := ((mem_Fnd b' F).mp u.2).1
+      have htu : u.1 ≠ t := fun hc => ht (hc ▸ huF)
+      have heq : (rg b' F u).sideA = (rst b' t hnd').sideA := by rw [hgu]
+      exact ⟨u.1, huF, Or.inl (sides_eq_of_rst_sideA _ _ hbA htu heq)⟩
+    · by_cases hins : (rst b' t hnd').swap ∈ rF b' F
+      · obtain ⟨u, hu, hgu⟩ := Finset.mem_image.mp hins
+        have huF : u.1 ∈ F := ((mem_Fnd b' F).mp u.2).1
+        have htus : u.1 ≠ t.swap := fun hc => hts (hc ▸ huF)
+        have heq : (rg b' F u).sideA = (rst b' t hnd').sideB := by
+          rw [hgu, Split.swap_sideA]
+        exact ⟨u.1, huF, Or.inr (sides_eq_of_rst_sideB _ _ hb' htus heq)⟩
+      · exact (hIH b' hnd' hin hins).elim
+  exact not_weaklyCompatible_of_forall_sides_eq (F := F) (A := t.sideA) (B := t.sideB)
+    (t.nonempty 0) hB3 key hF
+
+/-- 基础情形：`|A| = 1`、`|B| ≤ 2`（退化四元组 ＋ 远侧只能是 `t.sideB`）。 -/
+theorem base_case (F : Finset (Split α)) (w : Split α → ℝ) {t : Split α}
+    (ht : t ∉ F) (hts : t.swap ∉ F) (hw : ∀ s ∈ F, 0 < w s)
+    (hD : IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB)
+    (hA : t.sideA.card = 1) (hB : t.sideB.card ≤ 2) : False := by
+  classical
+  obtain ⟨a, ha⟩ := Finset.card_eq_one.mp hA
+  have key : ∀ b ∈ t.sideB, ∀ b' ∈ t.sideB, t.sideB ⊆ {b, b'} → False := by
+    intro b hb b' hb' hBsub
+    have haA : a ∈ t.sideA := by rw [ha]; exact Finset.mem_singleton_self a
+    have hcrit := (splitMetricSum_isDSplit_iff F w t.sideA t.sideB).mp hD a haA a haA b hb b' hb'
+    have hP0 : 0 ≤ ∑ u ∈ F.filter (fun u => qPairP u a a b b' = true), w u :=
+      Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have hX0 : 0 ≤ ∑ u ∈ F.filter (fun u => qPairX u a a b b' = true), w u :=
+      Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+    have hWpos : 0 < ∑ u ∈ F.filter (fun u => qPairW u a a b b' = true), w u := by
+      have hmin := le_min hP0 hX0
+      linarith
+    have hne : (F.filter (fun u => qPairW u a a b b' = true)).Nonempty := by
+      rcases Finset.eq_empty_or_nonempty (F.filter (fun u => qPairW u a a b b' = true)) with h | h
+      · rw [h] at hWpos
+        simp at hWpos
+      · exact h
+    obtain ⟨u, hu⟩ := hne
+    obtain ⟨huF, huW⟩ := Finset.mem_filter.mp hu
+    have hsep : u.Separates a a b b' := (qPairW_eq_true_iff u a a b b').mp huW
+    rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+    · have hsub : t.sideB ⊆ u.sideB := by
+        intro z hz
+        rcases Finset.mem_insert.mp (hBsub hz) with hz' | hz'
+        · rw [hz']; exact h3
+        · rw [Finset.mem_singleton] at hz'
+          rw [hz']; exact h4
+      have hsub2 : u.sideB ⊆ t.sideB := by
+        intro z hz
+        have hza : z ≠ a := fun hc => (Finset.disjoint_left.mp u.disjoint_sides) h1 (hc ▸ hz)
+        rw [Split.sideB_eq_compl, ha]
+        simpa using hza
+      exact ht (eq_of_sideB_eq (Finset.Subset.antisymm hsub2 hsub) ▸ huF)
+    · have hsub : t.sideB ⊆ u.sideA := by
+        intro z hz
+        rcases Finset.mem_insert.mp (hBsub hz) with hz' | hz'
+        · rw [hz']; exact h3
+        · rw [Finset.mem_singleton] at hz'
+          rw [hz']; exact h4
+      have hsub2 : u.sideA ⊆ t.sideB := by
+        intro z hz
+        have hza : z ≠ a := fun hc => (Finset.disjoint_left.mp u.disjoint_sides) hz (hc ▸ h1)
+        rw [Split.sideB_eq_compl, ha]
+        simpa using hza
+      have heq : u.sideA = t.swap.sideA := by
+        rw [Split.swap_sideA]
+        exact Finset.Subset.antisymm hsub2 hsub
+      exact hts (eq_of_sideA_eq heq ▸ huF)
+  rcases Nat.lt_or_ge t.sideB.card 2 with h2 | h2
+  · have hc : t.sideB.card = 1 := by
+      have hpos : 0 < t.sideB.card := (t.nonempty 1).card_pos
+      omega
+    obtain ⟨b0, hb0⟩ := Finset.card_eq_one.mp hc
+    exact key b0 (by rw [hb0]; exact Finset.mem_singleton_self b0)
+      b0 (by rw [hb0]; exact Finset.mem_singleton_self b0)
+      (by intro x hx; simpa [hb0] using hx)
+  · have hc : t.sideB.card = 2 := le_antisymm hB h2
+    obtain ⟨b0, b1, _, hb0⟩ := Finset.card_eq_two.mp hc
+    exact key b0 (by rw [hb0]; simp) b1 (by rw [hb0]; simp)
+      (by intro x hx; simpa [hb0] using hx)
+
+
+/-- ★★★★★ 主引理：按 `|X|` 强归纳，证一般 `|X|` 的**非成员核心**。 -/
+private theorem aux (n : ℕ) :
+    ∀ {β : Type*} [Fintype β] [DecidableEq β], Fintype.card β = n →
+      ∀ (F : Finset (Split β)) (w : Split β → ℝ), WeaklyCompatible (↑F : Set (Split β)) →
+        (∀ s ∈ F, 0 < w s) → ∀ t : Split β, t ∉ F → t.swap ∉ F →
+          ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB := by
+  induction n using Nat.strong_induction_on with
+  | h n ih =>
+    intro β instF instD hcard F w hF hw t ht hts hD
+    classical
+    have hsum : t.sideA.card + t.sideB.card = Fintype.card β := by
+      rw [← Finset.card_union_of_disjoint t.disjoint_sides, t.union_sides, Finset.card_univ]
+    have mkIH : ∀ (t' : Split β), t' ∉ F → t'.swap ∉ F →
+        IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t'.sideA t'.sideB →
+        ∀ (b' : β) (hnd' : Nondeg b' t'), rst b' t' hnd' ∉ rF b' F →
+          (rst b' t' hnd').swap ∉ rF b' F → False := by
+      intro t' ht' hts' hD' b' hnd' h1 h2
+      have hlt : Fintype.card (Del b') < Fintype.card β :=
+        Fintype.card_subtype_lt (p := fun x => x ≠ b') (x := b') (by simp)
+      have hres := ih (Fintype.card (Del b')) (by omega) rfl (rF b' F) (rW b' F w)
+        (weaklyCompatible_rF b' F hF) (fun s hs => rW_pos b' F w hw hs) (rst b' t' hnd') h1 h2
+      refine hres ?_
+      have hdown := isDSplit_restrict b' F w hnd' hD'
+      have hmetric : (fun x y : Del b' => ∑ u ∈ F, w u * SplitMetric u (x : β) (y : β))
+          = fun x y : Del b' => ∑ s ∈ rF b' F, rW b' F w s * SplitMetric s x y := by
+        funext x y
+        exact sum_eq_rsum b' F w x y
+      rwa [hmetric] at hdown
+    by_cases hsmall : Fintype.card β ≤ 5
+    · rcases Nat.lt_or_ge (Fintype.card β) 4 with hlo | hge
+      · rcases Nat.lt_or_ge t.sideA.card 2 with h1 | h1
+        · have hAc : t.sideA.card = 1 := le_antisymm (by omega) (t.nonempty 0).card_pos
+          exact base_case F w ht hts hw hD hAc (by omega)
+        · have hBc : t.sideB.card = 1 := by
+            have hpos : 0 < t.sideB.card := (t.nonempty 1).card_pos
+            omega
+          have hD' : IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.swap.sideA
+              t.swap.sideB := by
+            rw [Split.swap_sideA, Split.swap_sideB]
+            exact (isDSplit_comm (fun x y => splitMetricSum_symm F w x y)).mp hD
+          refine base_case F w hts (by simpa using ht) hw hD' ?_ ?_
+          · rw [Split.swap_sideA]; exact hBc
+          · rw [Split.swap_sideB]; omega
+      · have h45 : Fintype.card β = 4 ∨ Fintype.card β = 5 := by omega
+        rcases h45 with h4c | h5c
+        · exact not_isDSplit_of_weaklyCompatible_of_card_univ_four F w hF hw ht hts h4c hD
+        · exact not_isDSplit_of_weaklyCompatible_of_card_univ_five F w hF hw ht hts h5c hD
+    · have h4 : 6 ≤ Fintype.card β := by omega
+      by_cases hB3 : 3 ≤ t.sideB.card
+      · obtain ⟨b, hb⟩ := t.nonempty 1
+        exact step (t := t) F hB3 ht hts hF (mkIH t ht hts hD)
+      · have hA3 : 3 ≤ t.sideA.card := by omega
+        have hD' : IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.swap.sideA
+            t.swap.sideB := by
+          rw [Split.swap_sideA, Split.swap_sideB]
+          exact (isDSplit_comm (fun x y => splitMetricSum_symm F w x y)).mp hD
+        obtain ⟨b, hb⟩ := t.swap.nonempty 1
+        exact step (t := t.swap) F (by rw [Split.swap_sideB]; exact hA3) hts (by simpa using ht) hF
+          (mkIH t.swap hts (by simpa using ht) hD')
+
+/-- ★★★★★ **一般 `|X|` 的非成员核心成立**（W27-b 归纳收口）。 -/
+theorem core_holds : Split.weakCompatibilityNonMemberCore := by
+  intro β instF instD F w hF hw t ht hts
+  exact aux (Fintype.card β) rfl F w hF hw t ht hts
+
+
+/-- ★★★★★★ **W27-b 收口**：weakCompatibilityRealization_gap（Phylo/SplitWeak.lean:562）**成立**
+（原 def **逐字未改**；全称 ∀ F w, …，**零额外前提**）。 -/
+theorem weakCompatibilityRealization_gap_holds : Split.weakCompatibilityRealization_gap :=
+  Split.weakCompatibilityRealization_gap_of_core core_holds
+
+
 end Split
 
 /-! ## 8. 树的 split 系统弱相容（`Phylo/Split.lean:894` 的接口） -/
