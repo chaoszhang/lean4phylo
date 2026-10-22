@@ -2456,6 +2456,32 @@ theorem existsUnique_newClade {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
   obtain ⟨k, -, hk⟩ := Finset.mem_image.mp hmem
   exact ⟨k, hk, fun k' hk' => newClade_injective hf (hk'.trans hk.symm)⟩
 
+/-! ### §14.6 ★★★ `children_cover` —— 非单点 clade 是**孩子之并**（(O1) 的**入口引理**）
+
+§14.4–§14.5 把 (O1)「纤维 ↔ 合法创建序」的两端接上了（重建映射 ＋ 创建块满射）。
+(O1) 本体（「合法创建序 ⟺ 线性扩展」）还缺一条**入口事实**：
+
+> 要建出非单点 clade `C`，**必须先把它的两个孩子建出来** ——
+> `C` 的**前驱集合恰是孩子之并**，而不是「`C` 的全部真子簇」。
+
+即集合等式 `C = ⋃_{B ∈ children (cladesOf n f) C} B`。它是 §15 的 `LinExt`
+（线性扩展只数 `internalBelow`）与 §14.4 的 `reconstruct`（读创建序）之间的桥：
+没有它，「`C` 的前驱只有两个孩子」这一步就无法从 `children` 的定义里取出。
+
+证明只有一行实质内容：`existsUnique_newClade` 把 `C` 认成某一步的新块 `newClade f k`，
+`children_newClade` 又把该新块的孩子算成第 `k` 步被合并的两块 `A`、`B`，
+而 `newClade f k = A ∪ B` **就是定义** —— 于是等式成立。 -/
+
+/-- ★★★ **`children_cover`**（(O1) 入口）：非单点 clade 等于其（极大真子）孩子之并。 -/
+theorem children_cover {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f)
+    (h2 : 2 ≤ C.card) :
+    C = (children (cladesOf n f) C).biUnion id := by
+  obtain ⟨k, hk, -⟩ := existsUnique_newClade hf hC h2
+  rw [← hk, children_newClade hf k]
+  ext z
+  simp [newClade]
+
 
 /-! ### §15 ★★★ 线性扩展数 `LinExt` —— (O1) 计数一侧的**具名器材**
 
