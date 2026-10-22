@@ -4368,7 +4368,7 @@ theorem reconstructStep_fst {n : ℕ} (S : Finset (Finset (Fin n))) (C : Finset 
 
 **剩余四件（逐字陈述，未做）**：
 
-1. **孩子里的元素所在块 = 那个孩子**（本轮写到 60 行时卡在 Lean 命名/作用域，已回退）：
+1. **孩子里的元素所在块 = 那个孩子** —— ✅ **已证**（`blockAt_eq_child`，上方）：
 
 ```text
 blockAt_eq_child (hn : 2 ≤ n) (hf) (σ) (hinj) (hord)
@@ -4384,7 +4384,10 @@ blockAt_eq_child (hn : 2 ≤ n) (hf) (σ) (hinj) (hord)
 ⚠️ Lean 坑：`children_maximal` 的结论是 `¬ D ⊂ C`，因此第三个参数必须是 **`⊂`**（用
 `Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩`）而不是 `⊆`；且 `hne` 的方向是 `B ≠ D`。
 
-2. **`reconstructStep` 的语义识别**：
+2. **`reconstructStep` 的语义识别**（⚠️ 本轮尝试了一次：用库内 `reconstructStep_eq` 兑九个前提可行，
+   但「`∃ a b (hbne : b.Nonempty), … ∧ (reconstructStep …).2 = b.min' hbne」这种**依赖型 `∃`** 在 Lean 里反复报
+   「期望 `(↑(σ k)).Nonempty`」；建议下一轮**把 `a, b, hbne` 提成定理的显式参数**（不要放进 `∃`），
+   调用处对 `x ∈ A ∨ x ∈ B` 分两次用。）：
 
 ```text
 reconstructStep_snd_eq (孩子为 {A, B}) :
