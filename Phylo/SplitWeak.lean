@@ -1909,6 +1909,144 @@ theorem weakCompatibilityRealization_gap_card_four {α : Type*} [Fintype α] [De
     · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
         (Or.inr (by rw [show s.swap = t by rw [← h, swap_swap]]; exact htF))
 
+/-! ### 7.4 ★★★★ W27-b：忠实形态的**登记位置**、非成员核心的分离、归纳法的收尾器材
+
+#### 0. 忠实性警告（★ 先读这一节，再看定义）
+
+`weakCompatibilityRealization_gap`（`:562`）的 `w` **只出现在假设里**，结论**不含** `α_S = w S`。
+因此**收口原 `def` ≠ 形式化 BdD Theorem 3**（md `:1683-1699`）—— Thm 3 是**两条**断言：
+
+1. `Σ` 恰是 `d`-split 的全体；
+2. **隔离指数 `α_S = λ_S`**（成员）。
+
+原 `def` 只覆盖 (1)。忠实形态（追加 (2)）**登记在**
+`Phylo/Stat/BunemanIndexBridge.lean` 的 §4.2：`Split.weakCompatibilityRealization_gap_weights`
+＋ `Split.weakCompatibilityRealization_gap_of_weights`（「**忠实 ⟹ 弱化**」）。**两条都要交，缺一条不算完成。**
+
+#### 1. 忠实形态为何**不能**写在本文件（import 方向）
+
+忠实形态的结论必须出现**隔离指数**，而隔离指数的落地件 `Split.isolationIndex`（BdD `:446-454`
+的三项 `max` 形 `α`）在 `Phylo/Stat/BunemanIndexBridge.lean:942`（§8.3），该文件
+**import 本文件**（`:6`）⇒ 在本文件写出忠实形态会**循环依赖** ✗。
+★ 这**不是**新器材：`α` 与 `0 < α ⟺ IsDSplit` 的桥（`isolationIndex_pos_iff_isDSplit`，同文件 `:971`）
+库内**已有**，本批只是把它接到 `w` 上（§4.2）。★ 也**不**用 `bunemanIndex` —— 那是 `μ_σ`
+（两项 `min` 形），正是 §4.1 已证伪的 `…_correct_shape` 的病根。
+
+⇒ 本文件负责的是**另一半**：一般 `|X|` 的 `_holds` 仍缺的**非成员核心**（具名桶，§2）
+＋ 它到原 `def` 的**归约**（§3）＋ 归纳路线的**收尾器材**（§4）。
+
+#### 2. 非成员核心（具名桶）：一般 `|X|` 的 `_holds` 唯一缺的那半
+
+`weakCompatibilityRealization_gap_holds` 的**一般 `|X|`** 形态**本批未证** —— 不是措辞问题：
+`(B2)` 的 `|t.sideB| ≥ 5` 情形仍开放（见 §7.3.2b 与 `:1862`/`:1892`）。
+`core` **只**含非成员半边，且**已**在 `|X| ≤ 5` 的全部分拆上形式化收口
+（`:1134`、`:1207`、`:1309`、`:1641`、`:1663`、`:1765`、`:1783`）；缺的仅是 `|t.sideB| ≥ 5`。
+
+#### 3. 归约 `gap ⟸ core`（`weakCompatibilityRealization_gap_of_core`）
+
+**不**是「把要证的命题塞进假设」：本条证的正是「原 `def` ＝ 成员半边（§7.2，已无条件）＋
+非成员半边（`core`）」这个**粘合**，`F = ∅` 也走通 `core`。
+
+#### 4. 归纳路线与它的收尾器材（`not_weaklyCompatible_of_forall_sides_eq`）
+
+按 `|X|` 强归纳：把 `F` 限制到 `X \ {b}` 后，对**较小**的 `X` 用归纳假设 ⇒ 每个 `b ∈ B` 存在
+`u_b ∈ F` 使 `u_b` 的两侧恰是 `A ∪ {b}` 与 `B \ {b}`；而三个 `u_b`（`b₁,b₂,b₃` 互异）在四点组
+`(a,b₁,b₂,b₃)` 上分别诱导 `{a,b₁}|{b₂,b₃}`、`{a,b₂}|{b₁,b₃}`、`{a,b₃}|{b₁,b₂}` ⇒ 冲突四点 ⇒ 矛盾。
+**收尾这一步已形式化**（下条）；缺的**唯一**一件是**限制映射**器材
+（`Split α → Option (Split {x // x ≠ b})` ＋ 纤维加权和 `w' s = Σ_{u ↦ s} w u`），不在本批时间盒内。 -/
+
+/-- ⬜ **弱相容版 (B2) 的一般形态（**具名桶**，W27-b 登记）**：`t ∉ F`、`t.swap ∉ F` ⇒
+`t` **不是** `δ := Σ_{u∈F} w_u δ_u` 的 `d`-split。
+
+★ 这是 `weakCompatibilityRealization_gap`（`:562`）收敛所需**唯一**的非成员半边（见 §7.1），
+也是 `notIsDSplit_of_splitMetricSum_gap`（`:688`）把「两两相容」换成「弱相容」后的形态。 -/
+def weakCompatibilityNonMemberCore : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
+      ∀ t : Split α, t ∉ F → t.swap ∉ F →
+        ¬ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB
+
+universe u
+
+/-- ★★★★ **`gap ⟸ core`**（W27-b 交的**归约**，不是 `gap_holds`）：`weakCompatibilityNonMemberCore`
+（**唯一**开放的那半，见其 docstring）＋ 已无条件的**成员半边**（§7.2）
+⇒ `weakCompatibilityRealization_gap`（`:562`）**逐字**成立。
+
+★ 这不是「把要证的命题当假设」：`core` 只含非成员半边，且在 `|X| ≤ 5` 上**已**形式化收口；
+本条证的正是「原 `def` ＝ 成员半边 ＋ 非成员半边」这个**粘合**（`F = ∅` 也走通 `core`）。 -/
+theorem weakCompatibilityRealization_gap_of_core :
+    weakCompatibilityNonMemberCore.{u} → weakCompatibilityRealization_gap.{u} := by
+  intro h α instF instD F w hF hw
+  refine ⟨fun x y => ∑ u ∈ F, w u * SplitMetric u x y,
+    fun x y => splitMetricSum_symm F w x y, fun s => ?_⟩
+  constructor
+  · intro hD
+    by_contra hcon
+    have hs : s ∉ F := fun hh => hcon ⟨s, hh, Or.inl rfl⟩
+    have hss : s.swap ∉ F := fun hh => hcon ⟨s.swap, hh, Or.inr (by simp)⟩
+    exact h F w hF hw s hs hss hD
+  · rintro ⟨t, htF, h | h⟩
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inl (h ▸ htF))
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inr (by rw [show s.swap = t by rw [← h, swap_swap]]; exact htF))
+
+/-- ★★★★ **归纳路线的收尾器材**（W27-b）：若对**每个** `b ∈ B` 都有成员 `u_b ∈ F` 的两侧恰是
+`A ∪ {b}` 与 `B \ {b}`，则 `F` **不**弱相容（`|A| ≥ 1`、`|B| ≥ 3`）。
+
+★ 这是「按 `|X|` 归纳证 `weakCompatibilityNonMemberCore`」的最后一步：把 `F` 限制到 `X \ {b}`、
+对**较小**的 `X` 用归纳假设，即得「每个 `b ∈ B` 存在这样的 `u_b`」；而三个 `u_b`（`b₁,b₂,b₃` 互异）
+在四点组 `(a, b₁, b₂, b₃)` 上分别诱导 `{a,b₁}|{b₂,b₃}`、`{a,b₂}|{b₁,b₃}`、`{a,b₃}|{b₁,b₂}`
+⇒ 冲突四点 ⇒ 与弱相容矛盾。★ 缺的**唯一**一件是**限制映射**器材（见 §7.4 第 4 条）。 -/
+theorem not_weaklyCompatible_of_forall_sides_eq {F : Finset (Split α)} {A B : Finset α}
+    (hA : A.Nonempty) (hB : 3 ≤ B.card)
+    (h : ∀ b ∈ B, ∃ u ∈ F, (u.sideA = A ∪ {b} ∧ u.sideB = B \ {b}) ∨
+      (u.sideA = B \ {b} ∧ u.sideB = A ∪ {b})) :
+    ¬ WeaklyCompatible (↑F : Set (Split α)) := by
+  classical
+  obtain ⟨a, ha⟩ := hA
+  obtain ⟨S, hSB, hScard⟩ := Finset.exists_subset_card_eq hB
+  obtain ⟨b1, b2, b3, h12, h13, h23, hSeq⟩ := Finset.card_eq_three.mp hScard
+  have hb1 : b1 ∈ B := hSB (by rw [hSeq]; simp)
+  have hb2 : b2 ∈ B := hSB (by rw [hSeq]; simp)
+  have hb3 : b3 ∈ B := hSB (by rw [hSeq]; simp)
+  -- 统一取向：`A ∪ {b}` 一侧含 `a` 与 `b`，另一侧是 `B \ {b}`
+  have key : ∀ b ∈ B, ∃ u ∈ F,
+      (a ∈ u.sideA ∧ b ∈ u.sideA ∧ ∀ x ∈ B, x ≠ b → x ∈ u.sideB) ∨
+        (a ∈ u.sideB ∧ b ∈ u.sideB ∧ ∀ x ∈ B, x ≠ b → x ∈ u.sideA) := by
+    intro b hb
+    obtain ⟨u, huF, hor⟩ := h b hb
+    have hmemA : a ∈ A ∪ ({b} : Finset α) := Finset.mem_union_left _ ha
+    have hmemB : b ∈ A ∪ ({b} : Finset α) :=
+      Finset.mem_union_right _ (Finset.mem_singleton_self b)
+    rcases hor with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · refine ⟨u, huF, Or.inl ⟨?_, ?_, ?_⟩⟩
+      · rw [h1]; exact hmemA
+      · rw [h1]; exact hmemB
+      · intro x hxB hxb
+        rw [h2]
+        exact Finset.mem_sdiff.mpr ⟨hxB, by simpa using hxb⟩
+    · refine ⟨u, huF, Or.inr ⟨?_, ?_, ?_⟩⟩
+      · rw [h2]; exact hmemA
+      · rw [h2]; exact hmemB
+      · intro x hxB hxb
+        rw [h1]
+        exact Finset.mem_sdiff.mpr ⟨hxB, by simpa using hxb⟩
+  obtain ⟨u1, hu1F, hu1⟩ := key b1 hb1
+  obtain ⟨u2, hu2F, hu2⟩ := key b2 hb2
+  obtain ⟨u3, hu3F, hu3⟩ := key b3 hb3
+  rintro hwc
+  refine hwc ⟨a, b1, b2, b3, ⟨u1, hu1F, ?_⟩, ⟨u2, hu2F, ?_⟩, ⟨u3, hu3F, ?_⟩⟩
+  · rcases hu1 with ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩
+    · exact Or.inl ⟨h1, h2, h3 b2 hb2 (Ne.symm h12), h3 b3 hb3 (Ne.symm h13)⟩
+    · exact Or.inr ⟨h1, h2, h3 b2 hb2 (Ne.symm h12), h3 b3 hb3 (Ne.symm h13)⟩
+  · rcases hu2 with ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩
+    · exact Or.inl ⟨h1, h2, h3 b1 hb1 h12, h3 b3 hb3 (Ne.symm h23)⟩
+    · exact Or.inr ⟨h1, h2, h3 b1 hb1 h12, h3 b3 hb3 (Ne.symm h23)⟩
+  · rcases hu3 with ⟨h1, h2, h3⟩ | ⟨h1, h2, h3⟩
+    · exact Or.inl ⟨h1, h2, h3 b1 hb1 h13, h3 b2 hb2 h23⟩
+    · exact Or.inr ⟨h1, h2, h3 b1 hb1 h13, h3 b2 hb2 h23⟩
+
 end Split
 
 /-! ## 8. 树的 split 系统弱相容（`Phylo/Split.lean:894` 的接口） -/

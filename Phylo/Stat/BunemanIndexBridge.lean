@@ -2620,5 +2620,83 @@ theorem notIsDSplit_of_splitMetricSum_gap_holds : notIsDSplit_of_splitMetricSum_
 theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} :=
   fourPointCharacterization_gap_of_noWRealizer noWRealizer_exists_gap_proof
 
+/-! ## 4.2 ★★★★ W27-b：`weakCompatibilityRealization_gap` 的**忠实形态**（`α_S = w S`）
+
+### 0. 为什么登记在**本文件**而不在 `Phylo/SplitWeak.lean`
+
+忠实形态的结论必须写出**隔离指数**，而隔离指数的落地件 `Split.isolationIndex` 在本文件 §8.3
+（`:942`）；本文件 **import** `Phylo.SplitWeak`（`:6`）⇒ 反向写会**循环依赖** ✗。
+故 `Phylo/SplitWeak.lean` 的 §7.4 只登记**非成员核心**（`weakCompatibilityNonMemberCore`）与
+**归约**（`weakCompatibilityRealization_gap_of_core`），忠实形态登记在此处 ✓。
+★ 本节的 `α` 与 `w` 的桥**不需要**新器材：`0 < isolationIndex ⟺ IsDSplit` 已在 §8.3 证成
+（`isolationIndex_pos_iff_isDSplit`，`:971`）。
+
+### 1. 形态（四要素）
+
+* **旧形态（派单建议）** ✗：忠实形态的结论追加 `bunemanIndex δ s.sideA s.sideB = w s`。**三重不可行**：
+  1. **不合型**：`bunemanIndex (δ : NJ.Dissimilarity X) (s : Split X)` 只吃 `Split`、不吃两侧
+     （`Phylo/BunemanTree.lean:107`）⇒ 字面写法**不存在**；
+  2. **类型不对**：`bunemanIndex` 是 **Buneman 1971 的 `μ_σ`**（两项 `min` 形 ＝ `IsDSplitStrong`），
+     **不是** BdD 的三项 `max` 形 `α` —— 正是 §4.1 **已证伪** `…_correct_shape`（`:249`，反例 `:351`）的病根；
+  3. **会重演同一反例**：`μ ≤ α` 且可取严格小值，而结论 (1) 的成员方向要求 `α_S > 0` ＝`IsDSplit`
+     ⇒ 在同一 `δ` 上「`μ_S = w_S`」与「`α_S > 0`」可同时不可满足。
+* **新形态** ✓：用 §8.3 的 `Split.isolationIndex`（三项 `max` 形 `α`，`0 < α ⟺ IsDSplit`）；
+* **文献行号**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:438-440`
+  （d-split ⟺ `α > 0`）· `:446-454`（`α` 定义）· `:1683-1699`（Thm 3：`Σ` ＝ d-split 全体 **且**
+  `α_S = λ_S`）· `:456-460`（`#X = 4` 时 `d = Σ α_{A,B} δ_{A,B}` —— **定标**系数）；
+* **理由（真假判据）**：W25-a 的假命题是「`IsDSplit ⟺ μ > 0`」；W25-b ★D 已改成「`IsDSplit ⟺ α > 0`」
+  ⇒ 忠实形态**必须**建在 `α` 上。
+
+### 2. 系数的 `2` 与 `w s + (if s.swap ∈ F then w s.swap else 0)`
+
+* **`2` 的来源（归一化差）**：本库 `isolationIndex` 取 `min pairDeficit`（**无 `½`**，§8.3），
+  而 `pairDeficit δ_S = 2`（`a,a' ∈ A`、`b,b' ∈ B` 时 `P = X = 2`、`I = 0`）⇒ 本库口径下
+  `isolationIndex = 2·α_BD`；由 `:456-460` 的定标（`d = δ_S` 必须给 `α_S = 1`）知 BdD 的
+  `α_S = λ_S` 在本库口径下正是 `isolationIndex = 2λ`。★ 若把 `δ_S` 归一为 `½·indicator`，
+  则 `2` 消失 —— 本库 `SplitMetric` 是 `0/1`，故 `2` 在。
+  ★ 对**成员** `s`，每个四元组都有 `pairDeficit ≥ 2·w_s > 0`（计数判据
+  `splitMetricSum_isDSplit_iff` ＋ 弱相容 ⇒ `min c_P c_X = 0`，`c_W ≥ w_s`）
+  ⇒ §8.3 的「`max` 里含 `I`」与「截断到 `0`」两种写法在**成员**上一致 ⇒ 上式两侧同源 ✓
+  （截断只可能影响**非成员**，而结论 (2) 不声称非成员）。
+* **为何不是 `α_s = w s`**：`Split` 的两侧**有序**、而 `δ_s = δ_{s.swap}` ⇒ 同一 split 以 `s` 与
+  `s.swap` **两个**成员出现时**合并**计数。取 `F = {s, s.swap}`、`w s ≠ w s.swap` 即知
+  「`α_s = w s`」**为假** ⇒ 必须写和式（这是 `w` 一侧**唯一**需要修的细节，「弱化」一侧不动）。
+* ★ 结论 (2) **只**声称成员（及成员的 `swap`）；**不**声称非成员 `α = 0` ——
+  那正是 §4.1 被证伪的那一条（`BunemanIndexBridge.lean:245`），且还需 `α ≥ 0`。
+
+### 3. 未证状态
+
+本 `def` 是**未证**形态（⬖）：BD Thm 3 的系数半边需要「`α` 对弱相容族逐成员恰等于权重」的
+层析论证，不在 W27-b 时间盒内。本节**只**交「**忠实 ⟹ 弱化**」方向
+（`weakCompatibilityRealization_gap_of_weights`，**无条件、零 `sorry`**）。 -/
+
+/-- ★★★★ **忠实形态**（W27-b 新立；BdD Theorem 3 的**两条**断言一起，一般 `α` 的 `_holds` 形态）。
+
+`F` 弱相容、`w > 0` 于 `F` ⇒ 取 `δ := Σ_{u∈F} w_u δ_u`，则
+① `IsDSplit δ s.sideA s.sideB ⟺ ∃ t ∈ F, t = s ∨ t.swap = s`（**弱化形态**的全部内容）；
+② `α_s(δ) = 2·(w s + (if s.swap ∈ F then w s.swap else 0))` 对每个成员 `s`
+（**忠实形态**追加的那半；`2` 是本库 `isolationIndex` 与 BdD `α` 的归一化差，见 §4.2 第 2 条）。
+
+★ 与 `Split.weakCompatibilityRealization_gap`（`Phylo/SplitWeak.lean:562`）的**唯一**差别就是新增的 ②：
+`w` 从「只出现在假设里」变成「**进出结论**」⇒ **收口前者的 `_holds` ≠ 形式化 BdD Thm 3**。 -/
+def weakCompatibilityRealization_gap_weights : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
+      ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
+        (∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s) ∧
+          ∀ s : Split α, (s ∈ F ∨ s.swap ∈ F) →
+            isolationIndex δ s.sideA s.sideB
+              = 2 * (w s + (if s.swap ∈ F then w s.swap else 0))
+
+/-- ★★★★ **忠实 ⟹ 弱化**（W27-b 要求的第二件，**无条件、零 `sorry`**）：结论多一条 `α_S = w S`
+的形态蕴含原 `def`（`Phylo/SplitWeak.lean:562`）—— 丢掉第三个合取项即可。
+
+★ 该方向**只是投影**，故它本身**不**声称忠实形态成立（忠实形态本批仍为 ⬖）。 -/
+theorem weakCompatibilityRealization_gap_of_weights :
+    weakCompatibilityRealization_gap_weights.{0} → Split.weakCompatibilityRealization_gap.{0} := by
+  intro h α instF instD F w hF hw
+  obtain ⟨δ, hsymm, hiff, _⟩ := h F w hF hw
+  exact ⟨δ, hsymm, hiff⟩
+
 end Split
 
