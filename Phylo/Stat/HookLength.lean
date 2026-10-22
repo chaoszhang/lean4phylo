@@ -4346,6 +4346,76 @@ theorem disjoint_blockAt_of_not_mem {n : ℕ} {T : Finset (Finset (Fin n))}
           (not_lt_of_ge hjlt.le)
     · exact absurd hwk (Finset.disjoint_left.mp hdisj hwC)
 
+/-- ★ `reconstructStep` 的**第一分量**就是 `C` 的最小元（非空时）。 -/
+theorem reconstructStep_fst {n : ℕ} (S : Finset (Finset (Fin n))) (C : Finset (Fin n))
+    (d : Fin n) (hne : C.Nonempty) : (reconstructStep S C d).1 = C.min' hne := by
+  show minOr d C = C.min' hne
+  exact minOr_of_nonempty hne
+
+/-! #### §22.1 **本轮做到哪、差哪一条前提**（逐字，供下一轮直接接手）
+
+**已落地的定义层与基础引理**（全绿）：
+
+* `procClades σ k`：前 `k` 步创建的 clade 集；`mem_procClades` / `procClades_mono` / `procClades_succ`；
+* `blockAt σ k z`：第 `k` 步后 `z` 的块 —— **直接用「含 `z` 的已创建 clade 之并」**定义
+  （不需要 `parent`：线性扩展下已创建集合是**下闭**的，故那些 clade 恰为一条链，其并就是最大者）；
+  `mem_blockAt` / `subset_blockAt` / `blockAt_eq_singleton` / `blockAt_mono`；
+* ★ `subset_of_mem_procClades`：嵌嵌性 ＋ 线性扩展序 ⇒ 已创建的含 `z` 的 clade 都 `⊆ σ k`；
+* ★ `blockAt_succ_of_mem`：`z ∈ σ k ⇒ blockAt σ (k+1) z = σ k`；
+* ★ `blockAt_succ_of_not_mem`：`z ∉ σ k ⇒ blockAt σ (k+1) z = blockAt σ k z`；
+* ★ `disjoint_blockAt_of_not_mem`：`z ∉ σ k ⇒ blockAt σ k z ⊥ σ k`；
+* `reconstructStep_fst`：`(reconstructStep S C d).1 = C.min' _`。
+
+**剩余四件（逐字陈述，未做）**：
+
+1. **孩子里的元素所在块 = 那个孩子**（本轮写到 60 行时卡在 Lean 命名/作用域，已回退）：
+
+```text
+blockAt_eq_child (hn : 2 ≤ n) (hf) (σ) (hinj) (hord)
+    {k : ℕ} (hk : k < n - 1) {D : Finset (Fin n)}
+    (hD : D ∈ children (cladesOf n f) (σ ⟨k, hk⟩).1) {z : Fin n} (hz : z ∈ D) :
+  blockAt (fun j => (σ j).1) k z = D
+```
+
+证法已在上一代码里验证过大半：`2 ≤ |D|` 时用 `exists_lt_of_mem_children`（§21）
+得 `D = σ j`（`j < k`），两边用 `subset_blockAt` 与
+`subset_of_mem_procClades` ＋ `children_maximal`；`|D| = 1` 时用 `blockAt_eq_singleton`，
+反设有已创建 `C ∋ z`，用嵌嵌性 ＋ 孩子极大性 + `2 ≤ |C|` 矛盾。
+⚠️ Lean 坑：`children_maximal` 的结论是 `¬ D ⊂ C`，因此第三个参数必须是 **`⊂`**（用
+`Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩`）而不是 `⊆`；且 `hne` 的方向是 `B ≠ D`。
+
+2. **`reconstructStep` 的语义识别**：
+
+```text
+reconstructStep_snd_eq (孩子为 {A, B}) :
+  (reconstructStep (cladesOf n f) (σ k).1 d).2 = ((σ k).1 \ a).min' _
+  其中 a := ((children … (σ k).1).filter (fun D => (σ k).1.min' _ ∈ D)).biUnion id
+```
+
+（即「另一个孩子的最小元」；需要 `children T (σ k).1 = {A,B}` 与 `x = min' (σ k).1 只在一个孩子里`。）
+
+3. **取值不变式**：
+
+```text
+chainMap_eq_blockMin : ∀ k z,
+  chainMap n g k z = (blockAt (fun j => (σ j).1) k z).min' ⟨z, mem_blockAt …⟩
+```
+
+归纳用 `chainMap_succ`（`chainMap (k+1) = stepMap (chainMap k) (g k).1 (g k).2`）；
+三种情形：`z ∈ a`（值不变，且 `blockAt (k+1) z = σ k`）、`z ∈ b`（值变为 `min' (σ k)`）、
+`z ∉ σ k`（不变）；用 1、2 与 `blockAt_succ_of_mem` / `blockAt_succ_of_not_mem` /
+`disjoint_blockAt_of_not_mem`。
+
+4. **取出 `IsMergeHistory` 与 `newClade` / `cladesOf`**：
+   * `IsStep`：由 3 得 `chainMap n g k x = x`、`chainMap n g k y = y`（`x = (g k).1 = min' (σ k)` 恰是块 `a` 的最小元），
+     `x < y` 由 `y ∈ (σ k).1`、`y ≠ x`、`x = min' (σ k).1`；
+   * 末步恒常：`k = n-1` 时所有 clade 已创建 ⇒ `blockAt = univ`（`univ_mem_cladesOf`）⇒ `chainMap` 恒为 `min' univ`；
+   * `cladesOf n g = cladesOf n f`：由 3、取每层的块 = 已创建集合 （故 `cladesOf g = {σ j} ∪ 单点 = T`）；
+   * `newClade g k = (σ k).1`：由 3 得两个孩子块的最小元恰为 `x, y`，故并起来是 `(σ k).1`。
+
+⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）；`rankedFiberCount_gap_holds` **未**落地。 -/
+
 end Phylo.Stat.HookLength
+
 
 
