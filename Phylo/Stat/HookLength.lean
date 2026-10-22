@@ -2731,5 +2731,65 @@ theorem card_fiber_le_LinExt {n : ℕ} (hn : 2 ≤ n)
   rw [LinExt_eq_filter_card (C := Finset.univ) hhook hinternal]
   exact card_fiber_le_creationOrders hn hf
 
+/-! ### §17 ★★★★ (O1) 的**归约**与**剩余两件的精确陈述**（不声称已证）
+
+§16 给出 (O1) 的一侧（`|纤维| ≤ LinExt`），§14.7 给出派单 ② 的「⟹」半。
+本节把**两件剩余工作**写成可机械核对的形式，并给出归约定理
+`rankedFiberCount_gap_of_fiber_eq_LinExt`（形式与 §13 的 `rankedFiberCount_gap_of_LE` 同一格）。
+
+**剩余件 ①（(O1) 的「≥」半 = 派单 ② 的「⟸」半）—— Φ 的满射性**：
+
+```text
+∀ (f) (hf : IsMergeHistory n f) (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}),
+  (∀ i j, i ≠ j → σ i ≠ σ j) → (∀ i j, i < j → ¬ (σ j).1 ⊂ (σ i).1) →
+    ∃ g : Fin (n - 1) → Fin n × Fin n,
+      IsMergeHistory n g ∧ cladesOf n g = cladesOf n f ∧ ∀ k, newClade g k = (σ k).1
+```
+
+即「每个线性扩展都被 `reconstruct (cladesOf n f) (fun k => (σ k).1) d`
+读成**合法**合并史（且 `cladesOf` 复原）」。可用器材：
+`reconstructStep_eq`、`reconstruct_newClade_eq`、`eq_of_newClade_eq`、`children_cover`（§14.6）、
+`newClade_not_ssubset_of_lt`（§14.7）。建议的补法：对 `k` 强归纳证不变式
+「第 `k` 步后的划分 = `{σ k, …, σ (n-2)}` 中的**极大者** ∪ 尚未被覆盖的单点」，
+并用 `reconstructStep_eq` 的九个前提逐个兑现。
+
+**剩余件 ②（派单 ③ 交错引理）**：
+
+```text
+LinExt_interleaving (T) (C) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
+  LinExt T C = Nat.multinomial (children T C) (fun B => hook T B) *
+    (children T C).attach.prod (fun Bx : {B // B ∈ children T C} => LinExt T Bx.1)
+```
+
+（与 §8 的 `LE_eq` 同一个形状；两者落地即可把 `LinExt` 认成 `LE`。）
+
+⇒ 两件落地后，`rankedFiberCount_gap` 由下一条归约定理 + §10 的钩长公式
+（`LE_mul_prod_hook_eq_factorial`）+ §13 的 `hook_cladesOf_eq_card_sub_one` 立即收口。
+
+⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变），只给归约定理与待证陈述。
+⚠️ 目标命题 `rankedFiberCount_gap` 是 SD2012 的 **Remark 6**，而 Remark 6 在该文是**转引**：
+正文明写 "A proof can be found in [26]"，[26] = Semple & Steel, *Phylogenetics*（Oxford），**该书不在库**。
+本模块（§14–§17）与 `rankedFiberCount_gap` 本身都**不**声称已证 Remark 6。 -/
+
+/-- ★★★★ **(O1) 的归约**：一旦「纤维基数 = `LinExt`」与「`LinExt` = `LE`」两件落地，
+`rankedFiberCount_gap` 在给定 `n`（`2 ≤ n`）上立即成立（接 §13 的 `rankedFiberCount_gap_of_LE`）。
+
+⚠️ 本定理**只是归约**：它把缺口精确化成这两个 `∀`-命题，**不**证它们，
+也不使 `rankedFiberCount_gap` 本身变成已证。 -/
+theorem rankedFiberCount_gap_of_fiber_eq_LinExt {n : ℕ} (hn : 2 ≤ n)
+    (h1 : ∀ (f : Fin (n - 1) → Fin n × Fin n) (_hf : IsMergeHistory n f),
+        ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+          = LinExt (cladesOf n f) (Finset.univ : Finset (Fin n)))
+    (h2 : ∀ (f : Fin (n - 1) → Fin n × Fin n) (_hf : IsMergeHistory n f)
+        (hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f),
+        LinExt (cladesOf n f) Finset.univ = LE (cladesOf n f) Finset.univ hU) :
+    ∀ (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
+      ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+        = (n - 1).factorial
+          / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) :=
+  rankedFiberCount_gap_of_LE hn fun f hf =>
+    by rw [h1 f hf, h2 f hf (univ_mem_cladesOf (by omega) hf)]
+
 end Phylo.Stat.HookLength
+
 
