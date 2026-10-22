@@ -3910,7 +3910,240 @@ theorem LinExt_univ_eq_LE_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n
     LinExt (cladesOf n f) Finset.univ = LE (cladesOf n f) Finset.univ hU :=
   LinExt_eq_LE_cladesOf hf Finset.univ hU
 
+/-! ### §21 ★★★ **(O1) 的「≥」半 ＝ 缺件 (a)：`Φ` 的满射性**（本轮**未**证，但已机器核对「它是唯一剩余」）
+
+**(a) 的逐字陈述（待证）**
+
+```text
+surj_reconstruct (hn : 2 ≤ n) (hf : IsMergeHistory n f)
+    (d : Fin n) (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hσinj : ∀ i j, i ≠ j → σ i ≠ σ j)
+    (hσord : ∀ i j, i < j → ¬ (σ j).1 ⊂ (σ i).1) :
+  ∃ g : Fin (n - 1) → Fin n × Fin n,
+    IsMergeHistory n g ∧ cladesOf n g = cladesOf n f ∧ ∀ k, newClade g k = (σ k).1
+```
+
+自然见证是 `g := reconstruct (cladesOf n f) (fun k => (σ k).1) d`（§14.4），此时第三条
+`newClade g k = (σ k).1` 由「读数正确」给出、第二条由 `reconstruct` 的往返引理给出，
+真正要做的是**第一条 `IsMergeHistory n g`**。
+
+**(a) ⇒ `h1`（下面的 `card_fiber_eq_LinExt_of_surj` 已机器核对）**。
+`h1` 的「≤」半是 §16 的 `card_fiber_le_LinExt`（已证、无条件），「≥」半只需 (a)：
+`g ↦ newClade g ·` 是从纤维到「合法创建序」集合的单射（`eq_of_newClade_eq`，已证），
+(a) 说明它**满**，故两个基数相等。
+
+**(a) 的证明路线（不变式）与每步要兑的前提**
+
+对 `k : ℕ` 归纳证下述**不变式**（`P k`：第 `k` 步之后 `chainMap n g k` 的纤维恰为「前沿」）：
+
+```text
+P k :  { fiberOf (chainMap n g k) v | v }  =  frontier(σ, k)
+其中 frontier(σ, k) := { u ∈ cladesOf n f | (u = σ j, j < k) ∨ (u 是单点) ,
+                         且 parent(u) ∉ {σ j | j < k} }        （univ 视为「无 parent」）
+```
+
+于是 `P (n-1)` 给出「最后所有块 = {univ}」，`P k → P (k+1)` 只需：**`σ k` 的两个孩子
+在 `frontier k` 里**（由「孩子先于父」：`σ i ⊊ σ j ⇒ i < j`，这是 `hσord` 的 3 行推论），
+再用 `children_cover`（§14.6，已证）保证 `σ k = ⋃ children`。
+
+**逐条对照 `reconstructStep_eq`（`HookLength.lean` §14.4）的九个前提** —— 这是本节的「卡点说明书」：
+
+| # | `reconstructStep_eq` 的前提 | 由谁供给 |
+|---|---|---|
+| 1 | `hC : C.Nonempty` | `2 ≤ C.card`（`σ` 的值域在非单点 clade 里） |
+| 2 | `hCAB : C = A ∪ B` | `children_cover`（已证）＋ 孩子恰两个（`children_cladesOf_card_two`） |
+| 3 | `hAB : Disjoint A B` | `laminarFamily_cladesOf` ＋ `children_antichain` |
+| 4 | `hxA : x ∈ A`（`x = min' C`） | 最小元落在「含它的孩子」里（需 `P k` 的纤维刻画） |
+| 5 | `hyB : y ∈ B`（`y = min' (C \ A)`） | 同上 |
+| 6 | `hminA : ∀ b ∈ A, x ≤ b` | `min'_fiberOf_chainMap`（已证）＋ `P k` |
+| 7 | `hminB : ∀ b ∈ B, y ≤ b` | 同上 |
+| 8 | `hxy : x < y` | `x = min' C`、`y ∈ C`、`y ≠ x` |
+| 9 | `hchildren : children S C = {A, B}` | `children_newClade`（已证）／`children_fiberOf_chainMap_succ` |
+
+⬜ **真正缺的具名器材有两件**（其余都是已证砖）：
+
+1. **`frontier` 的定义与它和 `chainMap` 的对应** —— 即 `P k` 的陈述本身：
+   `def frontier (σ) (k) : Finset (Finset (Fin n))` ＋
+   `theorem fibers_eq_frontier (P k 的逐字形式)`。
+   它需要「parent（最小严格超簇）」这一定义（`parent u := (cladesOf n f).filter (u ⊂ ·)` 的最小元），
+   库内**没有**（`children` 是自底向上的极大真子簇，不是 parent）。
+2. **`P k → P (k+1)` 的推进**：需要「`σ k` 的两个孩子在 `frontier k` 里」。
+   这一条依赖 `hσord`（`σ i ⊊ σ j ⇒ i < j`，3 行可证）＋ `children_cover` ＋
+   `frontier` 的「孩子先于父」封闭性。
+
+⚠️ 以上是本轮**如实**的卡点：不是缺引理的「口径」，而是缺一件**新的定义层**（`parent` ＋ `frontier`）
+与一条**跨 `chainMap`/`fiberOf` 的不变式归纳**（约 300–500 行）。本轮 60 分钟盒内**未**做。
+⚠️ `def rankedFiberCount_gap` 逐字未动；本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）。 -/
+
+/-- ★★ **(O1) 的「≥」半的归约**：一旦 (a)（`Φ` 的满射性，见 §21 的逐字陈述）成立，
+纤维基数就**等于** `LinExt`（「≤」半是 §16 的 `card_fiber_le_LinExt`，无条件已证）。 -/
+theorem card_fiber_eq_LinExt_of_surj {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (hsurj : ∀ (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}),
+      (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) →
+      (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) →
+      ∃ g : Fin (n - 1) → Fin n × Fin n,
+        IsMergeHistory n g ∧ cladesOf n g = cladesOf n f ∧ ∀ k, newClade g k = (σ k).1) :
+    ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+      = LinExt (cladesOf n f) (Finset.univ : Finset (Fin n)) := by
+  classical
+  refine le_antisymm (card_fiber_le_LinExt hn hf) ?_
+  have hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f := univ_mem_cladesOf (by omega) hf
+  have hhook : hook (cladesOf n f) (Finset.univ : Finset (Fin n)) = n - 1 := by
+    simpa using hook_cladesOf_eq_card_sub_one f hf Finset.univ hU (by simpa using hn)
+  have hinternal : internalBelow (cladesOf n f) (Finset.univ : Finset (Fin n))
+      = (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+    ext D
+    simp [mem_internalBelow]
+  rw [LinExt_eq_filter_card (C := Finset.univ) hhook hinternal]
+  -- 目标：|合法创建序| ≤ |纤维|
+  let Wt := {σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)} //
+    (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) ∧
+    (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1)}
+  -- 由 (a) 选点：W → 纤维
+  let Ψ : Wt → {g // g ∈ (mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)} :=
+    fun σ => ⟨Classical.choose (hsurj σ.1 σ.2.1 σ.2.2),
+      Finset.mem_filter.mpr
+        ⟨(mem_mergeHistories _).mpr (Classical.choose_spec (hsurj σ.1 σ.2.1 σ.2.2)).1,
+          (Classical.choose_spec (hsurj σ.1 σ.2.1 σ.2.2)).2.1⟩⟩
+  have hΨinj : Function.Injective Ψ := by
+    intro σ σ' heq
+    refine Subtype.ext (funext fun k => Subtype.ext ?_)
+    have h1 := (Classical.choose_spec (hsurj σ.1 σ.2.1 σ.2.2)).2.2 k
+    have h2 := (Classical.choose_spec (hsurj σ'.1 σ'.2.1 σ'.2.2)).2.2 k
+    have hfun : Classical.choose (hsurj σ.1 σ.2.1 σ.2.2)
+        = Classical.choose (hsurj σ'.1 σ'.2.1 σ'.2.2) := by
+      have hh := congrArg Subtype.val heq
+      simpa [Ψ] using hh
+    show (σ.1 k).1 = (σ'.1 k).1
+    rw [← h1, hfun, h2]
+  have hle : Fintype.card Wt ≤ ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card := by
+    have := Fintype.card_le_of_injective Ψ hΨinj
+    rwa [Fintype.card_coe] at this
+  have hWcard : (Finset.univ.filter (fun σ : Fin (n - 1) →
+        {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)} =>
+      (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) ∧
+      (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1))).card = Fintype.card Wt :=
+    (Fintype.card_subtype _).symm
+  rw [hWcard]
+  exact hle
+
+/-- ★★★ **(a) ⇒ 缺口公式（对固定 `n ≥ 2`）**：只要 §21 那条满射性（逐字陈述）成立，
+`rankedFiberCount_gap` 就在该 `n` 上成立 —— 即「**(a) 是唯一剩余输入**」的机器核对形式。
+
+（尚有 `n ≤ 1` 的退化支与「对所有 `n` 的 (a)」两件在包外；本定理**不**算收口，也不叫 `_holds`。） -/
+theorem rankedFiberCount_gap_of_surj {n : ℕ} (hn : 2 ≤ n)
+    (hsurj : ∀ (f : Fin (n - 1) → Fin n × Fin n) (_hf : IsMergeHistory n f)
+      (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}),
+      (∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) →
+      (∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) →
+      ∃ g : Fin (n - 1) → Fin n × Fin n,
+        IsMergeHistory n g ∧ cladesOf n g = cladesOf n f ∧ ∀ k, newClade g k = (σ k).1) :
+    ∀ (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
+      ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
+        = (n - 1).factorial
+          / ∏ C ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card), (C.card - 1) :=
+  rankedFiberCount_gap_of_fiber_eq_LinExt hn
+    (fun f hf => card_fiber_eq_LinExt_of_surj hn hf (hsurj f hf))
+    (fun _f H _ => LinExt_eq_LE_cladesOf H Finset.univ _)
+
+/-- ★★ **线性扩展里「孩子的位置必在父之前」**（§21 不变式推进所需的核心引理）。
+
+`σ` 是非单点 clade 的线性扩展（单射 + 序条件），则 `2 ≤ |B|` 且 `B ∈ children (σ k)` ⇒
+`∃ j < k, σ j = B` 。（`σ` 单射 + 两边同基数（`card_filter_nonsingleton_cladesOf`）⇒ 满射；
+再用 `B ⊊ σ k` 与序条件排除 `k < j`。） -/
+theorem exists_lt_of_mem_children {n : ℕ} (_hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    {k : Fin (n - 1)} {B : Finset (Fin n)}
+    (hB : B ∈ children (cladesOf n f) (σ k).1) (hB2 : 2 ≤ B.card) :
+    ∃ j : Fin (n - 1), j < k ∧ (σ j).1 = B := by
+  classical
+  have hBcl : B ∈ cladesOf n f := children_mem hB
+  have hBmem : B ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card) :=
+    Finset.mem_filter.mpr ⟨hBcl, hB2⟩
+  -- σ 单射 ⇒ 满射到 filter
+  have hsurj : ∀ D : {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)}, ∃ i, σ i = D := by
+    intro D
+    have hinj' : Function.Injective (fun i : Fin (n - 1) => (σ i).1) := by
+      intro i j hij
+      by_contra hne
+      exact hinj i j hne (Subtype.ext hij)
+    have hsub : (Finset.univ.image fun i : Fin (n - 1) => (σ i).1)
+        ⊆ (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+      intro E hE
+      obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hE
+      exact (σ i).2
+    have hcard : (Finset.univ.image fun i : Fin (n - 1) => (σ i).1).card
+        = ((cladesOf n f).filter (fun C => 2 ≤ C.card)).card := by
+      rw [Finset.card_image_of_injective _ hinj', Finset.card_univ, Fintype.card_fin,
+        card_filter_nonsingleton_cladesOf hf]
+    have heq := Finset.eq_of_subset_of_card_le hsub (le_of_eq hcard.symm)
+    have hsub' : (cladesOf n f).filter (fun C => 2 ≤ C.card) ⊆
+        (Finset.univ.image fun i : Fin (n - 1) => (σ i).1) := by
+      rw [heq]
+    obtain ⟨i, -, hi⟩ := Finset.mem_image.mp (hsub' D.2)
+    exact ⟨i, Subtype.ext hi⟩
+  obtain ⟨j, hj⟩ := hsurj ⟨B, hBmem⟩
+  have hjk : j ≠ k := by
+    intro h
+    have : (σ j).1 = (σ k).1 := by rw [h]
+    rw [hj] at this
+    exact (children_ssubset hB).2 this.ge
+  have hjklt : j < k := by
+    by_contra hlt
+    have hkj : k < j := by
+      rcases lt_or_gt_of_ne hjk with h | h
+      · exact absurd h hlt
+      · exact h
+    have hsub : (σ j).1 ⊂ (σ k).1 := by
+      rw [hj]
+      exact children_ssubset hB
+    exact hord k j hkj hsub
+  exact ⟨j, hjklt, by rw [hj]⟩
+
+/-- ★★★ **(a) 的结构归约：`reconstruct` 读出的合并史就是 `f` 的一次「**步骤重排**」**。
+
+即 `reconstruct (…) σ d = f ∘ τ`（`τ` 单射）。故 §21 的 (a) 等价于：
+
+> **按一个线性扩展的顺序重排一个合并史的步骤，仍然得到一个合并史（且 `cladesOf` 不变）**。
+
+这把剩余工作从「吹 `reconstruct`/`cladesOf`」降到「只谈 `IsMergeHistory` 与 `newClade`」。
+具体地：`τ k := ` 唯一的 `j` 使 `newClade f j = (σ k).1`（`existsUnique_newClade`，§14.5 已证），
+且 `σ j = newClade f (τ j)` ⇒ `τ` 单射（`σ` 单射 + `newClade_injective`）。 -/
+theorem reconstruct_eq_comp {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) (d : Fin n) :
+    ∃ τ : Fin (n - 1) → Fin (n - 1), Function.Injective τ ∧
+      ∀ k, reconstruct (cladesOf n f) (fun k => (σ k).1) d k = f (τ k) := by
+  classical
+  have hex : ∀ k : Fin (n - 1), ∃! j : Fin (n - 1), newClade f j = (σ k).1 := fun k =>
+    existsUnique_newClade hf (Finset.mem_filter.mp (σ k).2).1 (Finset.mem_filter.mp (σ k).2).2
+  choose τ hτ using hex
+  have hτ1 : ∀ k, newClade f (τ k) = (σ k).1 := fun k => (hτ k).1
+  refine ⟨τ, ?_, ?_⟩
+  · intro i j hij
+    have h1 : newClade f (τ i) = newClade f (τ j) := by rw [hij]
+    have h2 : (σ i).1 = (σ j).1 := (hτ1 i).symm.trans (h1.trans (hτ1 j))
+    by_contra hne
+    exact hinj i j hne (Subtype.ext h2)
+  · intro k
+    have hstep : reconstruct (cladesOf n f) (fun k => (σ k).1) d k
+        = reconstructStep (cladesOf n f) (newClade f (τ k)) d := by
+      show reconstructStep (cladesOf n f) ((σ k).1) d
+        = reconstructStep (cladesOf n f) (newClade f (τ k)) d
+      rw [hτ1 k]
+    rw [hstep]
+    exact congrFun (reconstruct_newClade_eq hf d) (τ k)
+
 end Phylo.Stat.HookLength
+
+
+
+
 
 
 
