@@ -136,9 +136,74 @@ VAR_RE = re.compile(r"^variable\s+\{?(.*)$")
 GAP_RE = re.compile(r"(gap|Gap)")
 
 
+def strip_lean_comments(text):
+    """★ W27 修：把 Lean 注释替换成等长空白（保留换行，行号不变）。
+
+    起因（真实事故）：`Phylo/Stat/HookLength.lean` §21 的 docstring 里有个
+
+    ```text
+    theorem rankedFiberCount_gap_holds : rankedFiberCount_gap := by ...
+    ```
+
+    的「收尾装配草图」，旧版按行 grep 扫到这一行就把缺口误判成 `[已收口]`
+    （台账一度报 真开放 6，实为 7）。注释里的声明**不是**声明。
+    """
+    out = []
+    i, n = 0, len(text)
+    depth = 0
+    while i < n:
+        if depth == 0:
+            if text.startswith("/-", i):
+                depth = 1
+                out.append("  ")
+                i += 2
+                continue
+            if text.startswith("--", i):
+                j = text.find("\n", i)
+                if j < 0:
+                    j = n
+                out.append(" " * (j - i))
+                i = j
+                continue
+            ch = text[i]
+            if ch == '"':
+                # 字符串字面量：整段跳过，避免把里面的 `--`/`/-` 当注释
+                out.append(ch)
+                i += 1
+                while i < n:
+                    c = text[i]
+                    if c == "\\" and i + 1 < n:
+                        out.append(text[i:i + 2])
+                        i += 2
+                        continue
+                    out.append(c)
+                    i += 1
+                    if c == '"':
+                        break
+                continue
+            out.append(ch)
+            i += 1
+        else:
+            if text.startswith("/-", i):
+                depth += 1
+                out.append("  ")
+                i += 2
+                continue
+            if text.startswith("-/", i):
+                depth -= 1
+                out.append("  ")
+                i += 2
+                continue
+            out.append("\n" if text[i] == "\n" else " ")
+            i += 1
+    return "".join(out)
+
+
 def read_lines(path):
     with open(path, "rb") as f:
-        return f.read().decode("utf-8").replace("\r\n", "\n").split("\n")
+        raw = f.read().decode("utf-8").replace("\r\n", "\n")
+    # 注释先抹成空白，再切行（行号与原文一一对应）
+    return strip_lean_comments(raw).split("\n")
 
 
 def cut_assign(text):
