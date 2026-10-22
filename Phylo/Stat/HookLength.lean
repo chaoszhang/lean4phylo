@@ -3451,7 +3451,345 @@ theorem linExtShuffle_ordered {T : Finset (Finset α)} {A B C : Finset α} {m sA
         (show (⟨i, hiB⟩ : ↥(bPos last S)) < ⟨j, hjB⟩ from hij)
     exact hordρ _ _ hlt hssub
 
+/-! ### §19.5 ★★★ **正向读数**：`σ` 的位置集 / `τ` / `ρ`（文件级定义，让证明项同形） -/
+
+/-- ★ `σ` 的 **`A`-位置集**：那些落在 `internalBelow T A` 里的位置。 -/
+noncomputable def posA {T : Finset (Finset α)} {A C : Finset α} {n : ℕ}
+    (σ : Fin n → {D // D ∈ internalBelow T C}) : Finset (Fin n) :=
+  Finset.univ.filter (fun i => (σ i).1 ∈ internalBelow T A)
+
+/-- `posA` 的成员刻画。 -/
+theorem mem_posA {T : Finset (Finset α)} {A C : Finset α} {n : ℕ}
+    {σ : Fin n → {D // D ∈ internalBelow T C}} {i : Fin n} :
+    i ∈ posA (A := A) σ ↔ (σ i).1 ∈ internalBelow T A := by
+  simp [posA]
+
+/-- ★ `σ` 在 `A`-位置上的**读数**（`A`-子树的线性扩展）。 -/
+noncomputable def tauOf {T : Finset (Finset α)} {A C : Finset α}
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hS : (posA (A := A) σ).card = hook T A) :
+    Fin (hook T A) → {D // D ∈ internalBelow T A} :=
+  fun j => ⟨(σ ↑(((posA (A := A) σ).orderIsoOfFin hS) j)).1,
+    (Finset.mem_filter.mp (((posA (A := A) σ).orderIsoOfFin hS) j).2).2⟩
+
+/-- `tauOf` 的定义式。 -/
+theorem tauOf_apply {T : Finset (Finset α)} {A C : Finset α}
+    {σ : Fin (hook T C) → {D // D ∈ internalBelow T C}}
+    {hS : (posA (A := A) σ).card = hook T A} (j : Fin (hook T A)) :
+    (tauOf σ hS j).1 = (σ ↑(((posA (A := A) σ).orderIsoOfFin hS) j)).1 := rfl
+
+/-- ★ `σ` 在 `B`-位置上的**读数**（`B`-子树的线性扩展）。
+（`B`-位置不在 `A`-位置集里，故取值落在 `internalBelow T B`：用§19.2 的
+`linExt_mem_union_of_ne_last` 与两孩子子树不交。） -/
+noncomputable def rhoOf {T : Finset (Finset α)} {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B})
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    (_hS : (posA (A := A) σ).card = hook T A)
+    (_hSl : ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ ∉ posA (A := A) σ)
+    (hB : (bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).card = hook T B) :
+    Fin (hook T B) → {D // D ∈ internalBelow T B} :=
+  fun j => ⟨(σ ↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).orderIsoOfFin hB) j)).1, by
+    have hb : (↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).orderIsoOfFin hB) j) : Fin (hook T C))
+        ∈ bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ) := (((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).orderIsoOfFin hB) j).2
+    obtain ⟨hne, hnS⟩ := mem_bPos.mp hb
+    have hunion := linExt_mem_union_of_ne_last hC h2 hch σ hinj hord hne
+    rcases Finset.mem_union.mp hunion with hh | hh
+    · exfalso
+      exact hnS (Finset.mem_filter.mpr ⟨Finset.mem_univ _, hh⟩)
+    · exact hh⟩
+
+/-- `rhoOf` 的定义式。 -/
+theorem rhoOf_apply {T : Finset (Finset α)} {A B C : Finset α}
+    {hC : C ∈ T} {h2 : 2 ≤ C.card} {hch : children T C = {A, B}}
+    {σ : Fin (hook T C) → {D // D ∈ internalBelow T C}}
+    {hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j}
+    {hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1}
+    {hS : (posA (A := A) σ).card = hook T A} {hSl : ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ ∉ posA (A := A) σ}
+    {hB : (bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).card = hook T B} (j : Fin (hook T B)) :
+    (rhoOf hC h2 hch σ hinj hord hS hSl hB j).1
+      = (σ ↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ)).orderIsoOfFin hB) j)).1 := rfl
+
+/-- ★★★ **线性扩展由（位置集, `τ`, `ρ`）确定**：把 `σ` 的读数用 `linExtShuffle` 拼回去，得到 `σ` 本身。
+
+（这是双射的**另一半**：`σ ↦ (位置集, τ, ρ)` 的左逆。三类位置上各用一条取值引理。） -/
+theorem linExtShuffle_recovers {T : Finset (Finset α)} {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    (hCmem : C ∈ internalBelow T C)
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    (hS : (posA (A := A) σ).card = hook T A)
+    (hSl : ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ ∉ posA (A := A) σ)
+    (hBof : (bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+      (posA (A := A) σ)).card = hook T B) :
+    linExtShuffle ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ (posA (A := A) σ) hS hBof
+        ⟨C, hCmem⟩ (tauOf σ hS)
+        (rhoOf hC h2 hch σ hinj hord hS hSl hBof) hAIC hBIC = σ := by
+  funext i
+  by_cases hiL : i = ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+  · rw [hiL, linExtShuffle_last, linExt_last hC h2 σ hinj hord]
+  · by_cases hiS : i ∈ posA (A := A) σ
+    · rw [linExtShuffle_mem_S ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+        (posA (A := A) σ) hS hBof ⟨C, hCmem⟩ (tauOf σ hS)
+        (rhoOf hC h2 hch σ hinj hord hS hSl hBof) hAIC hBIC hSl hiS]
+      refine Subtype.ext ?_
+      show (tauOf σ hS (((posA (A := A) σ).orderIsoOfFin hS).symm ⟨i, hiS⟩)).1 = (σ i).1
+      rw [tauOf_apply]
+      simp
+    · rw [linExtShuffle_mem_B ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+        (posA (A := A) σ) hS hBof ⟨C, hCmem⟩ (tauOf σ hS)
+        (rhoOf hC h2 hch σ hinj hord hS hSl hBof) hAIC hBIC hiS hiL]
+      refine Subtype.ext ?_
+      show (rhoOf hC h2 hch σ hinj hord hS hSl hBof
+        (((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+          (posA (A := A) σ)).orderIsoOfFin hBof).symm
+          ⟨i, by rw [mem_bPos]; exact ⟨hiL, hiS⟩⟩)).1 = (σ i).1
+      rw [rhoOf_apply]
+      simp
+
+/-- ★★★ **`tauOf` 的性质**（线性扩展的限制）。 -/
+theorem tauOf_props {T : Finset (Finset α)} {A C : Finset α}
+    {σ : Fin (hook T C) → {D // D ∈ internalBelow T C}}
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    (hS : (posA (A := A) σ).card = hook T A) :
+    (∀ i j : Fin (hook T A), i ≠ j → tauOf σ hS i ≠ tauOf σ hS j) ∧
+    (∀ i j : Fin (hook T A), i < j → ¬ (tauOf σ hS j).1 ⊂ (tauOf σ hS i).1) := by
+  constructor
+  · intro i j hij hcon
+    have hval : (tauOf σ hS i).1 = (tauOf σ hS j).1 := congrArg Subtype.val hcon
+    rw [tauOf_apply, tauOf_apply] at hval
+    have hne : (↑(((posA (A := A) σ).orderIsoOfFin hS) i) : Fin (hook T C))
+        ≠ ↑(((posA (A := A) σ).orderIsoOfFin hS) j) := by
+      intro hEq
+      exact hij (((posA (A := A) σ).orderIsoOfFin hS).injective (Subtype.ext hEq))
+    exact (hinj _ _ hne) (Subtype.ext hval)
+  · intro i j hij
+    have hlt : (↑(((posA (A := A) σ).orderIsoOfFin hS) i) : Fin (hook T C))
+        < ↑(((posA (A := A) σ).orderIsoOfFin hS) j) :=
+      ((posA (A := A) σ).orderIsoOfFin hS).lt_iff_lt.mpr hij
+    have hres := hord _ _ hlt
+    rwa [tauOf_apply, tauOf_apply]
+
+/-- ★★★ **`rhoOf` 的性质**（线性扩展的限制）。 -/
+theorem rhoOf_props {T : Finset (Finset α)} {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B})
+    {σ : Fin (hook T C) → {D // D ∈ internalBelow T C}}
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    (hS : (posA (A := A) σ).card = hook T A)
+    (hSl : ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ ∉ posA (A := A) σ)
+    (hB : (bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+      (posA (A := A) σ)).card = hook T B) :
+    (∀ i j : Fin (hook T B), i ≠ j →
+        rhoOf hC h2 hch σ hinj hord hS hSl hB i ≠ rhoOf hC h2 hch σ hinj hord hS hSl hB j) ∧
+    (∀ i j : Fin (hook T B), i < j →
+        ¬ (rhoOf hC h2 hch σ hinj hord hS hSl hB j).1
+          ⊂ (rhoOf hC h2 hch σ hinj hord hS hSl hB i).1) := by
+  constructor
+  · intro i j hij hcon
+    have hval : (rhoOf hC h2 hch σ hinj hord hS hSl hB i).1
+        = (rhoOf hC h2 hch σ hinj hord hS hSl hB j).1 := congrArg Subtype.val hcon
+    rw [rhoOf_apply, rhoOf_apply] at hval
+    have hne : (↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+          (posA (A := A) σ)).orderIsoOfFin hB) i) : Fin (hook T C))
+        ≠ ↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+          (posA (A := A) σ)).orderIsoOfFin hB) j) := by
+      intro hEq
+      exact hij (((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+        (posA (A := A) σ)).orderIsoOfFin hB).injective (Subtype.ext hEq))
+    exact (hinj _ _ hne) (Subtype.ext hval)
+  · intro i j hij
+    have hlt : (↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+          (posA (A := A) σ)).orderIsoOfFin hB) i) : Fin (hook T C))
+        < ↑(((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+          (posA (A := A) σ)).orderIsoOfFin hB) j) :=
+      ((bPos ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+        (posA (A := A) σ)).orderIsoOfFin hB).lt_iff_lt.mpr hij
+    have hres := hord _ _ hlt
+    rwa [rhoOf_apply, rhoOf_apply]
+
+/-- ★★ **拼接函数的位置集就是 `S`**（反向的第一件：位置集可恢复）。 -/
+theorem posA_linExtShuffle {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    (hSl : last ∉ S) (hcA : cC.1 ∉ internalBelow T A)
+    (hIdisj : Disjoint (internalBelow T A) (internalBelow T B)) :
+    posA (A := A) (linExtShuffle last S hS hB cC τ ρ hAIC hBIC) = S := by
+  ext i
+  rw [mem_posA]
+  constructor
+  · intro hmem
+    by_contra hiS
+    by_cases hiL : i = last
+    · rw [hiL, linExtShuffle_last] at hmem
+      exact hcA hmem
+    · rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hiS hiL] at hmem
+      exact (Finset.disjoint_left.mp hIdisj hmem)
+        (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, by rw [mem_bPos]; exact ⟨hiL, hiS⟩⟩)).2
+  · intro hiS
+    rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS]
+    exact (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).2
+
+/-- ★★★★ **两孩子版交错引理**（缺件 ③ 的两孩子形式）。 -/
+theorem LinExt_interleaving_pair (T : Finset (Finset α)) (hl : LaminarFamily T) {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B}) (hAB : A ≠ B) :
+    LinExt T C = Nat.choose (hook T A + hook T B) (hook T A) * (LinExt T A * LinExt T B) := by
+  classical
+  have hAc : A ∈ children T C := children_pair_left hch
+  have hBc : B ∈ children T C := children_pair_right hch
+  have hdisj : Disjoint A B := children_pair_disjoint hl hch hAB
+  have hAIC : internalBelow T A ⊆ internalBelow T C := internalBelow_subset_of_children hAc
+  have hBIC : internalBelow T B ⊆ internalBelow T C := internalBelow_subset_of_children hBc
+  have hm : hook T C = hook T A + hook T B + 1 := hook_eq_add_children_pair hl hC h2 hch hAB
+  have hIdisj : Disjoint (internalBelow T A) (internalBelow T B) := internalBelow_pair_disjoint hdisj
+  have hCnotA : C ∉ internalBelow T A :=
+    fun hh => (children_ssubset hAc).2 (mem_internalBelow.mp hh).2.2
+  have hCnotB : C ∉ internalBelow T B :=
+    fun hh => (children_ssubset hBc).2 (mem_internalBelow.mp hh).2.2
+  have hCmem : C ∈ internalBelow T C := mem_internalBelow.mpr ⟨hC, h2, Finset.Subset.refl C⟩
+  set last : Fin (hook T C) := ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ with hlastdef
+  have hlastmax : ∀ j : Fin (hook T C), (j : ℕ) ≤ (last : ℕ) := by
+    intro j
+    have hj := j.isLt
+    have hl : (last : ℕ) = hook T C - 1 := rfl
+    omega
+  have hBof : ∀ (S : Finset (Fin (hook T C))), S.card = hook T A → last ∉ S →
+      (bPos last S).card = hook T B := by
+    intro S hS hSl
+    rw [bPos_card last S hSl, hS]
+    omega
+  let Pat := {S : Finset (Fin (hook T C)) // S.card = hook T A ∧ last ∉ S}
+  let LA := {τ : Fin (hook T A) → {D // D ∈ internalBelow T A} //
+    (∀ i j : Fin (hook T A), i ≠ j → τ i ≠ τ j) ∧
+    (∀ i j : Fin (hook T A), i < j → ¬ (τ j).1 ⊂ (τ i).1)}
+  let LB := {ρ : Fin (hook T B) → {D // D ∈ internalBelow T B} //
+    (∀ i j : Fin (hook T B), i ≠ j → ρ i ≠ ρ j) ∧
+    (∀ i j : Fin (hook T B), i < j → ¬ (ρ j).1 ⊂ (ρ i).1)}
+  let X := {σ : Fin (hook T C) → {D // D ∈ internalBelow T C} //
+    (∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j) ∧
+    (∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)}
+  have hLC : LinExt T C = Fintype.card X := by
+    rw [LinExt]
+    exact (Fintype.card_subtype _).symm
+  have hLA : LinExt T A = Fintype.card LA := by
+    rw [LinExt]
+    exact (Fintype.card_subtype _).symm
+  have hLB : LinExt T B = Fintype.card LB := by
+    rw [LinExt]
+    exact (Fintype.card_subtype _).symm
+  -- 拼接（反向）
+  let invF : Pat × (LA × LB) → X := fun y =>
+    ⟨linExtShuffle last y.1.1 y.1.2.1 (hBof y.1.1 y.1.2.1 y.1.2.2) ⟨C, hCmem⟩ y.2.1.1 y.2.2.1 hAIC hBIC,
+      linExtShuffle_injective last y.1.1 y.1.2.1 (hBof y.1.1 y.1.2.1 y.1.2.2) ⟨C, hCmem⟩
+        y.2.1.1 y.2.2.1 hAIC hBIC y.1.2.2 hCnotA hCnotB hIdisj y.2.1.2.1 y.2.2.2.1,
+      linExtShuffle_ordered last hlastmax y.1.1 y.1.2.1 (hBof y.1.1 y.1.2.1 y.1.2.2) ⟨C, hCmem⟩
+        y.2.1.1 y.2.2.1 hAIC hBIC y.1.2.2 rfl hdisj y.2.1.2.2 y.2.2.2.2⟩
+  have hinvF_inj : Function.Injective invF := by
+    rintro ⟨⟨S, hS, hSl⟩, ⟨⟨τ, hτi, hτo⟩, ⟨ρ, hρi, hρo⟩⟩⟩
+      ⟨⟨S', hS', hSl'⟩, ⟨⟨τ', hτi', hτo'⟩, ⟨ρ', hρi', hρo'⟩⟩⟩ heq
+    have hfun : linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC
+        = linExtShuffle last S' hS' (hBof S' hS' hSl') ⟨C, hCmem⟩ τ' ρ' hAIC hBIC := by
+      simpa [invF] using congrArg Subtype.val heq
+    have hSS : S = S' := by
+      have h1 : posA (A := A) (linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC) = S :=
+        posA_linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC hSl hCnotA hIdisj
+      have h2' : posA (A := A) (linExtShuffle last S' hS' (hBof S' hS' hSl') ⟨C, hCmem⟩ τ' ρ' hAIC hBIC) = S' :=
+        posA_linExtShuffle last S' hS' (hBof S' hS' hSl') ⟨C, hCmem⟩ τ' ρ' hAIC hBIC hSl' hCnotA hIdisj
+      rw [← h1, ← h2', hfun]
+    subst hSS
+    have hτ : τ = τ' := by
+      funext j
+      have h1 : (linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC
+            ↑((S.orderIsoOfFin hS) j)).1 = (τ j).1 := by
+        rw [linExtShuffle_mem_S last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC hSl
+          ((S.orderIsoOfFin hS) j).2]
+        exact congrArg (fun x => (τ x).1) (OrderIso.symm_apply_apply (S.orderIsoOfFin hS) j)
+      have h2' : (linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ' ρ' hAIC hBIC
+            ↑((S.orderIsoOfFin hS) j)).1 = (τ' j).1 := by
+        rw [linExtShuffle_mem_S last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ' ρ' hAIC hBIC hSl
+          ((S.orderIsoOfFin hS) j).2]
+        exact congrArg (fun x => (τ' x).1) (OrderIso.symm_apply_apply (S.orderIsoOfFin hS) j)
+      exact Subtype.ext (h1.symm.trans ((congrArg Subtype.val (congrFun hfun _)).trans h2'))
+    subst hτ
+    have hρ : ρ = ρ' := by
+      funext j
+      have h1 : (linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC
+            ↑(((bPos last S).orderIsoOfFin (hBof S hS hSl)) j)).1 = (ρ j).1 := by
+        obtain ⟨hne, hnS⟩ := mem_bPos.mp (((bPos last S).orderIsoOfFin (hBof S hS hSl)) j).2
+        rw [linExtShuffle_mem_B last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ hAIC hBIC hnS hne]
+        exact congrArg (fun x => (ρ x).1)
+          (OrderIso.symm_apply_apply ((bPos last S).orderIsoOfFin (hBof S hS hSl)) j)
+      have h2' : (linExtShuffle last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ' hAIC hBIC
+            ↑(((bPos last S).orderIsoOfFin (hBof S hS hSl)) j)).1 = (ρ' j).1 := by
+        obtain ⟨hne, hnS⟩ := mem_bPos.mp (((bPos last S).orderIsoOfFin (hBof S hS hSl)) j).2
+        rw [linExtShuffle_mem_B last S hS (hBof S hS hSl) ⟨C, hCmem⟩ τ ρ' hAIC hBIC hnS hne]
+        exact congrArg (fun x => (ρ' x).1)
+          (OrderIso.symm_apply_apply ((bPos last S).orderIsoOfFin (hBof S hS hSl)) j)
+      exact Subtype.ext (h1.symm.trans ((congrArg Subtype.val (congrFun hfun _)).trans h2'))
+    subst hρ
+    rfl
+  -- 末位不在 `A`-位置集里
+  have hposlast : ∀ (σ : Fin (hook T C) → {D // D ∈ internalBelow T C}),
+      (∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j) →
+      (∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1) →
+      last ∉ posA (A := A) σ := by
+    intro σ hinj hord hmem
+    have h1 : (σ last).1 ∈ internalBelow T A := mem_posA.mp hmem
+    rw [linExt_last hC h2 σ hinj hord] at h1
+    exact hCnotA h1
+  -- 拼接满射
+  have hinvF_surj : Function.Surjective invF := by
+    rintro ⟨σ, hinj, hord⟩
+    have hS : (posA (A := A) σ).card = hook T A := linExt_positions_card hC h2 hch σ hinj hord
+    have hSl : last ∉ posA (A := A) σ := hposlast σ hinj hord
+    refine ⟨⟨⟨posA (A := A) σ, hS, hSl⟩,
+      ⟨⟨tauOf σ hS, (tauOf_props hinj hord hS).1, (tauOf_props hinj hord hS).2⟩,
+        ⟨rhoOf hC h2 hch σ hinj hord hS hSl (hBof (posA (A := A) σ) hS hSl),
+          (rhoOf_props hC h2 hch hinj hord hS hSl (hBof (posA (A := A) σ) hS hSl)).1,
+          (rhoOf_props hC h2 hch hinj hord hS hSl (hBof (posA (A := A) σ) hS hSl)).2⟩⟩⟩, ?_⟩
+    refine Subtype.ext ?_
+    exact linExtShuffle_recovers hC h2 hch hAIC hBIC hCmem σ hinj hord hS hSl
+      (hBof (posA (A := A) σ) hS hSl)
+  -- 基数相等
+  have hcard : Fintype.card X = Fintype.card (Pat × (LA × LB)) := by
+    refine le_antisymm ?_ (Fintype.card_le_of_injective invF hinvF_inj)
+    exact Fintype.card_le_of_surjective invF hinvF_surj
+  -- 位置集的个数
+  have hPatCard : Fintype.card Pat = Nat.choose (hook T A + hook T B) (hook T A) := by
+    have hset : (Finset.univ.filter (fun S : Finset (Fin (hook T C)) =>
+        S.card = hook T A ∧ last ∉ S))
+        = ((Finset.univ : Finset (Fin (hook T C))).erase last).powersetCard (hook T A) := by
+      ext S
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      rw [Finset.mem_powersetCard]
+      exact ⟨fun h => ⟨Finset.subset_erase.mpr ⟨Finset.subset_univ S, h.2⟩, h.1⟩,
+        fun h => ⟨h.2, (Finset.subset_erase.mp h.1).2⟩⟩
+    have hstep : Fintype.card Pat
+        = (Finset.univ.filter (fun S : Finset (Fin (hook T C)) =>
+            S.card = hook T A ∧ last ∉ S)).card := Fintype.card_subtype _
+    rw [hstep, hset, Finset.card_powersetCard, Finset.card_erase_of_mem (Finset.mem_univ last),
+      Finset.card_univ, Fintype.card_fin, hm]
+    norm_num
+  -- 装配
+  have hprod : Fintype.card (Pat × (LA × LB))
+      = Fintype.card Pat * (Fintype.card LA * Fintype.card LB) := by
+    rw [Fintype.card_prod, Fintype.card_prod]
+  rw [hLC, hcard, hprod, hPatCard, hLA, hLB]
+
 end Phylo.Stat.HookLength
+
+
+
+
 
 
 
