@@ -2922,7 +2922,125 @@ theorem LinExt_interleaving_false_without_laminar :
           (fun Bx => LinExt Tnonlam Bx.1) := by
   decide
 
+/-! ### §19 ★★ 两孩子版交错引理：**前置结构器材**
+
+目标（待证）：
+
+```text
+LinExt T C = Nat.choose (hook T A + hook T B) (hook T A) * (LinExt T A * LinExt T B)
+```
+
+在假设 `hl : LaminarFamily T`、`hC : C ∈ T`、`h2 : 2 ≤ C.card`、
+`hch : children T C = {A, B}`、**`hAB : A ≠ B`** 下。
+
+⚠️ **`hAB` 不可省**：不同的 `A、B` 共同表示一个集合，而同一个也可写成 `{A, A}`。
+机器核对的反例（`§19.1`）：`T = {{0,1}, {0,1,2}}`、`C = univ`，
+`children T univ = {{0,1}}`（故 `hch` 取 `A = B = {0,1}` 成立），
+左端 `LinExt = 1`、右端 `choose(2,1)·1·1 = 2`。 -/
+
+/-- `A ∈ children T C`（由 `children T C = {A, B}`）。 -/
+theorem children_pair_left {T : Finset (Finset α)} {C A B : Finset α}
+    (hch : children T C = {A, B}) : A ∈ children T C := by
+  rw [hch]
+  exact Finset.mem_insert_self _ _
+
+/-- `B ∈ children T C`（由 `children T C = {A, B}`）。 -/
+theorem children_pair_right {T : Finset (Finset α)} {C A B : Finset α}
+    (hch : children T C = {A, B}) : B ∈ children T C := by
+  rw [hch]
+  exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _)
+
+/-- ★ **两个（不同的）孩子不交**：嵌嵌性 + 孩子的极大性 ⇒ 不可能嵌套。 -/
+theorem children_pair_disjoint {T : Finset (Finset α)} {C A B : Finset α}
+    (hl : LaminarFamily T) (hch : children T C = {A, B}) (hAB : A ≠ B) :
+    Disjoint A B := by
+  have hA : A ∈ children T C := children_pair_left hch
+  have hB : B ∈ children T C := children_pair_right hch
+  rcases hl A (children_mem hA) B (children_mem hB) with hsub | hsub | hdisj
+  · exact absurd (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hAB⟩) (children_antichain hA hB)
+  · exact absurd (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hAB.symm⟩) (children_antichain hB hA)
+  · exact hdisj
+
+/-- 孩子的 `internalBelow` 落在父的 `internalBelow` 里。 -/
+theorem internalBelow_subset_of_children {T : Finset (Finset α)} {C A : Finset α}
+    (hA : A ∈ children T C) : internalBelow T A ⊆ internalBelow T C := by
+  intro D hD
+  obtain ⟨hDT, hD2, hDA⟩ := mem_internalBelow.mp hD
+  exact mem_internalBelow.mpr ⟨hDT, hD2, hDA.trans (children_ssubset hA).1⟩
+
+/-- ★ **两孩子子树之间无可比性**：`X ∈ internalBelow A`、`Y ∈ internalBelow B`
+且 `A、B` 不交 ⇒ `X ⊂ Y` 为假（`X` 非空且落在 `A ∩ B` 里）。 -/
+theorem not_ssubset_of_children_pair_left {T : Finset (Finset α)} {A B : Finset α}
+    (hdisj : Disjoint A B) {X Y : Finset α}
+    (hX : X ∈ internalBelow T A) (hY : Y ∈ internalBelow T B) : ¬ X ⊂ Y := by
+  intro hssub
+  have hX2 : 2 ≤ X.card := (mem_internalBelow.mp hX).2.1
+  have hXA : X ⊆ A := (mem_internalBelow.mp hX).2.2
+  have hYB : Y ⊆ B := (mem_internalBelow.mp hY).2.2
+  have hinter : A ∩ B = ∅ := Finset.disjoint_iff_inter_eq_empty.mp hdisj
+  have hsub : X ⊆ A ∩ B := Finset.subset_inter hXA (hssub.1.trans hYB)
+  rw [hinter] at hsub
+  have hemp : X = ∅ := Finset.eq_empty_iff_forall_notMem.mpr (fun x hx => by simpa using hsub hx)
+  rw [hemp] at hX2
+  simp at hX2
+
+/-- ★ 反方向：`Y ⊂ X` 为假。 -/
+theorem not_ssubset_of_children_pair_right {T : Finset (Finset α)} {A B : Finset α}
+    (hdisj : Disjoint A B) {X Y : Finset α}
+    (hX : X ∈ internalBelow T A) (hY : Y ∈ internalBelow T B) : ¬ Y ⊂ X := by
+  intro hssub
+  have hY2 : 2 ≤ Y.card := (mem_internalBelow.mp hY).2.1
+  have hYB : Y ⊆ B := (mem_internalBelow.mp hY).2.2
+  have hXA : X ⊆ A := (mem_internalBelow.mp hX).2.2
+  have hinter : A ∩ B = ∅ := Finset.disjoint_iff_inter_eq_empty.mp hdisj
+  have hsub : Y ⊆ A ∩ B := Finset.subset_inter (hssub.1.trans hXA) hYB
+  rw [hinter] at hsub
+  have hemp : Y = ∅ := Finset.eq_empty_iff_forall_notMem.mpr (fun y hy => by simpa using hsub hy)
+  rw [hemp] at hY2
+  simp at hY2
+
+/-- ★ **`hook` 的两孩子分解**：`hook T C = hook T A + hook T B + 1`。 -/
+theorem hook_eq_add_children_pair {T : Finset (Finset α)} {C A B : Finset α}
+    (hl : LaminarFamily T) (hC : C ∈ T) (h2 : 2 ≤ C.card)
+    (hch : children T C = {A, B}) (hAB : A ≠ B) :
+    hook T C = hook T A + hook T B + 1 := by
+  have h := hook_eq_one_add_sum_children hl hC h2
+  rw [hch] at h
+  rw [Finset.sum_insert (by simp [hAB]), Finset.sum_singleton] at h
+  omega
+
+/-- ★ **`internalBelow T C` 的两孩子形式**：`= {C} ∪ (internalBelow T A ∪ internalBelow T B)`。 -/
+theorem internalBelow_pair_eq {T : Finset (Finset α)} {C A B : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B}) :
+    internalBelow T C = insert C (internalBelow T A ∪ internalBelow T B) := by
+  rw [internalBelow_eq_insert_biUnion_children hC h2, hch]
+  ext D
+  simp
+
+/-! #### §19.1 ⚠️ **`hAB` 不可省**：`A = B` 时命题为假（机器核对）
+
+`{A, B}` 当 `A = B` 时就是 `{A}`，故 `hch : children T C = {A, B}` 并**不**隐含 `A ≠ B`。
+取 `T = {{0,1}, {0,1,2}}`、`C = univ`：`children T univ = {{0,1}}`，取 `A = B = {0,1}` 则
+* 左端：`internalBelow T univ = {{0,1}, univ}` 为两元链 ⇒ `LinExt = 1`；
+* `hook T {0,1} = 1`、`LinExt T {0,1} = 1` ⇒ 右端 `= choose 2 1 · 1 · 1 = 2`。 -/
+
+/-- 反例用的退化族（`children T univ` 只有一个元素）。 -/
+def TpairDeg : Finset (Finset (Fin 3)) := ({{0, 1}, {0, 1, 2}} : Finset (Finset (Fin 3)))
+
+/-- 该族的根确实**只有一个**孩子（故 `hch` 可取 `A = B`）。 -/
+theorem children_TpairDeg : children TpairDeg (Finset.univ : Finset (Fin 3)) = {{0, 1}} := by
+  decide
+
+/-- ★ **机器核对的退化反例**：`A = B` 时两孩子版命题为假。 -/
+theorem LinExt_interleaving_pair_needs_distinct :
+    LinExt TpairDeg (Finset.univ : Finset (Fin 3)) ≠
+      Nat.choose (hook TpairDeg ({0, 1} : Finset (Fin 3)) + hook TpairDeg ({0, 1} : Finset (Fin 3)))
+          (hook TpairDeg ({0, 1} : Finset (Fin 3))) *
+        (LinExt TpairDeg ({0, 1} : Finset (Fin 3)) * LinExt TpairDeg ({0, 1} : Finset (Fin 3))) := by
+  decide
+
 end Phylo.Stat.HookLength
+
 
 
 
