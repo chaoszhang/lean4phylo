@@ -2021,6 +2021,37 @@ splitRestrict s : Split X                              -- 两侧取 (realLeaves 
 -/
 
 
+/-! ## 10. 去根载体映射 `rootedToCladogram`（缺口 ②(b) 的本体）
+
+### 10.0 这一节补的是什么
+
+**旧形态**（§9 结束时）：Lemma 6.1 的**数学内容**已在 split 层做完
+（★★★ `isClanMinusRoot_iff`），但 `Cladogram (X ⊕ Unit)` 上的器材**没有**通往
+`Cladogram X` 的**载体**；`YHKClanLawGap`（§6，`Phylo/Stat/ReciprocalMonophyly.lean:924`）
+的 `tree` 槽要求 `Cladogram (Fin n)`，故 ②(b) 空着（§9.2 表里的「❌ 未交」）。
+
+**新形态**（本节交付）：
+
+* ★★★ `rootedToCladogram`（§10.3）：`Cladogram (X ⊕ Unit) → Cladogram X`，
+  按 ★★★ `Cladogram.ofCompatibleSplits`（`Phylo/CladogramBuild.lean:188`）造树；
+* ★★★ `isSplitOf_rootedToCladogram`（§10.3）：它的 split 系统**完全刻画**（族 ∪ 平凡）；
+* ★★★ `isClade_rootedToCladogram_iff_of_nonempty`（§10.3）：
+  `(rootedToCladogram U h3).IsClade A ↔ IsClanMinusRoot U A`（`A` 非空真）；
+* ★★★ **两端反例**（§10.4）：**无条件**形态 `… IsClade A ↔ IsClanMinusRoot U A`
+  在 `A = ∅` / `A = univ` **为假** —— 这是定理，不是口径。
+
+**文献**：ZDS2011 **Lemma 6.1**
+（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md:991-992`，
+行号沿用 §9 开头的记录 —— `references/` 不随 worktree 分发，本节无法独立复核）＋
+其上一句「suppress the root」的推论（同文件 `:977-981`）；clan 的定义（同文件 `:985-988`）。
+
+**理由**：缺口 ② 的两半 —— (a) 数学内容（§9 已交）、(b) **载体**（本节）—— 缺一不可：
+`YHKClanLawGap` 的 `tree` 槽在 `Cladogram (Fin n)` 上，而全部裁决器材在
+`Cladogram (Fin n ⊕ Unit)` 上。本节**不做**图上的顶点抑制：抑制 `ρ` 的几何后果**只**落在
+split 系统上，而 ★★★ `Cladogram.isSplitOf_ofCompatibleSplits`（`Phylo/CladogramBuild.lean:200`）
+给出「族 ∪ 平凡」的**完整**刻画 —— 这使「搬 split 系统」成为**等价且更短**的做法
+（即 §9.3 第 1 步写下的路线）。 -/
+
 /-! ### 10.1 真叶集：基数、非空、单调、不交、`swap` 交换 -/
 
 /-- ★ **真叶集的基数只比原基数少至多 `1`**（少掉的至多一个：根叶 `m = Sum.inr ()`）。
@@ -2231,5 +2262,144 @@ theorem rootedSplits_swap {X : Type} [Fintype X] [DecidableEq X]
     exact hntriv
   · show splitOf (realLeaves u.sideB) h1' h2' = s.swap
     rw [hsw, heq]
+
+/-! ### 10.3 载体映射本体与刻画 -/
+
+/-- ★★★ **去根载体映射**（缺口 ②(b)）：`Cladogram (X ⊕ Unit) → Cladogram X`。
+
+`U` 是「有根树 `T` 加一片名为 `root` 的叶子 `m = Sum.inr ()`」；本映射把它送去根树 `T − ρ`。
+做法是**只搬 split 系统**（不做图上的顶点抑制）：族取 `rootedSplits`（`U` 每条非平凡边的真叶集侧），
+再用 ★★★ `Cladogram.ofCompatibleSplits`（`Phylo/CladogramBuild.lean:188`）造树，
+其 split 系统由 ★★★ `Cladogram.isSplitOf_ofCompatibleSplits`（同文件 `:200`）**完全刻画**。
+
+`h3 : 3 ≤ |X|` 是 `ofCompatibleSplits` 的**固有**前提（`Phylo/CladogramBuild.lean:193`，
+`toCladogram` 的根非退化条件），不是本节额外加的假设。 -/
+noncomputable def rootedToCladogram {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (h3 : 3 ≤ Fintype.card X) : Cladogram X :=
+  Cladogram.ofCompatibleSplits (rootedSplits U)
+    (Classical.choice (Fintype.card_pos_iff.mp (by omega)))
+    (rootedSplits_compatible U) (rootedSplits_notTrivial U) (rootedSplits_swap U) h3
+
+/-- ★★★ **`rootedToCladogram` 的 split 系统刻画**：恰为「族 ∪ 平凡 split」。 -/
+theorem isSplitOf_rootedToCladogram {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (h3 : 3 ≤ Fintype.card X) (t : Split X) :
+    (rootedToCladogram U h3).IsSplitOf t ↔
+      t ∈ rootedSplits U ∨ (∃ x : X, t.sideA = {x}) ∨ (∃ x : X, t.sideA = {x}ᶜ) :=
+  Cladogram.isSplitOf_ofCompatibleSplits (rootedSplits U)
+    (Classical.choice (Fintype.card_pos_iff.mp (by omega)))
+    (rootedSplits_compatible U) (rootedSplits_notTrivial U) (rootedSplits_swap U) h3 t
+
+/-- ★★ **单边方向**：`realLeaves u.sideA = A` 且 `u` 是 `U` 的一条边 ⟹ `A` 是 `T − ρ` 的 clan。 -/
+theorem isClade_of_realLeaves_sideA {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (h3 : 3 ≤ Fintype.card X) {u : Split (X ⊕ Unit)}
+    (hu : U.IsSplitOf u) {A : Finset X} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty)
+    (h : realLeaves u.sideA = A) : (rootedToCladogram U h3).IsClade A := by
+  classical
+  by_cases htriv : u.IsTrivial
+  · obtain ⟨z, hz⟩ | ⟨z, hz⟩ := htriv
+    · cases z with
+      | inl x =>
+          have hAx : A = {x} := by rw [← h, hz, realLeaves_singleton_inl]
+          refine ⟨splitOf A hA hAc, ?_, by rw [splitOf_sideA]⟩
+          rw [isSplitOf_rootedToCladogram]
+          exact Or.inr (Or.inl ⟨x, by rw [splitOf_sideA, hAx]⟩)
+      | inr u0 =>
+          cases u0
+          rw [hz, realLeaves_singleton_inr] at h
+          rw [← h] at hA
+          exact absurd hA (by simp)
+    · cases z with
+      | inl x =>
+          have hAx : A = {x}ᶜ := by rw [← h, hz, realLeaves_compl_singleton_inl]
+          refine ⟨splitOf A hA hAc, ?_, by rw [splitOf_sideA]⟩
+          rw [isSplitOf_rootedToCladogram]
+          exact Or.inr (Or.inr ⟨x, by rw [splitOf_sideA, hAx]⟩)
+      | inr u0 =>
+          cases u0
+          rw [hz, realLeaves_compl_singleton_inr] at h
+          rw [← h] at hAc
+          exact absurd hAc (by simp)
+  · obtain ⟨h1, h2⟩ := realLeaves_nonempty_of_not_isTrivial htriv
+    refine ⟨splitOf (realLeaves u.sideA) h1 h2, ?_, by rw [splitOf_sideA]; exact h⟩
+    rw [isSplitOf_rootedToCladogram]
+    by_cases hT : (splitOf (realLeaves u.sideA) h1 h2).IsTrivial
+    · exact Or.inr hT
+    · exact Or.inl ((mem_rootedSplits U _).mpr
+        ⟨u, h1, h2, (mem_nontrivialSplits U u).mpr ⟨hu, htriv⟩, hT, rfl⟩)
+
+/-- ★★★ **去根载体映射与 clan 判据一致**（缺口 ②(b) 的本体）：
+
+`A`（非空、真）是 `T − ρ` 的 clan **⟺** `A` 是 `rootedToCladogram U` 的一条边的一侧。
+
+配合 ★★★ `isClanMinusRoot_iff`（`Phylo/Stat/ReciprocalMonophyly.lean:1901`）即得
+ZDS2011 **Lemma 6.1**（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md:991-992`；
+行号沿用本文件 §9 开头的记录 —— `references/` 不随 worktree 分发，本节无法独立复核）
+的**载体形态**。
+
+⚠️ **这是「端点已排除」的真形态，不是无条件版**（故定理名带 `_of_nonempty`）：题目给的
+**无条件**形态 `(rootedToCladogram U).IsClade A ↔ IsClanMinusRoot U A` 在 `A = ∅` 与
+`A = univ` **为假**，§10.4 已把两端**证成反例定理**（★★★ `isClanMinusRoot_empty`、
+★★★ `isClanMinusRoot_univ`、★★★ `not_isClade_iff_isClanMinusRoot_empty`）：`IsClade` 对任何树
+都不接受空集与全集（`Split` 的两侧由 `KPartition.nonempty`，`Phylo/Split.lean:161`，保证非空；
+库内旧有的 `not_isClade_empty`，本文件 `:1060`），而 `IsClanMinusRoot` 接受（`m` 的悬挂边，§9.1）。
+
+⇒ 两个前提是**必需**的（不是为避免困难的削弱）：下游 `YHKClanLawGap`（§6，`:924`）要求
+`A.Nonempty` ＋ `A.card < n`、`TwoClanLawGap`（§6，`:977`）要求两侧非空且 `A.card + B.card ≤ n`，
+本条的两条前提**落在下游合法域内**。 -/
+theorem isClade_rootedToCladogram_iff_of_nonempty {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (h3 : 3 ≤ Fintype.card X) {A : Finset X}
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    (rootedToCladogram U h3).IsClade A ↔ IsClanMinusRoot U A := by
+  classical
+  constructor
+  · rintro ⟨t, ht, rfl⟩
+    rcases (isSplitOf_rootedToCladogram U h3 t).mp ht with hfam | ⟨x, hx⟩ | ⟨x, hx⟩
+    · obtain ⟨u, h1, h2, hu, -, heq⟩ := (mem_rootedSplits U t).mp hfam
+      exact ⟨u, ((mem_nontrivialSplits U u).mp hu).1, Or.inl (by rw [← heq, splitOf_sideA])⟩
+    · have hntsum : Nontrivial (X ⊕ Unit) := ⟨Sum.inl x, Sum.inr (), by simp⟩
+      obtain ⟨s', hs', hs'A⟩ := Cladogram.exists_isSplitOf_singleton U (Sum.inl x)
+      exact ⟨s', hs', Or.inl (by rw [hs'A, realLeaves_singleton_inl, hx])⟩
+    · have hntsum : Nontrivial (X ⊕ Unit) := ⟨Sum.inl x, Sum.inr (), by simp⟩
+      obtain ⟨s', hs', hs'A⟩ := Cladogram.exists_isSplitOf_singleton U (Sum.inl x)
+      exact ⟨s', hs', Or.inr (by
+        rw [realLeaves_sideB_compl, hs'A, realLeaves_singleton_inl, hx])⟩
+  · rintro ⟨u, hu, h | h⟩
+    · exact isClade_of_realLeaves_sideA U h3 hu hA hAc h
+    · exact isClade_of_realLeaves_sideA U h3 (U.isSplitOf_swap hu) hA hAc
+        (by rwa [Split.swap_sideA])
+
+
+/-! ### 10.4 端点：**无条件**形态为假（hA / hAc 两条前提的**唯一**来源）
+
+题目给的形态 (rootedToCladogram U).IsClade A ↔ IsClanMinusRoot U A 对 A = ∅ 与 A = univ
+**为假**，本节把两端的**不对称**逐条证出，使主定理的前提不是「为了好证」而是**必需**。 -/
+
+/-- ★★★ **IsClanMinusRoot U ∅ 为真**：见证是根叶 m 的**悬挂边**（
+ealLeaves {m} = ∅）。
+
+⇒ 题目的无条件形态在 A = ∅ 处**左假右真**。 -/
+theorem isClanMinusRoot_empty {X : Type} [Fintype X] [DecidableEq X] [Nonempty X]
+    (U : Cladogram (X ⊕ Unit)) : IsClanMinusRoot U (∅ : Finset X) := by
+  have hnt : Nontrivial (X ⊕ Unit) :=
+    ⟨Sum.inl (Classical.choice ‹Nonempty X›), Sum.inr (), by simp⟩
+  obtain ⟨s, hs, hsA⟩ := Cladogram.exists_isSplitOf_singleton U (Sum.inr ())
+  exact ⟨s, hs, Or.inl (by rw [hsA, realLeaves_singleton_inr])⟩
+
+/-- ★★★ **IsClanMinusRoot U univ 为真**：同一条悬挂边的**另一侧**（
+ealLeaves {m}ᶜ = univ）。 -/
+theorem isClanMinusRoot_univ {X : Type} [Fintype X] [DecidableEq X] [Nonempty X]
+    (U : Cladogram (X ⊕ Unit)) : IsClanMinusRoot U (Finset.univ : Finset X) := by
+  have hnt : Nontrivial (X ⊕ Unit) :=
+    ⟨Sum.inl (Classical.choice ‹Nonempty X›), Sum.inr (), by simp⟩
+  obtain ⟨s, hs, hsA⟩ := Cladogram.exists_isSplitOf_singleton U (Sum.inr ())
+  refine ⟨s, hs, Or.inr ?_⟩
+  rw [realLeaves_sideB_compl, hsA, realLeaves_singleton_inr, Finset.compl_empty]
+
+/-- ★★★ **无条件形态在 A = ∅ 处为假**（左假右真）—— 主定理的两条前提由此成为**必需**。 -/
+theorem not_isClade_iff_isClanMinusRoot_empty {X : Type} [Fintype X] [DecidableEq X]
+    [Nonempty X] (U : Cladogram (X ⊕ Unit)) (h3 : 3 ≤ Fintype.card X) :
+    ¬ ((rootedToCladogram U h3).IsClade (∅ : Finset X) ↔ IsClanMinusRoot U (∅ : Finset X)) := by
+  intro h
+  exact not_isClade_empty (rootedToCladogram U h3) (h.mpr (isClanMinusRoot_empty U))
 
 end Phylo.Stat.ReciprocalMonophyly
