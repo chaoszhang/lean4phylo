@@ -2020,4 +2020,216 @@ splitRestrict s : Split X                              -- 两侧取 (realLeaves 
 若陈述在 `Cladogram (Fin n ⊕ Unit)` 上带 `IsClanMinusRoot`，则 `…Model → YHKClanLawGap` **恰好就是**被卡住的那一步。
 -/
 
+
+/-! ### 10.1 真叶集：基数、非空、单调、不交、`swap` 交换 -/
+
+/-- ★ **真叶集的基数只比原基数少至多 `1`**（少掉的至多一个：根叶 `m = Sum.inr ()`）。
+
+`Y ⊆ (realLeaves Y).image Sum.inl ∪ {m}`，故 `Y.card ≤ (realLeaves Y).card + 1`。 -/
+theorem card_le_realLeaves_add_one {X : Type} [Fintype X] [DecidableEq X]
+    (Y : Finset (X ⊕ Unit)) : Y.card ≤ (realLeaves Y).card + 1 := by
+  classical
+  have hsub : Y ⊆ (realLeaves Y).image (Sum.inl : X → X ⊕ Unit) ∪ ({Sum.inr ()} : Finset (X ⊕ Unit)) := by
+    intro z hz
+    cases z with
+    | inl x =>
+        exact Finset.mem_union_left _
+          (Finset.mem_image_of_mem (Sum.inl : X → X ⊕ Unit) (mem_realLeaves.mpr hz))
+    | inr u => cases u; exact Finset.mem_union_right _ (Finset.mem_singleton_self _)
+  have h1 : Y.card ≤
+      ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit) ∪
+        ({Sum.inr ()} : Finset (X ⊕ Unit))).card :=
+    Finset.card_le_card hsub
+  have h2 : ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit) ∪
+      ({Sum.inr ()} : Finset (X ⊕ Unit))).card ≤ (realLeaves Y).card + 1 := by
+    have h3 : ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit) ∪
+        ({Sum.inr ()} : Finset (X ⊕ Unit))).card
+        ≤ ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit)).card + 1 := by
+      have h := Finset.card_union_le ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit))
+        ({Sum.inr ()} : Finset (X ⊕ Unit))
+      rw [Finset.card_singleton] at h
+      exact h
+    have h4 : ((realLeaves Y).image (Sum.inl : X → X ⊕ Unit)).card ≤ (realLeaves Y).card :=
+      Finset.card_image_le
+    omega
+  omega
+
+/-- ★★ **非平凡 split 的两侧真叶集都非空**。
+
+每侧有 `≥ 2` 个叶，其中至多一个是根叶 `m`（`card_le_realLeaves_add_one`），故该侧真叶集 `≥ 1`。
+这是 `rootedSplits` 能定义、也是 `ofCompatibleSplits` 的 `hnt` 槽能填上的**唯一**依据。 -/
+theorem realLeaves_nonempty_of_not_isTrivial {X : Type} [Fintype X] [DecidableEq X]
+    {s : Split (X ⊕ Unit)} (hs : ¬ s.IsTrivial) :
+    (realLeaves s.sideA).Nonempty ∧ (realLeaves s.sideA)ᶜ.Nonempty := by
+  have hnt := (Split.not_isTrivial_iff s).mp hs
+  have hA : 0 < (realLeaves s.sideA).card := by
+    have h := card_le_realLeaves_add_one s.sideA
+    omega
+  have hB : 0 < (realLeaves s.sideB).card := by
+    have h := card_le_realLeaves_add_one s.sideB
+    omega
+  rw [realLeaves_sideB_compl] at hB
+  exact ⟨Finset.card_pos.mp hA, Finset.card_pos.mp hB⟩
+
+/-- 真叶集**单调**。 -/
+theorem realLeaves_subset {X : Type} [Fintype X] [DecidableEq X] {Y Z : Finset (X ⊕ Unit)}
+    (h : Y ⊆ Z) : realLeaves Y ⊆ realLeaves Z := by
+  intro x hx
+  rw [mem_realLeaves] at hx ⊢
+  exact h hx
+
+/-- 真叶集**保持不交**。 -/
+theorem realLeaves_disjoint {X : Type} [Fintype X] [DecidableEq X] {Y Z : Finset (X ⊕ Unit)}
+    (h : Disjoint Y Z) : Disjoint (realLeaves Y) (realLeaves Z) := by
+  rw [Finset.disjoint_left] at h ⊢
+  intro x hx hy
+  rw [mem_realLeaves] at hx hy
+  exact h hx hy
+
+/-- 真叶集**把补集变补集**：`realLeaves Bᶜ = (realLeaves B)ᶜ`（因 `realLeaves` 只问 `Sum.inl x`）。 -/
+theorem realLeaves_compl {X : Type} [Fintype X] [DecidableEq X] (B : Finset (X ⊕ Unit)) :
+    realLeaves Bᶜ = (realLeaves B)ᶜ := by
+  ext x
+  rw [mem_realLeaves, Finset.mem_compl, Finset.mem_compl, mem_realLeaves]
+
+/-- 根叶单点集的真叶集：`{inl x} ↦ {x}`。 -/
+theorem realLeaves_singleton_inl {X : Type} [Fintype X] [DecidableEq X] (x : X) :
+    realLeaves ({Sum.inl x} : Finset (X ⊕ Unit)) = {x} := by
+  rw [← Finset.image_singleton (f := Sum.inl) (a := x), realLeaves_image_inl]
+
+/-- 根叶本身的单点集：真叶集为空。 -/
+theorem realLeaves_singleton_inr {X : Type} [Fintype X] [DecidableEq X] :
+    realLeaves ({Sum.inr ()} : Finset (X ⊕ Unit)) = ∅ := by
+  ext x
+  simp [mem_realLeaves]
+
+/-- `{inl x}ᶜ` 的真叶集是 `{x}ᶜ`。 -/
+theorem realLeaves_compl_singleton_inl {X : Type} [Fintype X] [DecidableEq X] (x : X) :
+    realLeaves (({Sum.inl x} : Finset (X ⊕ Unit))ᶜ) = {x}ᶜ := by
+  rw [realLeaves_compl, realLeaves_singleton_inl]
+
+/-- `{m}ᶜ` 的真叶集是全集（去根后 `m` 不再是 taxon）。 -/
+theorem realLeaves_compl_singleton_inr {X : Type} [Fintype X] [DecidableEq X] :
+    realLeaves (({Sum.inr ()} : Finset (X ⊕ Unit))ᶜ) = (Finset.univ : Finset X) := by
+  rw [realLeaves_compl, realLeaves_singleton_inr, Finset.compl_empty]
+
+/-- ★★ **平凡性对 `swap` 不变**（`IsTrivial` 只问「某一侧是单点」，两侧对称）。 -/
+theorem isTrivial_swap {X : Type} [Fintype X] [DecidableEq X] (s : Split X) :
+    s.swap.IsTrivial ↔ s.IsTrivial := by
+  rw [Split.isTrivial_iff_card, Split.isTrivial_iff_card, Split.swap_sideA,
+    Split.swap_sideB, or_comm]
+
+/-- ★★ **限制与 `swap` 交换**：一侧换向后限制 = 限制后换向。 -/
+theorem splitOf_realLeaves_sideB_eq_swap {X : Type} [Fintype X] [DecidableEq X]
+    (s : Split (X ⊕ Unit))
+    (h1 : (realLeaves s.sideA).Nonempty) (h2 : (realLeaves s.sideA)ᶜ.Nonempty)
+    (h1' : (realLeaves s.sideB).Nonempty) (h2' : (realLeaves s.sideB)ᶜ.Nonempty) :
+    splitOf (realLeaves s.sideB) h1' h2' = (splitOf (realLeaves s.sideA) h1 h2).swap := by
+  refine Split.ext_sideA ?_
+  rw [splitOf_sideA, Split.swap_sideA, splitOf_sideB, realLeaves_sideB_compl]
+
+/-- ★★★ **相容性在「限制到真叶集」下保持**。
+
+`Split.Compatible s t` 的四个「交为空」由 `realLeaves` 逐一接住（`realLeaves` 是 `Finset` 的滤子，
+故把 `∩` 送到 `∩`）；第四支（`并 = univ`）同样逐点传递。这是 `hcomp` 槽的**全部**内容。 -/
+theorem sidesCompatible_realLeaves {X : Type} [Fintype X] [DecidableEq X]
+    {s t : Split (X ⊕ Unit)} (h : Split.Compatible s t) :
+    SidesCompatible (realLeaves s.sideA) (realLeaves t.sideA) := by
+  rcases Split.sidesCompatible_of_compatible h with h1 | h1 | h1 | h1
+  · exact Or.inl (realLeaves_subset h1)
+  · exact Or.inr (Or.inl (realLeaves_subset h1))
+  · exact Or.inr (Or.inr (Or.inl (realLeaves_disjoint h1)))
+  · refine Or.inr (Or.inr (Or.inr ?_))
+    ext x
+    refine ⟨fun _ => Finset.mem_univ x, fun _ => ?_⟩
+    have hmem : Sum.inl x ∈ s.sideA ∪ t.sideA := by simp [h1]
+    rcases Finset.mem_union.mp hmem with hx | hx
+    · exact Finset.mem_union_left _ (mem_realLeaves.mpr hx)
+    · exact Finset.mem_union_right _ (mem_realLeaves.mpr hx)
+
+/-! ### 10.2 族 `rootedSplits`：`U` 的每条非平凡边限制到真 taxon -/
+
+/-- `U.nontrivialSplits` 的成员刻画。 -/
+theorem mem_nontrivialSplits {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram X) (s : Split X) :
+    s ∈ Cladogram.nontrivialSplits U ↔ U.IsSplitOf s ∧ ¬ s.IsTrivial := by
+  classical
+  rw [Cladogram.nontrivialSplits, Finset.mem_filter]
+  exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
+
+/-- `U.nontrivialSplits` 对 `swap` 封闭（每条边的两个朝向都在）。 -/
+theorem mem_nontrivialSplits_swap {X : Type} [Fintype X] [DecidableEq X]
+    {U : Cladogram (X ⊕ Unit)} {s : Split (X ⊕ Unit)} (hs : s ∈ U.nontrivialSplits) :
+    s.swap ∈ U.nontrivialSplits := by
+  classical
+  rw [mem_nontrivialSplits] at hs ⊢
+  exact ⟨U.isSplitOf_swap hs.1, fun h => hs.2 ((isTrivial_swap s).mp h)⟩
+
+/-- ★★ **去根树的 split 族**：`U` 每条**非平凡**边的真叶集侧，**滤掉**限制后退化成平凡的。
+
+退化的是 `sideA = {m, x}` 型：真叶集只剩单点 `{x}`，而单点 split 在任何树里都由叶边自动展示
+（`Cladogram.isSplitOf_ofCompatibleSplits` 的「平凡」那一支），故**不放进族**（否则 `hnt` 槽会失败）。
+
+用**存在式**而不用 `Finset.image`：`Finset.image` 的像里两个证明项不同的 `splitOf` 无法比对，
+存在式把「族成员 = 某个 `splitOf ⋯`」这条**等式**直接交到手上。 -/
+noncomputable def rootedSplits {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) : Finset (Split X) := by
+  classical
+  exact Finset.univ.filter (fun t : Split X =>
+    ∃ (u : Split (X ⊕ Unit)) (h1 : (realLeaves u.sideA).Nonempty)
+      (h2 : (realLeaves u.sideA)ᶜ.Nonempty),
+      u ∈ U.nontrivialSplits ∧ ¬ (splitOf (realLeaves u.sideA) h1 h2).IsTrivial ∧
+        splitOf (realLeaves u.sideA) h1 h2 = t)
+
+/-- `rootedSplits` 的成员刻画。 -/
+theorem mem_rootedSplits {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) (t : Split X) :
+    t ∈ rootedSplits U ↔
+      ∃ (u : Split (X ⊕ Unit)) (h1 : (realLeaves u.sideA).Nonempty)
+        (h2 : (realLeaves u.sideA)ᶜ.Nonempty),
+        u ∈ U.nontrivialSplits ∧ ¬ (splitOf (realLeaves u.sideA) h1 h2).IsTrivial ∧
+          splitOf (realLeaves u.sideA) h1 h2 = t := by
+  classical
+  rw [rootedSplits, Finset.mem_filter]
+  exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
+
+/-- ★★ `hcomp` 槽：`rootedSplits U` 两两相容。 -/
+theorem rootedSplits_compatible {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) :
+    ∀ s ∈ rootedSplits U, ∀ t ∈ rootedSplits U, Split.Compatible s t := by
+  intro s hs t ht
+  obtain ⟨u, h1, h2, hu, -, heq⟩ := (mem_rootedSplits U s).mp hs
+  obtain ⟨v, h1', h2', hv, -, heq'⟩ := (mem_rootedSplits U t).mp ht
+  rw [← heq, ← heq', Split.compatible_iff_sides, splitOf_sideA, splitOf_sideA]
+  exact sidesCompatible_realLeaves
+    (pairwiseCompatible U u ((mem_nontrivialSplits U u).mp hu).1 v
+      ((mem_nontrivialSplits U v).mp hv).1)
+
+/-- ★★ `hnt` 槽：`rootedSplits U` 的成员两侧都 `≥ 2`。 -/
+theorem rootedSplits_notTrivial {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) :
+    ∀ s ∈ rootedSplits U, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  obtain ⟨u, h1, h2, -, hntriv, heq⟩ := (mem_rootedSplits U s).mp hs
+  rw [← heq]
+  exact (Split.not_isTrivial_iff (splitOf (realLeaves u.sideA) h1 h2)).mp hntriv
+
+/-- ★★ `hswap` 槽：`rootedSplits U` 对 `swap` 封闭。 -/
+theorem rootedSplits_swap {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) :
+    ∀ s ∈ rootedSplits U, s.swap ∈ rootedSplits U := by
+  intro s hs
+  obtain ⟨u, h1, h2, hu, hntriv, heq⟩ := (mem_rootedSplits U s).mp hs
+  have h1' : (realLeaves u.sideB).Nonempty := by rw [realLeaves_sideB_compl]; exact h2
+  have h2' : (realLeaves u.sideB)ᶜ.Nonempty := by
+    rw [realLeaves_sideB_compl, compl_compl]; exact h1
+  have hsw := splitOf_realLeaves_sideB_eq_swap u h1 h2 h1' h2'
+  refine (mem_rootedSplits U s.swap).mpr ⟨u.swap, h1', h2', ?_, ?_, ?_⟩
+  · exact mem_nontrivialSplits_swap hu
+  · show ¬ (splitOf (realLeaves u.sideB) h1' h2').IsTrivial
+    rw [hsw, isTrivial_swap]
+    exact hntriv
+  · show splitOf (realLeaves u.sideB) h1' h2' = s.swap
+    rw [hsw, heq]
+
 end Phylo.Stat.ReciprocalMonophyly
