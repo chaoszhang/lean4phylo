@@ -3277,7 +3277,183 @@ theorem linExtShuffle_mem_B {T : Finset (Finset α)} {A B C : Finset α} {m sA s
   simp only [linExtShuffle]
   rw [dite_eq_right hne, dite_eq_right hi]
 
+/-- ★★ **拼接函数的单射性**（三类位置上的值分别落在
+`{C}`、`internalBelow T A`、`internalBelow T B`，同类用序同构的单射性，
+异类用 `C ∉ internalBelow T A/B` 与 `internalBelow T A ⊥ internalBelow T B`）。 -/
+theorem linExtShuffle_injective {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    (hSl : last ∉ S)
+    (hcA : cC.1 ∉ internalBelow T A) (hcB : cC.1 ∉ internalBelow T B)
+    (hIdisj : Disjoint (internalBelow T A) (internalBelow T B))
+    (hinjτ : ∀ i j : Fin sA, i ≠ j → τ i ≠ τ j)
+    (hinjρ : ∀ i j : Fin sB, i ≠ j → ρ i ≠ ρ j) :
+    ∀ i j : Fin m, i ≠ j →
+      linExtShuffle last S hS hB cC τ ρ hAIC hBIC i ≠
+      linExtShuffle last S hS hB cC τ ρ hAIC hBIC j := by
+  intro i j hij hcon
+  have hcls : ∀ x : Fin m, (x = last) ∨ (x ∈ S) ∨ (x ∈ bPos last S) := by
+    intro x
+    by_cases hx : x = last
+    · exact Or.inl hx
+    · by_cases hxS : x ∈ S
+      · exact Or.inr (Or.inl hxS)
+      · exact Or.inr (Or.inr (by rw [mem_bPos]; exact ⟨hx, hxS⟩))
+  rcases hcls i with hiL | hiS | hiB <;> rcases hcls j with hjL | hjS | hjB
+  · exact hij (hiL.trans hjL.symm)
+  · rw [hiL, linExtShuffle_last,
+      linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hjS] at hcon
+    exact hcA (hcon.symm ▸ (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).2)
+  · obtain ⟨hjne, hjnS⟩ := mem_bPos.mp hjB
+    rw [hiL, linExtShuffle_last,
+      linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hjnS hjne] at hcon
+    exact hcB (hcon.symm ▸ (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).2)
+  · rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS, hjL,
+      linExtShuffle_last] at hcon
+    exact hcA (hcon ▸ (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).2)
+  · rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS,
+      linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hjS] at hcon
+    have hval : (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).1
+        = (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).1 :=
+      congrArg (fun x : {D // D ∈ internalBelow T C} => x.1) hcon
+    have heq : ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)
+        = ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩) := by
+      by_contra hne
+      exact absurd (Subtype.ext hval) (hinjτ _ _ hne)
+    have hsub : (⟨i, hiS⟩ : ↥S) = ⟨j, hjS⟩ := (S.orderIsoOfFin hS).symm.injective heq
+    exact hij (congrArg Subtype.val hsub)
+  · obtain ⟨hjne, hjnS⟩ := mem_bPos.mp hjB
+    rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS,
+      linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hjnS hjne] at hcon
+    have hX : (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).1 ∈ internalBelow T A :=
+      (τ _).2
+    have hval : (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).1
+        = (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).1 := congrArg (fun x : {D // D ∈ internalBelow T C} => x.1) hcon
+    exact (Finset.disjoint_left.mp hIdisj hX) (hval.symm ▸ (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).2)
+  · obtain ⟨hine, hinS⟩ := mem_bPos.mp hiB
+    rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hinS hine, hjL,
+      linExtShuffle_last] at hcon
+    exact hcB (hcon ▸ (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).2)
+  · obtain ⟨hine, hinS⟩ := mem_bPos.mp hiB
+    rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hinS hine,
+      linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hjS] at hcon
+    have hY : (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).1 ∈ internalBelow T B := (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).2
+    have hval : (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).1 = (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).1 :=
+      congrArg (fun x : {D // D ∈ internalBelow T C} => x.1) hcon
+    exact (Finset.disjoint_right.mp hIdisj hY)
+      (hval.symm ▸ (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).2)
+  · obtain ⟨hine, hinS⟩ := mem_bPos.mp hiB
+    obtain ⟨hjne, hjnS⟩ := mem_bPos.mp hjB
+    rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hinS hine,
+      linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hjnS hjne] at hcon
+    have hval : (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).1
+        = (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).1 :=
+      congrArg (fun x : {D // D ∈ internalBelow T C} => x.1) hcon
+    have heq : (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)
+        = (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩) := by
+      by_contra hne
+      exact absurd (Subtype.ext hval) (hinjρ _ _ hne)
+    have hsub : (⟨i, hiB⟩ : ↥(bPos last S)) = ⟨j, hjB⟩ :=
+      ((bPos last S).orderIsoOfFin hB).symm.injective heq
+    exact hij (congrArg Subtype.val hsub)
+
+/-- ★★ **拼接函数保持序条件**（`τ`、`ρ` 是线性扩展时）。
+
+`i < j` 分九类：同类用序同构＋`τ`/`ρ` 的序条件；异类用两孩子子树的**互不可比性**
+（`not_ssubset_of_children_pair_left/right`）；`j` 是末位时用 `C` 是 `internalBelow T C` 的**极大元**。 -/
+theorem linExtShuffle_ordered {T : Finset (Finset α)} {A B C : Finset α} {m sA sB : ℕ}
+    (last : Fin m) (hlastmax : ∀ j : Fin m, (j : ℕ) ≤ (last : ℕ))
+    (S : Finset (Fin m)) (hS : S.card = sA)
+    (hB : (bPos last S).card = sB) (cC : {D // D ∈ internalBelow T C})
+    (τ : Fin sA → {D // D ∈ internalBelow T A})
+    (ρ : Fin sB → {D // D ∈ internalBelow T B})
+    (hAIC : internalBelow T A ⊆ internalBelow T C)
+    (hBIC : internalBelow T B ⊆ internalBelow T C)
+    (hSl : last ∉ S) (hcC : cC.1 = C)
+    (hdisj : Disjoint A B)
+    (hordτ : ∀ i j : Fin sA, i < j → ¬ (τ j).1 ⊂ (τ i).1)
+    (hordρ : ∀ i j : Fin sB, i < j → ¬ (ρ j).1 ⊂ (ρ i).1) :
+    ∀ i j : Fin m, i < j →
+      ¬ (linExtShuffle last S hS hB cC τ ρ hAIC hBIC j).1 ⊂
+        (linExtShuffle last S hS hB cC τ ρ hAIC hBIC i).1 := by
+  intro i j hij
+  have hcls : ∀ x : Fin m, (x = last) ∨ (x ∈ S) ∨ (x ∈ bPos last S) := by
+    intro x
+    by_cases hx : x = last
+    · exact Or.inl hx
+    · by_cases hxS : x ∈ S
+      · exact Or.inr (Or.inl hxS)
+      · exact Or.inr (Or.inr (by rw [mem_bPos]; exact ⟨hx, hxS⟩))
+  rcases hcls i with hiL | hiS | hiB <;> rcases hcls j with hjL | hjS | hjB
+  · exact absurd (hiL.trans hjL.symm) (ne_of_lt hij)
+  · rw [hiL] at hij
+    exact absurd hij (by have := hlastmax j; omega)
+  · rw [hiL] at hij
+    exact absurd hij (by have := hlastmax j; omega)
+  · -- i ∈ S, j = last：`C` 极大
+    rw [hjL, linExtShuffle_last]
+    intro hssub
+    rw [hcC] at hssub
+    exact hssub.2 (mem_internalBelow.mp (((linExtShuffle last S hS hB cC τ ρ hAIC hBIC) i).2)).2.2
+  · -- 同在 S
+    have hvi : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC i).1
+        = (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).1 := by
+      rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS]
+    have hvj : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC j).1
+        = (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).1 := by
+      rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hjS]
+    intro hssub
+    rw [hvi, hvj] at hssub
+    have hlt : ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩) < ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩) :=
+      (S.orderIsoOfFin hS).symm.lt_iff_lt.mpr (show (⟨i, hiS⟩ : ↥S) < ⟨j, hjS⟩ from hij)
+    exact hordτ _ _ hlt hssub
+  · -- i ∈ S, j ∈ bPos：跨块互不可比
+    obtain ⟨hjne, hjnS⟩ := mem_bPos.mp hjB
+    have hX : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC i).1 ∈ internalBelow T A := by
+      rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hiS]
+      exact (τ ((S.orderIsoOfFin hS).symm ⟨i, hiS⟩)).2
+    have hY : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC j).1 ∈ internalBelow T B := by
+      rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hjnS hjne]
+      exact (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).2
+    exact not_ssubset_of_children_pair_right hdisj hX hY
+  · -- i ∈ bPos, j = last：`C` 极大
+    rw [hjL, linExtShuffle_last]
+    intro hssub
+    rw [hcC] at hssub
+    exact hssub.2 (mem_internalBelow.mp (((linExtShuffle last S hS hB cC τ ρ hAIC hBIC) i).2)).2.2
+  · -- i ∈ bPos, j ∈ S：跨块互不可比
+    obtain ⟨hine, hinS⟩ := mem_bPos.mp hiB
+    have hX : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC j).1 ∈ internalBelow T A := by
+      rw [linExtShuffle_mem_S last S hS hB cC τ ρ hAIC hBIC hSl hjS]
+      exact (τ ((S.orderIsoOfFin hS).symm ⟨j, hjS⟩)).2
+    have hY : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC i).1 ∈ internalBelow T B := by
+      rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hinS hine]
+      exact (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).2
+    exact not_ssubset_of_children_pair_left hdisj hX hY
+  · -- 同在 bPos
+    obtain ⟨hine, hinS⟩ := mem_bPos.mp hiB
+    obtain ⟨hjne, hjnS⟩ := mem_bPos.mp hjB
+    have hvi : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC i).1
+        = (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)).1 := by
+      rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hinS hine]
+    have hvj : (linExtShuffle last S hS hB cC τ ρ hAIC hBIC j).1
+        = (ρ (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩)).1 := by
+      rw [linExtShuffle_mem_B last S hS hB cC τ ρ hAIC hBIC hjnS hjne]
+    intro hssub
+    rw [hvi, hvj] at hssub
+    have hlt : (((bPos last S).orderIsoOfFin hB).symm ⟨i, hiB⟩)
+        < (((bPos last S).orderIsoOfFin hB).symm ⟨j, hjB⟩) :=
+      ((bPos last S).orderIsoOfFin hB).symm.lt_iff_lt.mpr
+        (show (⟨i, hiB⟩ : ↥(bPos last S)) < ⟨j, hjB⟩ from hij)
+    exact hordρ _ _ hlt hssub
+
 end Phylo.Stat.HookLength
+
+
 
 
 
