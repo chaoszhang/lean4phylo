@@ -2756,9 +2756,12 @@ theorem card_fiber_le_LinExt {n : ℕ} (hn : 2 ≤ n)
 **剩余件 ②（派单 ③ 交错引理）**：
 
 ```text
-LinExt_interleaving (T) (C) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
+LinExt_interleaving (T) (hl : LaminarFamily T) (C) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
   LinExt T C = Nat.multinomial (children T C) (fun B => hook T B) *
     (children T C).attach.prod (fun Bx : {B // B ∈ children T C} => LinExt T Bx.1)
+
+⚠️ hl : LaminarFamily T **不可省**：§18.1 已给出**机器核对的反例**
+LinExt_interleaving_false_without_laminar（左端 2、右端 6）。
 ```
 
 （与 §8 的 `LE_eq` 同一个形状；两者落地即可把 `LinExt` 认成 `LE`。）
@@ -2790,6 +2793,137 @@ theorem rankedFiberCount_gap_of_fiber_eq_LinExt {n : ℕ} (hn : 2 ≤ n)
   rankedFiberCount_gap_of_LE hn fun f hf =>
     by rw [h1 f hf, h2 f hf (univ_mem_cladesOf (by omega) hf)]
 
+/-! ### §18 ★★★ 交错引理（派单缺件 ③）的**结构分解**（第一批器材）
+
+目标（待证）：
+
+```text
+LinExt T C = Nat.multinomial (children T C) (fun B => hook T B) *
+  (children T C).attach.prod (fun Bx : {B // B ∈ children T C} => LinExt T Bx.1)
+```
+
+⚠️ **必需 `LaminarFamily T`**：不加嵌嵌性时命题**为假**。反例（`α = Fin 4`）：
+`T = {{0,1,2}, {1,2,3}, {1,2}, univ}`、`C = univ`。两个孩子 `A = {0,1,2}`、`B = {1,2,3}`
+**相交**（与 `{1,2}` 两边都放）：此时 `internalBelow T A ∩ internalBelow T B ∋ {1,2}`。
+左端：`internalBelow T C` 的偏序是 `{1,2} ⊂ A, {1,2} ⊂ B` ⇒ 线性扩展数 `= 2`；
+右端：`multinomial · ∏ LinExt`（`hook A = hook B = 2`）`= 6 · 1 · 1 = 6 ≠ 2`。
+故本节所有声明都带 `hl : LaminarFamily T`。
+
+本节只落下**分解侧**的三件器材（`C` 的位置与孩子子树的不交）：
+`internalBelow_eq_insert_biUnion_children`、`notMem_biUnion_internalBelow_children`、
+`LinExt_last_eq`（线性扩展的**末位必是 `C`**）。
+剩下的「洗牌双射 + 模式数 `= multinomial`」**本次未做**（见下方诚实边界）。 -/
+
+/-- ★★ **`internalBelow` 的孩子分解**：`internalBelow T C = {C} ∪ ⋃_{B ∈ children T C} internalBelow T B`。
+
+（=「`C` 之下的内部结点 = `C` 自己 + 各孩子子树的内部结点」；
+覆盖性用 §3 的 `eq_or_mem_children`。） -/
+theorem internalBelow_eq_insert_biUnion_children {T : Finset (Finset α)} {C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) :
+    internalBelow T C = insert C ((children T C).biUnion fun B => internalBelow T B) := by
+  classical
+  ext D
+  simp only [mem_internalBelow, Finset.mem_insert, Finset.mem_biUnion]
+  constructor
+  · rintro ⟨hDT, hD2, hDC⟩
+    rcases eq_or_mem_children hDT hD2 hDC with h | ⟨B, hB, hDB⟩
+    · exact Or.inl h
+    · exact Or.inr ⟨B, hB, hDT, hD2, hDB⟩
+  · rintro (hEq | ⟨B, hB, hDT, hD2, hDsubB⟩)
+    · exact ⟨hEq ▸ hC, hEq ▸ h2, hEq ▸ Finset.Subset.refl D⟩
+    · exact ⟨hDT, hD2, hDsubB.trans (children_ssubset hB).1⟩
+
+/-- ★ **`C` 不在孩子的 `internalBelow` 之并里**（故上一条的 `insert` 是真插入）。 -/
+theorem notMem_biUnion_internalBelow_children {T : Finset (Finset α)} {C : Finset α} :
+    C ∉ (children T C).biUnion fun B => internalBelow T B := by
+  rw [Finset.mem_biUnion]
+  rintro ⟨B, hB, hCB⟩
+  exact (children_ssubset hB).2 (mem_internalBelow.mp hCB).2.2
+
+/-- ★★ **线性扩展的末位必是 `C`**：`C` 是 `internalBelow T C` 在 `⊂` 下的**唯一极大元**，
+故任何线性扩展都把它放在最后一位。
+
+（证：同基数 + 单射 ⇒ 满射，故 `C` 在序列里；若它不在末位，
+则有某个 `D ⊊ C` 排在它后面，违反 `hord`。） -/
+theorem LinExt_last_eq {T : Finset (Finset α)} {C : Finset α} (hC : C ∈ T) (h2 : 2 ≤ C.card)
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1) :
+    (σ ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩).1 = C := by
+  classical
+  have hm : 0 < hook T C := hook_pos hC h2
+  have hmem : C ∈ internalBelow T C := mem_internalBelow.mpr ⟨hC, h2, Finset.Subset.refl C⟩
+  have hinj' : Function.Injective (fun i : Fin (hook T C) => (σ i).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have hsurj : ∃ i, (σ i).1 = C := by
+    have hsub : (Finset.univ.image fun i : Fin (hook T C) => (σ i).1) ⊆ internalBelow T C := by
+      intro D hD
+      obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hD
+      exact (σ i).2
+    have hcard : (Finset.univ.image fun i : Fin (hook T C) => (σ i).1).card
+        = (internalBelow T C).card := by
+      rw [Finset.card_image_of_injective _ hinj', Finset.card_univ, Fintype.card_fin]
+      rfl
+    have heq := Finset.eq_of_subset_of_card_le hsub (le_of_eq hcard.symm)
+    obtain ⟨i, -, hi⟩ := Finset.mem_image.mp (heq ▸ hmem)
+    exact ⟨i, hi⟩
+  obtain ⟨i, hi⟩ := hsurj
+  have hmax : ∀ j : Fin (hook T C), (j : ℕ) ≤ (i : ℕ) := by
+    intro j
+    by_contra hlt
+    have hlt' : (i : ℕ) < (j : ℕ) := by omega
+    have hij : i < j := hlt'
+    have hDne : (σ j).1 ≠ C := by
+      intro h
+      exact hinj i j (ne_of_lt hij) (Subtype.ext (hi.trans h.symm))
+    have hDsub : (σ j).1 ⊂ C :=
+      Finset.ssubset_iff_subset_ne.mpr ⟨(mem_internalBelow.mp (σ j).2).2.2, hDne⟩
+    exact hord i j hij (hi.symm ▸ hDsub)
+  have hi_last : i = ⟨hook T C - 1, by omega⟩ := by
+    apply Fin.ext
+    have hle : ((hook T C - 1 : ℕ)) ≤ (i : ℕ) := by
+      have := hmax ⟨hook T C - 1, by omega⟩
+      simpa using this
+    have hlt : (i : ℕ) < hook T C := i.isLt
+    show (i : ℕ) = hook T C - 1
+    omega
+  exact hi_last ▸ hi
+
+/-! #### §18.1 ★★ **反例（机器核对）：嵌嵌性不可省**
+
+派单给的陈述（只带 `hC : C ∈ T`）**为假**。反例 `Tnonlam`（`α = Fin 4`）：
+
+* `T = {{0,1,2}, {1,2,3}, {1,2}, univ}`、`C = univ`；`hook C = 4`、`#children C = 2`；
+* 两个孩子 `{0,1,2}`、`{1,2,3}` **相交**（都含 `{1,2}`）⇒ `T` **不**是嵌嵌族，
+  `internalBelow` 在两个孩子下**重复计** `{1,2}`；
+* 左端实值 `LinExt T C = 2`（机器算），右端 `multinomial · ∏ LinExt = 6 · 1 = 6`。
+
+故派单那一条必须加 `hl : LaminarFamily T`（本节上方三条器材也都是为了它服务）。
+
+⚠️ 加上 `hl` 后的**正面结论本次未证**：还缺「线性扩展 ↔ (位置模式, 各孩子子树的线性扩展)」的**洗牌双射**
+（需拿 `Fin (hook T C)` 上的下标压缩把「属于某孩子的位置」压成 `Fin (hook T B)`）
+与「模式数 `= multinomial`」（Mathlib **无**「给定各纤维大小的函数个数 = 多项式系数」的现成引理）。
+口径上 `hook` 与 `multinomial` **是对得上的**：`Nat.multinomial s f = (∑ f)!/∏ f!`
+而 `hook T C = 1 + ∑_{B ∈ children} hook T B`（§3 `hook_eq_one_add_sum_children`），故 `multinomial` 恰为洗牌数。 -/
+
+/-- 反例用的非嵌嵌族（两个孩子相交）。 -/
+def Tnonlam : Finset (Finset (Fin 4)) :=
+  ({{0, 1, 2}, {1, 2, 3}, {1, 2}, Finset.univ} : Finset (Finset (Fin 4)))
+
+/-- ★★ **机器核对的反例**：不假设 `LaminarFamily T` 时交错引理**为假**。
+（左端 `= 2`、右端 `= 6`；`decide` 直接算出不等。） -/
+theorem LinExt_interleaving_false_without_laminar :
+    LinExt Tnonlam (Finset.univ : Finset (Fin 4)) ≠
+      Nat.multinomial (children Tnonlam (Finset.univ : Finset (Fin 4)))
+          (fun B => hook Tnonlam B) *
+        (children Tnonlam (Finset.univ : Finset (Fin 4))).attach.prod
+          (fun Bx => LinExt Tnonlam Bx.1) := by
+  decide
+
 end Phylo.Stat.HookLength
+
+
 
 
