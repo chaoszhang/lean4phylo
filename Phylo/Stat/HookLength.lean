@@ -4480,7 +4480,38 @@ theorem blockAt_eq_child {n : ℕ} (hn : 2 ≤ n) {f : Fin (n - 1) → Fin n × 
       rw [hw, ← hzw]
       exact Finset.singleton_subset_iff.mpr (mem_blockAt _ k z)
 
+/-- ★★★ **`reconstructStep` 的语义：就是「两个孩子的最小元」**（全部参数显式，不用依赖型 `∃`）。
+
+`a` 是含 `C` 最小元的那个孩子、`b` 是另一个；结论：`reconstructStep S C d = (C.min', b.min')`。 -/
+theorem reconstructStep_eq_children {n : ℕ} (S : Finset (Finset (Fin n)))
+    (C : Finset (Fin n)) (d : Fin n) {a b : Finset (Fin n)}
+    (_ha : a.Nonempty) (hb : b.Nonempty) (hC : C.Nonempty)
+    (hCAB : C = a ∪ b) (hdisj : Disjoint a b)
+    (hch : children S C = {a, b}) (hCmin : C.min' hC ∈ a) :
+    reconstructStep S C d = (C.min' hC, b.min' hb) := by
+  have ha_mem : a.min' _ha = C.min' hC := by
+    refine le_antisymm ?_ ?_
+    · exact Finset.min'_le _ _ hCmin
+    · exact Finset.min'_le _ _ (by rw [hCAB]; exact Finset.mem_union_left _ (Finset.min'_mem _ _))
+  refine reconstructStep_eq d hC hCAB hdisj hCmin (Finset.min'_mem _ _) ?_ ?_ ?_ hch
+  · -- ∀ w ∈ a, C.min' ≤ w
+    intro w hw
+    exact Finset.min'_le _ _ (by rw [hCAB]; exact Finset.mem_union_left _ hw)
+  · -- ∀ w ∈ b, b.min' ≤ w
+    intro w hw
+    exact Finset.min'_le _ _ hw
+  · -- C.min' < b.min'
+    have hyC : b.min' hb ∈ C := by
+      rw [hCAB]; exact Finset.mem_union_right _ (Finset.min'_mem _ _)
+    have hle := Finset.min'_le _ _ hyC
+    have hne : C.min' hC ≠ b.min' hb := by
+      intro heq
+      have hmem : b.min' hb ∈ a := by rw [← heq]; exact hCmin
+      exact Finset.disjoint_left.mp hdisj hmem (Finset.min'_mem _ _)
+    exact lt_of_le_of_ne hle hne
+
 end Phylo.Stat.HookLength
+
 
 
 
