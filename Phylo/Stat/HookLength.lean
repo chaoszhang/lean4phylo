@@ -4169,27 +4169,88 @@ theorem rankedFiberCount_gap_small (n : ℕ) (hn : n ≤ 1) :
     rw [hf0]
     decide
 
+/-! ### §22 ★★★ **(O1) 的「≥」半：`reconstruct` 的合法性**（定义层 ＋ 不变式）
+
+本节把 §21 的 (a) 拆成可机器核对的层：「第 `k` 步之后 `z` 所在的块」直接用
+**已创建 clade 的并**来写（不需要 `parent`：因为线性扩展下已创建的 clade 是**下闭**的，
+故「含 `z` 的已创建 clade」恰为一条链，其并就是最大者）。 -/
+
+/-- ★ `σ` 前 `k` 步创建出的 clade 集合。 -/
+def procClades {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) (k : ℕ) : Finset (Finset (Fin n)) :=
+  (Finset.univ.filter (fun j : Fin (n - 1) => (j : ℕ) < k)).image σ
+
+/-- `procClades` 的成员刻画。 -/
+theorem mem_procClades {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ}
+    {C : Finset (Fin n)} :
+    C ∈ procClades σ k ↔ ∃ j : Fin (n - 1), (j : ℕ) < k ∧ σ j = C := by
+  simp [procClades]
+
+/-- 已创建集合随步数单调。 -/
+theorem procClades_mono {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k k' : ℕ}
+    (h : k ≤ k') : procClades σ k ⊆ procClades σ k' := by
+  intro C hC
+  obtain ⟨j, hj, rfl⟩ := (mem_procClades σ).mp hC
+  exact (mem_procClades σ).mpr ⟨j, by omega, rfl⟩
+
+/-- 递推一步：`procClades σ (k+1) = insert (σ k) (procClades σ k)`。 -/
+theorem procClades_succ {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ}
+    (hk : k < n - 1) : procClades σ (k + 1) = insert (σ ⟨k, hk⟩) (procClades σ k) := by
+  ext C
+  simp only [mem_procClades, Finset.mem_insert]
+  constructor
+  · rintro ⟨j, hj, rfl⟩
+    rcases Nat.lt_succ_iff_lt_or_eq.mp hj with h' | h'
+    · exact Or.inr ⟨j, by omega, rfl⟩
+    · left
+      have hjk : j = ⟨k, hk⟩ := Fin.ext h'
+      rw [hjk]
+  · rintro (rfl | ⟨j, hj, rfl⟩)
+    · exact ⟨⟨k, hk⟩, by simp, rfl⟩
+    · exact ⟨j, by omega, rfl⟩
+
+/-- ★ **第 `k` 步之后 `z` 所在的块**：「含 `z` 的已创建 clade」之并再加上 `z`。 -/
+def blockAt {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) (k : ℕ) (z : Fin n) :
+    Finset (Fin n) :=
+  insert z (((procClades σ k).filter (fun C => z ∈ C)).biUnion id)
+
+/-- `z` 在自己的块里。 -/
+theorem mem_blockAt {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) (k : ℕ) (z : Fin n) :
+    z ∈ blockAt σ k z := by
+  simp [blockAt]
+
+/-- 已创建的含 `z` 的 clade 落在块里。 -/
+theorem subset_blockAt {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ}
+    {C : Finset (Fin n)} {z : Fin n} (hC : C ∈ procClades σ k) (hz : z ∈ C) :
+    C ⊆ blockAt σ k z := by
+  intro w hw
+  simp only [blockAt, Finset.mem_insert]
+  exact Or.inr (Finset.mem_biUnion.mpr
+    ⟨C, Finset.mem_filter.mpr ⟨hC, hz⟩, hw⟩)
+
+/-- 若没有已创建的 clade 含 `z`，则块退化为单点 `{z}`。 -/
+theorem blockAt_eq_singleton {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ}
+    {z : Fin n} (h : ∀ C ∈ procClades σ k, z ∉ C) : blockAt σ k z = {z} := by
+  ext w
+  constructor
+  · intro hw
+    have hw' : w = z ∨ ∃ C, (C ∈ procClades σ k ∧ z ∈ C) ∧ w ∈ C := by
+      simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+    rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, -⟩
+    · rw [hwz]; exact Finset.mem_singleton_self z
+    · exact absurd hzC (h C hC)
+  · intro hw
+    rw [Finset.mem_singleton] at hw
+    rw [hw]
+    exact mem_blockAt σ k z
+
+/-- 块随步数单调。 -/
+theorem blockAt_mono {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k k' : ℕ}
+    (h : k ≤ k') (z : Fin n) : blockAt σ k z ⊆ blockAt σ k' z := by
+  intro w hw
+  have hw' : w = z ∨ ∃ C, (C ∈ procClades σ k ∧ z ∈ C) ∧ w ∈ C := by
+    simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+  rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+  · rw [hwz]; exact mem_blockAt σ k' z
+  · exact subset_blockAt σ (procClades_mono σ h hC) hzC hwC
+
 end Phylo.Stat.HookLength
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
