@@ -4415,7 +4415,70 @@ chainMap_eq_blockMin : ∀ k z,
 
 ⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）；`rankedFiberCount_gap_holds` **未**落地。 -/
 
+/-- ★★★ **孩子里的元素所在的块就是那个孩子**（两孩子版上）。 -/
+theorem blockAt_eq_child {n : ℕ} (hn : 2 ≤ n) {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    {k : ℕ} (hk : k < n - 1) {D : Finset (Fin n)}
+    (hD : D ∈ children (cladesOf n f) (σ ⟨k, hk⟩).1) {z : Fin n} (hz : z ∈ D) :
+    blockAt (fun j => (σ j).1) k z = D := by
+  classical
+  have hσT : ∀ j, (σ j).1 ∈ cladesOf n f := fun j => (Finset.mem_filter.mp (σ j).2).1
+  have hσ2 : ∀ j, 2 ≤ (σ j).1.card := fun j => (Finset.mem_filter.mp (σ j).2).2
+  have hσinj' : Function.Injective (fun j => (σ j).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have hσord' : ∀ i j, (σ i).1 ⊂ (σ j).1 → i < j := by
+    intro i j hlt
+    have hji : ¬ (j < i) := fun h => hord j i h (by simpa using hlt)
+    have hne : i ≠ j := fun h => by rw [h] at hlt; exact absurd hlt (lt_irrefl _)
+    exact lt_of_le_of_ne (not_lt.mp hji) hne
+  have hzσ : z ∈ (σ ⟨k, hk⟩).1 := (children_ssubset hD).1 hz
+  have hDcl : D ∈ cladesOf n f := children_mem hD
+  refine Finset.Subset.antisymm ?_ ?_
+  · -- blockAt ⊆ D：任何已创建的含 z 的 clade 都 ⊆ D
+    intro w hw
+    have hw' : w = z ∨ ∃ C, (C ∈ procClades (fun j => (σ j).1) k ∧ z ∈ C) ∧ w ∈ C := by
+      simpa [blockAt, Finset.mem_biUnion, Finset.mem_filter] using hw
+    rcases hw' with hwz | ⟨C, ⟨hC, hzC⟩, hwC⟩
+    · rw [hwz]; exact hz
+    · obtain ⟨j, hj, rfl⟩ := (mem_procClades _).mp hC
+      have hsubσ : (σ j).1 ⊆ (σ ⟨k, hk⟩).1 :=
+        subset_of_mem_procClades (laminarFamily_cladesOf f) hσT hσinj' hσord' hk hC hzC hzσ
+      have hjne : j ≠ ⟨k, hk⟩ := by
+        intro heq
+        rw [heq] at hj
+        exact absurd hj (by simp)
+      have hne : (σ j).1 ≠ (σ ⟨k, hk⟩).1 := fun heq => hjne (hσinj' heq)
+      rcases laminarFamily_cladesOf f (σ j).1 (hσT j) D hDcl with h | h | hdisj
+      · exact h hwC
+      · have hsub2 : (σ j).1 ⊂ (σ ⟨k, hk⟩).1 :=
+          Finset.ssubset_iff_subset_ne.mpr ⟨hsubσ, hne⟩
+        have hDeq : D = (σ j).1 := by
+          by_contra hne2
+          exact children_maximal hD (hσT j)
+            (Finset.ssubset_iff_subset_ne.mpr ⟨h, hne2⟩) hsub2
+        rw [hDeq]; exact hwC
+      · exact absurd hzC (Finset.disjoint_right.mp hdisj hz)
+  · -- D ⊆ blockAt：非单点用 `subset_blockAt`，单点用 `mem_blockAt`
+    by_cases hD2 : 2 ≤ D.card
+    · obtain ⟨j, hjk, hjD⟩ := exists_lt_of_mem_children hn hf σ hinj hord hD hD2
+      have hDproc : D ∈ procClades (fun j => (σ j).1) k := (mem_procClades _).mpr ⟨j, hjk, hjD⟩
+      exact subset_blockAt _ hDproc hz
+    · have hD1 : D.card = 1 := by
+        have := Finset.card_pos.mpr ⟨z, hz⟩
+        omega
+      obtain ⟨w, hw⟩ := Finset.card_eq_one.mp hD1
+      rw [hw] at hz
+      have hzw : z = w := by simpa using hz
+      rw [hw, ← hzw]
+      exact Finset.singleton_subset_iff.mpr (mem_blockAt _ k z)
+
 end Phylo.Stat.HookLength
+
 
 
 
