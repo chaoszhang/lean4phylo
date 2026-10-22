@@ -2482,6 +2482,102 @@ theorem children_cover {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
   ext z
   simp [newClade]
 
+/-! ### §14.7 ★★★ 创建序是**线性扩展**（(O1) 的「⟹」半）
+
+§14.4–§14.6 把「合并史 ↔ (clade 集, 创建块)」两端接上并给出了**入口**。本小节证它的「⟹」方向，即
+
+> 合并史的创建顺序 `k ↦ newClade f k` 是非单点 clade 在**严格包含序**
+> `⊂` 下的一个**线性扩展**：`C ⊂ D ⟹ 创建步(C) < 创建步(D)`。
+
+（反方向「线性扩展 ⟹ 合法创建序」本次**未**做，见本节末尾的诚实边界。）
+
+**证明路线**：对 `k'` 做**强归纳**。
+`C ⊂ D` 且 `children D = {A, B}`（`children_newClade`）⇒ `C ⊆ A ∪ B`，
+故 `C` 与某个孩子 `E ∈ {A, B}` 相交；橡嵌性（`laminarFamily_cladesOf`）给出
+`C ⊆ E` 或 `E ⊆ C`：
+
+* `C ⊆ E` 且 `C = E`：`E` 是 `k'` 层的块、`C` 的创建步为 `k`
+  ⇒ `newClade_lt_of_mem_blocksOf` 直接给 `k < k'`；
+* `C ⊂ E`：`E` 也是新块 `newClade f j`（`existsUnique_newClade`）且 `j < k'`（同上），
+  强归纳假设给 `k < j`，故 `k < j < k'`；
+* `E ⊂ C`：`E` 是 `D` 的**极大**真子簇，`E ⊂ C ⊂ D` 与极大性矛盾（`children_maximal`）；
+* `Disjoint C E`：与 `C 与 E` 相交矛盾。
+
+卡点只在一处：「`E` 是更小的新块 ⇒ 它的创建步 `< k'`」—— 它靠
+`newClade f j ∈ blocksOf (chainMap k') ⇒ j < k'`，后者又靠 `not_mem_upto_newClade`
+（新块不在更低层出现）与 `upto` 的单调性。
+
+⚠️ 本条**只**交付 (O1) 双射的「⟹」半，**不**声称已证 `rankedFiberCount_gap`：
+后者是 SD2012 的 **Remark 6**，而 Remark 6 本身是**转引** —— 该文正文明写
+"A proof can be found in [26]"，[26] = Semple & Steel, *Phylogenetics*（Oxford），**该书不在库**。 -/
+
+/-- ★★★ **新块在更晚层仍是块 ⇒ 它的创建步更早**（§14.7 的关键引理）。 -/
+theorem newClade_lt_of_mem_blocksOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {k : Fin (n - 1)} {L : ℕ}
+    (h : newClade f k ∈ blocksOf n (chainMap n f L)) : (k : ℕ) < L := by
+  by_contra hcon
+  have hLk : L ≤ (k : ℕ) := by omega
+  exact not_mem_upto_newClade hf k (upto_subset f hLk (mem_upto_of_le (le_refl L) h))
+
+/-- ★★★ **(O1) 的「⟹」半：创建序是严格包含序的线性扩展**（§14.7）。 -/
+theorem newClade_ssubset_imp_lt {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {k k' : Fin (n - 1)}
+    (hsub : newClade f k ⊂ newClade f k') : (k : ℕ) < (k' : ℕ) := by
+  refine Nat.strongRecOn (k' : ℕ)
+    (motive := fun m => ∀ (k k' : Fin (n - 1)), (k' : ℕ) = m →
+      newClade f k ⊂ newClade f k' → (k : ℕ) < (k' : ℕ)) ?_ k k' rfl hsub
+  intro m ih k k' hk'm hsub
+  have hCcl : newClade f k ∈ cladesOf n f := mem_cladesOf_newClade hf k
+  have hC2 : 2 ≤ (newClade f k).card := two_le_card_newClade hf k
+  have hCD : newClade f k ⊆ newClade f k' := hsub.1
+  obtain ⟨z, hzC⟩ := Finset.card_pos.mp (by omega : 0 < (newClade f k).card)
+  have hzD : z ∈ newClade f k' := hCD hzC
+  have key : ∀ (E : Finset (Fin n)), E ∈ blocksOf n (chainMap n f (k' : ℕ)) →
+      E ∈ children (cladesOf n f) (newClade f k') → z ∈ E → (k : ℕ) < (k' : ℕ) := by
+    intro E hEblk hEch hzE
+    have hEcl : E ∈ cladesOf n f := children_mem hEch
+    rcases laminarFamily_cladesOf f (newClade f k) hCcl E hEcl with h1 | h1 | h1
+    · by_cases hEC : E = newClade f k
+      · rw [hEC] at hEblk
+        exact newClade_lt_of_mem_blocksOf hf hEblk
+      · have hE2 : 2 ≤ E.card := le_trans hC2 (Finset.card_le_card h1)
+        obtain ⟨j, hEj, -⟩ := existsUnique_newClade hf hEcl hE2
+        have hjlt : (j : ℕ) < (k' : ℕ) :=
+          newClade_lt_of_mem_blocksOf hf (k := j) (L := (k' : ℕ)) (by rw [hEj]; exact hEblk)
+        have hss : newClade f k ⊂ newClade f j := by
+          rw [hEj]
+          exact Finset.ssubset_iff_subset_ne.mpr ⟨h1, fun hh => hEC hh.symm⟩
+        have hkj : (k : ℕ) < (j : ℕ) := ih (j : ℕ) (by omega) k j rfl hss
+        omega
+    · by_cases hEC : E = newClade f k
+      · rw [hEC] at hEblk
+        exact newClade_lt_of_mem_blocksOf hf hEblk
+      · exact absurd hsub (children_maximal hEch hCcl
+          (Finset.ssubset_iff_subset_ne.mpr ⟨h1, hEC⟩))
+    · exact absurd hzE (Finset.disjoint_left.mp h1 hzC)
+  rw [newClade] at hzD
+  rcases Finset.mem_union.mp hzD with hz | hz
+  · refine key (fiberOf (chainMap n f (k' : ℕ)) (f k').1) ?_ ?_ hz
+    · exact fiberOf_mem_blocksOf_of_nonempty ⟨(f k').1, mem_fiberOf.mpr (hf.1 k').1⟩
+    · rw [children_newClade hf k']; simp
+  · refine key (fiberOf (chainMap n f (k' : ℕ)) (f k').2) ?_ ?_ hz
+    · exact fiberOf_mem_blocksOf_of_nonempty ⟨(f k').2, mem_fiberOf.mpr (hf.1 k').2.1⟩
+    · rw [children_newClade hf k']; simp
+
+/-- ★★ **§14.7 的 `LinExt` 形式**：创建序满足 §15 `LinExt` 定义里的
+“下标越大者越大”条件（`i < j ⇒ ─ (newClade f j ⊂ newClade f i)`）。
+
+它是把 `newClade_ssubset_imp_lt` 转成反面说法：若 `newClade f j` 真包含于
+`newClade f i` 且 `i < j`，则它们的创建步应该 `j < i`，矛盾。 -/
+theorem newClade_not_ssubset_of_lt {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {i j : Fin (n - 1)} (hij : i < j) :
+    ¬ (newClade f j ⊂ newClade f i) := by
+  intro h
+  have h1 : (j : ℕ) < (i : ℕ) := newClade_ssubset_imp_lt hf h
+  have h2 : (i : ℕ) < (j : ℕ) := hij
+  omega
+
+
 
 /-! ### §15 ★★★ 线性扩展数 `LinExt` —— (O1) 计数一侧的**具名器材**
 
