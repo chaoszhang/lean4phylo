@@ -67,7 +67,8 @@ hook T C = |{ D ∈ T : 2 ≤ |D| ∧ D ⊆ C }|        -- 「C 子树内的内�
 | **§14.2–§14.3 ★★★** | **`card_cladesOf`** ＋ **`card_filter_nonsingleton_cladesOf`** ＋ **`existsUnique_creation_level`** ＋ `children_fiberOf_chainMap_succ` | **层分解无重（全局版）**：`|cladesOf n f| = 2n-1`、非单点 clade 恰 `n-1` 个、每个非单点 clade 的**创建步唯一**且 `children` 恰为该步被合并的两块 —— (O1) 具名缺件 ① 已落地（W26 泳道 b） |
 | §10.1 ★B | 4 条 `example` | `LE Tcat = 1` / `LE Tbal = 2` —— 与既有**纤维数** `rankedFiberCount_012_3 = 1` / `rankedFiberCount_01_23 = 2` **对上** |
 | **§14.4–§14.5 ★★★★** | **`reconstruct`** ＋ **`reconstructStep_eq`** ＋ **`reconstruct_newClade_eq`** ＋ **`cladesOf_reconstruct_newClade`** ＋ **`eq_of_newClade_eq`** ＋ **`image_newClade`** / **`existsUnique_newClade`** | **(O1) 重建映射**：由「clade 集 ＋ 创建块」按最小元读出合并对，重建出的合并史**就是** `f`（左逆），故 `cladesOf` 复原、`f ↦ (cladesOf, newClade)` **单射**；且 `k ↦ newClade f k` **恰枚举**非单点 clade（**满射**）—— (O1) 的「纤维 ↪ 创建序」两向已通（W26 泳道 f） |
-| **§15 ★★★** | **`LinExt`** ＋ `LinExt_eq_one_of_hook_eq_zero` ＋ 2 条 `example` | **线性扩展数（(O1) 计数一侧的语义对象）**：`internalBelow T C` 在 `⊊` 下的线性扩展数（`decide` 可算 ⇒ `n = 4` 取值 `Tcat = 1` / `Tbal = 2`，与 §10.1 的 `LE` 及纤维数对上）。⬜ 交错引理 `LinExt = multinomial · ∏ LinExt 孩子` **未证**（W26 泳道 f） |
+| **§15 ★★★** | **`LinExt`** ＋ `LinExt_eq_one_of_hook_eq_zero` ＋ 2 条 `example` | **线性扩展数（(O1) 计数一侧的语义对象）**：`internalBelow T C` 在 `⊊` 下的线性扩展数（`decide` 可算 ⇒ `n = 4` 取值 `Tcat = 1` / `Tbal = 2`，与 §10.1 的 `LE` 及纤维数对上）。✅ 交错引理的**两孩子形式已证**（`§19.4` `LinExt_interleaving_pair`），
+并由此得 **`LinExt = LE`**（`§20` `LinExt_eq_LE_cladesOf`）；一般 k-元形式未做（已按派单放弃） |
 | §4/§7/§8.1 ★B | 25 条 `example` | `n = 4` 两棵拓扑的钩长、钩长积、两条递推、计数恒等式、`LE` 的平凡定义方程 |
 
 **✅ (i) 已收口（第八轮）**：hook-length 公式本体
@@ -2590,7 +2591,10 @@ theorem newClade_not_ssubset_of_lt {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n
 （那要走子类型上的 `PartialOrder` 实例，内核不化），而用「**下标枚举 ＋ 过滤**」，
 使 `LinExt` 是**可计算**的 `def`（`decide` 能直接算出具体值，见 §15.1）。
 
-⬜ **仍未做（本节的诚实边界）**：**交错引理**
+✅ **交错引理已在§19.4（两孩子形式）证成**，`LinExt = LE` 见 `§20`
+（`LinExt_eq_LE_cladesOf`）。下面这段是**当时**（W26 泳道 f）的边界记录，保留供追溯：
+
+⬜ **当时未做（已由§19.4 补上）**：**交错引理**
 `LinExt T C = multinomial(hook 孩子) · ∏ LinExt 孩子` —— 即 §8 `LE_eq` 的语义版
 （孩子子树的线性扩展在**块间插空**的洗牌双射）。本节**没有**给出它，
 故「`LinExt = LE`」**仍开着**，§15.1 只给 `n = 4` 的数值对照。 -/
