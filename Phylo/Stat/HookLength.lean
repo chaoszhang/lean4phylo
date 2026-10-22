@@ -2753,21 +2753,32 @@ theorem card_fiber_le_LinExt {n : ℕ} (hn : 2 ≤ n)
 「第 `k` 步后的划分 = `{σ k, …, σ (n-2)}` 中的**极大者** ∪ 尚未被覆盖的单点」，
 并用 `reconstructStep_eq` 的九个前提逐个兑现。
 
-**剩余件 ②（派单 ③ 交错引理）**：
+**剩余件 ②（派单 ③ 交错引理与 `LinExt = LE`）—— ✅ **已落地**（§19–§20）
+
+两孩子形式（`§19.4`，证成）：
 
 ```text
-LinExt_interleaving (T) (hl : LaminarFamily T) (C) (hC : C ∈ T) (h2 : 2 ≤ C.card) :
-  LinExt T C = Nat.multinomial (children T C) (fun B => hook T B) *
-    (children T C).attach.prod (fun Bx : {B // B ∈ children T C} => LinExt T Bx.1)
-
-⚠️ hl : LaminarFamily T **不可省**：§18.1 已给出**机器核对的反例**
-LinExt_interleaving_false_without_laminar（左端 2、右端 6）。
+LinExt_interleaving_pair (T) (hl : LaminarFamily T) {A B C} (hC : C ∈ T) (h2 : 2 ≤ C.card)
+    (hch : children T C = {A, B}) (hAB : A ≠ B) :
+  LinExt T C = Nat.choose (hook T A + hook T B) (hook T A) * (LinExt T A * LinExt T B)
 ```
 
-（与 §8 的 `LE_eq` 同一个形状；两者落地即可把 `LinExt` 认成 `LE`。）
+`cladesOf` 上的形式（`§19.7` `LinExt_cladesOf_pair`）与 **`LinExt = LE`（`§20`，证成）**：
 
-⇒ 两件落地后，`rankedFiberCount_gap` 由下一条归约定理 + §10 的钩长公式
-（`LE_mul_prod_hook_eq_factorial`）+ §13 的 `hook_cladesOf_eq_card_sub_one` 立即收口。
+```text
+LinExt_eq_LE_cladesOf (hf : IsMergeHistory n f) :
+  ∀ (C) (hC : C ∈ cladesOf n f), LinExt (cladesOf n f) C = LE (cladesOf n f) C hC
+```
+
+⚠️ 两处规格修正均已**机器核对**：
+`hl : LaminarFamily T` **不可省**（§18.1 反例，左 2 / 右 6）；
+`hAB : A ≠ B` **不可省**（§19.1 反例 `children T univ = {{0,1}}` 可写成 `{A, A}`，左 1 / 右 2）。
+一般（k-元）形式本仓**仍未做**（已按派单永久放弃）。
+
+⇒ 归约定理的 `h2` 现可直接以
+`fun f hf hU => LinExt_eq_LE_cladesOf hf Finset.univ hU` 供给。**剩下只有 (O1) 的「≥」半
+（Φ 的满射性 = `reconstruct` 读法的满射性）**；它落地后由归约定理 + §10 钩长公式
++ §13 `hook_cladesOf_eq_card_sub_one` 即整条收口。
 
 ⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变），只给归约定理与待证陈述。
 ⚠️ 目标命题 `rankedFiberCount_gap` 是 SD2012 的 **Remark 6**，而 Remark 6 在该文是**转引**：
@@ -3807,7 +3818,98 @@ theorem LinExt_cladesOf_pair {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
   exact ⟨A, B, hAB, hch,
     LinExt_interleaving_pair (cladesOf n f) (laminarFamily_cladesOf f) hC h2 hch hAB⟩
 
+/-! ### §20 ★★★★ **`LinExt = LE`**（§17 的 `LinExt = LE` 半边）
+
+`LinExt` 与 `LE` 满足**同一个递推**：两孩子时
+`LinExt T C = C(s_A+s_B, s_A) · LinExt A · LinExt B`（§19.4 `LinExt_interleaving_pair`），
+而 `LE T C = multinomial(children) · ∏ LE`（§8 `LE_eq`）在 `children T C = {A,B}` 时
+`multinomial` 恰是同一个二项式（`multinomial_pair`）。故按 `hook T C` 强归纳（库内 `LE_induction`）即得。
+端点 `C.card ≤ 1` 两边都是 `1`。 -/
+
+/-- ★ **两元 `multinomial` 就是二项式系数**：`multinomial {A,B} f = C(f A + f B, f A)`。
+
+（`Nat.multinomial s f = (∑ f)!/∏ f!`，而 `Nat.choose_mul_factorial_mul_factorial` 给
+`C(a+b, a) · a! · b! = (a+b)!`；两边同乘 `a!·b!` 后消去。） -/
+theorem multinomial_pair {β : Type*} [DecidableEq β] {A B : β} (hAB : A ≠ B) (f : β → ℕ) :
+    Nat.multinomial ({A, B} : Finset β) f = Nat.choose (f A + f B) (f A) := by
+  have hpos : 0 < (f A).factorial * (f B).factorial :=
+    Nat.mul_pos (Nat.factorial_pos _) (Nat.factorial_pos _)
+  have h1 : ((f A).factorial * (f B).factorial) * Nat.multinomial ({A, B} : Finset β) f
+      = (f A + f B).factorial := by
+    have hspec := Nat.multinomial_spec ({A, B} : Finset β) f
+    rw [Finset.prod_insert (by simp [hAB]), Finset.prod_singleton,
+      Finset.sum_insert (by simp [hAB]), Finset.sum_singleton] at hspec
+    exact hspec
+  have h2 : ((f A).factorial * (f B).factorial) * Nat.choose (f A + f B) (f A)
+      = (f A + f B).factorial := by
+    have hc := Nat.choose_mul_factorial_mul_factorial (show f A ≤ f A + f B by omega)
+    rw [Nat.add_sub_cancel_left] at hc
+    calc ((f A).factorial * (f B).factorial) * Nat.choose (f A + f B) (f A)
+        = Nat.choose (f A + f B) (f A) * (f A).factorial * (f B).factorial := by ring
+      _ = (f A + f B).factorial := hc
+  exact Nat.mul_left_cancel hpos (h1.trans h2.symm)
+
+/-- ★★ **`LE` 在两孩子情形下的递推**（`multinomial` 落成二项式）。 -/
+theorem LE_pair_of_children_eq {T : Finset (Finset α)} {C A B : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B}) (hAB : A ≠ B)
+    (hA : A ∈ T) (hB : B ∈ T) :
+    LE T C hC = Nat.choose (hook T A + hook T B) (hook T A) * (LE T A hA * LE T B hB) := by
+  rw [LE_eq T C hC h2, attach_prod_LE]
+  simp only [hch]
+  rw [multinomial_pair hAB, Finset.prod_insert (by simp [hAB]), Finset.prod_singleton]
+  simp
+
+/-- ★★★ **`LinExt = LE`（`cladesOf n f` 上逐 clade）**—— §17 里「`LinExt = LE`」半边的**逐簇形式**。 -/
+theorem LinExt_eq_LE_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) :
+    ∀ (C : Finset (Fin n)) (hC : C ∈ cladesOf n f),
+      LinExt (cladesOf n f) C = LE (cladesOf n f) C hC := by
+  intro C hC
+  by_cases h2 : 2 ≤ C.card
+  · refine LE_induction (T := cladesOf n f)
+      (P := fun D => ∀ (hD : D ∈ cladesOf n f),
+        LinExt (cladesOf n f) D = LE (cladesOf n f) D hD) ?_ C hC h2 hC
+    intro D hD hD2 ih _
+    obtain ⟨A, B, hAB, hch⟩ := exists_children_pair_cladesOf hf hD hD2
+    have hAc : A ∈ children (cladesOf n f) D := by rw [hch]; simp
+    have hBc : B ∈ children (cladesOf n f) D := by rw [hch]; simp
+    have hAmem : A ∈ cladesOf n f := children_mem hAc
+    have hBmem : B ∈ cladesOf n f := children_mem hBc
+    have hLin : LinExt (cladesOf n f) D
+        = Nat.choose (hook (cladesOf n f) A + hook (cladesOf n f) B) (hook (cladesOf n f) A)
+          * (LinExt (cladesOf n f) A * LinExt (cladesOf n f) B) :=
+      LinExt_interleaving_pair (cladesOf n f) (laminarFamily_cladesOf f) hD hD2 hch hAB
+    have hLE2 : LE (cladesOf n f) D hD
+        = Nat.choose (hook (cladesOf n f) A + hook (cladesOf n f) B) (hook (cladesOf n f) A)
+          * (LE (cladesOf n f) A hAmem * LE (cladesOf n f) B hBmem) :=
+      LE_pair_of_children_eq hD hD2 hch hAB hAmem hBmem
+    have hA : LinExt (cladesOf n f) A = LE (cladesOf n f) A hAmem := by
+      by_cases hA2 : 2 ≤ A.card
+      · exact ih A hAc hA2 hAmem
+      · have h1 : A.card ≤ 1 := by omega
+        rw [LinExt_eq_one_of_hook_eq_zero (hook_eq_zero_of_card_le_one h1),
+          LE_eq_one_of_card_le_one hAmem h1]
+    have hB : LinExt (cladesOf n f) B = LE (cladesOf n f) B hBmem := by
+      by_cases hB2 : 2 ≤ B.card
+      · exact ih B hBc hB2 hBmem
+      · have h1 : B.card ≤ 1 := by omega
+        rw [LinExt_eq_one_of_hook_eq_zero (hook_eq_zero_of_card_le_one h1),
+          LE_eq_one_of_card_le_one hBmem h1]
+    rw [hLin, hLE2, hA, hB]
+  · have h1 : C.card ≤ 1 := by omega
+    rw [LinExt_eq_one_of_hook_eq_zero (hook_eq_zero_of_card_le_one h1),
+      LE_eq_one_of_card_le_one hC h1]
+
+/-- ★ **`univ` 形式**（§17 归约定理的 `h2` 直接用它）。 -/
+theorem LinExt_univ_eq_LE_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) (hU : (Finset.univ : Finset (Fin n)) ∈ cladesOf n f) :
+    LinExt (cladesOf n f) Finset.univ = LE (cladesOf n f) Finset.univ hU :=
+  LinExt_eq_LE_cladesOf hf Finset.univ hU
+
 end Phylo.Stat.HookLength
+
+
+
 
 
 
