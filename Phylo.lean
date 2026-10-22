@@ -17,6 +17,7 @@ import Phylo.Algorithm.UPGMA
 import Phylo.AttesonRadius
 import Phylo.BMELeastSquares
 import Phylo.Binary
+import Phylo.BinaryRealization
 import Phylo.Buneman
 import Phylo.BunemanGraft
 import Phylo.BunemanShrinkPD
