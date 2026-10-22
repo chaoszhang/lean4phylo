@@ -1805,6 +1805,119 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
    hsp, hdiag, hnn, by
      intro x y
      simp⟩
+
+/-! ## 8.8 ★★★ W27 泳道 e：`_v2` 结论的**归纳步封闭性**（存在性 ① 的骨架）
+
+`§8.7` 给了两端：split 锥内（`F` = 支撑、`δ₀ = 0`）与 split-prime 端（`F = ∅`、`δ₀ = δ`）。
+本节补上中间的**归纳步**：结论对「再加一条正系数 split 度量」封闭 ⇒
+
+> 存在性 ① ＝ 基例（split-prime 端，已证）＋ 归纳步（本节，已证）＋ **剥离链的终止性**（缺，即 §8.6 的 (P1)+(P2)）。
+
+这就是把 `_v2` 的缺口**收缩到唯一一件**：终止性。 -/
+
+/-- ★★ 系数并合的展开（`s₀ ∈ F` 情形用的 `c'`）：
+`(if s = s₀ then c s₀ + c₀ else c s) = c s + (if s = s₀ then c₀ else 0)`。 -/
+theorem coeff_merge_mem {α : Type*} [Fintype α] [DecidableEq α] (c : Split α → ℝ) (c₀ : ℝ)
+    {s₀ s : Split α} :
+    (if s = s₀ then c s₀ + c₀ else c s) = c s + (if s = s₀ then c₀ else 0) := by
+  by_cases h : s = s₀
+  · rw [h, ite_eq_left rfl, ite_eq_left rfl]
+  · rw [ite_eq_right h, ite_eq_right h, add_zero]
+
+/-- ★★ `s₀ ∈ F` 情形的正性：并合后的系数仍为正。 -/
+theorem coeff_merge_mem_pos {α : Type*} [Fintype α] [DecidableEq α] {F : Finset (Split α)}
+    {s₀ : Split α} (hmem : s₀ ∈ F) {c : Split α → ℝ} {c₀ : ℝ} (hc₀ : 0 < c₀)
+    (hpos : ∀ s ∈ F, 0 < c s) {s : Split α} (hs : s ∈ F) :
+    0 < (if s = s₀ then c s₀ + c₀ else c s) := by
+  by_cases h : s = s₀
+  · rw [ite_eq_left h]
+    linarith [hpos s₀ hmem, hc₀]
+  · rw [ite_eq_right h]
+    exact hpos s hs
+
+/-- ★★ `s₀ ∉ F` 情形的正性：新并进来的 `s₀` 系数为 `c₀ > 0`，其余不变。 -/
+theorem coeff_insert_pos {α : Type*} [Fintype α] [DecidableEq α] {F : Finset (Split α)}
+    {s₀ : Split α} (hnot : s₀ ∉ F) {c : Split α → ℝ} {c₀ : ℝ} (hc₀ : 0 < c₀)
+    (hpos : ∀ s ∈ F, 0 < c s) {s : Split α} (hs : s ∈ insert s₀ F) :
+    0 < (if s = s₀ then c₀ else c s) := by
+  rcases Finset.mem_insert.mp hs with rfl | hs'
+  · rw [ite_eq_left rfl]
+    exact hc₀
+  · have hne : s ≠ s₀ := fun hh => hnot (hh ▸ hs')
+    rw [ite_eq_right hne]
+    exact hpos s hs'
+
+/-- ★★ 系数合并（`s₀ ∈ F` 情形）：`Σ_{s∈F} c s·δ_s + c₀·δ_{s₀} = Σ_{s∈F} c'_s·δ_s`，
+其中 `c'_s := if s = s₀ then c s₀ + c₀ else c s`。 -/
+theorem sum_splitMetric_add_mem {α : Type*} [Fintype α] [DecidableEq α]
+    {F : Finset (Split α)} {s₀ : Split α} (hmem : s₀ ∈ F) (c : Split α → ℝ) (c₀ : ℝ)
+    (x y : α) :
+    (∑ s ∈ F, c s * SplitMetric s x y) + c₀ * SplitMetric s₀ x y
+      = ∑ s ∈ F, (if s = s₀ then c s₀ + c₀ else c s) * SplitMetric s x y := by
+  have hpt : ∀ s ∈ F, (if s = s₀ then c s₀ + c₀ else c s) * SplitMetric s x y
+      = c s * SplitMetric s x y + (if s = s₀ then c₀ * SplitMetric s₀ x y else 0) := by
+    intro s _
+    rw [coeff_merge_mem c c₀ (s₀ := s₀) (s := s), add_mul]
+    by_cases h : s = s₀
+    · rw [h, ite_eq_left rfl, ite_eq_left rfl]
+    · rw [ite_eq_right h, ite_eq_right h, zero_mul, add_zero]
+  have hsingle : (∑ s ∈ F, (if s = s₀ then c₀ * SplitMetric s₀ x y else 0))
+      = c₀ * SplitMetric s₀ x y := by
+    have h := Finset.sum_eq_single (s := F) (a := s₀)
+      (f := fun s => if s = s₀ then c₀ * SplitMetric s₀ x y else 0) (by
+        intro b _ hb
+        exact ite_eq_right hb) (by
+        intro h
+        exact absurd hmem h)
+    simpa using h
+  rw [Finset.sum_congr rfl hpt, Finset.sum_add_distrib, hsingle]
+
+/-- ★★ 系数合并（`s₀ ∉ F` 情形）：`Σ_{s∈F} c s·δ_s + c₀·δ_{s₀} = Σ_{s∈insert s₀ F} c'_s·δ_s`，
+其中 `c'_s := if s = s₀ then c₀ else c s`。 -/
+theorem sum_splitMetric_add_not_mem {α : Type*} [Fintype α] [DecidableEq α]
+    {F : Finset (Split α)} {s₀ : Split α} (hnot : s₀ ∉ F) (c : Split α → ℝ) (c₀ : ℝ)
+    (x y : α) :
+    (∑ s ∈ F, c s * SplitMetric s x y) + c₀ * SplitMetric s₀ x y
+      = ∑ s ∈ insert s₀ F, (if s = s₀ then c₀ else c s) * SplitMetric s x y := by
+  have hrest : (∑ s ∈ F, (if s = s₀ then c₀ else c s) * SplitMetric s x y)
+      = ∑ s ∈ F, c s * SplitMetric s x y := by
+    refine Finset.sum_congr rfl ?_
+    intro s hs
+    have hne : s ≠ s₀ := fun h => hnot (h ▸ hs)
+    rw [ite_eq_right hne]
+  rw [Finset.sum_insert hnot, hrest]
+  have hv : (if s₀ = s₀ then c₀ else c s₀) * SplitMetric s₀ x y = c₀ * SplitMetric s₀ x y := by
+    rw [ite_eq_left rfl]
+  rw [hv]
+  ring
+
+/-- ★★★ **`_v2` 结论的归纳步**：若 `δ` 有分解，则 `δ + c₀·δ_{s₀}`（`c₀ > 0`）也有分解 ——
+残差 `δ₀` 与 split-prime 性**逐字不动**，只把 `s₀` 并进 `F`（已在则系数相加）。
+
+⇒ 存在性 ① 只剩「剥离链终止」这一件（见 §8.6 的 (P1)+(P2)）。 -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_add_split
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} {s₀ : Split α} {c₀ : ℝ}
+    (hc₀ : 0 < c₀)
+    (h : ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧ ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y) :
+    ∃ (F' : Finset (Split α)) (c' : Split α → ℝ) (δ₀ : α → α → ℝ),
+      (∀ s ∈ F', 0 < c' s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+        (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y + c₀ * SplitMetric s₀ x y
+            = δ₀ x y + ∑ s ∈ F', c' s * SplitMetric s x y := by
+  obtain ⟨F, c, δ₀, hpos, hsp, hdiag, hnn, heq⟩ := h
+  by_cases hmem : s₀ ∈ F
+  · refine ⟨F, fun s => if s = s₀ then c s₀ + c₀ else c s, δ₀,
+      fun s hs => coeff_merge_mem_pos (F := F) (s₀ := s₀) hmem hc₀ hpos hs, hsp, hdiag, hnn, ?_⟩
+    intro x y
+    rw [heq x y]
+    linarith [sum_splitMetric_add_mem hmem c c₀ x y]
+  · refine ⟨insert s₀ F, fun s => if s = s₀ then c₀ else c s, δ₀,
+      fun s hs => coeff_insert_pos (F := F) (s₀ := s₀) hmem hc₀ hpos hs, hsp, hdiag, hnn, ?_⟩
+    intro x y
+    rw [heq x y]
+    linarith [sum_splitMetric_add_not_mem hmem c c₀ x y]
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
 **目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
