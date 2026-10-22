@@ -3785,7 +3785,30 @@ theorem LinExt_interleaving_pair (T : Finset (Finset α)) (hl : LaminarFamily T)
     rw [Fintype.card_prod, Fintype.card_prod]
   rw [hLC, hcard, hprod, hPatCard, hLA, hLB]
 
+/-- ★★ **`cladesOf n f` 的非单点 clade 恰有两个（不同的）孩子** —— 把
+`children_cladesOf_card_two`（数量）提升成可直接喂给交错引理的形式。 -/
+theorem exists_children_pair_cladesOf {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f) (h2 : 2 ≤ C.card) :
+    ∃ A B, A ≠ B ∧ children (cladesOf n f) C = {A, B} := by
+  have hcard : (children (cladesOf n f) C).card = 2 := children_cladesOf_card_two hf hC h2
+  obtain ⟨A, B, hAB, hEq⟩ := Finset.card_eq_two.mp hcard
+  exact ⟨A, B, hAB, hEq⟩
+
+/-- ★★★ **两孩子版交错引理在 `cladesOf n f` 上的形式**：
+因 `cladesOf n f` 是嵌嵌族（`laminarFamily_cladesOf`）且每个非单点 clade 恰两个孩子，
+`LinExt` 的洗牌递推**可直接应用** —— 这就是 §17 里「`LinExt = LE`」半边所需的输入。 -/
+theorem LinExt_cladesOf_pair {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f) {C : Finset (Fin n)} (hC : C ∈ cladesOf n f) (h2 : 2 ≤ C.card) :
+    ∃ A B, A ≠ B ∧ children (cladesOf n f) C = {A, B} ∧
+      LinExt (cladesOf n f) C
+        = Nat.choose (hook (cladesOf n f) A + hook (cladesOf n f) B) (hook (cladesOf n f) A)
+          * (LinExt (cladesOf n f) A * LinExt (cladesOf n f) B) := by
+  obtain ⟨A, B, hAB, hch⟩ := exists_children_pair_cladesOf hf hC h2
+  exact ⟨A, B, hAB, hch,
+    LinExt_interleaving_pair (cladesOf n f) (laminarFamily_cladesOf f) hC h2 hch hAB⟩
+
 end Phylo.Stat.HookLength
+
 
 
 
