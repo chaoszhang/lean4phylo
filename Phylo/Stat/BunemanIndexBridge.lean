@@ -1383,6 +1383,371 @@ theorem not_canonicalSplitDecomposition_gap_faithful :
   have hpos2 : 0 < witnessForm witnessDist := by rw [witnessForm_witnessDist]; norm_num
   linarith
 
+/-! ## 8.6 ★★★ W27 泳道 e：BdD **Thm 2** 的**剥离步**器材（存在性 ① 的第一块砖）
+
+文献：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:1281-1326`（**Thm 2** 陈述：
+`A,B` 是 `d`-split 时系数 `λ_{A,B} = α_{A,B}`，其余为 `0`；`d' := d - Σ λ_{A,B} δ_{A,B}` 满足
+`α'_{A,B} = α_{A,B} - λ_{A,B}`；**且 `d` 是 dissimilarity/metric ⇒ `d'` 也是**）＋ Proof 从 `:1346` 起。
+
+### 本节的机器结论（四要素：旧形态 / 新形态 / 文献 / 理由）
+
+`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，**未改一字**）的结论要求
+`δ = δ₀ + Σ_{s∈F} c_s·δ_s`，`c_s > 0`、`δ₀` 划分版 split-prime、`δ₀` 非负且对角为 `0`。
+存在性 ① = 「把正隔离指数的 split 逐个剥离」。**本节只落地剥离单步的全部度量保形结论**
+（= Thm 2 末句「`d'` 仍是 dissimilarity/metric」），不声称已证 ①。
+
+记 `A := s.sideA`、`B := s.sideB`、`α := isolationIndex δ A B`、`c := α/2`
+（BdD 的 `α` 带 `½`，库内 `pairDeficit` **省去 `½`** ⇒ 系数要除 `2`，见 `§8.3` 头部的形态约定）、
+`δ' := peelMetric δ s`（即 `δ' x y = δ x y - c·δ_{A,B}(x,y)`）。
+
+1. `splitMetric_nonneg / _self / _eq_one_* / _eq_zero_*`：`δ_{A,B}` 是 `0/1` 值、对角 `0`、
+   两侧之间的取值为 `1`、同侧取值为 `0`（`splitMetric_symm` 已在 `Phylo/SplitWeak.lean:960`）；
+2. `peelMetric_symm / _diag / _nonneg / _triangle`：**`δ'` 仍是度量**；
+   ★ 非负与三角不等式的**实质输入都是同一条定量界**（本节 `isolationIndex_le_cross_gap_*`）：
+   `α_{A,B} ≤ δ x y + δ y z - δ x z`（`x,z` 同侧、`y` 在另一侧）——
+   它是 `isolationIndex_le_pairDeficit` 的**退化四元组** `(x,z,y,y)` 的直接推论，
+   也正是「剥离不会把距离压到负、也不会破坏三角不等式」的**唯一**障碍；
+3. `peelMetric_pairDeficit`：对 `A×A×B×B` 的四元组 `q`，`pd(δ',q) = pd(δ,q) - 2c = pd(δ,q) - α`
+   （该四元组相对 `s` 的模式只有 `(2,2,0)` 一种 ⇒ `max` **可以**整体减去常数）；
+4. `peelMetric_not_isDSplit`：**`s` 不再是 `δ'` 的 d-split**（即 `α'_s = α_s - 2c = 0`）；
+5. `peelCoeff_pos`：`s` 是 `δ` 的 d-split ⇒ `0 < c`；
+6. `peelStep`：以上合取成一个「剥离步」包（**BdD Thm 2 Proof `:1346` 起的第一句**的机器版）。
+
+### ⚠️ 仍缺的两件（**具名**缺件；本节不含、也不假装含）
+
+* **(P1) 剥离的「全局」下降**：Thm 2 的 `α'_{A,B} = α_{A,B} - λ_{A,B}` 是对**所有**对 `A,B`
+  （本节第 3 条只对上被剥离的那一对 `A,B = s.sideA,s.sideB`）。一般对不是逐点可加的：
+  对四元组 `q`，`pd(δ - cδ_s, q)` 与 `pd(δ,q)` 之差取决于 `q` 相对 `s` 的**五种模式**
+  （见 `§9` 头部的表）：模式 `(0,0,0)`、`(1,1,1)` 差 `0`，`(2,2,0)` 差 `-2c`，
+  而 `(2,0,2)` / `(0,2,2)` 差 `max{P'+2c,Q'} - max{P',Q'} - 2c`，**可正可负**
+  ⇒ 需要 BdD Lemma 3–6（md `:5581` / `:6094` / `:6159` / `:6504`）的 `s(S)`-cluster / 弱层级结构
+  才能推出「剥离后 d-split 集合严格缩小」。
+* **(P2) 终止性**：可取的终止测度是 `dSplits δ`（本节 `:定义`）的基数：
+  每剥一步 `card` 严格下降（需 (P1)）⇒ 有限步后残差无 d-split。**目前 (P1) 缺 ⇒ 终止性缺。**
+* **② 唯一性（BdD Cor 4，md `:1794-1799`）不是独立上游**：Cor 4 的原文证明用 Thm 3（唯一性），
+  而 Thm 3 又依赖「d-split 集合 = 正系数支撑集」⇒ 它在 ① **之后**；先做 ② 拿不到独立成果。
+  这是把「先做 ②」的路线**排除**的机器级理由（Cor 4 的 `Y⁺`/`Y⁻` 论证以 Thm 3 为前提）。 -/
+
+/-- `SplitMetric` 非负（`0/1` 值）。 -/
+theorem splitMetric_nonneg {α : Type*} [Fintype α] [DecidableEq α] (s : Split α) (x y : α) :
+    0 ≤ SplitMetric s x y := by
+  unfold SplitMetric
+  split_ifs <;> norm_num
+
+/-- `SplitMetric` 对角为零（两侧不交）。 -/
+theorem splitMetric_self {α : Type*} [Fintype α] [DecidableEq α] (s : Split α) (x : α) :
+    SplitMetric s x x = 0 := by
+  unfold SplitMetric
+  split_ifs with h
+  · rcases h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · exact absurd h2 (Finset.disjoint_left.mp s.disjoint_sides h1)
+    · exact absurd h1 (Finset.disjoint_left.mp s.disjoint_sides h2)
+  · rfl
+
+/-- `x ∈ A`、`y ∈ B` ⇒ `δ_{A,B}(x,y) = 1`。 -/
+theorem splitMetric_eq_one_of_mem_sideA_mem_sideB {α : Type*} [Fintype α] [DecidableEq α]
+    {s : Split α} {x y : α} (hx : x ∈ s.sideA) (hy : y ∈ s.sideB) :
+    SplitMetric s x y = 1 := by
+  unfold SplitMetric
+  split_ifs with h
+  · rfl
+  · exact absurd (Or.inl ⟨hx, hy⟩) h
+
+/-- `x ∈ B`、`y ∈ A` ⇒ `δ_{A,B}(x,y) = 1`。 -/
+theorem splitMetric_eq_one_of_mem_sideB_mem_sideA {α : Type*} [Fintype α] [DecidableEq α]
+    {s : Split α} {x y : α} (hx : x ∈ s.sideB) (hy : y ∈ s.sideA) :
+    SplitMetric s x y = 1 := by
+  unfold SplitMetric
+  split_ifs with h
+  · rfl
+  · exact absurd (Or.inr ⟨hx, hy⟩) h
+
+/-- 同侧（都在 `A`）⇒ `δ_{A,B}(x,y) = 0`。 -/
+theorem splitMetric_eq_zero_of_mem_sideA {α : Type*} [Fintype α] [DecidableEq α]
+    {s : Split α} {x y : α} (hx : x ∈ s.sideA) (hy : y ∈ s.sideA) :
+    SplitMetric s x y = 0 := by
+  have hyB : y ∉ s.sideB := fun h => Finset.disjoint_left.mp s.disjoint_sides hy h
+  have hxB : x ∉ s.sideB := fun h => Finset.disjoint_left.mp s.disjoint_sides hx h
+  unfold SplitMetric
+  split_ifs with h
+  · rcases h with ⟨-, h2⟩ | ⟨h2, -⟩
+    · exact absurd h2 hyB
+    · exact absurd h2 hxB
+  · rfl
+
+/-- 同侧（都在 `B`）⇒ `δ_{A,B}(x,y) = 0`。 -/
+theorem splitMetric_eq_zero_of_mem_sideB {α : Type*} [Fintype α] [DecidableEq α]
+    {s : Split α} {x y : α} (hx : x ∈ s.sideB) (hy : y ∈ s.sideB) :
+    SplitMetric s x y = 0 := by
+  have hyA : y ∉ s.sideA := fun h => Finset.disjoint_left.mp s.disjoint_sides h hy
+  have hxA : x ∉ s.sideA := fun h => Finset.disjoint_left.mp s.disjoint_sides h hx
+  unfold SplitMetric
+  split_ifs with h
+  · rcases h with ⟨h1, -⟩ | ⟨-, h2⟩
+    · exact absurd h1 hxA
+    · exact absurd h2 hyA
+  · rfl
+
+/-- ★ 剥离系数 `c := α_{A,B}/2`（BdD 的 `α` 含 `½`，库内 `pairDeficit` 省去 `½`）。 -/
+noncomputable def peelCoeff {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (s : Split α) : ℝ := isolationIndex δ s.sideA s.sideB / 2
+
+/-- ★ 剥离一步：`δ' x y := δ x y - c·δ_{A,B}(x,y)`（BdD Thm 2 的 `d' := d - λ_{A,B}δ_{A,B}`）。 -/
+noncomputable def peelMetric {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (s : Split α) : α → α → ℝ :=
+  fun x y => δ x y - peelCoeff δ s * SplitMetric s x y
+
+/-- `peelMetric` 的展开式（`def` 级，`rfl`）。 -/
+theorem peelMetric_apply {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (s : Split α) (x y : α) :
+    peelMetric δ s x y = δ x y - peelCoeff δ s * SplitMetric s x y := rfl
+
+/-- `δ` 的 d-split 全体（**终止测度的载体**：`card` 是要在 (P1) 之后证严格下降的量）。 -/
+noncomputable def dSplits {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) : Finset (Split α) :=
+  letI := Classical.decPred (fun s : Split α => IsDSplit δ s.sideA s.sideB)
+  Finset.univ.filter (fun s => IsDSplit δ s.sideA s.sideB)
+
+/-- `dSplits` 的成员判据（`s ∈ dSplits δ ↔ s` 是 `δ` 的 d-split）。 -/
+theorem mem_dSplits {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} :
+    s ∈ dSplits δ ↔ IsDSplit δ s.sideA s.sideB := by
+  classical
+  simp only [dSplits, Finset.mem_filter, Finset.mem_univ, true_and]
+
+/-- ★★ **同侧跨点的定量界**（`x,z ∈ A`、`y ∈ B`）：`α_{A,B} ≤ δ x y + δ y z - δ x z`。
+来自退化四元组 `(x,z,y,y)`；它是「剥离后三角不等式仍成立」的实质输入。 -/
+theorem isolationIndex_le_cross_gap_of_mem_sideA {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) {s : Split α} (hδ : ∀ x y, δ x y = δ y x)
+    (hdiag : ∀ x, δ x x = 0) (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty)
+    {x y z : α} (hx : x ∈ s.sideA) (hz : z ∈ s.sideA) (hy : y ∈ s.sideB) :
+    isolationIndex δ s.sideA s.sideB ≤ δ x y + δ y z - δ x z := by
+  have hle := isolationIndex_le_pairDeficit δ (A := s.sideA) (B := s.sideB) hA hB
+    (a := x) (a' := z) (b := y) (b' := y) hx hz hy hy
+  have hpd : pairDeficit δ x z y y = δ x y + δ y z - δ x z := by
+    unfold pairDeficit
+    rw [hdiag y, max_self, ← hδ z y]
+    ring
+  linarith
+
+/-- ★★ **同侧跨点的定量界**（`x,z ∈ B`、`y ∈ A`）：`α_{A,B} ≤ δ x y + δ y z - δ x z`
+（退化四元组 `(y,y,x,z)`）。 -/
+theorem isolationIndex_le_cross_gap_of_mem_sideB {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) {s : Split α} (hδ : ∀ x y, δ x y = δ y x)
+    (hdiag : ∀ x, δ x x = 0) (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty)
+    {x y z : α} (hx : x ∈ s.sideB) (hz : z ∈ s.sideB) (hy : y ∈ s.sideA) :
+    isolationIndex δ s.sideA s.sideB ≤ δ x y + δ y z - δ x z := by
+  have hle := isolationIndex_le_pairDeficit δ (A := s.sideA) (B := s.sideB) hA hB
+    (a := y) (a' := y) (b := x) (b' := z) hy hy hx hz
+  have hpd : pairDeficit δ y y x z = δ x y + δ y z - δ x z := by
+    unfold pairDeficit
+    rw [hdiag y, add_comm (δ y z) (δ y x), max_self, ← hδ y x]
+    ring
+  linarith
+
+/-- ★★ `δ'` 对称。 -/
+theorem peelMetric_symm {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} (hδ : ∀ x y, δ x y = δ y x) (s : Split α) :
+    ∀ x y, peelMetric δ s x y = peelMetric δ s y x := by
+  intro x y
+  rw [peelMetric_apply, peelMetric_apply, hδ x y, splitMetric_symm s x y]
+
+/-- ★★ `δ'` 对角为零。 -/
+theorem peelMetric_diag {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} (hdiag : ∀ x, δ x x = 0) (s : Split α) :
+    ∀ x, peelMetric δ s x x = 0 := by
+  intro x
+  rw [peelMetric_apply, hdiag x, splitMetric_self, mul_zero, sub_zero]
+
+/-- ★★★ **`δ'` 非负**（Thm 2 末句「`d` 是 dissimilarity ⇒ `d'` 也是」的第一半）。
+两侧被分开时用退化四元组的定量界 `α ≤ 2δ x y`；同侧时 `δ' = δ`。 -/
+theorem peelMetric_nonneg {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α}
+    (hδ : ∀ x y, δ x y = δ y x) (hdiag : ∀ x, δ x x = 0) (hnn : ∀ x y, 0 ≤ δ x y)
+    (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty) :
+    ∀ x y, 0 ≤ peelMetric δ s x y := by
+  intro x y
+  rw [peelMetric_apply]
+  have hc : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  by_cases hxy : (x ∈ s.sideA ∧ y ∈ s.sideB) ∨ (x ∈ s.sideB ∧ y ∈ s.sideA)
+  · have hS : SplitMetric s x y = 1 := by
+      unfold SplitMetric
+      exact ite_eq_left hxy
+    rw [hS, mul_one]
+    have hbound : isolationIndex δ s.sideA s.sideB ≤ 2 * δ x y := by
+      rcases hxy with ⟨hx, hy⟩ | ⟨hx, hy⟩
+      · have hle := isolationIndex_le_pairDeficit δ (A := s.sideA) (B := s.sideB) hA hB
+          (a := x) (a' := x) (b := y) (b' := y) hx hx hy hy
+        have hpd : pairDeficit δ x x y y = 2 * δ x y := by
+          unfold pairDeficit
+          rw [hdiag x, hdiag y, max_self]
+          ring
+        linarith
+      · have hle := isolationIndex_le_pairDeficit δ (A := s.sideA) (B := s.sideB) hA hB
+          (a := y) (a' := y) (b := x) (b' := x) hy hy hx hx
+        have hpd : pairDeficit δ y y x x = 2 * δ x y := by
+          unfold pairDeficit
+          rw [hdiag y, hdiag x, ← hδ x y, max_self]
+          ring
+        linarith
+    linarith
+  · have hS : SplitMetric s x y = 0 := by
+      unfold SplitMetric
+      exact ite_eq_right hxy
+    rw [hS, mul_zero, sub_zero]
+    exact hnn x y
+
+/-- ★★★ **`δ'` 满足三角不等式**（Thm 2 末句「`d` 是 metric ⇒ `d'` 也是」的第二半）。
+八种「`x,y,z` 相对两侧的位置」情形：同侧同情形给 `0`，跨侧给 `1`；
+只有「`x,z` 同侧、`y` 在另一侧」两情形需要定量界 `α ≤ δ x y + δ y z - δ x z`，其余只用 `δ` 的三角不等式。 -/
+theorem peelMetric_triangle {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α}
+    (hδ : ∀ x y, δ x y = δ y x) (hdiag : ∀ x, δ x x = 0)
+    (htri : ∀ x y z, δ x z ≤ δ x y + δ y z)
+    (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty) :
+    ∀ x y z, peelMetric δ s x z ≤ peelMetric δ s x y + peelMetric δ s y z := by
+  intro x y z
+  rw [peelMetric_apply, peelMetric_apply, peelMetric_apply]
+  have hc : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  by_cases hx : x ∈ s.sideA <;> by_cases hy : y ∈ s.sideA <;> by_cases hz : z ∈ s.sideA
+  · rw [splitMetric_eq_zero_of_mem_sideA hx hz, splitMetric_eq_zero_of_mem_sideA hx hy,
+      splitMetric_eq_zero_of_mem_sideA hy hz]
+    simp only [mul_zero, sub_zero]
+    exact htri x y z
+  · have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+    rw [splitMetric_eq_one_of_mem_sideA_mem_sideB hx hzB,
+      splitMetric_eq_zero_of_mem_sideA hx hy,
+      splitMetric_eq_one_of_mem_sideA_mem_sideB hy hzB]
+    simp only [mul_one, mul_zero, sub_zero]
+    linarith [htri x y z]
+  · have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+    rw [splitMetric_eq_zero_of_mem_sideA hx hz,
+      splitMetric_eq_one_of_mem_sideA_mem_sideB hx hyB,
+      splitMetric_eq_one_of_mem_sideB_mem_sideA hyB hz]
+    simp only [mul_one, mul_zero, sub_zero]
+    have hgap := isolationIndex_le_cross_gap_of_mem_sideA δ hδ hdiag hA hB hx hz hyB
+    linarith
+  · have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+    have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+    rw [splitMetric_eq_one_of_mem_sideA_mem_sideB hx hzB,
+      splitMetric_eq_one_of_mem_sideA_mem_sideB hx hyB,
+      splitMetric_eq_zero_of_mem_sideB hyB hzB]
+    simp only [mul_one, mul_zero, sub_zero]
+    linarith [htri x y z]
+  · have hxB : x ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s x).mpr hx
+    rw [splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hz,
+      splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hy,
+      splitMetric_eq_zero_of_mem_sideA hy hz]
+    simp only [mul_one, mul_zero, sub_zero]
+    linarith [htri x y z]
+  · have hxB : x ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s x).mpr hx
+    have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+    rw [splitMetric_eq_zero_of_mem_sideB hxB hzB,
+      splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hy,
+      splitMetric_eq_one_of_mem_sideA_mem_sideB hy hzB]
+    simp only [mul_one, mul_zero, sub_zero]
+    have hgap := isolationIndex_le_cross_gap_of_mem_sideB δ hδ hdiag hA hB hxB hzB hy
+    linarith
+  · have hxB : x ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s x).mpr hx
+    have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+    rw [splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hz,
+      splitMetric_eq_zero_of_mem_sideB hxB hyB,
+      splitMetric_eq_one_of_mem_sideB_mem_sideA hyB hz]
+    simp only [mul_one, mul_zero, sub_zero]
+    linarith [htri x y z]
+  · have hxB : x ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s x).mpr hx
+    have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+    have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+    rw [splitMetric_eq_zero_of_mem_sideB hxB hzB, splitMetric_eq_zero_of_mem_sideB hxB hyB,
+      splitMetric_eq_zero_of_mem_sideB hyB hzB]
+    simp only [mul_zero, sub_zero]
+    exact htri x y z
+
+/-- ★★★ **被剥离四元组的 `pairDeficit` 精确下降**：`q ∈ A×A×B×B` 时
+`pd(δ',q) = pd(δ,q) - 2c = pd(δ,q) - α`（该模式只有 `(2,2,0)` 一种 ⇒ `max` 可整体平移）。 -/
+theorem peelMetric_pairDeficit {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a a' b b' : α}
+    (ha : a ∈ s.sideA) (ha' : a' ∈ s.sideA) (hb : b ∈ s.sideB) (hb' : b' ∈ s.sideB) :
+    pairDeficit (peelMetric δ s) a a' b b' = pairDeficit δ a a' b b' - 2 * peelCoeff δ s := by
+  have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb
+  have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha' hb'
+  have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb'
+  have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha' hb
+  have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA ha ha'
+  have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB hb hb'
+  have e1 : (δ a b - peelCoeff δ s * 1) + (δ a' b' - peelCoeff δ s * 1)
+      = (δ a b + δ a' b') - 2 * peelCoeff δ s := by ring
+  have e2 : (δ a b' - peelCoeff δ s * 1) + (δ a' b - peelCoeff δ s * 1)
+      = (δ a b' + δ a' b) - 2 * peelCoeff δ s := by ring
+  have e3 : (δ a a' - peelCoeff δ s * 0) + (δ b b' - peelCoeff δ s * 0)
+      = δ a a' + δ b b' := by ring
+  simp only [pairDeficit, peelMetric_apply, h1, h2, h3, h4, h5, h6, e1, e2, e3,
+    max_sub_sub_right]
+  ring
+
+/-- ★★★ **`s` 不再是 `δ'` 的 d-split**（Thm 2 的 `α'_s = α_s - 2c = 0`）。
+反证：若 `δ'` 仍在 `A×A×B×B` 上处处正亏损，则由 `lt_inf'_iff` 得 `α < α`。 -/
+theorem peelMetric_not_isDSplit {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty) :
+    ¬ IsDSplit (peelMetric δ s) s.sideA s.sideB := by
+  intro hcon
+  have hc : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  have hlt : isolationIndex δ s.sideA s.sideB < isolationIndex δ s.sideA s.sideB := by
+    have hkey : isolationIndex δ s.sideA s.sideB
+        < (isoQuadruples s.sideA s.sideB).inf' (isoQuadruples_nonempty hA hB)
+            (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2) := by
+      refine (Finset.lt_inf'_iff (H := isoQuadruples_nonempty hA hB)
+        (f := fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)).mpr ?_
+      intro q hq
+      obtain ⟨⟨a, a'⟩, b, b'⟩ := q
+      obtain ⟨ha, ha', hb, hb'⟩ := mem_isoQuadruples.mp hq
+      have hp : 0 < pairDeficit (peelMetric δ s) a a' b b' := by
+        simp only [pairDeficit, sub_pos]
+        exact hcon a ha a' ha' b hb b' hb'
+      rw [peelMetric_pairDeficit ha ha' hb hb'] at hp
+      linarith
+    rwa [← isolationIndex_eq_inf' δ hA hB] at hkey
+  exact lt_irrefl _ hlt
+
+/-- ★★ **d-split 的剥离系数为正**（`α_s > 0`）。 -/
+theorem peelCoeff_pos {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α}
+    (hA : s.sideA.Nonempty) (hB : s.sideB.Nonempty) (hds : IsDSplit δ s.sideA s.sideB) :
+    0 < peelCoeff δ s := by
+  have hpos : 0 < isolationIndex δ s.sideA s.sideB :=
+    (isolationIndex_pos_iff_isDSplit δ hA hB).mpr hds
+  unfold peelCoeff
+  linarith
+
+/-- ★★★ **剥离步包**（BdD Thm 2 Proof `:1346` 起：「if `d` is a dissimilarity function
+(or a metric), then `d′` is also」＋ `α'_s = 0` 的机器版）。
+
+`δ` 是度量（对称 / 对角 `0` / 非负 / 三角不等式）、`s` 是 `δ` 的 d-split ⇒
+`c = α_s/2 > 0`，`δ' := δ - c·δ_s` **仍是度量**，且 `s` **不再是** `δ'` 的 d-split。
+
+⚠️ 这**不是** `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`）：还缺 (P1)「剥离后
+d-split 集合严格缩小」（BdD Lemma 3–6）与 (P2) 终止性 —— 见本节头部。 -/
+theorem peelStep {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α}
+    (hδ : ∀ x y, δ x y = δ y x) (hdiag : ∀ x, δ x x = 0) (hnn : ∀ x y, 0 ≤ δ x y)
+    (htri : ∀ x y z, δ x z ≤ δ x y + δ y z) (hds : IsDSplit δ s.sideA s.sideB) :
+    0 < peelCoeff δ s ∧ (∀ x y, peelMetric δ s x y = peelMetric δ s y x) ∧
+      (∀ x, peelMetric δ s x x = 0) ∧ (∀ x y, 0 ≤ peelMetric δ s x y) ∧
+      (∀ x y z, peelMetric δ s x z ≤ peelMetric δ s x y + peelMetric δ s y z) ∧
+      ¬ IsDSplit (peelMetric δ s) s.sideA s.sideB :=
+  ⟨peelCoeff_pos (s.nonempty 0) (s.nonempty 1) hds,
+   peelMetric_symm hδ s,
+   peelMetric_diag hdiag s,
+   peelMetric_nonneg hδ hdiag hnn (s.nonempty 0) (s.nonempty 1),
+   peelMetric_triangle hδ hdiag htri (s.nonempty 0) (s.nonempty 1),
+   peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1)⟩
+
 /-! ## 9. ★★★ 修复形态的关键引理：三种「配对」两两不相容（W12l）
 
 **目标**（`fourPointOfSplitMetricSum_gap_correct_shape`）：正权 ＋ 两两相容的 split 度量之和
