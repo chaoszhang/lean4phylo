@@ -3039,7 +3039,114 @@ theorem LinExt_interleaving_pair_needs_distinct :
         (LinExt TpairDeg ({0, 1} : Finset (Fin 3)) * LinExt TpairDeg ({0, 1} : Finset (Fin 3))) := by
   decide
 
+/-! ### §19.2 ★★ 计数主体的四件引理（洗牌双射的前半）
+
+记 `m = hook T C`、`σ : Fin m → {D // D ∈ internalBelow T C}` 为一个**线性扩展**
+（`inj`：`i ≠ j ⇒ σ i ≠ σ j`；`ord`：`i < j ⇒ ¬ (σ j).1 ⊂ (σ i).1`）。
+
+* `linExt_surjective`：同基数 + 单射 ⇒ `σ` **满射**（故为双射）；
+* `linExt_last`：末位必是 `C`（§18 的 `LinExt_last_eq` 的子类型形式）；
+* `linExt_mem_union_of_ne_last`：非末位处的值落在 `internalBelow T A ∪ internalBelow T B` 里；
+* `linExt_positions_card`：`A`-**位置集** `{i | σ i ∈ internalBelow T A}` 的基数 `= hook T A`。
+
+这四件合起来就是「从 σ 读出位置模式 + 两个子树的线性扩展」的**定义性**
+（单射侧）；反方向的重构（满射侧）见§19.3。 -/
+
+/-- ★★ **线性扩展是满射**（定义域与码域同基数）。 -/
+theorem linExt_surjective {T : Finset (Finset α)} {C : Finset α} (_hC : C ∈ T)
+    (_h2 : 2 ≤ C.card) (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j) :
+    ∀ D : {D // D ∈ internalBelow T C}, ∃ i, σ i = D := by
+  classical
+  have hinj' : Function.Injective (fun i : Fin (hook T C) => (σ i).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have hsub : (Finset.univ.image fun i : Fin (hook T C) => (σ i).1) ⊆ internalBelow T C := by
+    intro D hD
+    obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hD
+    exact (σ i).2
+  have hcard : (Finset.univ.image fun i : Fin (hook T C) => (σ i).1).card
+      = (internalBelow T C).card := by
+    rw [Finset.card_image_of_injective _ hinj', Finset.card_univ, Fintype.card_fin]
+    rfl
+  have heq := Finset.eq_of_subset_of_card_le hsub (le_of_eq hcard.symm)
+  intro D
+  have hsub' : internalBelow T C ⊆ (Finset.univ.image fun i : Fin (hook T C) => (σ i).1) := by
+    rw [heq]
+  have hD : D.1 ∈ (Finset.univ.image fun i : Fin (hook T C) => (σ i).1) := hsub' D.2
+  obtain ⟨i, -, hi⟩ := Finset.mem_image.mp hD
+  exact ⟨i, Subtype.ext hi⟩
+
+/-- ★ 线性扩展的**末位就是 `C`**（子类型形式，由 §18 `LinExt_last_eq`）。 -/
+theorem linExt_last {T : Finset (Finset α)} {C : Finset α} (hC : C ∈ T)
+    (h2 : 2 ≤ C.card) (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1) :
+    σ ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩
+      = ⟨C, mem_internalBelow.mpr ⟨hC, h2, Finset.Subset.refl C⟩⟩ :=
+  Subtype.ext (LinExt_last_eq hC h2 σ hinj hord)
+
+/-- ★★ **非末位处的值落在两个孩子子树的并里**。 -/
+theorem linExt_mem_union_of_ne_last {T : Finset (Finset α)} {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B})
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1)
+    {i : Fin (hook T C)} (hi : i ≠ ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩) :
+    (σ i).1 ∈ internalBelow T A ∪ internalBelow T B := by
+  have hsub : internalBelow T C ⊆ insert C (internalBelow T A ∪ internalBelow T B) := by
+    rw [internalBelow_pair_eq hC h2 hch]
+  have hmem : (σ i).1 ∈ insert C (internalBelow T A ∪ internalBelow T B) := hsub (σ i).2
+  rcases Finset.mem_insert.mp hmem with h | h
+  · exfalso
+    have hlast := linExt_last hC h2 σ hinj hord
+    have heq : σ i = σ ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ := by
+      rw [hlast]
+      exact Subtype.ext h
+    exact absurd heq (hinj i _ hi)
+  · exact h
+
+/-- ★★ **`A`-位置集的基数恰为 `hook T A`**：线性扩展把 `A`-位置集**双射**到 `internalBelow T A`。 -/
+theorem linExt_positions_card {T : Finset (Finset α)} {A B C : Finset α}
+    (hC : C ∈ T) (h2 : 2 ≤ C.card) (hch : children T C = {A, B})
+    (σ : Fin (hook T C) → {D // D ∈ internalBelow T C})
+    (hinj : ∀ i j : Fin (hook T C), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (hook T C), i < j → ¬ (σ j).1 ⊂ (σ i).1) :
+    (Finset.univ.filter (fun i : Fin (hook T C) => (σ i).1 ∈ internalBelow T A)).card
+      = hook T A := by
+  classical
+  have hAc : A ∈ children T C := children_pair_left hch
+  set S := Finset.univ.filter (fun i : Fin (hook T C) => (σ i).1 ∈ internalBelow T A) with hSdef
+  have hinjS : Set.InjOn (fun i : Fin (hook T C) => (σ i).1) ↑S := by
+    intro i _ j _ hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have himg : S.image (fun i : Fin (hook T C) => (σ i).1) = internalBelow T A := by
+    apply Finset.Subset.antisymm
+    · intro D hD
+      obtain ⟨i, hi, rfl⟩ := Finset.mem_image.mp hD
+      exact (Finset.mem_filter.mp hi).2
+    · intro D hD
+      have hDIC : D ∈ internalBelow T C := internalBelow_subset_of_children hAc hD
+      obtain ⟨i, hi⟩ := linExt_surjective hC h2 σ hinj ⟨D, hDIC⟩
+      have hne : i ≠ ⟨hook T C - 1, by have h := hook_pos hC h2; omega⟩ := by
+        intro hcontra
+        have hlast := linExt_last hC h2 σ hinj hord
+        rw [hcontra, hlast] at hi
+        have hCD : C = D := congrArg Subtype.val hi
+        rw [← hCD] at hD
+        exact (children_ssubset hAc).2 (mem_internalBelow.mp hD).2.2
+      refine Finset.mem_image.mpr ⟨i, ?_, ?_⟩
+      · rw [hSdef]
+        exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, by rw [hi]; exact hD⟩
+      · rw [hi]
+  have hgoal : S.card = (internalBelow T A).card := by
+    rw [← himg, Finset.card_image_of_injOn hinjS]
+  simpa [hook] using hgoal
+
 end Phylo.Stat.HookLength
+
 
 
 
