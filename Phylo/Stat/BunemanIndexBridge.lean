@@ -3543,5 +3543,204 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
       unfold peelMetric
       ring
 
+
+/-! ## 8.11 ★★★ W28 泳道 e：(P1) 的**逐点定量障碍** ＋ 残余缺口的具名登记
+
+`§8.10` 把存在性 ① 压到唯一假设 (P1)「剥离后 `dSplits` 基数严格下降」，并证了它的**相容半边**。
+本节把 (P1) 的**不相容半边**压到**一条逐点不等式**（这是本节的全部内容，不声称证成 (P1)）：
+
+1. `pairDeficit_peelMetric_le_add`：`pd(δ,q) ≤ pd(δ',q) + 2c`（`c ≥ 0`）；
+2. `pairDeficit_le_peelMetric_add`：`pd(δ',q) ≤ pd(δ,q) + 2c`（`c ≥ 0`）——
+   合起来 `|pd(δ,q) − pd(δ',q)| ≤ 2c`：**剥离对任一四元组亏损的扰动 ≤ `α_s`**；
+3. ★★★ `pairDeficit_peelMetric_of_mem_sideA_mem_sideB`：**`−2` 模式（唯一危险模式）的精确公式**
+   （`a,b ∈ A_s`、`a',b' ∈ B_s`；此时四交全非空 ⇒ `s` 与 `t` **不相容**）：
+   ```
+   pd(δ', a a' b b') = max (δ a b + δ a' b' + 2c) (δ a b' + δ a' b) − (δ a a' + δ b b')
+   ```
+   ⇒ `pd(δ',q) > 0` 只给出 `δ a b + δ a' b' + 2c > δ a a' + δ b b'`（其余配对不受 `c` 影响）；
+4. ★★★ `cross_mode_obstruction`：于是「`t ∉ dSplits δ` 而 `t ∈ dSplits δ'`」要成立，**必须**有
+   ```
+   0 ≤ (δ a a' + δ b b') − (δ a b + δ a' b') < 2c = α_s
+   ```
+   即**危险模式下的亏损落在 `[0, α_s)` 内**。★ 这就是 (P1) 剩下的**唯一**缺口，且它是**逐点**的；
+5. `dSplitsPeelDecrease_gap`：(P1) 的具名 `Prop`（零假设、零证明，供台账追踪）；
+6. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease_gap`：
+   **一行装配** —— `dSplitsPeelDecrease_gap → canonicalSplitDecomposition_gap_faithful_v2`。
+
+### 为什么第 4 条仍是缺口（为什么它不能由现有器材推出）
+
+设 `α_s ≤ pd_s(δ)` 的四元组取自**同样四点**（`a,b ∈ A_s`、`a',b' ∈ B_s`）：
+`pd_s(δ) = max (δ a a' + δ b b', δ a b' + δ b a') − (δ a b + δ a' b') = max(Z, Y) − X`，
+其中 `Z := δ a a' + δ b b'`、`Y := δ a b' + δ b a'`、`X := δ a b + δ a' b'`。
+把 `δ = δ' + c·δ_s` 代入：`Z = Z' + 2c`、`Y = Y' + 2c`、`X = X'`，故
+`α_s ≤ max(Z', Y') + 2c − X'` —— **不等式的右端含 `2c = α_s` 本身** ⇒ 只能得到恒真式 `X' ≤ max(Z',Y')`。
+危险模式要求的是 `X' ≤ Z' < X' + 2c`，**恰好是这个循环的盲区**。
+⇒ 要排除它必须换一组点（即 BdD 的 convexity / `s(S)`-cluster 弱层级：Lemma 3 `md:5581`、
+Lemma 4 `:6094`、Lemma 5 `:6159`、Lemma 6 `:6504`），本库的 `Split.cluster ρ` 与
+`laminar_of_compatible_clusters`（`Phylo/Aho.lean`、`Phylo/Split.lean`）是现成的起点，
+但**弱**层级（非相容 ⇒ 非 `laminar`）需要新证。 -/
+
+/-- ★★ **剥离对 `pairDeficit` 的扰动（上界）**：`pd(δ,q) ≤ pd(δ',q) + 2c`（`c ≥ 0`）。
+
+`SplitMetric` 是 `0/1` 值 ⇒ 每个配对至多涨 `2c`、被减项只减不增。 -/
+theorem pairDeficit_peelMetric_le_add {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} (hc : 0 ≤ peelCoeff δ s) (a a' b b' : α) :
+    pairDeficit δ a a' b b' ≤ pairDeficit (peelMetric δ s) a a' b b' + 2 * peelCoeff δ s := by
+  have hmax : max (δ a b + δ a' b') (δ a b' + δ a' b)
+      ≤ max (peelMetric δ s a b + peelMetric δ s a' b')
+          (peelMetric δ s a b' + peelMetric δ s a' b) + 2 * peelCoeff δ s := by
+    have hX : δ a b + δ a' b'
+        ≤ peelMetric δ s a b + peelMetric δ s a' b' + 2 * peelCoeff δ s := by
+      have h1 : peelCoeff δ s * SplitMetric s a b ≤ peelCoeff δ s := by
+        simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s a b) hc
+      have h2 : peelCoeff δ s * SplitMetric s a' b' ≤ peelCoeff δ s := by
+        simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s a' b') hc
+      rw [peelMetric_apply, peelMetric_apply]
+      linarith
+    have hY : δ a b' + δ a' b
+        ≤ peelMetric δ s a b' + peelMetric δ s a' b + 2 * peelCoeff δ s := by
+      have h1 : peelCoeff δ s * SplitMetric s a b' ≤ peelCoeff δ s := by
+        simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s a b') hc
+      have h2 : peelCoeff δ s * SplitMetric s a' b ≤ peelCoeff δ s := by
+        simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s a' b) hc
+      rw [peelMetric_apply, peelMetric_apply]
+      linarith
+    have := max_le_max hX hY
+    rwa [max_add_add_right] at this
+  have hZ : peelMetric δ s a a' + peelMetric δ s b b' ≤ δ a a' + δ b b' := by
+    have h1 : 0 ≤ peelCoeff δ s * SplitMetric s a a' :=
+      mul_nonneg hc (splitMetric_nonneg s a a')
+    have h2 : 0 ≤ peelCoeff δ s * SplitMetric s b b' :=
+      mul_nonneg hc (splitMetric_nonneg s b b')
+    rw [peelMetric_apply, peelMetric_apply]
+    linarith
+  unfold pairDeficit
+  linarith
+
+/-- ★★ **剥离对 `pairDeficit` 的扰动（下界）**：`pd(δ',q) ≤ pd(δ,q) + 2c`（`c ≥ 0`）。
+
+与上一条合起来：`|pd(δ,q) − pd(δ',q)| ≤ 2c = α_s` —— **剥离只把亏损扰动 `α_s` 以内**。 -/
+theorem pairDeficit_le_peelMetric_add {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} (hc : 0 ≤ peelCoeff δ s) (a a' b b' : α) :
+    pairDeficit (peelMetric δ s) a a' b b' ≤ pairDeficit δ a a' b b' + 2 * peelCoeff δ s := by
+  have hmax : max (peelMetric δ s a b + peelMetric δ s a' b')
+      (peelMetric δ s a b' + peelMetric δ s a' b)
+      ≤ max (δ a b + δ a' b') (δ a b' + δ a' b) := by
+    have hX : peelMetric δ s a b + peelMetric δ s a' b' ≤ δ a b + δ a' b' := by
+      have h1 : 0 ≤ peelCoeff δ s * SplitMetric s a b :=
+        mul_nonneg hc (splitMetric_nonneg s a b)
+      have h2 : 0 ≤ peelCoeff δ s * SplitMetric s a' b' :=
+        mul_nonneg hc (splitMetric_nonneg s a' b')
+      rw [peelMetric_apply, peelMetric_apply]
+      linarith
+    have hY : peelMetric δ s a b' + peelMetric δ s a' b ≤ δ a b' + δ a' b := by
+      have h1 : 0 ≤ peelCoeff δ s * SplitMetric s a b' :=
+        mul_nonneg hc (splitMetric_nonneg s a b')
+      have h2 : 0 ≤ peelCoeff δ s * SplitMetric s a' b :=
+        mul_nonneg hc (splitMetric_nonneg s a' b)
+      rw [peelMetric_apply, peelMetric_apply]
+      linarith
+    exact max_le_max hX hY
+  have hZ : (δ a a' + δ b b') - (peelMetric δ s a a' + peelMetric δ s b b')
+      ≤ 2 * peelCoeff δ s := by
+    have h1 : peelCoeff δ s * SplitMetric s a a' ≤ peelCoeff δ s := by
+      simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s a a') hc
+    have h2 : peelCoeff δ s * SplitMetric s b b' ≤ peelCoeff δ s := by
+      simpa using mul_le_mul_of_nonneg_left (splitMetric_le_one s b b') hc
+    rw [peelMetric_apply, peelMetric_apply]
+    linarith
+  unfold pairDeficit
+  linarith
+
+/-- ★★★ **`−2` 模式（唯一危险模式）的精确公式**：`a, b ∈ A_s`、`a', b' ∈ B_s` 时
+
+```
+pd(δ', a a' b b') = max (δ a b + δ a' b' + 2c) (δ a b' + δ a' b) − (δ a a' + δ b b')
+```
+
+（`c = peelCoeff δ s`。此时四交 `A_s∩A_t ⊇ {a,b}`、`B_s∩A_t ⊇ {a',b'}` 等因 `t` 的
+`A = {a,a'}`、`B = {b,b'}` 而**全非空** ⇒ `s` 与 `t` **不相容**，正是 `§8.9` 的相容半边**覆盖不到**的构形。）
+
+⇒ 与 `s` 自己的四元组 `pd_s(δ) = max(Z, Y) − X` 对照可见：`pd(δ',q) > 0` 只把 `X` 换成 `X + 2c`，
+**其余不变** —— 这就是「`pd` 之差可正可负」的机器形态。 -/
+theorem pairDeficit_peelMetric_of_mem_sideA_mem_sideB {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α}
+    (ha : a ∈ s.sideA) (hb : b ∈ s.sideA) (ha' : a' ∈ s.sideB) (hb' : b' ∈ s.sideB) :
+    pairDeficit (peelMetric δ s) a a' b b'
+      = max (δ a b + δ a' b' + 2 * peelCoeff δ s) (δ a b' + δ a' b)
+          - (δ a a' + δ b b') := by
+  have hgen : ∀ A Y Z c : ℝ, max A (Y - 2 * c) - (Z - 2 * c) = max (A + 2 * c) Y - Z := by
+    intro A Y Z c
+    rcases le_total (Y - 2 * c) A with h | h
+    · rw [max_eq_left h, max_eq_left (show Y ≤ A + 2 * c by linarith)]
+      ring
+    · rw [max_eq_right h, max_eq_right (show A + 2 * c ≤ Y by linarith)]
+      ring
+  have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA ha hb
+  have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB ha' hb'
+  have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb'
+  have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha' hb
+  have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha ha'
+  have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB hb hb'
+  have e1 : (δ a b' - peelCoeff δ s) + (δ a' b - peelCoeff δ s)
+      = (δ a b' + δ a' b) - 2 * peelCoeff δ s := by ring
+  have e2 : (δ a a' - peelCoeff δ s) + (δ b b' - peelCoeff δ s)
+      = (δ a a' + δ b b') - 2 * peelCoeff δ s := by ring
+  simp only [pairDeficit, peelMetric_apply, h1, h2, h3, h4, h5, h6, mul_one, mul_zero,
+    sub_zero]
+  rw [e1, e2, hgen]
+
+/-- ★★★ **(P1) 残余缺口的逐点形态**（`−2` 模式的**唯一**危险构形）：若四元组 `q` 在 `δ` 处**非正**
+（`max(X,Y) ≤ Z`）而在 `δ'` 处**严格正**，则必有
+
+```
+0 ≤ Z − X < 2c = α_s
+```
+
+其中 `X = δ a b + δ a' b'`、`Z = δ a a' + δ b b'`。
+⇒ 「剥离产生新的 d-split」**只可能**发生在这个带宽里 —— 这是 (P1) 剩下的**全部**内容。 -/
+theorem cross_mode_obstruction {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α}
+    (ha : a ∈ s.sideA) (hb : b ∈ s.sideA) (ha' : a' ∈ s.sideB) (hb' : b' ∈ s.sideB)
+    (hneg : max (δ a b + δ a' b') (δ a b' + δ a' b) ≤ δ a a' + δ b b')
+    (hpos : 0 < pairDeficit (peelMetric δ s) a a' b b') :
+    δ a b + δ a' b' ≤ δ a a' + δ b b' ∧
+      δ a a' + δ b b' < δ a b + δ a' b' + 2 * peelCoeff δ s := by
+  have hf := pairDeficit_peelMetric_of_mem_sideA_mem_sideB (δ := δ) ha hb ha' hb'
+  rw [hf] at hpos
+  have hX : δ a b + δ a' b' ≤ δ a a' + δ b b' := le_trans (le_max_left _ _) hneg
+  have hY : δ a b' + δ a' b ≤ δ a a' + δ b b' := le_trans (le_max_right _ _) hneg
+  refine ⟨hX, ?_⟩
+  by_contra hcon
+  rw [not_lt] at hcon
+  have h1 : δ a b + δ a' b' + 2 * peelCoeff δ s ≤ δ a a' + δ b b' := hcon
+  have h2 : δ a b' + δ a' b ≤ δ a a' + δ b b' := hY
+  have : max (δ a b + δ a' b' + 2 * peelCoeff δ s) (δ a b' + δ a' b)
+      ≤ δ a a' + δ b b' := max_le h1 h2
+  linarith
+
+/-- ⬜ **(P1) 的具名登记**（零假设、零证明）：剥离 `δ` 的任一 d-split 后，`dSplits` 的基数**严格下降**。
+
+★ 这是 `§8.10` 的收口归约唯一欠的假设 ⇒ **存在性 ① 的全部残余缺口就是本条**。
+其**相容半边已证**（`§8.10` 的 `dSplits_peelMetric_card_lt_of_compatible`）；
+**不相容半边**的逐点障碍见 `§8.11` 的 `cross_mode_obstruction`（需 BdD Lemma 3–6）。
+★ 本 `Prop` **不叫** `_gap_holds`：它就是缺口本身（台账口径：`_gap` 为未证、`_holds` 为已证）。 -/
+def dSplitsPeelDecrease_gap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
+    (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
+    ∀ s : Split α, IsDSplit δ s.sideA s.sideB →
+      (dSplits (peelMetric δ s)).card < (dSplits δ).card
+
+/-- ★★★★ **一行装配**：`(P1)` ⟹ `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改**）。
+
+★ 本定理**不叫** `_holds`：前提 `dSplitsPeelDecrease_gap` **未证**。
+一旦 (P1) 证成（`h := …`），`canonicalSplitDecomposition_gap_faithful_v2_holds` 即本定理的直接实例。 -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease_gap
+    (h : dSplitsPeelDecrease_gap.{0}) : canonicalSplitDecomposition_gap_faithful_v2.{0} := by
+  intro α _ _ δ hδ hdiag hnn htri
+  exact canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+    (fun (δ : α → α → ℝ) hδ hdiag hnn htri s hds => h δ hδ hdiag hnn htri s hds)
+    δ hδ hdiag hnn htri
+
 end Split
 
