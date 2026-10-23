@@ -3239,4 +3239,69 @@ theorem rootedSplitWeight_filter_card {n : ℕ} (ω : rootedSplitFamily n) :
     rwa [hneg] at h
   omega
 
+
+/-! ### 11.11 树 ↦ 族（块 2 的三条「免费」条件 ＋ 只差基数）
+
+要把「拓扑类」装进 §11.7 的载体，需要每个 `n` 叶有根树 `U` 的**非平凡 split 系统**
+`U.nontrivialSplits` 落在 `rootedSplitFamily n` 里（四条：相容 / 非平凡 / `swap`-封闭 / 基数）。
+
+* 前三条本节**无条件证掉**：
+  - ★★ `compatible_of_mem_nontrivialSplits` —— 同树的 split 两两相容（用
+    ★★ `Cladogram.compatible_of_sameQuartetSystem` 取 `T = T'`）；
+  - ★★ `sides_card_of_mem_nontrivialSplits` —— 非平凡 ⟺ 两侧各 `≥ 2`（★ `Split.not_isTrivial_iff`）；
+  - ★★ `swap_mem_nontrivialSplits` —— `U.isSplitOf_swap` ＋ ★★ `isTrivial_swap`。
+* 第四条（**基数** `= 2(n−2)`）**未证** —— 那正是
+  「二叉 `m = n+1` 叶树恰 `m−3` 个（无序）非平凡 split」这块计数。
+* ★★ `exists_rootedSplitFamily_of_card` 把它写成**唯一前提**：
+  给了基数，就得到载体元素，并且 ★★★ `nontrivialSplits_rootedSplitTree` 保证
+  `rootedSplitTree` 的 split 系统**还原**它（族 ↦ 树 ↦ 族 = id）。 -/
+
+/-- ★★★ **树给出自身的非平凡 split 系统**：`rootedSplitTree hn ω` 的非平凡 split 系统
+**恰为** `ω.val`（族被树精确还原）。这就把 §11.7 的逐点刻画升成 `Finset` 等式。 -/
+theorem nontrivialSplits_rootedSplitTree {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n) :
+    (rootedSplitTree hn ω).nontrivialSplits = ω.val :=
+  Cladogram.nontrivialSplits_ofCompatibleSplits_eq ω.val (Sum.inr ())
+    ω.2.1 ω.2.2.1 ω.2.2.2.1 (by
+      simp only [Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+      omega)
+
+/-- ★★ 树的两条非平凡 split **相容**（同树的 split 族两两相容）。 -/
+theorem compatible_of_mem_nontrivialSplits {n : ℕ} (U : Cladogram (Fin n ⊕ Unit))
+    {s t : Split (Fin n ⊕ Unit)} (hs : s ∈ U.nontrivialSplits)
+    (ht : t ∈ U.nontrivialSplits) : Split.Compatible s t := by
+  simp only [Cladogram.nontrivialSplits, Finset.mem_filter, Finset.mem_univ, true_and] at hs ht
+  exact Cladogram.compatible_of_sameQuartetSystem (T := U) (T' := U)
+    (fun _ _ _ _ _ => Iff.rfl)
+    hs.1 ht.1
+
+/-- ★★ 非平凡 split 的两侧各 `≥ 2`。 -/
+theorem sides_card_of_mem_nontrivialSplits {n : ℕ} (U : Cladogram (Fin n ⊕ Unit))
+    {s : Split (Fin n ⊕ Unit)} (hs : s ∈ U.nontrivialSplits) :
+    2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  simp only [Cladogram.nontrivialSplits, Finset.mem_filter, Finset.mem_univ, true_and] at hs
+  exact (Split.not_isTrivial_iff s).mp hs.2
+
+/-- ★★ 非平凡 split 系统对 `swap` 封闭。 -/
+theorem swap_mem_nontrivialSplits {n : ℕ} (U : Cladogram (Fin n ⊕ Unit))
+    {s : Split (Fin n ⊕ Unit)} (hs : s ∈ U.nontrivialSplits) :
+    s.swap ∈ U.nontrivialSplits := by
+  simp only [Cladogram.nontrivialSplits, Finset.mem_filter, Finset.mem_univ, true_and] at hs ⊢
+  exact ⟨U.isSplitOf_swap hs.1, fun h => hs.2 ((isTrivial_swap s).mp h)⟩
+
+/-- ★★★ **块 2（只差基数）**：任何 `n` 叶有根树 `U` 的非平凡 split 系统，若基数恰
+`2(n−2)`，就是一个 `rootedSplitFamily n` 的元素 —— 且其 `rootedSplitTree` 的 split 系统
+**还原**它。
+
+⇒ 本批唯一没证的就是那条**基数**（= 块 1「二叉 `m` 叶树恰 `m−3` 个非平凡 split」）。 -/
+theorem exists_rootedSplitFamily_of_card {n : ℕ} (hn : 2 ≤ n) (U : Cladogram (Fin n ⊕ Unit))
+    (hcard : U.nontrivialSplits.card = 2 * (n - 2)) :
+    ∃ ω : rootedSplitFamily n, ω.val = U.nontrivialSplits ∧
+      (rootedSplitTree hn ω).nontrivialSplits = U.nontrivialSplits :=
+  ⟨⟨U.nontrivialSplits,
+      fun s hs t ht => compatible_of_mem_nontrivialSplits U hs ht,
+      fun s hs => sides_card_of_mem_nontrivialSplits U hs,
+      fun s hs => swap_mem_nontrivialSplits U hs,
+      hcard⟩,
+    rfl, by rw [nontrivialSplits_rootedSplitTree]⟩
+
 end Phylo.Stat.ReciprocalMonophyly
