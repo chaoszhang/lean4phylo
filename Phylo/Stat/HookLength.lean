@@ -4742,6 +4742,58 @@ theorem blockAt_eq_of_mem {n : ℕ} {T : Finset (Finset (Fin n))}
   Finset.Subset.antisymm (blockAt_subset_of_mem hl hσT hw)
     (blockAt_subset_of_mem hl hσT (mem_blockAt_comm hw))
 
+
+/-- ★★ **块相等 ⇒ 最小元相等**（`blockAt_min'_eq` 的「两边都是块」版；
+依然用 `Finset.min'_le` 两侧夹，**全程不做依赖重写**）。 -/
+theorem min'_blockAt_eq {n : ℕ} {σ : Fin (n - 1) → Finset (Fin n)} {k : ℕ} {z w : Fin n}
+    (h : blockAt σ k w = blockAt σ k z) :
+    (blockAt σ k w).min' ⟨w, mem_blockAt σ k w⟩ = (blockAt σ k z).min' ⟨z, mem_blockAt σ k z⟩ := by
+  have h1 : (blockAt σ k z).min' ⟨z, mem_blockAt σ k z⟩ ∈ blockAt σ k w := by
+    rw [h]; exact Finset.min'_mem _ _
+  have h2 : (blockAt σ k w).min' ⟨w, mem_blockAt σ k w⟩ ∈ blockAt σ k z := by
+    rw [← h]; exact Finset.min'_mem _ _
+  exact le_antisymm (Finset.min'_le _ _ h1) (Finset.min'_le _ _ h2)
+
+/-- ★★★★ **`fiberOf` 就是块**：`reconstruct` 出来的 `chainMap` 在第 `L` 层的纤维
+恰是第 `L` 层的块 `blockAt`。这是把 `blocksOf`/`cladesOf` 逐层读出来的入口。 -/
+theorem fiberOf_chainMap_reconstruct {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n)
+    {L : ℕ} (hL : L ≤ n - 1) (z : Fin n) :
+    fiberOf (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) L)
+        (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) L z)
+      = blockAt (fun j => (σ j).1) L z := by
+  classical
+  have hval : ∀ w : Fin n,
+      chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) L w
+        = (blockAt (fun j => (σ j).1) L w).min' ⟨w, mem_blockAt _ L w⟩ :=
+    fun w => chainMap_reconstruct_eq_min hn hf σ hinj hord d L hL w
+  have hpart : ∀ {a b : Fin n}, b ∈ blockAt (fun j => (σ j).1) L a →
+      blockAt (fun j => (σ j).1) L b = blockAt (fun j => (σ j).1) L a := fun h =>
+    blockAt_eq_of_mem (laminarFamily_cladesOf f)
+      (fun j => (Finset.mem_filter.mp (σ j).2).1) h
+  ext w
+  rw [mem_fiberOf]
+  constructor
+  · intro hw
+    have h1 : (blockAt (fun j => (σ j).1) L w).min' ⟨w, mem_blockAt _ L w⟩
+        = (blockAt (fun j => (σ j).1) L z).min' ⟨z, mem_blockAt _ L z⟩ :=
+      (hval w).symm.trans (hw.trans (hval z))
+    have huw : (blockAt (fun j => (σ j).1) L w).min' ⟨w, mem_blockAt _ L w⟩
+        ∈ blockAt (fun j => (σ j).1) L w := Finset.min'_mem _ _
+    have huz : (blockAt (fun j => (σ j).1) L w).min' ⟨w, mem_blockAt _ L w⟩
+        ∈ blockAt (fun j => (σ j).1) L z := by
+      rw [h1]
+      exact Finset.min'_mem _ _
+    have heq : blockAt (fun j => (σ j).1) L w = blockAt (fun j => (σ j).1) L z := by
+      rw [← hpart huw, ← hpart huz]
+    rw [← heq]
+    exact mem_blockAt _ L w
+  · intro hw
+    exact (hval w).trans ((min'_blockAt_eq (hpart hw)).trans (hval z).symm)
+
 end Phylo.Stat.HookLength
 
 
