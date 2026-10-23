@@ -3060,4 +3060,86 @@ theorem clanEvent_rootedSplitFamily {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
   simp only [Finset.mem_filter, Finset.mem_univ, true_and]
   exact isClanMinusRoot_rootedSplitTree hn ω hA hAc
 
+
+/-! ### 11.8 载体的**不空转**检查与「非平凡 split」收窄
+
+`rootedSplitFamily n` 若对 `n ≥ 3` 是空的，则 §11.7 的 `Σ = 1` 会退化成 `0 = 1`（假），
+下一步全白做。本节把非空性显式造出来（`n = 2` 已在 §11.7 由 `rootedSplitFamily_two_card` 覆盖）。
+★ 顺带把 ★★ `isSplitOf_rootedSplitTree` 的两档「平凡」支去掉：族的成员恰是树的**非平凡**
+split（这正是 `Split` 层上「clan = split」的接口）。 -/
+
+/-- 非平凡时 `IsSplitOf` 恰为族成员（去掉两档平凡 split）。 -/
+theorem isSplitOf_rootedSplitTree_of_notTrivial {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n)
+    {s : Split (Fin n ⊕ Unit)} (hs : ¬ s.IsTrivial) :
+    (rootedSplitTree hn ω).IsSplitOf s ↔ s ∈ ω.val := by
+  rw [isSplitOf_rootedSplitTree hn ω s]
+  constructor
+  · rintro (h | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · exact h
+    · exact absurd (Or.inl ⟨x, hx⟩) hs
+    · exact absurd (Or.inr ⟨x, hx⟩) hs
+  · exact fun h => Or.inl h
+
+/-- `n = 3` 时载体的具体见证：`{0,1} | {2,ρ}` 及其换向。 -/
+theorem rootedSplitFamily_three_nonempty : Nonempty (rootedSplitFamily 3) := by
+  have hB : ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} : Finset (Fin 3 ⊕ Unit)).Nonempty :=
+    ⟨Sum.inl 0, by simp⟩
+  have hBc : (({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} : Finset (Fin 3 ⊕ Unit))ᶜ).Nonempty :=
+    ⟨Sum.inr (), by simp⟩
+  refine ⟨⟨{splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+      Finset (Fin 3 ⊕ Unit)) hB hBc,
+    (splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+      Finset (Fin 3 ⊕ Unit)) hB hBc).swap}, ?_, ?_, ?_, ?_⟩⟩
+  · -- 相容（自身与换向两两相容）
+    intro a ha b hb
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ha hb
+    rcases ha with rfl | rfl <;> rcases hb with rfl | rfl
+    · exact Or.inr (Or.inl (Split.disjoint_sides _))
+    · exact Or.inl (by rw [Split.swap_sideA]; exact Split.disjoint_sides _)
+    · exact Or.inl (by
+        rw [Split.swap_sideA]
+        exact disjoint_comm.mpr (Split.disjoint_sides _))
+    · exact Or.inr (Or.inl (by
+        rw [Split.swap_sideA, Split.swap_sideB]
+        exact disjoint_comm.mpr (Split.disjoint_sides _)))
+  · -- 非平凡（两侧各 2）
+    intro a ha
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ha
+    rcases ha with rfl | rfl
+    · rw [splitOf_sideA, splitOf_sideB]
+      constructor
+      · decide
+      · rw [Finset.card_compl, Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+        decide
+    · rw [Split.swap_sideA, Split.swap_sideB, splitOf_sideA, splitOf_sideB]
+      constructor
+      · rw [Finset.card_compl, Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+        decide
+      · decide
+  · -- swap-封闭
+    intro a ha
+    simp only [Finset.mem_insert, Finset.mem_singleton] at ha ⊢
+    rcases ha with rfl | rfl
+    · exact Or.inr rfl
+    · exact Or.inl (Split.swap_swap _)
+  · -- card = 2·(3−2) = 2
+    have hne : splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+        Finset (Fin 3 ⊕ Unit)) hB hBc ≠
+        (splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+          Finset (Fin 3 ⊕ Unit)) hB hBc).swap := by
+      intro h
+      have h1 : (splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+          Finset (Fin 3 ⊕ Unit)) hB hBc).sideA =
+          (splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+            Finset (Fin 3 ⊕ Unit)) hB hBc).sideB := by
+        rw [← Split.swap_sideA]
+        exact congrArg Split.sideA h
+      have h2 : Sum.inl (0 : Fin 3) ∈
+          (splitOf ({Sum.inl (0 : Fin 3), Sum.inl (1 : Fin 3)} :
+            Finset (Fin 3 ⊕ Unit)) hB hBc).sideA := by
+        rw [splitOf_sideA]; simp
+      rw [h1, splitOf_sideB] at h2
+      simp at h2
+    rw [Finset.card_pair hne]
+
 end Phylo.Stat.ReciprocalMonophyly
