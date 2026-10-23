@@ -3725,8 +3725,12 @@ theorem cross_mode_obstruction {α : Type*} [Fintype α] [DecidableEq α]
 ★★ **命名说明**：本 `Prop` **故意不带 `gap`** —— 它是 `_v2` 的**内部子义务**（(P1) 的测度载体性质），
 **不是**新的独立文献缺口；台账口径 `A/B` 是机械的（`def` 名含 `gap` 就多登记一行），
 故此处只作具名 `Prop`，不计入「还剩几条真开放」。
-其**相容半边已证**（`§8.10` 的 `dSplits_peelMetric_card_lt_of_compatible`）；
-**不相容半边**的逐点障碍见 `§8.11` 的 `cross_mode_obstruction`（需 BdD Lemma 3–6）。
+其**相容半边**见 `§8.10` 的 `dSplits_peelMetric_card_lt_of_compatible`；
+**不相容半边**的逐点障碍见 `§8.11` 的 `cross_mode_obstruction`。
+
+★★ **状态更新（W28 收口）**：本 `Prop` **已被证成** —— 见 `§8.13` 的 `dSplitsPeelDecrease_holds`
+（不相容半边由 `§8.12` 的 `isDSplit_of_isDSplit_peelMetric_general` 给出，**不需要** BdD Lemma 3–6）。
+下文「仍需 BdD Lemma 3–6」的判断是**历史记录**（已被上文的反证取代）。
 ★ 本 `Prop` **不叫** `_gap_holds`：它就是缺口本身（台账口径：`_gap` 为未证、`_holds` 为已证）。 -/
 def dSplitsPeelDecrease : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
