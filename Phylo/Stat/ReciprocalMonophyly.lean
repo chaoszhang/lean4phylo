@@ -4026,4 +4026,75 @@ theorem inlEmbed_mem_union (A : Finset (Fin n)) (y : A ⊕ Unit) :
   · cases u
     exact Finset.mem_union.mpr (Or.inr (Finset.mem_singleton_self _))
 
+
+/-! ### 11.18 `restrictToFinset`：把 split 限制到子叶集 `A ⊕ Unit`
+
+第七轮的唯一目标（六轮失败清单的三条提示全部用上）：
+
+* ★★ `restrictSet A s := {y : A ⊕ Unit | inlEmbed A y ∈ s.away ρ}`（**独立 `def`**，
+  不是 `let` —— 这是绕开六轮那个 `splitOf` 占位符报错的关键：
+  把 `B` 变成定理/定义的**参数**，占位符就没有合成歧义）；
+* ★★ `restrictSet_nonempty`（需 `awayLeaves s ⊆ A`）与 ★★ `restrictSet_compl_nonempty`
+  （**先 `Finset.mem_compl.mpr` 再 `intro`**，不在一次 `simp only` 里同时展开 `mem_compl`/`mem_filter`
+  —— 这是六轮第二个报错 `Fintype ?m` 卡住的绕法）；
+* ★★★ `restrictToFinset A s h := splitOf (restrictSet A s) (restrictSet_nonempty …) (restrictSet_compl_nonempty …)`；
+* 取值引理：★★ `restrictToFinset_sideA`、★★ `mem_restrictToFinset_sideA_iff`
+  （`ρ ∉ s.sideA` 时限制侧 = `s.sideA` 的原像）、★★ `mem_restrictToFinset_sideA_iff'`
+  （`ρ ∈ s.sideA` 时 = `s.sideB` 的原像）。 -/
+
+
+variable {n : ℕ}
+
+/-- 限制用的集合：`A ⊕ Unit` 中落在 `s` 的 away 侧的点。 -/
+noncomputable def restrictSet (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit)) : Finset (A ⊕ Unit) :=
+  Finset.univ.filter (fun y => inlEmbed A y ∈ s.away (Sum.inr ()))
+
+theorem mem_restrictSet_iff (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (y : A ⊕ Unit) : y ∈ restrictSet A s ↔ inlEmbed A y ∈ s.away (Sum.inr ()) := by
+  simp only [restrictSet, Finset.mem_filter, Finset.mem_univ, true_and]
+
+theorem restrictSet_nonempty (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) : (restrictSet A s).Nonempty := by
+  obtain ⟨x, hx⟩ := awayLeaves_nonempty s
+  have hx' : Sum.inl x ∈ s.away (Sum.inr ()) := by
+    simpa only [awayLeaves, mem_realLeaves] using hx
+  refine ⟨Sum.inl ⟨x, h (by simpa only [awayLeaves, mem_realLeaves] using hx)⟩, ?_⟩
+  rw [mem_restrictSet_iff, inlEmbed, Sum.map_inl]
+  exact hx'
+
+theorem restrictSet_compl_nonempty (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit)) :
+    ((restrictSet A s)ᶜ).Nonempty := by
+  refine ⟨Sum.inr (), ?_⟩
+  refine Finset.mem_compl.mpr ?_
+  intro hmem
+  have h2 := (mem_restrictSet_iff A s (Sum.inr ())).mp hmem
+  rw [inlEmbed, Sum.map_inr] at h2
+  exact Split.not_mem_away (Sum.inr ()) s h2
+
+/-- ★★★ **沿子叶集限制 split**：若 `s` 的 away 真叶集含于 `A`，把 `s` 限制到 `A ⊕ Unit`。
+
+`B := {y : A ⊕ Unit | inlEmbed A y ∈ s.away ρ}`，再 `splitOf B`。
+关键：away 侧 ⊆ `A ∪ {ρ}`（away 真叶集 ⊆ `A` 且 `ρ ∉ away`），故 away 侧恰是 `B` 的原像。 -/
+noncomputable def restrictToFinset (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) : Split (A ⊕ Unit) :=
+  splitOf (restrictSet A s) (restrictSet_nonempty A s h) (restrictSet_compl_nonempty A s)
+
+/-- ★★ 取值式：限制后 `sideA` 就是 `restrictSet`。 -/
+theorem restrictToFinset_sideA (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) : (restrictToFinset A s h).sideA = restrictSet A s :=
+  splitOf_sideA _ _ _
+
+/-- ★★ 取值式：`sideA` 与**大集**的 `sideA` 的关系（`ρ ∉ s.sideA` 时 away 侧就是 `sideA`）。 -/
+theorem mem_restrictToFinset_sideA_iff (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) (hρ : Sum.inr () ∉ s.sideA) (y : A ⊕ Unit) :
+    y ∈ (restrictToFinset A s h).sideA ↔ inlEmbed A y ∈ s.sideA := by
+  rw [restrictToFinset_sideA, mem_restrictSet_iff, Split.away_of_notMem _ hρ]
+
+/-- ★★ 取值式：`ρ ∈ s.sideA` 时 away 侧是 `s.sideB`。 -/
+theorem mem_restrictToFinset_sideA_iff' (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) (hρ : Sum.inr () ∈ s.sideA) (y : A ⊕ Unit) :
+    y ∈ (restrictToFinset A s h).sideA ↔ inlEmbed A y ∈ s.sideB := by
+  rw [restrictToFinset_sideA, mem_restrictSet_iff, Split.away_of_mem _ hρ]
+
+
 end Phylo.Stat.ReciprocalMonophyly
