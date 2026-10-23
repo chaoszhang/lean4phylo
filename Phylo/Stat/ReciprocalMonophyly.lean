@@ -3142,4 +3142,40 @@ theorem rootedSplitFamily_three_nonempty : Nonempty (rootedSplitFamily 3) := by
       simp at h2
     rw [Finset.card_pair hne]
 
+
+/-! ### 11.9 载体**不重复计数**（归一化的那一半前提）
+
+★ `rootedSplitTree_family_eq`：两个族若给出同一个（非平凡）split 系统，则两个族相等 ——
+即 `fam ↦ tree` 在**拓扑类**上是单射，故 §11.7 的 `Σ_ω weight ω` **不会把同一棵拓扑算两次**。
+这是 ① 的拓扑层归一化（`Σ = 1`，仍未证）的**一半**前提；另一半是「每个拓扑类都被击中」
+（需要 `rootedSplitFamily n` 与有根二叉标号拓扑的**计数**双射，本批未做）。 -/
+
+/-- ★★ **族里只有非平凡 split**（`hnt` 的直接推论）。 -/
+theorem not_isTrivial_of_mem_rootedSplitFamily {n : ℕ} (ω : rootedSplitFamily n)
+    {s : Split (Fin n ⊕ Unit)} (hs : s ∈ ω.val) : ¬ s.IsTrivial := by
+  intro h
+  rcases (Split.isTrivial_iff_card s).mp h with h1 | h1
+  · have h2 := (ω.2.2.1 s hs).1
+    omega
+  · have h2 := (ω.2.2.1 s hs).2
+    omega
+
+/-- ★★★ **载体不重复计数**：两族若给出同一个（非平凡）split 系统，则两族相等。
+
+即 `fam ↦ tree` 在「拓扑类」上是**单射** —— 这是 ① 的拓扑层归一化
+（`Σ_ω weight ω = 1`）**不重复计数**的那一半前提。 -/
+theorem rootedSplitTree_family_eq {n : ℕ} (hn : 2 ≤ n) {ω₁ ω₂ : rootedSplitFamily n}
+    (h : ∀ s : Split (Fin n ⊕ Unit), ¬ s.IsTrivial →
+      ((rootedSplitTree hn ω₁).IsSplitOf s ↔ (rootedSplitTree hn ω₂).IsSplitOf s)) :
+    ω₁ = ω₂ := by
+  have hfam : ω₁.val = ω₂.val := by
+    ext s
+    by_cases hs : s.IsTrivial
+    · exact iff_of_false (fun hmem => not_isTrivial_of_mem_rootedSplitFamily ω₁ hmem hs)
+        (fun hmem => not_isTrivial_of_mem_rootedSplitFamily ω₂ hmem hs)
+    · rw [← isSplitOf_rootedSplitTree_of_notTrivial hn ω₁ hs,
+        ← isSplitOf_rootedSplitTree_of_notTrivial hn ω₂ hs]
+      exact h s hs
+  exact Subtype.ext hfam
+
 end Phylo.Stat.ReciprocalMonophyly
