@@ -4943,6 +4943,54 @@ theorem isMergeHistory_reconstruct {n : ℕ} (hn : 2 ≤ n)
   ⟨fun k => isStep_reconstruct hn hf σ hinj hord d k,
     final_const_reconstruct hn hf σ hinj hord d⟩
 
+
+/-- ★★★★ **(a) 的第三件：`newClade (reconstruct …) k = (σ k).1`**。
+
+用 `reconstructStep_fst` 直接读出**第一分量**（不需要 `reconstructStep_eq_children` 的两孩子分析），
+再用 `fiberOf` = 块 ＋ `blockAt_succ_of_mem`。 -/
+theorem newClade_reconstruct {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) (k : Fin (n - 1)) :
+    newClade (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k = (σ k).1 := by
+  classical
+  have hk : (k : ℕ) < n - 1 := k.isLt
+  have hCne : (σ k).1.Nonempty := Finset.card_pos.mp (by
+    have := (Finset.mem_filter.mp (σ k).2).2
+    omega)
+  have hinj' : Function.Injective (fun j : Fin (n - 1) => (σ j).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  have hord' : ∀ i j : Fin (n - 1), (σ i).1 ⊂ (σ j).1 → i < j := by
+    intro i j hlt
+    have hji : ¬ (j < i) := fun h => hord j i h (by simpa using hlt)
+    have hne : i ≠ j := fun h => by rw [h] at hlt; exact absurd hlt (lt_irrefl _)
+    exact lt_of_le_of_ne (not_lt.mp hji) hne
+  have hσT : ∀ j, (σ j).1 ∈ cladesOf n f := fun j => (Finset.mem_filter.mp (σ j).2).1
+  have hfst : (reconstruct (cladesOf n f) (fun j => (σ j).1) d k).1 = (σ k).1.min' hCne := by
+    show (reconstructStep (cladesOf n f) ((σ k).1) d).1 = (σ k).1.min' hCne
+    exact reconstructStep_fst _ _ d hCne
+  have hx : chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) ((k : ℕ) + 1)
+      ((σ k).1.min' hCne) = (σ k).1.min' hCne := by
+    rw [chainMap_reconstruct_eq_min hn hf σ hinj hord d ((k : ℕ) + 1) (by omega) ((σ k).1.min' hCne)]
+    refine (blockAt_min'_eq (fun j => (σ j).1) hCne ?_)
+    exact blockAt_succ_of_mem (laminarFamily_cladesOf f) hσT hinj' hord' hk
+      (Finset.min'_mem _ _)
+  rw [newClade_eq_fiberOf_succ, hfst]
+  calc fiberOf (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) ((k : ℕ) + 1))
+        ((σ k).1.min' hCne)
+      = fiberOf (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) ((k : ℕ) + 1))
+          (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) ((k : ℕ) + 1)
+            ((σ k).1.min' hCne)) :=
+        congrArg (fun v => fiberOf (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d)
+          ((k : ℕ) + 1)) v) hx.symm
+    _ = blockAt (fun j => (σ j).1) ((k : ℕ) + 1) ((σ k).1.min' hCne) :=
+        fiberOf_chainMap_reconstruct hn hf σ hinj hord d (by omega) ((σ k).1.min' hCne)
+    _ = (σ k).1 :=
+        blockAt_succ_of_mem (laminarFamily_cladesOf f) hσT hinj' hord' hk (Finset.min'_mem _ _)
+
 end Phylo.Stat.HookLength
 
 
