@@ -15,11 +15,12 @@
 #   | 顺序 | 桶 | 判据 |
 #   | - | - | - |
 #   | 1 | `[追溯]` | 名字以 `_legacy` 结尾（已证伪旧形态的追溯登记，W22 起） |
-#   | 2 | `[判定收档]` | 在 `ARCHIVED_JUDGED` 白名单（老师明文认可"任务完成"，见下） |
+#   | 2 | `[判定收档]` | 在 `ARCHIVED_JUDGED` 白名单（老师明文认可"任务完成"；**无可证内容**） |
+#   | 2′ | `[长期开放]` | 在 `LONGTERM_OPEN` 白名单（老师裁定"**Conjecture 不证**"；**有可证内容但不证**，2026-10-23 起） |
 #   | 3 | `[已证伪]` | 库内存在 `not_N` / `N_refuted` / `N_false*` / `N_not_universal` |
 #   | 4 | `[条件收口]` | 收口定理：(a) 比 `def` **多吃显式假设**，或 (b) 把 `def` 的某参数**特化** |
 #   | 5 | `[已收口]` | 存在**无条件、无特化**的收口定理 |
-#   | 6 | `[真开放]` | 其余 |
+#   | 6 | `[真开放]` | 其余（= **我们要证的**） |
 #
 #   ★ 收口定理的命名后缀（**按此顺序匹配，取第一条命中**）：
 #     `_holds` → `_proved` → `_true` → `_of_isBinary` → `_proof`
@@ -64,7 +65,15 @@ PHYLO = os.path.join(ROOT, "Phylo")
 #   (c) 老师明文认可「判定完成 / 任务完成」（不是 dsh 自己说了算）。
 # 现值：rStarConsensus_gap —— (a) 谓词式 ＋ W19 判不忠实；(b) rStarConsensus_gap_strictSplits；
 #       (c) W24 派单「A-10 任务完成，代码归档」。
-ARCHIVED_JUDGED = ["rStarConsensus_gap"]
+ARCHIVED_JUDGED = ["rStarConsensus_gap", "bme_pauplin_identity_gap"]
+# ★ 2026-10-23 老师裁定：`bme_pauplin_identity_gap`（原形态）**收档** —— 不再作为待证条目。
+#   技术备注（协调侧镜像实测）：它其实**2 行就能条件收口**
+#   （`_binary_holds` 给 `∃ T`，`_of_binary` 直接给本体，带 `2 ≤ |X|`）；
+#   若将来要恢复，落成 `…_of_card` 即可，不需新数学。
+
+# ★ 2026-10-23 老师裁定：**Conjecture 不证** ⇒ 单独一桶「[长期开放]」。
+#   与 `[判定收档]` 的区别：收档 = **无可证内容**；长期开放 = **有可证内容，但我们决定不证**。
+LONGTERM_OPEN = ["toricIdeal_generated_in_degree_le_four_gap"]
 
 # ===== 已证伪条目的形态（W25-B 人工逐条核对 2026-10-19；脚本推断只作兜底）=====
 FORM_OVERRIDE = {
@@ -348,7 +357,7 @@ def main():
         return None
 
     CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof", "_degenerate"]
-    buckets = {k: [] for k in ("refuted", "closed", "cond", "trace", "judged", "open")}
+    buckets = {k: [] for k in ("refuted", "closed", "cond", "trace", "judged", "longterm", "open")}
 
     for (rel, ln, kind, name, sig) in gaps:
         if name.endswith("_legacy"):
@@ -356,6 +365,10 @@ def main():
             continue
         if name in ARCHIVED_JUDGED:
             buckets["judged"].append((rel, ln, name, "在白名单 ARCHIVED_JUDGED 内（老师认可「任务完成」）", None))
+            continue
+        if name in LONGTERM_OPEN:
+            buckets["longterm"].append((rel, ln, name,
+                "在白名单 LONGTERM_OPEN 内（老师裁定「Conjecture 不证」：**有可证内容但不证**，不进派单）", None))
             continue
 
         # ---- 3) 已证伪 ----
@@ -423,21 +436,24 @@ def main():
                 print("        · %s" % note)
         print("")
 
-    print("=== 口径 B：六桶（已证伪 / 已收口 / 条件收口 / 追溯 / 判定收档 / 真开放）===")
+    print("=== 口径 B：七桶（已证伪 / 已收口 / 条件收口 / 追溯 / 判定收档 / 长期开放 / 真开放）===")
     show("已证伪", "refuted")
     show("已收口", "closed")
     show("条件收口", "cond")
     show("追溯", "trace")
     show("判定收档", "judged")
+    show("长期开放", "longterm")
     show("真开放", "open")
 
     print("  口径 B 合计 = %d 行（%d 个不同名）" % (total, uniq))
     if dup:
         print("  ⚠️ 同名重复定义（**不去重**，故行数 > 名字数）：%s" % ", ".join(dup))
     print("  口径 B：真开放 = %d · 已收口 = %d · 条件收口 = %d · 已证伪 = %d · 追溯 = %d · 判定收档 = %d"
+          " · 长期开放 = %d"
           % (len(buckets["open"]), len(buckets["closed"]), len(buckets["cond"]),
-             len(buckets["refuted"]), len(buckets["trace"]), len(buckets["judged"])))
-    print("  ✓ 六桶加总 = %d = 本脚本解析条数 %d（★ 口径 A 的**行数**可能因同名重复而更多，"
+             len(buckets["refuted"]), len(buckets["trace"]), len(buckets["judged"]),
+             len(buckets["longterm"])))
+    print("  ✓ 七桶加总 = %d = 本脚本解析条数 %d（★ 口径 A 的**行数**可能因同名重复而更多，"
           "见 list_gaps.sh 的『同名定义两次』提示）" % (total, len(gaps)))
     if total != len(gaps):
         print("  ✗ 加总不守恒！", file=sys.stderr)
