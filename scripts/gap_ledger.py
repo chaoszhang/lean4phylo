@@ -437,7 +437,8 @@ def main():
     print("  口径 B：真开放 = %d · 已收口 = %d · 条件收口 = %d · 已证伪 = %d · 追溯 = %d · 判定收档 = %d"
           % (len(buckets["open"]), len(buckets["closed"]), len(buckets["cond"]),
              len(buckets["refuted"]), len(buckets["trace"]), len(buckets["judged"])))
-    print("  ✓ 六桶加总 = %d = 口径 A 条数 %d" % (total, len(gaps)))
+    print("  ✓ 六桶加总 = %d = 本脚本解析条数 %d（★ 口径 A 的**行数**可能因同名重复而更多，"
+          "见 list_gaps.sh 的『同名定义两次』提示）" % (total, len(gaps)))
     if total != len(gaps):
         print("  ✗ 加总不守恒！", file=sys.stderr)
         return 1
