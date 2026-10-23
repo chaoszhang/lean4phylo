@@ -3515,4 +3515,207 @@ theorem sum_rootedSplitWeight_two :
   unfold yhkRootWeight
   norm_num
 
+
+/-! ### 11.14 根分裂分解（第 1 步）：clade 抽取 `awayLeaves` ＋ 基例
+
+**目标分解式（下一轮的靶子）**。记 `c n := Fintype.card (rootedSplitFamily n)`。
+有根树的根 = `ρ = Sum.inr ()` 的唯一邻居，它的两棵子树叶集 `A`、`Aᶜ` 给出**根分裂**，故
+
+```text
+2 · c n = ∑ a ∈ Ico 1 n, C(n,a) · c a · c (n − a)        (★ 取「定向」根分裂)
+```
+
+⚠️ **因子口径**：若只写 `∑_a (C(n,a)/2)·c a·c(n−a)`，则 `a ≠ n−a` 时**重复计数**
+（`{A,Aᶜ}` 会以 `|A| = a` 与 `|A| = n−a` 各出现一次，而 `c a·c(n−a)` 与 `c(n−a)·c a` 是**不同**的配对）。
+`(★)` 用「定向」（有序 `(A, Aᶜ)`，且每个 `ω` 恰有 **2** 个定向分解 —— 根的两个孩子可互换）避免了半边，
+**乘以 2 正好补偿**。这与 §11.1 的权重递推 `S_n = (1/(2(n−1)))·∑_a C(n,a)·S_a·S_{n−a}` 是**同一条**。
+
+**本节交付的是分解的「clade 抽取」那一半**（`ω ↦ 它的全部 clade`）：
+
+* ★★★ `awayLeaves`：split 的 **away 真叶集**（不含 `ρ` 的那一侧的真叶集）= 有根树的一个 clade；
+* ★★ `awayLeaves_eq_iff`：**两条 split 的 away 侧相同 ⟺ 它们相等或互为换向** ——
+  即 `awayLeaves` 在族上是 **2 对 1**（`s` 与 `s.swap` 同像），这正是「每条无向 split 恰给一个 clade」；
+* ★★ `awayLeaves_nonempty` / `awayLeaves_compl_nonempty`：clade 与其补都非空（真子集）；
+* ★★★ `card_image_awayLeaves`：**`#(ω 的 clade 集) = n − 2`**
+  （有根二叉 `n` 叶树的 proper clade 恰 `n−2` 个 = 非根内部顶点数）；
+* ★★ `rootedSplitFamily_card_of_le_two`：>基例 `c 0 = c 1 = c 2 = 1`（`n ≤ 2` 时载体是单点集，
+  唯一元素是空族）—— 递推 `(★)` 的底座；
+* ★ `exists_inl_of_two_le_card`：`2 ≤ #T` 的 `T ⊆ Fin n ⊕ Unit` 必含真叶（辅助）。
+
+**没做的那一半**：把 `ω` 拆成「根分裂 `(A, Aᶜ)` ＋ `ω_A ∈ Ω_|A|` ＋ `ω_B ∈ Ω_|B|`」以及反向的**嫁接**。
+卡点在**载体运输**：子族住在 `Cladogram (A ⊕ Unit)` 上，而 `rootedSplitFamily a` 说的是
+`Split (Fin a ⊕ Unit)`；库内**没有** `Cladogram`/`Split` 沿 `A ≃ Fin |A|` 的运输 API
+（`Cladogram.V : Type*` 任意），故 `Ω_A ≃ Ω_|A|` 这一句先要自建 `~50–80` 行的运输层。
+有了运输层，`(★)` 的证明骨架是：`ω ↦ (away 极大元对, 两个子族)` 双向 ＋
+★★★ `card_image_awayLeaves` 保证「clade 数对」，★★★ `nontrivialSplits_rootedSplitTree`(:3261) 保证还原。 -/
+
+/-! ## 基例：`n ≤ 2` 的载体都是单点 -/
+
+theorem rootedSplitFamily_card_of_le_two {n : ℕ} (hn : n ≤ 2) :
+    Fintype.card (rootedSplitFamily n) = 1 := by
+  have h0 : n - 2 = 0 := by omega
+  have hempty : ∀ x : rootedSplitFamily n, x.val = ∅ := by
+    intro x
+    apply Finset.card_eq_zero.mp
+    calc x.val.card = 2 * (n - 2) := x.2.2.2.2
+      _ = 0 := by rw [h0]
+  have hnon : Nonempty (rootedSplitFamily n) :=
+    ⟨⟨∅, by refine ⟨?_, ?_, ?_, ?_⟩ <;> simp [h0]⟩⟩
+  have hle : Fintype.card (rootedSplitFamily n) ≤ 1 := by
+    rw [Fintype.card_le_one_iff_subsingleton]
+    exact ⟨fun a b => Subtype.ext ((hempty a).trans (hempty b).symm)⟩
+  have hpos : 0 < Fintype.card (rootedSplitFamily n) := Fintype.card_pos_iff.mpr hnon
+  omega
+
+/-- ★ `Fin n ⊕ Unit` 里一个大集合必含真叶（`2 ≤ card`）。 -/
+theorem exists_inl_of_two_le_card {n : ℕ} {T : Finset (Fin n ⊕ Unit)} (h : 2 ≤ T.card) :
+    ∃ x : Fin n, Sum.inl x ∈ T := by
+  by_contra hc
+  have hc' : ∀ x : Fin n, Sum.inl x ∉ T := fun x hx => hc ⟨x, hx⟩
+  have hsub : T ⊆ {Sum.inr ()} := by
+    intro y hy
+    rcases y with x | u
+    · exact absurd hy (hc' x)
+    · cases u
+      exact Finset.mem_singleton_self _
+  have hcard := Finset.card_le_card hsub
+  simp at hcard
+  omega
+
+/-! ## away 侧（clade 抽取） -/
+
+/-- ★★ split 的 **away 真叶集**（不含 `ρ = Sum.inr ()` 那一侧的真叶集）。 -/
+noncomputable def awayLeaves {n : ℕ} (s : Split (Fin n ⊕ Unit)) : Finset (Fin n) :=
+  realLeaves (s.away (Sum.inr ()))
+
+/-- ★ away 侧恰是 away 真叶集的原像（`away` 侧不含 `ρ`）。 -/
+theorem away_eq_image_awayLeaves {n : ℕ} (s : Split (Fin n ⊕ Unit)) :
+    s.away (Sum.inr ()) = (awayLeaves s).image Sum.inl := by
+  ext y
+  rcases y with x | u
+  · simp only [awayLeaves, Finset.mem_image, mem_realLeaves]
+    exact ⟨fun h => ⟨x, h, rfl⟩, fun ⟨x', hx', h⟩ => by
+      rw [← Sum.inl.inj h]; exact hx'⟩
+  · cases u
+    constructor
+    · intro h
+      exact absurd h (Split.not_mem_away _ _)
+    · intro h
+      obtain ⟨a, -, ha⟩ := Finset.mem_image.mp h
+      exact absurd ha (by simp)
+
+/-- ★ `awayLeaves` 对换向不变。 -/
+theorem awayLeaves_swap {n : ℕ} (s : Split (Fin n ⊕ Unit)) :
+    awayLeaves s.swap = awayLeaves s := by
+  simp only [awayLeaves, Split.away_swap]
+
+/-- ★★ **away 侧相同的两条 split 只差换向**。 -/
+theorem awayLeaves_eq_iff {n : ℕ} {s t : Split (Fin n ⊕ Unit)} :
+    awayLeaves s = awayLeaves t ↔ s = t ∨ s = t.swap := by
+  have key : ∀ {a b : Split (Fin n ⊕ Unit)},
+      awayLeaves a = awayLeaves b → a.sideA = b.sideA ∨ a.sideA = b.sideAᶜ := by
+    intro a b h
+    have hu : a.away (Sum.inr ()) = b.away (Sum.inr ()) := by
+      rw [away_eq_image_awayLeaves, away_eq_image_awayLeaves, h]
+    by_cases ha : Sum.inr () ∈ a.sideA <;> by_cases hb : Sum.inr () ∈ b.sideA
+    · left
+      rw [Split.away_of_mem _ ha, Split.away_of_mem _ hb, Split.sideB_eq_compl,
+        Split.sideB_eq_compl] at hu
+      simpa using congrArg (fun s : Finset (Fin n ⊕ Unit) => sᶜ) hu
+    · right
+      rw [Split.away_of_mem _ ha, Split.away_of_notMem _ hb, Split.sideB_eq_compl] at hu
+      rw [← hu]
+      simp
+    · right
+      rw [Split.away_of_notMem _ ha, Split.away_of_mem _ hb, Split.sideB_eq_compl] at hu
+      exact hu
+    · left
+      rw [Split.away_of_notMem _ ha, Split.away_of_notMem _ hb] at hu
+      exact hu
+  constructor
+  · intro h
+    rcases key h with h1 | h1
+    · exact Or.inl (Split.ext_sideA h1)
+    · refine Or.inr (Split.ext_sideA ?_)
+      rw [Split.swap_sideA, Split.sideB_eq_compl]
+      exact h1
+  · rintro (rfl | h)
+    · rfl
+    · rw [h, awayLeaves_swap]
+
+/-- ★★ `awayLeaves` 非空。 -/
+theorem awayLeaves_nonempty {n : ℕ} (s : Split (Fin n ⊕ Unit)) :
+    (awayLeaves s).Nonempty := by
+  obtain ⟨y, hy⟩ := s.away_nonempty (Sum.inr ())
+  have hne : y ≠ Sum.inr () := by
+    have h := s.away_subset (Sum.inr ()) hy
+    simpa using h
+  rcases y with x | u
+  · exact ⟨x, by simp only [awayLeaves, mem_realLeaves]; exact hy⟩
+  · cases u
+    exact absurd rfl hne
+
+/-- ★★ 族的成员（非平凡）其 `awayLeaves` 的补也非空。 -/
+theorem awayLeaves_compl_nonempty {n : ℕ} (ω : rootedSplitFamily n)
+    {s : Split (Fin n ⊕ Unit)} (hs : s ∈ ω.val) : (awayLeaves s)ᶜ.Nonempty := by
+  have h2 := ω.2.2.1 s hs
+  by_cases hρ : Sum.inr () ∈ s.sideA
+  · have hu : awayLeaves s = realLeaves s.sideB := by
+      simp only [awayLeaves, Split.away_of_mem _ hρ]
+    obtain ⟨x, hx⟩ := exists_inl_of_two_le_card h2.1
+    refine ⟨x, ?_⟩
+    simp only [Finset.mem_compl, hu, mem_realLeaves]
+    intro hmem
+    exact (Finset.disjoint_left.mp (Split.disjoint_sides s)) hx hmem
+  · have hu : awayLeaves s = realLeaves s.sideA := by
+      simp only [awayLeaves, Split.away_of_notMem _ hρ]
+    obtain ⟨x, hx⟩ := exists_inl_of_two_le_card h2.2
+    refine ⟨x, ?_⟩
+    simp only [Finset.mem_compl, hu, mem_realLeaves]
+    intro hmem
+    exact (Finset.disjoint_left.mp (Split.disjoint_sides s)) hmem hx
+
+/-- ★★★ **有根二叉 
+ 叶树的 proper clade 恰 
+ − 2 个**（= #ω.val / 2）：
+wayLeaves 在族上是 **2 对 1** 的（s 与 s.swap 同像，wayLeaves_eq_iff）。 -/
+theorem card_image_awayLeaves {n : ℕ} (ω : rootedSplitFamily n) :
+    (ω.val.image awayLeaves).card = n - 2 := by
+  classical
+  have hfib : ∀ x ∈ ω.val.image awayLeaves,
+      (ω.val.filter (fun s => awayLeaves s = x)).card = 2 := by
+    intro x hx
+    obtain ⟨s₀, hs₀, hs₀x⟩ := Finset.mem_image.mp hx
+    have hset : ω.val.filter (fun s => awayLeaves s = x) = {s₀, s₀.swap} := by
+      ext t
+      simp only [Finset.mem_filter, Finset.mem_insert, Finset.mem_singleton]
+      constructor
+      · rintro ⟨-, ht⟩
+        rcases awayLeaves_eq_iff.mp (ht.trans hs₀x.symm) with h | h
+        · exact Or.inl h
+        · exact Or.inr h
+      · rintro (rfl | rfl)
+        · exact ⟨hs₀, hs₀x⟩
+        · exact ⟨ω.2.2.2.1 s₀ hs₀, by rw [awayLeaves_swap, hs₀x]⟩
+    have hne : s₀ ≠ s₀.swap := by
+      intro h
+      have h1 : s₀.sideA = s₀.sideB := by
+        have := congrArg Split.sideA h
+        simpa [Split.swap_sideA] using this
+      obtain ⟨y, hy⟩ := s₀.nonempty 0
+      have hy' : y ∈ s₀.sideB := h1 ▸ hy
+      exact (Finset.disjoint_left.mp (Split.disjoint_sides s₀)) hy hy'
+    rw [hset, Finset.card_pair hne]
+  have hsum := Finset.card_eq_sum_card_image (awayLeaves) ω.val
+  rw [Finset.sum_congr rfl hfib, Finset.sum_const, nsmul_eq_mul] at hsum
+  have hcard : ω.val.card = 2 * (n - 2) := ω.2.2.2.2
+  have hsum2 : (ω.val.image awayLeaves).card * 2 = ω.val.card := hsum.symm
+  rcases Nat.lt_or_ge n 2 with hn | hn
+  · have h0 : n - 2 = 0 := by omega
+    have hc : ω.val.card = 0 := by omega
+    have hzero : (ω.val.image awayLeaves).card = 0 := by omega
+    omega
+  · have hc : ω.val.card = 2 * n - 4 := by omega
+    omega
+
 end Phylo.Stat.ReciprocalMonophyly
