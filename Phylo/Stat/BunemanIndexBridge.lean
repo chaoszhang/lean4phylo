@@ -4901,5 +4901,35 @@ abbrev qAvoid {n : ℕ} (F : Finset (Split (Fin n))) (s : Split (Fin n)) : Prop 
   ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
     ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ sepQ u a a' b b'
 
+
+/-- ★ **(B) 在 `s` 处**：存在 `a,a' ∈ s.sideA`、`b,b' ∈ s.sideB`，使 `F` 中除 `s`、`s.swap`
+之外的**任何**成员都不 W-分离它（`Separates` 见 `Phylo/SplitWeak.lean:153`）。
+
+★ **退化四元组允许**（`a = a'`、`b = b'`）：`isolationIndex` 的 `isoQuadruples` 也允许
+（`Phylo/Stat/BunemanIndexBridge.lean:931`），故这里不为难。 -/
+def QuartetAvoiding {α : Type*} [Fintype α] [DecidableEq α]
+    (F : Finset (Split α)) (s : Split α) : Prop :=
+  ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+    ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ u.Separates a a' b b'
+
+/-- ★★★★★ **唯一具名缺件 (B)**（逐字）：`F` 弱相容、`s ∈ F` ⇒ 存在 `a a' ∈ s.sideA`、
+`b b' ∈ s.sideB`，使 `F ∖ {s, s.swap}` 中**不存在** `u` 满足 `u.Separates a a' b b'`。
+
+**它是 `weakCompatibilityRealization_gap_weights_v2` 第二个合取项（上界）的唯一缺口**：
+有了 (B)，取该四元组，`pairDeficit_sum_eq`（`:4665`）给
+`pd = 2·max(c_W − c_P)(c_W − c_X) ≤ 2·c_W`（`c_P, c_X ≥ 0`），而 `c_W = w s + [s.swap∈F]·w s.swap`
+（成员恰好是 `s`、`s.swap`）⇒ `α_s ≤ 2(w_s + [s.swap∈F]·w_swap)`；与已证下界
+`isolationIndex_ge_two_mul_weight`（`:4706`）合并即得**等式**。
+
+**证据状态**：Python 穷举（`n ≤ 6`、`|F| ≤ 7`）未找到反例；`n = 6`、`|sideA| = 3` 时为
+`|Candidate(s)| = 30`，弱相容族中至多 **2** 个候选成员（`cand`，见 `§8.14.1`），
+故检验规模为 `36 + 630` 个族；**Lean 机器验证尚未落地**（`native_decide` 的编译障碍
+见 `§8.14.1` 尾部：`Decidable (∀ u ∈ F, …)` 走 `Fintype (Split _)`，而
+`instFintypeKPartition` 是 `noncomputable`）。
+**注**：(B) 的平凡情形 `|s.sideA| = 2` 或 `|s.sideB| = 2`（覆盖全部 `n ≤ 5`）也**尚未**形式化。 -/
+def weakCompatibilityQuartetGap : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (s : Split α),
+    s ∈ F → WeaklyCompatible (↑F : Set (Split α)) → QuartetAvoiding F s
+
 end Split
 
