@@ -3718,4 +3718,213 @@ theorem card_image_awayLeaves {n : ℕ} (ω : rootedSplitFamily n) :
   · have hc : ω.val.card = 2 * n - 4 := by omega
     omega
 
+
+/-! ### 11.15 **载体运输层**（`Split` 沿等价）——下一轮「子族抽取」的前置器材
+
+§11.14 差的那一半是「把 `ω` 拆成 `(根分裂, ω_A, ω_B)`」。子族住在 `Split (A ⊕ Unit)` 上
+（`A : Finset (Fin n)` 是子类型），而载体 `rootedSplitFamily a` 说的是 `Split (Fin a ⊕ Unit)`；
+本节的运输层就是补这两者之间的桥（即「`Ω_A ≃ Ω_|A|`」）。
+
+* ★★★ `Split.congrFun` / `Split.congr`（`Equiv` 形态）：`KPartition` 的 `parts` 逐点取
+  `Finset.image e`（相容 / 覆盖 / 非空三条字段逐条搬运）；取值引理
+  ★★ `congrFun_sideA`、★★ `congrFun_sideB`、★★ `congrFun_swap`（`swap` 与传输交换）、
+  ★★ `congrFun_symm_congrFun` / `congrFun_congrFun_symm`（往返）、
+  ★★ `congr_sideA` / `congr_sideB` / `congr_swap` / `congr_congr_symm`（`Equiv` 形态的取值式）。
+  ★ 做法上避开「硬证 `Equiv` 往返」：先证**取值式**往返（`sideA` 的 `image_image` ＋
+  `Equiv.symm_apply_apply`），再用 ★★ `Split.ext_sideA` 升级成 split 相等。
+* ★★ `disjoint_image_equiv` / ★★ `compatible_congrFun`：相容性沿等价保持（四支逐一搬运）；
+* ★★★ `rootedSplitSet β`：**任意有限叶类型**上的载体（`rootedSplitFamily n` 的推广，
+  把 `n` 换成 `Fintype.card β`），带 ★★ `rootedSplitSetFintype`；
+* ★★★ `rootedSplitSetCongr` / `rootedSplitSetEquiv`：载体沿 `(β ⊕ Unit) ≃ (γ ⊕ Unit)` 运输
+  （`fam ↦ fam.image (Split.congr E)`，四条载体条件逐条搬运）；
+* ★★★ `card_rootedSplitSet`：**载体基数不随叶类型改变**；★★ `card_rootedSplitSet_fin`：
+  特化到 `#(rootedSplitSet β) = #(rootedSplitSet (Fin #β))`。
+
+⚠️ 下一轮用它时注意：`rootedSplitSet (Fin n)` 与 `rootedSplitFamily n` 只差索引写法
+（`Fintype.card (Fin n)` vs `n`），两者**不是** `rfl` 相等，按需 `unfold` 后 `rw [Fintype.card_fin]`。 -/
+
+namespace Split
+
+variable {α β : Type*} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+
+/-- ★★★ **`split` 沿等价的传输**（`parts` 逐点取 `Finset.image e`）。 -/
+noncomputable def congrFun (e : α ≃ β) (s : Split α) : Split β where
+  parts := fun i => (s.parts i).image e
+  pairwise_disjoint := by
+    intro i j hij
+    rw [Finset.disjoint_left]
+    intro x hx1 hx2
+    simp only [Finset.mem_image] at hx1 hx2
+    obtain ⟨a, ha, rfl⟩ := hx1
+    obtain ⟨b, hb, hba⟩ := hx2
+    exact (Finset.disjoint_left.mp (s.pairwise_disjoint i j hij)) ha (e.injective hba ▸ hb)
+  union_eq_univ := by
+    rw [Finset.eq_univ_iff_forall]
+    intro y
+    obtain ⟨a, rfl⟩ := e.surjective y
+    have ha : a ∈ Finset.univ.biUnion s.parts := by
+      rw [s.union_eq_univ]; exact Finset.mem_univ a
+    obtain ⟨i, -, hi⟩ := Finset.mem_biUnion.mp ha
+    exact Finset.mem_biUnion.mpr ⟨i, Finset.mem_univ i, Finset.mem_image_of_mem e hi⟩
+  nonempty := fun i => Finset.image_nonempty.mpr (s.nonempty i)
+
+/-- ★★ 取值式：`sideA` 就是 `image e`。 -/
+theorem congrFun_sideA (e : α ≃ β) (s : Split α) :
+    (congrFun e s).sideA = s.sideA.image e := rfl
+
+/-- ★★ 取值式：`sideB` 就是 `image e`。 -/
+theorem congrFun_sideB (e : α ≃ β) (s : Split α) :
+    (congrFun e s).sideB = s.sideB.image e := rfl
+
+/-- ★★ 取值式：传输与换向交换。 -/
+theorem congrFun_swap (e : α ≃ β) (s : Split α) :
+    (congrFun e s).swap = congrFun e s.swap := by
+  refine Split.ext_sideA ?_
+  rw [Split.swap_sideA, congrFun_sideB, congrFun_sideA, Split.swap_sideA]
+
+/-- ★★ 往返（`e.symm` 后传回）等于原 split。 -/
+theorem congrFun_symm_congrFun (e : α ≃ β) (s : Split α) :
+    congrFun e.symm (congrFun e s) = s := by
+  refine Split.ext_sideA ?_
+  rw [congrFun_sideA, congrFun_sideA, Finset.image_image]
+  have hcomp : (⇑e.symm ∘ ⇑e) = id := funext (fun a => Equiv.symm_apply_apply e a)
+  rw [hcomp, Finset.image_id]
+
+/-- ★★ 往返（`e` 后传回）等于原 split。 -/
+theorem congrFun_congrFun_symm (e : α ≃ β) (t : Split β) :
+    congrFun e (congrFun e.symm t) = t := by
+  refine Split.ext_sideA ?_
+  rw [congrFun_sideA, congrFun_sideA, Finset.image_image]
+  have hcomp : (⇑e ∘ ⇑e.symm) = id := funext (fun b => Equiv.apply_symm_apply e b)
+  rw [hcomp, Finset.image_id]
+
+/-- ★★★ **`split` 沿等价的传输**（`Equiv` 形态）。 -/
+noncomputable def congr (e : α ≃ β) : Split α ≃ Split β where
+  toFun := congrFun e
+  invFun := congrFun e.symm
+  left_inv := congrFun_symm_congrFun e
+  right_inv := congrFun_congrFun_symm e
+
+/-- ★★ 取值式：`(congr e s).sideA = s.sideA.image e`。 -/
+theorem congr_sideA (e : α ≃ β) (s : Split α) :
+    (congr e s).sideA = s.sideA.image e := rfl
+
+/-- ★★ 取值式：`(congr e s).sideB = s.sideB.image e`。 -/
+theorem congr_sideB (e : α ≃ β) (s : Split α) :
+    (congr e s).sideB = s.sideB.image e := rfl
+
+/-- ★★ 取值式：`congr` 与 `swap` 交换。 -/
+theorem congr_swap (e : α ≃ β) (s : Split α) :
+    (congr e s).swap = congr e s.swap := congrFun_swap e s
+
+/-- ★★ 取值式：`congr e` 与 `congr e.symm` 互逆（左）。 -/
+theorem congr_congr_symm (e : α ≃ β) (s : Split α) :
+    congr e.symm (congr e s) = s := congrFun_symm_congrFun e s
+
+end Split
+
+/-- ★★ 不交集的像不交（`e` 单射）。 -/
+theorem disjoint_image_equiv {α β : Type*} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (e : α ≃ β) {A B : Finset α} (h : Disjoint A B) :
+    Disjoint (A.image e) (B.image e) := by
+  rw [Finset.disjoint_left] at h ⊢
+  intro x hx1 hx2
+  rw [Finset.mem_image] at hx1 hx2
+  obtain ⟨a, ha, rfl⟩ := hx1
+  obtain ⟨b, hb, hba⟩ := hx2
+  exact h ha (e.injective hba ▸ hb)
+
+/-- ★★ 相容性沿等价保持。 -/
+theorem compatible_congrFun {α β : Type*} [Fintype α] [DecidableEq α] [Fintype β] [DecidableEq β]
+    (e : α ≃ β) {s t : Split α} (h : Split.Compatible s t) :
+    Split.Compatible (Split.congrFun e s) (Split.congrFun e t) := by
+  rw [Split.Compatible]
+  rw [Split.congrFun_sideA, Split.congrFun_sideA, Split.congrFun_sideB, Split.congrFun_sideB]
+  rcases h with h | h | h | h
+  · exact Or.inl (disjoint_image_equiv e h)
+  · exact Or.inr (Or.inl (disjoint_image_equiv e h))
+  · exact Or.inr (Or.inr (Or.inl (disjoint_image_equiv e h)))
+  · exact Or.inr (Or.inr (Or.inr (disjoint_image_equiv e h)))
+
+/-- ★★★ **任意有限叶类型上的载体**（`Fin n` 版 `rootedSplitFamily n` 的推广）。 -/
+abbrev rootedSplitSet (β : Type) [Fintype β] [DecidableEq β] : Type :=
+  { fam : Finset (Split (β ⊕ Unit)) //
+      (∀ s ∈ fam, ∀ t ∈ fam, Split.Compatible s t) ∧
+      (∀ s ∈ fam, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card) ∧
+      (∀ s ∈ fam, s.swap ∈ fam) ∧
+      fam.card = 2 * (Fintype.card β - 2) }
+
+/-- ★★ **`rootedSplitSet` 是有限类型**。 -/
+noncomputable instance rootedSplitSetFintype (β : Type) [Fintype β] [DecidableEq β] :
+    Fintype (rootedSplitSet β) := by
+  classical
+  exact Subtype.fintype _
+
+/-- ★★★ **载体沿（叶集上的）等价运输**：`fam ↦ fam.image (Split.congr E)`。 -/
+noncomputable def rootedSplitSetCongr {β γ : Type} [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ] (E : (β ⊕ Unit) ≃ (γ ⊕ Unit)) :
+    rootedSplitSet β → rootedSplitSet γ := by
+  classical
+  intro ω
+  refine ⟨ω.val.image (fun s => Split.congr E s), ?_, ?_, ?_, ?_⟩
+  · intro s hs t ht
+    obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+    obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp ht
+    exact compatible_congrFun E (ω.2.1 s' hs' t' ht')
+  · intro s hs
+    obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+    have h := ω.2.2.1 s' hs'
+    have h1 : ((Split.congr E s').sideA).card = s'.sideA.card := by
+      rw [Split.congr_sideA, Finset.card_image_of_injective _ E.injective]
+    have h2 : ((Split.congr E s').sideB).card = s'.sideB.card := by
+      rw [Split.congr_sideB, Finset.card_image_of_injective _ E.injective]
+    rw [h1, h2]
+    exact h
+  · intro s hs
+    obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+    exact Finset.mem_image.mpr ⟨s'.swap, ω.2.2.2.1 s' hs', (Split.congr_swap E s').symm⟩
+  · have hcard : Fintype.card β = Fintype.card γ := by
+      have h := Fintype.card_congr E
+      simp only [Fintype.card_sum, Fintype.card_unit] at h
+      omega
+    rw [Finset.card_image_of_injective _ (Split.congr E).injective, ω.2.2.2.2, hcard]
+
+/-- ★★★ **载体沿叶集等价的 `Equiv`**。 -/
+noncomputable def rootedSplitSetEquiv {β γ : Type} [Fintype β] [DecidableEq β]
+    [Fintype γ] [DecidableEq γ] (E : (β ⊕ Unit) ≃ (γ ⊕ Unit)) :
+    rootedSplitSet β ≃ rootedSplitSet γ where
+  toFun := rootedSplitSetCongr E
+  invFun := rootedSplitSetCongr E.symm
+  left_inv := by
+    intro ω
+    refine Subtype.ext ?_
+    show (ω.val.image (fun s => Split.congr E s)).image (fun s => Split.congr E.symm s) = ω.val
+    rw [Finset.image_image]
+    have hcomp : ((fun s => Split.congr E.symm s) ∘ (fun s => Split.congr E s)) = id := by
+      funext s
+      exact Split.congr_congr_symm E s
+    rw [hcomp, Finset.image_id]
+  right_inv := by
+    intro ω
+    refine Subtype.ext ?_
+    show (ω.val.image (fun s => Split.congr E.symm s)).image (fun s => Split.congr E s) = ω.val
+    rw [Finset.image_image]
+    have hcomp : ((fun s => Split.congr E s) ∘ (fun s => Split.congr E.symm s)) = id := by
+      funext s
+      exact Split.congrFun_congrFun_symm E s
+    rw [hcomp, Finset.image_id]
+
+/-- ★★★ **载体基数不随叶类型改变**（叶集等价 ⇒ 载体等基数）。
+（下一轮「子族住在 `A ⊆ Fin n` 上」要用它把 `Ω_A` 认成 `Ω_|A|`；
+`rootedSplitSet (Fin n)` 与 `rootedSplitFamily n` 只差索引写法。） -/
+theorem card_rootedSplitSet {β γ : Type} [Fintype β] [DecidableEq β] [Fintype γ] [DecidableEq γ]
+    (E : (β ⊕ Unit) ≃ (γ ⊕ Unit)) :
+    Fintype.card (rootedSplitSet β) = Fintype.card (rootedSplitSet γ) :=
+  Fintype.card_congr (rootedSplitSetEquiv E)
+
+/-- ★★ **特化到 `Fin`**：`#(rootedSplitSet β) = #(rootedSplitSet (Fin #β))`。 -/
+theorem card_rootedSplitSet_fin {β : Type} [Fintype β] [DecidableEq β] :
+    Fintype.card (rootedSplitSet β) = Fintype.card (rootedSplitSet (Fin (Fintype.card β))) :=
+  card_rootedSplitSet (Equiv.sumCongr (Fintype.equivFin β) (Equiv.refl Unit))
+
 end Phylo.Stat.ReciprocalMonophyly
