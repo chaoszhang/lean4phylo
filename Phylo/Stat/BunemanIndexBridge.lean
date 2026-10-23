@@ -4848,5 +4848,58 @@ def weakCompatibilityRealization_gap_weights_v2 : Prop :=
       ∧ ∀ s : Split α, s ∈ F → isolationIndex (sumMetric F w) s.sideA s.sideB
           = 2 * (w s + (if s.swap ∈ F then w s.swap else 0))
 
+
+/-! ### 8.14.1 机器验证（小 `n`）的**可计算底座**
+
+`Decidable` 合成不展开 `def`、也不穿透 `↥F : Set`，故 `decide`/`native_decide` 无法直接判定
+`WeaklyCompatible (↑F)`。本小节登记 (B) 的可计算复刻（`abbrev` ⇒ `Decidable` 可展开）：
+
+* `sepQ` —— `Separates`（`Phylo/SplitWeak.lean:153`）的复刻；
+* `wcomp` —— `HasConflictingQuartet` 的 `Finset` 版，`wcomp_iff` 与库内形态对齐；
+* `splitsFinset n` —— `Fin n` 的**全部** split（`#eval (splitsFinset 6).card = 62` ✓）；
+* `cand s` —— 能 W-分离某个「`s.sideA` 两点、`s.sideB` 两点」四元组（**含退化**）的成员，
+  去掉 `s` 与 `s.swap`。(B) 在 `s` 处只依赖 `F` 与它的交；
+* `qAvoid F s` —— (B) 在 `s` 处的可计算形态。
+
+★ **已量出的规模（`n = 6`、`|sideA| = 3`）**：`|cand s| = 30`，故 `2^30` 个子集仍需再用
+一条机器事实（「弱相容族中至多两个候选成员」）压缩到 `|U'| ≤ 2`；`qAvoid` 对子族单调。
+该整体检查**本轮未落地**（见本节尾部状态说明）。 -/
+
+/-- `Separates` 的可计算复刻（`abbrev` ⇒ `Decidable` 合成可展开）。 -/
+abbrev sepQ {n : ℕ} (u : Split (Fin n)) (a a' b b' : Fin n) : Prop :=
+  (a ∈ u.sideA ∧ a' ∈ u.sideA ∧ b ∈ u.sideB ∧ b' ∈ u.sideB) ∨
+    (a ∈ u.sideB ∧ a' ∈ u.sideB ∧ b ∈ u.sideA ∧ b' ∈ u.sideA)
+
+/-- `HasConflictingQuartet` 的 **`Finset` 可计算复刻**。 -/
+abbrev wcomp {n : ℕ} (F : Finset (Split (Fin n))) : Prop :=
+  ¬ ∃ a b c e : Fin n,
+    (∃ s ∈ F, sepQ s a b c e) ∧ (∃ t ∈ F, sepQ t a c b e) ∧ (∃ u ∈ F, sepQ u a e b c)
+
+/-- ★ `wcomp` 与库内 `WeaklyCompatible (↑F)` **等价**（只差 `Set`/`Finset` 记法）。 -/
+theorem wcomp_iff {n : ℕ} {F : Finset (Split (Fin n))} :
+    wcomp F ↔ WeaklyCompatible (↑F : Set (Split (Fin n))) := by
+  unfold wcomp WeaklyCompatible HasConflictingQuartet Separates sepQ
+  simp only [Finset.mem_coe]
+
+/-- **`Fin n` 的全部 `split`**（可计算）：`sideA` 遍历非空真子集。
+`Finset.univ : Finset (Finset (Fin n))` 由 `Split.instFintypeFinset` 的显式 `powerset` 给出
+（`Phylo/Split.lean:186`）。 -/
+def splitsFinset (n : ℕ) : Finset (Split (Fin n)) :=
+  ((Finset.univ : Finset (Finset (Fin n))).filter
+      (fun A => A.Nonempty ∧ Aᶜ.Nonempty)).attach.image
+    (fun p => ofSideA p.1 (Finset.mem_filter.mp p.2).2.1 (Finset.mem_filter.mp p.2).2.2)
+
+/-- **候选集**：能 W-分离某个「`s.sideA` 两点、`s.sideB` 两点」（**含退化**）四元组的成员，
+去掉 `s` 与 `s.swap`。(B) 在 `s` 处只依赖 `F` 与它的交。 -/
+abbrev cand {n : ℕ} (s : Split (Fin n)) : Finset (Split (Fin n)) :=
+  (splitsFinset n).filter (fun u =>
+    u ≠ s ∧ u ≠ s.swap ∧
+      ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB, sepQ u a a' b b')
+
+/-- **(B) 在 `s` 处**（可计算复刻）：存在四元组，使 `F` 中除 `s`、`s.swap` 外任何成员都不 W-分离它。 -/
+abbrev qAvoid {n : ℕ} (F : Finset (Split (Fin n))) (s : Split (Fin n)) : Prop :=
+  ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+    ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ sepQ u a a' b b'
+
 end Split
 
