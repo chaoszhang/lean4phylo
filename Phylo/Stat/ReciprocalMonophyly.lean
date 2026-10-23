@@ -3480,4 +3480,39 @@ theorem nontrivialSplits_mem_rootedSplitFamily {n : ℕ} (hn : 2 ≤ n)
   have htarget : U.nontrivialSplits.card = 2 * (n - 2) := by omega
   exact exists_rootedSplitFamily_of_card hn U htarget
 
+
+/-! ### 11.13 块 3 的**基例**（`n = 2`）：`Σ_ω rootedSplitWeight ω = 1`
+
+载体 `rootedSplitFamily 2` 是单点集（§11.7 的 `rootedSplitFamily_two_card`），唯一元素是空族，
+其权 `2^1/(2!·1) = 1` ⇒ 和恰为 `1`。
+
+★ 这条的意义：`Σ_ω weight ω = 1` 在基例上**成立且非空转**，故它确实是对的命题
+（不是 `0 = 1`）。一般 `n` 的情形见 §11.12 末尾的说明（缺拓扑侧计数）。 -/
+
+/-- 载体在 `n = 2` 时的唯一元素是空族。 -/
+theorem rootedSplitFamily_two_val_eq_empty (x : rootedSplitFamily 2) : x.val = ∅ := by
+  apply Finset.card_eq_zero.mp
+  calc x.val.card = 2 * (2 - 2) := x.2.2.2.2
+    _ = 0 := by norm_num
+
+/-- ★★★ **块 3 在 `n = 2` 的实例**：`Σ_ω rootedSplitWeight ω = 1`
+（载体只有一个元素 = 空族，其权 `2^1/(2!·1) = 1`）。
+
+这是 `Σ_ω weight ω = 1` 的**基例**，也说明该式在 `n = 2` 上**不是**空转命题。 -/
+theorem sum_rootedSplitWeight_two :
+    ∑ ω : rootedSplitFamily 2, rootedSplitWeight ω = 1 := by
+  classical
+  obtain ⟨ω₀⟩ := rootedSplitFamily_two_nonempty
+  have hmem : ∀ x : rootedSplitFamily 2, x.val = ∅ := rootedSplitFamily_two_val_eq_empty
+  have huniv : (Finset.univ : Finset (rootedSplitFamily 2)) = {ω₀} := by
+    rw [Finset.eq_singleton_iff_unique_mem]
+    exact ⟨Finset.mem_univ _, fun x _ =>
+      Subtype.ext (by rw [hmem x, hmem ω₀])⟩
+  rw [huniv, Finset.sum_singleton]
+  have hval : ω₀.val = ∅ := hmem ω₀
+  unfold rootedSplitWeight
+  rw [hval, Finset.filter_empty, Finset.prod_empty, Nat.mul_one]
+  unfold yhkRootWeight
+  norm_num
+
 end Phylo.Stat.ReciprocalMonophyly
