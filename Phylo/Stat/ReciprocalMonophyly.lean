@@ -7,7 +7,6 @@ import Phylo.Stat.MSCProof
 import Phylo.InternalEdge
 import Phylo.CladogramBuild
 import Mathlib.Combinatorics.SimpleGraph.Star
-
 /-!
 # `Phylo.Stat.ReciprocalMonophyly` —— Zhu–Degnan–Steel 2011 的 clade/clan 闭形式
 
