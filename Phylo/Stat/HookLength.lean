@@ -4680,6 +4680,68 @@ theorem chainMap_reconstruct_eq_min {n : ℕ} (hn : 2 ≤ n)
       rw [blockAt_min'_eq (fun j => (σ j).1) ⟨z, mem_blockAt _ k z⟩ hsucc, hstep]
       exact hv
 
+
+/-! ### §23 ★★★ **(O1)「≥」半的收口**
+
+§22.1 里「剩余唯一一件」（取出层）从这里开始落地。
+策略：**先把「块」当划分用**（`blockAt_eq_of_mem`），于是
+`fiberOf (chainMap n (reconstruct …) L) v` 就是一个**块**，从而
+`cladesOf` / `newClade` 都能逐层读出。 -/
+
+/-- `blockAt` 的**成员刻画**（把定义里的 `biUnion`/`filter` 化开）。 -/
+theorem mem_blockAt_iff {n : ℕ} (σ : Fin (n - 1) → Finset (Fin n)) {k : ℕ} {z w : Fin n} :
+    w ∈ blockAt σ k z ↔ w = z ∨ ∃ C ∈ procClades σ k, z ∈ C ∧ w ∈ C := by
+  simp only [blockAt, Finset.mem_insert, Finset.mem_biUnion, Finset.mem_filter]
+  constructor
+  · rintro (rfl | ⟨C, ⟨hC, hzC⟩, hwC⟩)
+    · exact Or.inl rfl
+    · exact Or.inr ⟨C, hC, hzC, hwC⟩
+  · rintro (rfl | ⟨C, hC, hzC, hwC⟩)
+    · exact Or.inl rfl
+    · exact Or.inr ⟨C, ⟨hC, hzC⟩, hwC⟩
+
+/-- ★★ **块的单调性（单向）**：`w` 在 `z` 的块里 ⇒ `w` 的块含于 `z` 的块。
+
+只需镶嵌性：两个已创建的且同含一个元素的 clade 必然嵌套（不能相离）。 -/
+theorem blockAt_subset_of_mem {n : ℕ} {T : Finset (Finset (Fin n))}
+    {σ : Fin (n - 1) → Finset (Fin n)} (hl : LaminarFamily T) (hσT : ∀ j, σ j ∈ T)
+    {k : ℕ} {z w : Fin n} (hw : w ∈ blockAt σ k z) : blockAt σ k w ⊆ blockAt σ k z := by
+  intro v hv
+  have hw' : w = z ∨ ∃ C ∈ procClades σ k, z ∈ C ∧ w ∈ C := (mem_blockAt_iff σ).mp hw
+  have hv' : v = w ∨ ∃ C ∈ procClades σ k, w ∈ C ∧ v ∈ C := (mem_blockAt_iff σ).mp hv
+  refine (mem_blockAt_iff σ).mpr ?_
+  rcases hv' with hvw | ⟨C, hC, hwC, hvC⟩
+  · simpa [hvw] using hw'
+  · rcases hw' with hwz | ⟨C', hC', hzC', hwC'⟩
+    · refine Or.inr ⟨C, hC, ?_, hvC⟩
+      rw [← hwz]
+      exact hwC
+    · obtain ⟨j, hj, rfl⟩ := (mem_procClades σ).mp hC
+      obtain ⟨j', hj', rfl⟩ := (mem_procClades σ).mp hC'
+      have hCk : σ j ∈ procClades σ k := (mem_procClades σ).mpr ⟨j, hj, rfl⟩
+      have hCk' : σ j' ∈ procClades σ k := (mem_procClades σ).mpr ⟨j', hj', rfl⟩
+      rcases hl (σ j) (hσT j) (σ j') (hσT j') with hsub | hsub | hdisj
+      · exact Or.inr ⟨σ j', hCk', hzC', hsub hvC⟩
+      · exact Or.inr ⟨σ j, hCk, hsub hzC', hvC⟩
+      · exact (Finset.disjoint_left.mp hdisj hwC hwC').elim
+
+/-- ★★ **块的对称性**：`w` 在 `z` 的块里 ⇒ `z` 在 `w` 的块里。 -/
+theorem mem_blockAt_comm {n : ℕ} {σ : Fin (n - 1) → Finset (Fin n)} {k : ℕ} {z w : Fin n}
+    (hw : w ∈ blockAt σ k z) : z ∈ blockAt σ k w := by
+  have hw' : w = z ∨ ∃ C ∈ procClades σ k, z ∈ C ∧ w ∈ C := (mem_blockAt_iff σ).mp hw
+  rcases hw' with hwz | ⟨C, hC, hzC, hwC⟩
+  · rw [← hwz]
+    exact mem_blockAt σ k w
+  · exact subset_blockAt σ hC hwC hzC
+
+/-- ★★★★ **划分引理**：`blockAt` 的块构成划分 —— 同块的两个元素确定同一个块。
+（这是把 `fiberOf` 写成「块」的唯一入口。） -/
+theorem blockAt_eq_of_mem {n : ℕ} {T : Finset (Finset (Fin n))}
+    {σ : Fin (n - 1) → Finset (Fin n)} (hl : LaminarFamily T) (hσT : ∀ j, σ j ∈ T)
+    {k : ℕ} {z w : Fin n} (hw : w ∈ blockAt σ k z) : blockAt σ k w = blockAt σ k z :=
+  Finset.Subset.antisymm (blockAt_subset_of_mem hl hσT hw)
+    (blockAt_subset_of_mem hl hσT (mem_blockAt_comm hw))
+
 end Phylo.Stat.HookLength
 
 
