@@ -3950,4 +3950,80 @@ noncomputable def rootedSplitSetFinEquivFamily (n : ℕ) :
     rootedSplitSet (Fin n) ≃ rootedSplitFamily n :=
   Equiv.cast (rootedSplitSet_fin_eq_rootedSplitFamily n)
 
+
+/-! ### 11.17 子族抽取 ＋ 嫁接的**逐字规格**（下一轮照此实现即可）
+
+器材已齐（本节只加 `inlEmbed` 及其两条基本性质）。下面把「块 2 ＋ 块 3」写成规格。
+
+**记号**：`ω ∈ rootedSplitFamily n`；`ρ = Sum.inr ()`；`cladeSet ω := ω.val.image awayLeaves`
+（§11.14，`card = n − 2`，且 `s ↦ awayLeaves s` 在 `ω.val` 上是 2 对 1，见 ★★ `awayLeaves_eq_iff`）。
+
+**① 极大 clade 与根分裂**
+```text
+A := cladeSet ω 的一个 ⊆-极大元            （LaminarFamily ＋ Finset.exists_subset_maximal_member）
+根分裂 := 无序对 {A, Aᶜ}                    （二叉树的根恰两个孩子；需证 Aᶜ ∈ cladeSet ω）
+```
+**② 子族抽取（限制）**
+```text
+ω_A := (ω.val.filter (fun s => awayLeaves s ⊆ A)).image (restrictToFinset A)
+       —— restrictToFinset A s h : Split (A ⊕ Unit)，h : awayLeaves s ⊆ A
+       —— 定义：B := {y : A ⊕ Unit | inlEmbed A y ∈ s.away ρ}，取 splitOf B
+       —— 关键事实：away 侧 ⊆ A ∪ {ρ}（away 真叶集 ⊆ A 且 ρ ∉ away）⇒ away 侧 = B 的原像
+ω_B := 同法（A 换成 Aᶜ）
+```
+要证（`rootedSplitSet A` 的四条件）：
+* **相容**：`Split.Compatible` 在限制下保持（把四个「交为空」逐支下推，`inlEmbed` 单射）；
+* **非平凡**：`2 ≤ sideA.card ∧ 2 ≤ sideB.card` —— 由 `ω` 的非平凡 ＋ 限制不减基数（限制是单射的像）；
+* **swap-闭**：★★ `restrictToFinset_swap`（限制对换向不变：`s` 与 `s.swap` 限制到同一条）⇒ 2 对 1；
+* **基数 `2(|A| − 2)`**：`#(ω_A) = 2 · #(cladeSet ω 中 ⊊ A 的元)`，再证后者 = `|A| − 2`。
+  ⚠️ 这是本块**唯一非机械**的一步：等价于「子树上 proper clade 数 = 叶数 − 2」。
+  两条可行路线：(a) 用 `Phylo/SideSubtree.lean` 的 `sideVertices`/`induce`/`isTree_induce_sideVertices`
+  把子树做成 `Cladogram A`，再套 ★★★ `card_nontrivialSplits_of_isBinary`（`:3433`）与
+  ★★★ `card_image_awayLeaves`（`:3682`）；(b) 对 laminar 族做「每个非极小元恰有两个极大真子元」的结构归纳。
+
+**③ 嫁接（反向）**
+```text
+给定 A（A.Nonempty, Aᶜ.Nonempty）、ω_A ∈ rootedSplitSet A、ω_B ∈ rootedSplitSet Aᶜ：
+  lift_A : Split (A ⊕ Unit) → Split (Fin n ⊕ Unit)      —— sideA := (image Sum.inl of ω_A's away side)
+  ρ-split := splitOf (A.image Sum.inl)                  —— {A ∪ {ρ} | Aᶜ}
+  ω := (lift_A '' ω_A) ∪ (lift_B '' ω_B) ∪ {ρ-split, ρ-split.swap}
+```
+要证：`ω ∈ rootedSplitFamily n`（四条件）＋ 基数算术
+`2(|A|−2) + 2(|Aᶜ|−2) + 2 = 2(n−2)`（用 `|A| + |Aᶜ| = n`，定向式，**不除 2**）。
+
+**④ 互逆 ＋ 递推**
+```text
+decompose ∘ glue = id、glue ∘ decompose = id
+⇒ 2 · c n = ∑ a ∈ Ico 1 n, C(n,a) · c a · c (n − a)        （c n := #(rootedSplitFamily n)）
+```
+（因子口径：**定向式**，见 §11.14 与五轮报告；每个 `ω` 恰有 2 个定向分解。）
+
+⚠️ **本盒的进度**：块 1 完成（§11.16）；块 2 只交了 `inlEmbed` ＋ 本规格；
+`restrictToFinset` 的定义在收盒前卡在 `splitOf` 的隐式参数统一上（见六轮报告），**未提交半成品**。 -/
+
+
+variable {n : ℕ}
+
+/-- 子叶集 `A ⊆ Fin n` 嵌入 `Fin n ⊕ Unit`（子族限制/嫁接的公共载体）。 -/
+def inlEmbed (A : Finset (Fin n)) : (A ⊕ Unit) → (Fin n ⊕ Unit) :=
+  Sum.map (fun a => (a : Fin n)) id
+
+/-- ★ `inlEmbed` 单射。 -/
+theorem inlEmbed_injective (A : Finset (Fin n)) : Function.Injective (inlEmbed A) := by
+  intro x y h
+  rcases x with a | u <;> rcases y with b | v
+  · have h' : (a : Fin n) = (b : Fin n) := Sum.inl.inj h
+    exact congrArg Sum.inl (Subtype.ext h')
+  · exact absurd h (by simp [inlEmbed])
+  · exact absurd h.symm (by simp [inlEmbed])
+  · rfl
+
+/-- ★ `inlEmbed` 的像落在 `A ∪ {ρ}` 里。 -/
+theorem inlEmbed_mem_union (A : Finset (Fin n)) (y : A ⊕ Unit) :
+    inlEmbed A y ∈ (A.image Sum.inl) ∪ {Sum.inr ()} := by
+  rcases y with a | u
+  · exact Finset.mem_union.mpr (Or.inl (Finset.mem_image_of_mem Sum.inl a.2))
+  · cases u
+    exact Finset.mem_union.mpr (Or.inr (Finset.mem_singleton_self _))
+
 end Phylo.Stat.ReciprocalMonophyly
