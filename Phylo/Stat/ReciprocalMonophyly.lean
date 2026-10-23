@@ -3927,4 +3927,27 @@ theorem card_rootedSplitSet_fin {β : Type} [Fintype β] [DecidableEq β] :
     Fintype.card (rootedSplitSet β) = Fintype.card (rootedSplitSet (Fin (Fintype.card β))) :=
   card_rootedSplitSet (Equiv.sumCongr (Fintype.equivFin β) (Equiv.refl Unit))
 
+
+/-! ### 11.16 桥：`rootedSplitSet (Fin n)` ＝ `rootedSplitFamily n`
+
+两者只差索引写法（`Fintype.card (Fin n)` vs `n`），需要 `unfold` 后 `rw [Fintype.card_fin]`
+（直接 `rw`/`simpa` 会因依赖类型失败 —— 五轮留的坑，在此闭环）。 -/
+
+/-- ★★★ **桥：`rootedSplitSet (Fin n)` 与 `rootedSplitFamily n` 相等**（只差索引写法
+`Fintype.card (Fin n)` vs `n`）。 -/
+theorem rootedSplitSet_fin_eq_rootedSplitFamily (n : ℕ) :
+    rootedSplitSet (Fin n) = rootedSplitFamily n := by
+  unfold rootedSplitSet rootedSplitFamily
+  rw [Fintype.card_fin]
+
+/-- ★★★ **基数桥**：`#(rootedSplitFamily n) = #(rootedSplitSet (Fin n))`。 -/
+theorem card_rootedSplitFamily_eq_rootedSplitSet (n : ℕ) :
+    Fintype.card (rootedSplitFamily n) = Fintype.card (rootedSplitSet (Fin n)) :=
+  Fintype.card_congr (Equiv.cast (rootedSplitSet_fin_eq_rootedSplitFamily n)).symm
+
+/-- ★★★ **两者的 `Equiv`**（下一轮把子族按 `A` 认成按 `Fin |A|` 时直接用）。 -/
+noncomputable def rootedSplitSetFinEquivFamily (n : ℕ) :
+    rootedSplitSet (Fin n) ≃ rootedSplitFamily n :=
+  Equiv.cast (rootedSplitSet_fin_eq_rootedSplitFamily n)
+
 end Phylo.Stat.ReciprocalMonophyly
