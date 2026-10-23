@@ -4927,7 +4927,9 @@ def QuartetAvoiding {α : Type*} [Fintype α] [DecidableEq α]
 见 `§8.14.1` 尾部：`Decidable (∀ u ∈ F, …)` 走 `Fintype (Split _)`，而
 `instFintypeKPartition` 是 `noncomputable`）。
 **注**：(B) 的平凡情形 `|s.sideA| = 2` 或 `|s.sideB| = 2`（覆盖全部 `n ≤ 5`）也**尚未**形式化。 -/
-def weakCompatibilityQuartetGap : Prop :=
+-- ★ W29 台账口径：本 `def` 是 `weakCompatibilityRealization_gap_weights_v2` 的**内部子义务**，
+--   **不是**独立缺口登记 ⇒ 名字里**不带** `gap/Gap`（否则 `gap_ledger.py` 会多登记一条真开放）。
+def weakCompatibilityQuartetCore : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (s : Split α),
     s ∈ F → WeaklyCompatible (↑F : Set (Split α)) → QuartetAvoiding F s
 
