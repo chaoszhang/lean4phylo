@@ -4427,3 +4427,140 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_holds :
 
 end Split
 
+/-! ## 8.12 ★★★★ `weakCompatibilityRealization_gap_weights`（`:3358`）**已被机器证伪**
+
+### 结论
+
+`def weakCompatibilityRealization_gap_weights` 的**第三个合取项**（`:3363-3365`）**为假**，
+故它的 `_holds` 形态**不可能成立**。反例已机器验证：
+`not_weakCompatibilityRealization_gap_weights : ¬ weakCompatibilityRealization_gap_weights.{0}`。
+
+### 缺陷（量词错位）
+
+第三个合取项量化 `∀ s, (s ∈ F ∨ s.swap ∈ F) → α_s = 2·(w s + [s.swap ∈ F]·w s.swap)`。
+当 `s ∉ F` 而 `s.swap ∈ F` 时：
+
+* `∨` 前提**成立**（右析取：`(s.swap).swap = s ∈ F`）；
+* 但 `δ = Σ_{u∈F} w_u δ_u` 中**没有** `w s` 这一项（`F` 不含 `s`）；
+* 而假设只要求 `∀ s ∈ F, 0 < w s` ⇒ `w` 在 `F` **外任意** ⇒ 右侧的 `w s` 可以任意大。
+
+### 反例（`Fin 4`）
+
+`s₀ := {0,1}|{2,3}`、`F := {s₀}`、`w s₀ = 1`、`w s₀.swap = 5`。
+
+* `F` 单元集 ⇒ `δ = 1·δ_{s₀}` ⇒ `α_{s₀} = α_{s₀.swap} = 2`；
+* 结论在 `s₀` 上给 `2·(1 + 0) = 2` ✓；
+* 结论在 `s₀.swap` 上（`s₀.swap ∉ F`、`(s₀.swap).swap = s₀ ∈ F`）给 `2·(5 + 1) = 12` ✗ ⇒ 矛盾。
+
+### 正确的成员形态（**待协调侧裁定**；本批**不新建 `def`**）
+
+应把量词限制为 `s ∈ F`：
+`∀ s ∈ F, α_s = 2·(w s + (if s.swap ∈ F then w s.swap else 0))`。
+`2` 与「`s` 与 `s.swap` 系数**相加**」的口径**不变**；`s ∉ F` 时右侧就是 `2·(w s + 0)`。
+
+★ 即使如此修正，**上界** `α_s ≤ 2(w_s + [s.swap∈F]w_swap)` 仍需一条**组合引理**：
+存在四元组 `a,a' ∈ s.sideA`、`b,b' ∈ s.sideB`，使 `F \ {s,s.swap}` 中**没有**成员把
+`{a,a'}` 与 `{b,b'}` 分到两侧（弱相容是关键；**退化的** `a=a', b=b'` 版本为假）。
+本文件证明的**下界**与**单成员精确形态**见 `§8.13`。 -/
+
+open Finset
+
+namespace Split
+
+/-- `Fin 4` 上的 split `{0,1} | {2,3}`（反例载体）。 -/
+def cexSplit4 : Split (Fin 4) := ofSideA {0, 1} (by decide) (by decide)
+
+/-- `cexSplit4.swap ≠ cexSplit4`（两侧非空且互异 ⇒ `swap` 不是恒等）。 -/
+theorem cexSplit4_swap_ne : cexSplit4.swap ≠ cexSplit4 := by
+  intro h
+  have h1 : (0 : Fin 4) ∈ cexSplit4.sideB := by
+    rw [← swap_sideA cexSplit4, h]
+    simp [cexSplit4]
+  simp [cexSplit4] at h1
+
+/-- `pairDeficit` 在**两侧整体对换**下不变（只需对称性）。 -/
+theorem pairDeficit_swap_sides {α : Type*} {δ : α → α → ℝ} (hδ : ∀ x y, δ x y = δ y x)
+    (a a' b b' : α) : pairDeficit δ b b' a a' = pairDeficit δ a a' b b' := by
+  unfold pairDeficit
+  have h1 : δ b a + δ b' a' = δ a b + δ a' b' := by rw [hδ b a, hδ b' a']
+  have h2 : δ b a' + δ b' a = δ a b' + δ a' b := by rw [hδ b a', hδ b' a]; ring
+  have h3 : δ b b' + δ a a' = δ a a' + δ b b' := by ring
+  rw [h1, h2, h3]
+
+/-- ★ `isolationIndex` 对两侧互换不变（需对称性）：`α_{A,B} = α_{B,A}`。 -/
+theorem isolationIndex_comm {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (hδ : ∀ x y, δ x y = δ y x) (A B : Finset α) :
+    isolationIndex δ A B = isolationIndex δ B A := by
+  by_cases hA : A.Nonempty
+  · by_cases hB : B.Nonempty
+    · rw [isolationIndex_eq_inf' δ hA hB, isolationIndex_eq_inf' δ hB hA]
+      refine le_antisymm ?_ ?_
+      · refine Finset.le_inf' (isoQuadruples_nonempty hB hA) _ ?_
+        rintro ⟨⟨b, b'⟩, a, a'⟩ hq
+        rw [mem_isoQuadruples] at hq
+        obtain ⟨hb, hb', ha, ha'⟩ := hq
+        calc (isoQuadruples A B).inf' (isoQuadruples_nonempty hA hB)
+              (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+            ≤ pairDeficit δ a a' b b' :=
+              Finset.inf'_le (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+                (mem_isoQuadruples.mpr ⟨ha, ha', hb, hb'⟩)
+          _ = pairDeficit δ b b' a a' := (pairDeficit_swap_sides hδ a a' b b').symm
+      · refine Finset.le_inf' (isoQuadruples_nonempty hA hB) _ ?_
+        rintro ⟨⟨a, a'⟩, b, b'⟩ hq
+        rw [mem_isoQuadruples] at hq
+        obtain ⟨ha, ha', hb, hb'⟩ := hq
+        calc (isoQuadruples B A).inf' (isoQuadruples_nonempty hB hA)
+              (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+            ≤ pairDeficit δ b b' a a' :=
+              Finset.inf'_le (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+                (mem_isoQuadruples.mpr ⟨hb, hb', ha, ha'⟩)
+          _ = pairDeficit δ a a' b b' := pairDeficit_swap_sides hδ a a' b b'
+    · have hB0 : B = ∅ := Finset.not_nonempty_iff_eq_empty.mp hB
+      simp [isolationIndex, isoQuadruples, hB0]
+  · have hA0 : A = ∅ := Finset.not_nonempty_iff_eq_empty.mp hA
+    simp [isolationIndex, isoQuadruples, hA0]
+
+/-- ★★★ **反例**：`weakCompatibilityRealization_gap_weights`（`:3358`）在宇宙 `0` 上**为假**。
+
+`F := {s₀}`、`w s₀ = 1`、`w (s₀.swap) = 5`。`F` 是单元集 ⇒ `δ = 1·δ_{s₀}` ⇒
+`α_{s₀} = α_{s₀.swap} = 2`；但结论在 `s₀.swap` 上（`∨` 前提由 `(s₀.swap).swap = s₀ ∈ F` 成立）
+要求 `α = 2·(5 + 1) = 12`。 -/
+theorem not_weakCompatibilityRealization_gap_weights :
+    ¬ weakCompatibilityRealization_gap_weights.{0} := by
+  intro h
+  have hF : WeaklyCompatible (↑({cexSplit4} : Finset (Split (Fin 4))) : Set (Split (Fin 4))) := by
+    have hp := weaklyCompatible_pair cexSplit4 cexSplit4
+    simpa using hp
+  have hw : ∀ s ∈ ({cexSplit4} : Finset (Split (Fin 4))),
+      0 < (fun t : Split (Fin 4) => if t = cexSplit4 then (1 : ℝ) else 5) s := by
+    intro s hs
+    rw [Finset.mem_singleton] at hs
+    subst hs
+    simp
+  obtain ⟨δ, hsymm, _, hiso⟩ :=
+    h (α := Fin 4) (F := {cexSplit4})
+      (w := fun t : Split (Fin 4) => if t = cexSplit4 then (1 : ℝ) else 5) hF hw
+  have hne : cexSplit4.swap ≠ cexSplit4 := cexSplit4_swap_ne
+  have hmem0 : (cexSplit4 ∈ ({cexSplit4} : Finset (Split (Fin 4)))
+      ∨ cexSplit4.swap ∈ ({cexSplit4} : Finset (Split (Fin 4)))) := Or.inl (Finset.mem_singleton_self _)
+  have hmem1 : (cexSplit4.swap ∈ ({cexSplit4} : Finset (Split (Fin 4)))
+      ∨ (cexSplit4.swap).swap ∈ ({cexSplit4} : Finset (Split (Fin 4)))) := by
+    refine Or.inr ?_
+    rw [swap_swap]
+    exact Finset.mem_singleton_self _
+  have h1 : isolationIndex δ cexSplit4.sideA cexSplit4.sideB = 2 := by
+    have hh := hiso cexSplit4 hmem0
+    simp [hne] at hh
+    linarith
+  have h2 : isolationIndex δ cexSplit4.swap.sideA cexSplit4.swap.sideB = 12 := by
+    have hh := hiso cexSplit4.swap hmem1
+    simp [hne] at hh ⊢
+    linarith
+  have hcomm : isolationIndex δ cexSplit4.swap.sideA cexSplit4.swap.sideB
+      = isolationIndex δ cexSplit4.sideA cexSplit4.sideB := by
+    rw [swap_sideA, swap_sideB]
+    exact isolationIndex_comm δ hsymm cexSplit4.sideB cexSplit4.sideA
+  linarith
+
+end Split
+
