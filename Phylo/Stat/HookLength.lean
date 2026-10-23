@@ -5086,6 +5086,25 @@ theorem cladesOf_reconstruct_eq {n : ℕ} (hn : 2 ≤ n)
         rw [image_newClade hf]
     _ = cladesOf n f := (cladesOf_eq_singleton_union_newClade hf).symm
 
+
+/-- ★★★★★ **收口：`rankedFiberCount_gap` 成立**（零额外前提）。
+
+装配：`2 ≤ n` 支用 §21 的 `rankedFiberCount_gap_of_surj`，把它的 `hsurj` 用
+`g := reconstruct (cladesOf n f) (fun j => (σ j).1) d` 兑出来 —— 三个分量分别是
+`isMergeHistory_reconstruct` / `cladesOf_reconstruct_eq` / `newClade_reconstruct`；
+`n ≤ 1` 支用已证的退化支 `rankedFiberCount_gap_small`。 -/
+theorem rankedFiberCount_gap_holds : rankedFiberCount_gap := by
+  intro n f hf
+  by_cases hn : 2 ≤ n
+  · exact rankedFiberCount_gap_of_surj hn
+      (fun f hf σ hinj hord =>
+        ⟨reconstruct (cladesOf n f) (fun j => (σ j).1) ⟨0, by omega⟩,
+          isMergeHistory_reconstruct hn hf σ hinj hord ⟨0, by omega⟩,
+          cladesOf_reconstruct_eq hn hf σ hinj hord ⟨0, by omega⟩,
+          fun k => newClade_reconstruct hn hf σ hinj hord ⟨0, by omega⟩ k⟩)
+      f hf
+  · exact rankedFiberCount_gap_small n (by omega) f hf
+
 end Phylo.Stat.HookLength
 
 
