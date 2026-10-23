@@ -3745,5 +3745,620 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease
     (fun (δ : α → α → ℝ) hδ hdiag hnn htri s hds => h δ hδ hdiag hnn htri s hds)
     δ hδ hdiag hnn htri
 
+
+/-! ## 8.12 ★★★★ W28 泳道 e：**(P1) 的不相容半边已证** —— 剥离下 d-split 的**无条件存活**
+
+`§8.9` 只给了「`t` 与 `s` 相容 ⇒ `t` 在剥离下存活」；`§8.11` 把不相容半边压成逐点带宽
+`0 ≤ Z − X < α_s`。本节把这条带宽证掉 ⇒ (P1)（`dSplitsPeelDecrease`）成立。
+
+### 五模式（按三个**和**陈述）
+
+记 `u₁ := δ_s(a,b)`、`u₂ := δ_s(a',b')`、`v₁ := δ_s(a,b')`、`v₂ := δ_s(a',b)`、
+`w₁ := δ_s(a,a')`、`w₂ := δ_s(b,b')`（各 `∈ {0,1}`），`x := u₁+u₂`、`y := v₁+v₂`、`z := w₁+w₂`，
+`c := peelCoeff δ s`、`δ' := peelMetric δ s`、`A := δ a b + δ a' b'`、`B := δ a b' + δ a' b`、`Z := δ a a' + δ b b'`。
+由 `δ = δ' + c·δ_s`：
+
+```
+pd(δ',q) = max(A − c·x, B − c·y) − (Z − c·z)
+```
+
+★ **奇偶性**：`δ_s(u,v) ≡ ε(u)+ε(v) (mod 2)`（`ε = 1` 表示在 `s.sideB`）⇒ `x ≡ y ≡ z (mod 2)`
+⇒ `pd_s = max(x,y) − z ∈ {0, ±2}`（**没有 `±1`**）。四种模式（本节四条 `…_of_sums_…`）：
+
+| 四点相对 `s` | `(x,y,z)` | `pd(δ')` |
+|---|---|---|
+| `x = y = z`（同侧／3–1） | `(0,0,0)`／`(1,1,1)` | `pd(δ)` |
+| `A×A×B×B`（= `§8.6` 已证） | `(2,2,0)` | `pd(δ) − 2c` |
+| 交叉 ①（`{a,b}`／`{a',b'}` 分居两侧） | `(0,2,2)` | `max (A+2c) B − Z` |
+| 交叉 ②（`{a,b'}`／`{a',b}` 分居两侧） | `(2,0,2)` | `max A (B+2c) − Z` |
+
+### 危险模式的反证（`cross_core` / `cross_core2`，纯实数）
+
+交叉 ①：若 `pd(δ) ≤ 0` 则 `A ≤ Z` 且 `B ≤ Z`；而 **`s` 在同样四点上的四元组**
+（`a,b ∈ A_s`、`a',b' ∈ B_s`）给出
+`α_s ≤ pd_s(δ) = max(Z,B) − A = Z − A`，又 `pd(δ') > 0` 给 `Z < A + 2c`
+⇒ `2c = α_s ≤ Z − A < 2c`，矛盾。交叉 ② 同理（取 `(a,b')`／`(a',b)` 作 `s`-四元组）。
+
+★ **两条定义级出处**（不留猜测）：
+1. 「`α_s` 是下确界 ⇒ 对**每个**四元组都有 `α_s ≤ pd(δ)`」—— 库内
+   `isolationIndex_le_pairDeficit`（`§8.3`，`isolationIndex` 用 `Finset.inf'` 定义）；
+2. 「`2c = α_s`」—— `peelCoeff` 的定义（`unfold peelCoeff; ring`），即 `c = α_s/2`。
+
+★ **更正记录**：`§8.11` 头部曾判「危险模式只能循环」，**那是代数失误**（先把 `Z`、`B` 用
+`Z'+2c`、`B'+2c` 代进去再比）。正解是取 `δ` 侧的界 `α_s ≤ Z − A`：它**不含 `c`**，正好把带宽卡死。
+
+### 数值证据（**非**证明，仅供交叉核对）
+
+随机整数 5 点度量 4459 个，对每个度量的**每个** d-split 逐个剥离，检验 `S(δ') ⊆ S(δ)`：
+**零反例** ⇒ 测度载体 `(dSplits δ).card` 站得住、下面结论不是假命题。
+（脚本口径：`α_s` 取 `min` 遍历含退化四元组，`c = α_s/2`，与库内 `isolationIndex`/`peelCoeff` 同口径。
+★ 这是**数值证据**，不是证明；机器证明见本节各条定理。） -/
+
+/-- ★★ **五模式的统一恒等式**（纯代数）：`pd(δ)` 由 `pd(δ')` 与三个和决定。 -/
+theorem pairDeficit_peel_general {α : Type*} [Fintype α] [DecidableEq α]
+    (δ : α → α → ℝ) (s : Split α) (a a' b b' : α) :
+    pairDeficit δ a a' b b'
+      = max (peelMetric δ s a b + peelMetric δ s a' b'
+              + peelCoeff δ s * (SplitMetric s a b + SplitMetric s a' b'
+                - (SplitMetric s a a' + SplitMetric s b b')))
+            (peelMetric δ s a b' + peelMetric δ s a' b
+              + peelCoeff δ s * (SplitMetric s a b' + SplitMetric s a' b
+                - (SplitMetric s a a' + SplitMetric s b b')))
+          - (peelMetric δ s a a' + peelMetric δ s b b') := by
+  have e1 : peelMetric δ s a b + peelMetric δ s a' b'
+      + peelCoeff δ s * (SplitMetric s a b + SplitMetric s a' b'
+        - (SplitMetric s a a' + SplitMetric s b b'))
+      = (δ a b + δ a' b') - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]; ring
+  have e2 : peelMetric δ s a b' + peelMetric δ s a' b
+      + peelCoeff δ s * (SplitMetric s a b' + SplitMetric s a' b
+        - (SplitMetric s a a' + SplitMetric s b b'))
+      = (δ a b' + δ a' b) - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]; ring
+  have e3 : peelMetric δ s a a' + peelMetric δ s b b'
+      = (δ a a' + δ b b') - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]; ring
+  rw [e1, e2, e3, max_sub_sub_right]
+  unfold pairDeficit
+  ring
+
+/-- **`max A (B − 2c) − (R − 2c) = max (A + 2c) B − R`**（交叉 ① 的收口）。 -/
+theorem max_sub_two_mul_aux (A B R c : ℝ) :
+    max A (B - 2 * c) - (R - 2 * c) = max (A + 2 * c) B - R := by
+  have key : max (A + 2 * c) ((B - 2 * c) + 2 * c) = max A (B - 2 * c) + 2 * c :=
+    max_add_add_right A (B - 2 * c) (2 * c)
+  have hB : (B - 2 * c) + 2 * c = B := by ring
+  rw [hB] at key
+  rw [key]
+  ring
+
+/-- **`max (A − 2c) B − (R − 2c) = max A (B + 2c) − R`**（交叉 ② 的收口）。 -/
+theorem max_sub_two_mul_aux' (A B R c : ℝ) :
+    max (A - 2 * c) B - (R - 2 * c) = max A (B + 2 * c) - R := by
+  have key : max ((A - 2 * c) + 2 * c) (B + 2 * c) = max (A - 2 * c) B + 2 * c :=
+    max_add_add_right (A - 2 * c) B (2 * c)
+  have hA : (A - 2 * c) + 2 * c = A := by ring
+  rw [hA] at key
+  rw [key]
+  ring
+
+/-! ### 四模式表（按三个和陈述） -/
+
+/-- 模式 `x = y = z`（同侧 `(0,0,0)` 与 3–1 `(1,1,1)` 合并）：`pd(δ') = pd(δ)`。 -/
+theorem pairDeficit_peelMetric_of_sums_diag {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a a' b b' : α}
+    (hx : SplitMetric s a b + SplitMetric s a' b'
+      = SplitMetric s a a' + SplitMetric s b b')
+    (hy : SplitMetric s a b' + SplitMetric s a' b
+      = SplitMetric s a a' + SplitMetric s b b') :
+    pairDeficit (peelMetric δ s) a a' b b' = pairDeficit δ a a' b b' := by
+  have e1 : peelMetric δ s a b + peelMetric δ s a' b'
+      = (δ a b + δ a' b') - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hx
+    simp only [mul_add] at hcx
+    linarith
+  have e2 : peelMetric δ s a b' + peelMetric δ s a' b
+      = (δ a b' + δ a' b) - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hy
+    simp only [mul_add] at hcx
+    linarith
+  have e3 : peelMetric δ s a a' + peelMetric δ s b b'
+      = (δ a a' + δ b b') - peelCoeff δ s * (SplitMetric s a a' + SplitMetric s b b') := by
+    rw [peelMetric_apply, peelMetric_apply]; ring
+  unfold pairDeficit
+  rw [e1, e2, e3, max_sub_sub_right]
+  try ring
+
+/-- 模式 `(2,2,0)`（= `§8.6` 的 `A×A×B×B`）：`pd(δ') = pd(δ) − 2c`。 -/
+theorem pairDeficit_peelMetric_of_sums_220 {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a a' b b' : α}
+    (hx : SplitMetric s a b + SplitMetric s a' b' = 2)
+    (hy : SplitMetric s a b' + SplitMetric s a' b = 2)
+    (hz : SplitMetric s a a' + SplitMetric s b b' = 0) :
+    pairDeficit (peelMetric δ s) a a' b b'
+      = pairDeficit δ a a' b b' - 2 * peelCoeff δ s := by
+  have e1 : peelMetric δ s a b + peelMetric δ s a' b'
+      = (δ a b + δ a' b') - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hx
+    simp only [mul_add] at hcx
+    linarith
+  have e2 : peelMetric δ s a b' + peelMetric δ s a' b
+      = (δ a b' + δ a' b) - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hy
+    simp only [mul_add] at hcx
+    linarith
+  have e3 : peelMetric δ s a a' + peelMetric δ s b b' = δ a a' + δ b b' := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hz
+    simp only [mul_add] at hcx
+    linarith
+  unfold pairDeficit
+  rw [e1, e2, e3, max_sub_sub_right]
+  try ring
+
+/-- 模式 `(0,2,2)`（**交叉 ①**）：`pd(δ') = max (A+2c) B − Z`。 -/
+theorem pairDeficit_peelMetric_of_sums_022 {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a a' b b' : α}
+    (hx : SplitMetric s a b + SplitMetric s a' b' = 0)
+    (hy : SplitMetric s a b' + SplitMetric s a' b = 2)
+    (hz : SplitMetric s a a' + SplitMetric s b b' = 2) :
+    pairDeficit (peelMetric δ s) a a' b b'
+      = max (δ a b + δ a' b' + 2 * peelCoeff δ s) (δ a b' + δ a' b)
+          - (δ a a' + δ b b') := by
+  have e1 : peelMetric δ s a b + peelMetric δ s a' b' = δ a b + δ a' b' := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hx
+    simp only [mul_add] at hcx
+    linarith
+  have e2 : peelMetric δ s a b' + peelMetric δ s a' b
+      = (δ a b' + δ a' b) - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hy
+    simp only [mul_add] at hcx
+    linarith
+  have e3 : peelMetric δ s a a' + peelMetric δ s b b'
+      = (δ a a' + δ b b') - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hz
+    simp only [mul_add] at hcx
+    linarith
+  unfold pairDeficit
+  rw [e1, e2, e3, max_sub_two_mul_aux]
+  try ring
+
+/-- 模式 `(2,0,2)`（**交叉 ②**）：`pd(δ') = max A (B+2c) − Z`。 -/
+theorem pairDeficit_peelMetric_of_sums_202 {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a a' b b' : α}
+    (hx : SplitMetric s a b + SplitMetric s a' b' = 2)
+    (hy : SplitMetric s a b' + SplitMetric s a' b = 0)
+    (hz : SplitMetric s a a' + SplitMetric s b b' = 2) :
+    pairDeficit (peelMetric δ s) a a' b b'
+      = max (δ a b + δ a' b') (δ a b' + δ a' b + 2 * peelCoeff δ s)
+          - (δ a a' + δ b b') := by
+  have e1 : peelMetric δ s a b + peelMetric δ s a' b'
+      = (δ a b + δ a' b') - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hx
+    simp only [mul_add] at hcx
+    linarith
+  have e2 : peelMetric δ s a b' + peelMetric δ s a' b = δ a b' + δ a' b := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hy
+    simp only [mul_add] at hcx
+    linarith
+  have e3 : peelMetric δ s a a' + peelMetric δ s b b'
+      = (δ a a' + δ b b') - 2 * peelCoeff δ s := by
+    rw [peelMetric_apply, peelMetric_apply]
+    have hcx := congrArg (fun t => peelCoeff δ s * t) hz
+    simp only [mul_add] at hcx
+    linarith
+  unfold pairDeficit
+  rw [e1, e2, e3, max_sub_two_mul_aux']
+  try ring
+
+/-! ### 危险模式的实数核 -/
+
+/-- ★★ **交叉 ① 的实数核**：`2c = iso ≤ max Z B − A`、`0 < max (A+2c) B − Z` ⇒ `0 < max A B − Z`。 -/
+theorem cross_core {A B Z c iso : ℝ} (h2c : 2 * c = iso)
+    (hiso : iso ≤ max Z B - A) (hpos : 0 < max (A + 2 * c) B - Z) :
+    0 < max A B - Z := by
+  by_contra hcon
+  rw [not_lt] at hcon
+  have hAZ : A ≤ Z := le_trans (le_max_left A B) (by linarith)
+  have hBZ : B ≤ Z := le_trans (le_max_right A B) (by linarith)
+  have hAZc : Z < A + 2 * c := by
+    by_contra hc
+    rw [not_lt] at hc
+    have hle : max (A + 2 * c) B ≤ Z := max_le hc hBZ
+    linarith
+  have hmax : max Z B = Z := max_eq_left hBZ
+  have h1 : iso ≤ Z - A := by rw [← hmax]; exact hiso
+  linarith
+
+/-- ★★ **交叉 ② 的实数核**：`2c = iso ≤ max Z A − B`、`0 < max A (B+2c) − Z` ⇒ `0 < max A B − Z`。 -/
+theorem cross_core2 {A B Z c iso : ℝ} (h2c : 2 * c = iso)
+    (hiso : iso ≤ max Z A - B) (hpos : 0 < max A (B + 2 * c) - Z) :
+    0 < max A B - Z := by
+  by_contra hcon
+  rw [not_lt] at hcon
+  have hAZ : A ≤ Z := le_trans (le_max_left A B) (by linarith)
+  have hBZ : B ≤ Z := le_trans (le_max_right A B) (by linarith)
+  have hBZc : Z < B + 2 * c := by
+    by_contra hc
+    rw [not_lt] at hc
+    have hle : max A (B + 2 * c) ≤ Z := max_le hAZ hc
+    linarith
+  have hmax : max Z A = Z := max_eq_left hAZ
+  have h1 : iso ≤ Z - B := by rw [← hmax]; exact hiso
+  linarith
+
+
+/-- ★★★ **交叉 ①（`{a,b}⊆A_s`、`{a',b'}⊆B_s`）：`pd(δ') > 0 ⇒ pd(δ) > 0`。** -/
+theorem pd_pos_of_peel_pos_cross_AA {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α} (hδ : ∀ x y, δ x y = δ y x)
+    (ha : a ∈ s.sideA) (hb : b ∈ s.sideA) (ha' : a' ∈ s.sideB) (hb' : b' ∈ s.sideB)
+    (h : 0 < pairDeficit (peelMetric δ s) a a' b b') :
+    0 < pairDeficit δ a a' b b' := by
+  have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA ha hb
+  have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB ha' hb'
+  have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb'
+  have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha' hb
+  have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha ha'
+  have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB hb hb'
+  have hx : SplitMetric s a b + SplitMetric s a' b' = 0 := by rw [h1, h2]; norm_num
+  have hy : SplitMetric s a b' + SplitMetric s a' b = 2 := by rw [h3, h4]; norm_num
+  have hz : SplitMetric s a a' + SplitMetric s b b' = 2 := by rw [h5, h6]; norm_num
+  rw [pairDeficit_peelMetric_of_sums_022 hx hy hz] at h
+  have hiso : isolationIndex δ s.sideA s.sideB ≤ pairDeficit δ a b a' b' :=
+    isolationIndex_le_pairDeficit δ (s.nonempty 0) (s.nonempty 1) ha hb ha' hb'
+  have hpd : pairDeficit δ a b a' b'
+      = max (δ a a' + δ b b') (δ a b' + δ a' b) - (δ a b + δ a' b') := by
+    unfold pairDeficit
+    rw [hδ b a']
+  have h2c : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  have hiso' : isolationIndex δ s.sideA s.sideB
+      ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) - (δ a b + δ a' b') := by
+    rw [← hpd]
+    exact hiso
+  exact cross_core (A := δ a b + δ a' b') (B := δ a b' + δ a' b) (Z := δ a a' + δ b b')
+    (c := peelCoeff δ s) (iso := isolationIndex δ s.sideA s.sideB) h2c hiso' h
+
+/-- ★★★ **交叉 ①（镜像：`{a,b}⊆B_s`、`{a',b'}⊆A_s`）：同上。** -/
+theorem pd_pos_of_peel_pos_cross_BB {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α} (hδ : ∀ x y, δ x y = δ y x)
+    (ha : a ∈ s.sideB) (hb : b ∈ s.sideB) (ha' : a' ∈ s.sideA) (hb' : b' ∈ s.sideA)
+    (h : 0 < pairDeficit (peelMetric δ s) a a' b b') :
+    0 < pairDeficit δ a a' b b' := by
+  have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideB ha hb
+  have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideA ha' hb'
+  have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha hb'
+  have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha' hb
+  have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha ha'
+  have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA hb hb'
+  have hx : SplitMetric s a b + SplitMetric s a' b' = 0 := by rw [h1, h2]; norm_num
+  have hy : SplitMetric s a b' + SplitMetric s a' b = 2 := by rw [h3, h4]; norm_num
+  have hz : SplitMetric s a a' + SplitMetric s b b' = 2 := by rw [h5, h6]; norm_num
+  rw [pairDeficit_peelMetric_of_sums_022 hx hy hz] at h
+  have hiso : isolationIndex δ s.sideA s.sideB ≤ pairDeficit δ a' b' a b :=
+    isolationIndex_le_pairDeficit δ (s.nonempty 0) (s.nonempty 1) ha' hb' ha hb
+  have hpd : pairDeficit δ a' b' a b
+      = max (δ a a' + δ b b') (δ a b' + δ a' b) - (δ a b + δ a' b') := by
+    unfold pairDeficit
+    rw [hδ a' a, hδ b' b, hδ b' a, add_comm (δ a' b') (δ a b), add_comm (δ a' b) (δ a b')]
+  have h2c : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  have hiso' : isolationIndex δ s.sideA s.sideB
+      ≤ max (δ a a' + δ b b') (δ a b' + δ a' b) - (δ a b + δ a' b') := by
+    rw [← hpd]
+    exact hiso
+  exact cross_core (A := δ a b + δ a' b') (B := δ a b' + δ a' b) (Z := δ a a' + δ b b')
+    (c := peelCoeff δ s) (iso := isolationIndex δ s.sideA s.sideB) h2c hiso' h
+
+/-- ★★★ **交叉 ②（`{a,b'}⊆A_s`、`{a',b}⊆B_s`）：`pd(δ') > 0 ⇒ pd(δ) > 0`。** -/
+theorem pd_pos_of_peel_pos_cross_ABA {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α} (hδ : ∀ x y, δ x y = δ y x)
+    (ha : a ∈ s.sideA) (hb' : b' ∈ s.sideA) (ha' : a' ∈ s.sideB) (hb : b ∈ s.sideB)
+    (h : 0 < pairDeficit (peelMetric δ s) a a' b b') :
+    0 < pairDeficit δ a a' b b' := by
+  have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb
+  have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha' hb'
+  have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideA ha hb'
+  have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideB ha' hb
+  have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha ha'
+  have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA hb hb'
+  have hx : SplitMetric s a b + SplitMetric s a' b' = 2 := by rw [h1, h2]; norm_num
+  have hy : SplitMetric s a b' + SplitMetric s a' b = 0 := by rw [h3, h4]; norm_num
+  have hz : SplitMetric s a a' + SplitMetric s b b' = 2 := by rw [h5, h6]; norm_num
+  rw [pairDeficit_peelMetric_of_sums_202 hx hy hz] at h
+  have hiso : isolationIndex δ s.sideA s.sideB ≤ pairDeficit δ a b' a' b :=
+    isolationIndex_le_pairDeficit δ (s.nonempty 0) (s.nonempty 1) ha hb' ha' hb
+  have hpd : pairDeficit δ a b' a' b
+      = max (δ a a' + δ b b') (δ a b + δ a' b') - (δ a b' + δ a' b) := by
+    unfold pairDeficit
+    rw [hδ b' b, hδ b' a']
+  have h2c : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  have hiso' : isolationIndex δ s.sideA s.sideB
+      ≤ max (δ a a' + δ b b') (δ a b + δ a' b') - (δ a b' + δ a' b) := by
+    rw [← hpd]
+    exact hiso
+  exact cross_core2 (A := δ a b + δ a' b') (B := δ a b' + δ a' b) (Z := δ a a' + δ b b')
+    (c := peelCoeff δ s) (iso := isolationIndex δ s.sideA s.sideB) h2c hiso' h
+
+/-- ★★★ **交叉 ②（镜像：`{a,b'}⊆B_s`、`{a',b}⊆A_s`）：同上。** -/
+theorem pd_pos_of_peel_pos_cross_BAB {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} {a b a' b' : α} (hδ : ∀ x y, δ x y = δ y x)
+    (ha : a ∈ s.sideB) (hb' : b' ∈ s.sideB) (ha' : a' ∈ s.sideA) (hb : b ∈ s.sideA)
+    (h : 0 < pairDeficit (peelMetric δ s) a a' b b') :
+    0 < pairDeficit δ a a' b b' := by
+  have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha hb
+  have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha' hb'
+  have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideB ha hb'
+  have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideA ha' hb
+  have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA ha ha'
+  have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB hb hb'
+  have hx : SplitMetric s a b + SplitMetric s a' b' = 2 := by rw [h1, h2]; norm_num
+  have hy : SplitMetric s a b' + SplitMetric s a' b = 0 := by rw [h3, h4]; norm_num
+  have hz : SplitMetric s a a' + SplitMetric s b b' = 2 := by rw [h5, h6]; norm_num
+  rw [pairDeficit_peelMetric_of_sums_202 hx hy hz] at h
+  have hiso : isolationIndex δ s.sideA s.sideB ≤ pairDeficit δ a' b a b' :=
+    isolationIndex_le_pairDeficit δ (s.nonempty 0) (s.nonempty 1) ha' hb ha hb'
+  have hpd : pairDeficit δ a' b a b'
+      = max (δ a a' + δ b b') (δ a b + δ a' b') - (δ a b' + δ a' b) := by
+    unfold pairDeficit
+    rw [hδ a' a, hδ b a, add_comm (δ a' b') (δ a b), add_comm (δ a' b) (δ a b')]
+  have h2c : 2 * peelCoeff δ s = isolationIndex δ s.sideA s.sideB := by
+    unfold peelCoeff
+    ring
+  have hiso' : isolationIndex δ s.sideA s.sideB
+      ≤ max (δ a a' + δ b b') (δ a b + δ a' b') - (δ a b' + δ a' b) := by
+    rw [← hpd]
+    exact hiso
+  exact cross_core2 (A := δ a b + δ a' b') (B := δ a b' + δ a' b) (Z := δ a a' + δ b b')
+    (c := peelCoeff δ s) (iso := isolationIndex δ s.sideA s.sideB) h2c hiso' h
+
+
+/-! ### 装配：剥离下 d-split 的**无条件存活**（(P1) 的核心） -/
+
+/-- ★★★★ **(P1) 的核心**：`t` 是 `δ' := δ − c·δ_s` 的 d-split ⇒ `t` 是 `δ` 的 d-split
+（**不需要 `s` 与 `t` 相容**）。16 个成员性构形 × 四模式；两个危险模式由
+`pd_pos_of_peel_pos_cross_*` 收口。 -/
+theorem isDSplit_of_isDSplit_peelMetric_general {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s t : Split α} (hδ : ∀ x y, δ x y = δ y x)
+    (hc : 0 ≤ peelCoeff δ s) (h : IsDSplit (peelMetric δ s) t.sideA t.sideB) :
+    IsDSplit δ t.sideA t.sideB := by
+  intro a ha a' ha' b hb b' hb'
+  have hpos : 0 < pairDeficit (peelMetric δ s) a a' b b' := by
+    have h0 := h a ha a' ha' b hb b' hb'
+    unfold pairDeficit
+    linarith
+  suffices hgoal : 0 < pairDeficit δ a a' b b' by
+    unfold pairDeficit at hgoal
+    linarith
+  by_cases c_a : a ∈ s.sideA <;> by_cases c_a' : a' ∈ s.sideA <;>
+    by_cases c_b : b ∈ s.sideA <;> by_cases c_b' : b' ∈ s.sideA
+
+  · -- 构形 AAAA
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b'
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b'
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_a'
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideA c_b c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 AAAB
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_b'B
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_b'B
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_a'
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_b c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 AABA
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_bB
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b'
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b'
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_bB
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_a'
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_bB c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 AABB
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_bB
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_b'B
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_b'B
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_bB
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_a'
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB c_bB c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = 2 := by rw [h1, h2]; norm_num
+    have hy : SplitMetric s a b' + SplitMetric s a' b = 2 := by rw [h3, h4]; norm_num
+    have hz : SplitMetric s a a' + SplitMetric s b b' = 0 := by rw [h5, h6]; norm_num
+    rw [pairDeficit_peelMetric_of_sums_220 hx hy hz] at hpos
+    linarith
+
+  · -- 构形 ABAA
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b'
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b'
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_a'B
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideA c_b c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 ABAB
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_b'B
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_b'B
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_a'B
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_b c_b'B
+    exact pd_pos_of_peel_pos_cross_AA hδ c_a c_b c_a'B c_b'B hpos
+
+  · -- 构形 ABBA
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_bB
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b'
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a c_b'
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_bB
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_a'B
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_bB c_b'
+    exact pd_pos_of_peel_pos_cross_ABA hδ c_a c_b' c_a'B c_bB hpos
+
+  · -- 构形 ABBB
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_bB
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_b'B
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_b'B
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_bB
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a c_a'B
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB c_bB c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 BAAA
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b'
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b'
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_a'
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideA c_b c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 BAAB
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_b'B
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_b'B
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_a'
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_b c_b'B
+    exact pd_pos_of_peel_pos_cross_BAB hδ c_aB c_b'B c_a' c_b hpos
+
+  · -- 构形 BABA
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_bB
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideA c_a' c_b'
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b'
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_bB
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_a'
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_bB c_b'
+    exact pd_pos_of_peel_pos_cross_BB hδ c_aB c_bB c_a' c_b' hpos
+
+  · -- 构形 BABB
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_bB
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_b'B
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_b'B
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_a' c_bB
+    have h5 : SplitMetric s a a' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_a'
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB c_bB c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 BBAA
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b'
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b'
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_a'B
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideA c_b c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = 2 := by rw [h1, h2]; norm_num
+    have hy : SplitMetric s a b' + SplitMetric s a' b = 2 := by rw [h3, h4]; norm_num
+    have hz : SplitMetric s a a' + SplitMetric s b b' = 0 := by rw [h5, h6]; norm_num
+    rw [pairDeficit_peelMetric_of_sums_220 hx hy hz] at hpos
+    linarith
+
+  · -- 构形 BBAB
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_b'B
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_b'B
+    have h4 : SplitMetric s a' b = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_a'B
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB c_b c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 BBBA
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_bB
+    have h2 : SplitMetric s a' b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_a'B c_b'
+    have h3 : SplitMetric s a b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_aB c_b'
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_bB
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_a'B
+    have h6 : SplitMetric s b b' = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA c_bB c_b'
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
+  · -- 构形 BBBB
+    have c_aB : a ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a).mpr c_a
+    have c_a'B : a' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s a').mpr c_a'
+    have c_bB : b ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b).mpr c_b
+    have c_b'B : b' ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s b').mpr c_b'
+    have h1 : SplitMetric s a b = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_bB
+    have h2 : SplitMetric s a' b' = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_b'B
+    have h3 : SplitMetric s a b' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_b'B
+    have h4 : SplitMetric s a' b = 0 := splitMetric_eq_zero_of_mem_sideB c_a'B c_bB
+    have h5 : SplitMetric s a a' = 0 := splitMetric_eq_zero_of_mem_sideB c_aB c_a'B
+    have h6 : SplitMetric s b b' = 0 := splitMetric_eq_zero_of_mem_sideB c_bB c_b'B
+    have hx : SplitMetric s a b + SplitMetric s a' b' = SplitMetric s a a' + SplitMetric s b b' := by rw [h1, h2, h5, h6]; try ring
+    have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
+    rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
+    exact hpos
+
 end Split
 
