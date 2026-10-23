@@ -3986,6 +3986,11 @@ theorem rankedFiberCount_gap_holds : rankedFiberCount_gap := by
 即：(a) 一旦成立，`rankedFiberCount_gap_holds` 就是上面三行（`h2` 用 §20，`h1` 用 §21 的归约，
 `n ≤ 1` 用本节末尾的 `rankedFiberCount_gap_small`）。
 
+✅ **已收口（§23）**：`theorem rankedFiberCount_gap_holds : rankedFiberCount_gap` 已在文件末尾的
+§23 里落地，**零额外前提**（签名就是 `: rankedFiberCount_gap`，没有 `hsurj`、没有 `2 ≤ n`、
+没有 `|X| ≤ k`）。(a) 由 `reconstruct (cladesOf n f) (fun j => (σ j).1) d` 兑出，
+三个分量分别是 `isMergeHistory_reconstruct` / `cladesOf_reconstruct_eq` / `newClade_reconstruct`。
+
 ⚠️ `def rankedFiberCount_gap` 逐字未动；本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）。 -/
 
 /-- ★★ **(O1) 的「≥」半的归约**：一旦 (a)（`Φ` 的满射性，见 §21 的逐字陈述）成立，
@@ -4439,7 +4444,14 @@ surj_reconstruct (hn : 2 ≤ n) (hf) (σ) (hinj) (hord) (d) :
    * `newClade g k = (σ k).1`：用 `newClade_eq_fiberOf_succ`（库内）把它变成单个纤维，再用 3 +
      `blockAt_succ_of_mem` / `disjoint_blockAt_of_not_mem` 两个方向夹出来（~30 行）。
 
-⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）；`rankedFiberCount_gap_holds` **未**落地。 -/
+⚠️ 本节**不**新增任何 `def … : Prop` 缺口登记（口径 A 不变）。
+
+⬜→✅ **状态更新（§23 落地后）**：本节写作时 `rankedFiberCount_gap_holds` **未**落地；
+现在它**已**在文件末尾的 §23 落地（零额外前提）。下面「剩余四件」里
+第 1、2、3 件已在本节证完，第 4 件（取出层）在 §23 由
+`fiberOf_chainMap_reconstruct` / `isStep_reconstruct` / `final_const_reconstruct` /
+`newClade_reconstruct` / `cladesOf_reconstruct_eq` 逐条兑出，
+最后经 §21 的 `rankedFiberCount_gap_of_surj` ＋ `rankedFiberCount_gap_small` 装配。 -/
 
 /-- ★★★ **孩子里的元素所在的块就是那个孩子**（两孩子版上）。 -/
 theorem blockAt_eq_child {n : ℕ} (hn : 2 ≤ n) {f : Fin (n - 1) → Fin n × Fin n}
