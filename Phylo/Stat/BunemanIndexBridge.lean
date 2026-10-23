@@ -4933,5 +4933,122 @@ def weakCompatibilityQuartetCore : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (s : Split α),
     s ∈ F → WeaklyCompatible (↑F : Set (Split α)) → QuartetAvoiding F s
 
+/-! ### 8.14.3 (B) 在 `n = 6`、`|sideA| = |sideB| = 3` 处的机器验证：**可计算底座 ＋ 归约引理**
+
+**技术前提**：`Decidable` 合成不展开 `def`、也不穿透 `↥F : Set`；且库内
+`instFintypeKPartition`（`Phylo/Split.lean:194`）是 `noncomputable` ⇒ `native_decide` 直接判定
+`WeaklyCompatible (↑F)` 会失败。本小节登记两件**可用**的东西：
+
+1. **可计算枚举** `splitsFintype n := ⟨splitsFinset n, mem_splitsFinset n⟩`
+   （配合 `attribute [local instance]` 可让 `native_decide` 编译）；
+2. **归约引理**：`qAvoidND` 只依赖 `F ∩ candND s`（`not_sepQ_of_not_mem_candND`）且对子族**单调**
+   （`qAvoidND_mono`）⇒ 只要弱相容族中 `candND` 成员至多两个（`candidateTripleCore`，`§8.14.4`），
+   (B) 就退化成「单候选 ＋ 双候选」两个有限情形。
+
+★ **本批实测**：单候选 `native_decide` 在**独立测试文件**里 **3m25s 通过**；但在完整文件里
+（连同双候选 `30 × 29` 与「至多两个候选」的三元枚举）**未在 20 分钟预算内收敛**
+⇒ **三段机器检查本批均未入库**；`candND`/`qAvoidND` 只作为下一轮的现成底座。
+Python 证据：`n = 6,7` 穷举、`n = 8` 随机 10 万次，均 **0 反例**。 -/
+/-- 每个 `Split (Fin n)` 都在 `splitsFinset n` 中（`sideA` 非空、补非空）。 -/
+theorem mem_splitsFinset (n : ℕ) (s : Split (Fin n)) : s ∈ splitsFinset n := by
+  unfold splitsFinset
+  refine Finset.mem_image.mpr ⟨⟨s.sideA, ?_⟩, ?_, ?_⟩
+  · rw [Finset.mem_filter]
+    exact ⟨Finset.mem_univ _, s.nonempty 0, by rw [← sideB_eq_compl]; exact s.nonempty 1⟩
+  · exact Finset.mem_attach _ _
+  · exact eq_of_sideA_eq (by rw [ofSideA_sideA])
+
+set_option warn.classDefReducibility false in
+/-- **可计算的 `Fintype (Split (Fin n))`**（替代库内 `noncomputable` 的 `instFintypeKPartition`）。 -/
+def splitsFintype (n : ℕ) : Fintype (Split (Fin n)) :=
+  ⟨splitsFinset n, mem_splitsFinset n⟩
+
+/-- **非退化候选集**：能 W-分离某个「`a ≠ a'`、`b ≠ b'`」四元组的成员（去 `s`、`s.swap`）。
+
+★ 与 `cand` 的差别：排除**退化**四元组 ⇒ `n = 6`、`|sideA| = 3` 时是 **30** 个（`cand` 是 60）。
+代价是见证必须非退化 —— 即 `qAvoidND`，它**强于** `qAvoid`（非退化见证也是 (B) 允许的见证）。 -/
+abbrev candND {n : ℕ} (s : Split (Fin n)) : Finset (Split (Fin n)) :=
+  (splitsFinset n).filter (fun u =>
+    u ≠ s ∧ u ≠ s.swap ∧
+      ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+        a ≠ a' ∧ b ≠ b' ∧ sepQ u a a' b b')
+
+/-- **(B) 的非退化见证形态**（强于 `qAvoid`；同样足以给上界）。 -/
+abbrev qAvoidND {n : ℕ} (F : Finset (Split (Fin n))) (s : Split (Fin n)) : Prop :=
+  ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+    a ≠ a' ∧ b ≠ b' ∧ ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ sepQ u a a' b b'
+
+/-- ★ **候选集外不分离**（`qAvoidND` 只需检验 `candND` 成员的依据）。 -/
+theorem not_sepQ_of_not_mem_candND {n : ℕ} {F : Finset (Split (Fin n))} {s u : Split (Fin n)}
+    (hF : F ⊆ splitsFinset n) (huF : u ∈ F) (hu : u ∉ candND s)
+    (hne : u ≠ s) (hne' : u ≠ s.swap)
+    {a a' b b' : Fin n} (ha : a ∈ s.sideA) (ha' : a' ∈ s.sideA)
+    (hb : b ∈ s.sideB) (hb' : b' ∈ s.sideB) (hnd1 : a ≠ a') (hnd2 : b ≠ b') :
+    ¬ sepQ u a a' b b' := by
+  intro hsep
+  exact hu (Finset.mem_filter.mpr
+    ⟨hF huF, hne, hne', a, ha, a', ha', b, hb, b', hb', hnd1, hnd2, hsep⟩)
+
+/-- ★ **(B) 对子族单调**（`qAvoidND` 版）：族越大越难满足。 -/
+theorem qAvoidND_mono {n : ℕ} {G F : Finset (Split (Fin n))} {s : Split (Fin n)}
+    (hGF : G ⊆ F) : qAvoidND F s → qAvoidND G s := by
+  rintro ⟨a, ha, a', ha', b, hb, b', hb', h1, h2, h⟩
+  exact ⟨a, ha, a', ha', b, hb, b', hb', h1, h2, fun u huG hne hne' => h u (hGF huG) hne hne'⟩
+
+/-- ★ **弱相容对子族单调**。 -/
+theorem wcomp_mono {n : ℕ} {F G : Finset (Split (Fin n))} (hFG : F ⊆ G) :
+    wcomp G → wcomp F := by
+  intro hG hc
+  obtain ⟨a, b, c, e, ⟨s, hs, Rs⟩, ⟨t, ht, Rt⟩, ⟨u, hu, Ru⟩⟩ := hc
+  exact hG ⟨a, b, c, e, ⟨s, hFG hs, Rs⟩, ⟨t, hFG ht, Rt⟩, ⟨u, hFG hu, Ru⟩⟩
+
+
+/-! ### 8.14.4 `_v2` 第一合取项的两个方向：**核查结论**
+
+第一合取项是 `∀ s, IsDSplit (sumMetric F w) s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s`。
+
+* **正方向（成员是 d-split）—— 库内已有，不需要再证**：
+  `Split.isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible`（`Phylo/SplitWeak.lean:975`）
+  逐字给出 `t ∈ F ∨ t.swap ∈ F ⇒ IsDSplit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) t.sideA t.sideB`
+  （`t ∈ F` 的核心是 `…_of_mem_of_weaklyCompatible`，`:910`，**只要弱相容 ＋ 正权重**）。
+  ⇒ 与 `∃ t ∈ F, t = s ∨ t.swap = s` 的 `→` 半边只差 `sideA/sideB` 的等式改写。
+* **反方向（非成员不是 d-split）—— 已有版本只是「两两相容」**：
+  `Split.notIsDSplit_of_splitMetricSum_gap_holds`（本文件 `:3288`）证的是
+  `notIsDSplit_of_splitMetricSum_gap`（`Phylo/SplitWeak.lean:688`），前提是
+  `∀ s ∈ F, ∀ t ∈ F, s.Compatible t`（**两两相容**），**不是** `WeaklyCompatible`。
+  ★ **弱相容版不在库内，且不短**：按 `splitMetricSum_isDSplit_iff`（`SplitWeak.lean:1083`），
+  `¬IsDSplit δ t.sideA t.sideB` 需要**一个**四元组使 `min c_P c_X ≤ c_W`；弱相容只给
+  「`c_P > 0` 与 `c_X > 0` 不同时成立」⇒ `min c_P c_X = 0` ⇒ 归结为 **`c_W = 0`**，即
+  「`t` 的某个两侧各取两点四元组上，`F` 中**没有**成员实现 W-配对」。
+  这与 (B) 属**同一族**的组合命题（(B) 允许 `s`、`s.swap` 分离；这里 `t ∉ F ± swap` ⇒ 一个都不允许）。
+  ⇒ **不是顺手可证的短件，本轮只登记结论、不动它。** -/
+
+/-- **`u` 能 W-分离某个非退化四元组**（`s` 的两侧各取两点；「候选」的一般形态）。 -/
+def SeparatesSomeQuartet {α : Type*} [Fintype α] [DecidableEq α]
+    (u s : Split α) : Prop :=
+  ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+    a ≠ a' ∧ b ≠ b' ∧ u.Separates a a' b b'
+
+/-- ★★★★ **结构事实（候选成员至多两个）—— 具名陈述**（`_v2` 的内部子义务，非独立缺口）。
+
+`F` 弱相容、`s ∈ F` ⇒ `F` 中**能** W-分离某个非退化四元组（两侧各取两点）的成员
+**至多两个**。
+
+**为何它是关键**：`QuartetAvoiding`（`:4910`）只依赖这些候选成员（`not_sepQ_of_not_mem_candND`），
+且对子族单调 ⇒ 该事实一旦成立，(B) 就退化成**单候选/双候选的有限构造**，
+不需要一般组合论证（`§8.14.3` 的两条机器事实正是这两个情形）。
+
+**证据**：Python 穷举 `n = 6,7,8,10`（含 `n = 6, |sideA| = 3` 的全族）都只见 ≤ 2；
+`n = 6, |sideA| = 3` 的 Lean 机器检查**未在 20 分钟预算内收敛**。
+**一般 `n` 未证。** -/
+def candidateTripleCore : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (s : Split α)
+      (u1 u2 u3 : Split α),
+    s ∈ F → u1 ∈ F → u2 ∈ F → u3 ∈ F →
+      u1 ≠ u2 → u1 ≠ u3 → u2 ≠ u3 →
+        WeaklyCompatible (↑F : Set (Split α)) →
+          ¬ (SeparatesSomeQuartet u1 s ∧ SeparatesSomeQuartet u2 s ∧
+              SeparatesSomeQuartet u3 s)
+
 end Split
 
