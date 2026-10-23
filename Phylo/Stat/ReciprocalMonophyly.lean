@@ -3304,4 +3304,180 @@ theorem exists_rootedSplitFamily_of_card {n : ℕ} (hn : 2 ≤ n) (U : Cladogram
       hcard⟩,
     rfl, by rw [nontrivialSplits_rootedSplitTree]⟩
 
+
+/-! ### 11.12 块 1：二叉树的 **split 计数**（`|X| − 3` 个非平凡 split）
+
+本节把 §11.11 的「只差基数」补上，从而**块 2 完成**。
+
+计数链条（两步挤压 ＋ 平凡 split 计数）：
+
+* ★★ `card_splits_of_isBinary`：**全部**（有向）split 恰 `4|X| − 6` 条。
+  - 下界：★★★ `Cladogram.two_mul_card_edgeFinset_le_card_splits`（每条边给两个有向 split，
+    单射由 ★★★ `eq_of_sideLeaves_eq` 保证）＋ ★★ `IsBinary.card_edgeFinset`（`#E = 2ℓ−3`）
+    ＋ ★★ `Cladogram.card_leafFinset`（`ℓ = |X|`）⇒ `4|X| − 6 ≤ #S`；
+  - 上界：★★★ `Finset.card_add_six_le_four_mul_card_of_pairwise_compatible`
+    （`X` 上两两相容族至多 `4|X| − 6` 条）＋ 同树 split 两两相容 ⇒ `#S ≤ 4|X| − 6`。
+* ★★ `card_isTrivial_splits`：**平凡**（有向）split 恰 `2|X|` 条
+  （`{x}` 一档 `|X|` 条、`{x}ᶜ` 一档 `|X|` 条，两档用 `Split.ext_sideA` 定值、且不相交）。
+* ★★ `isSplitOf_of_isTrivial`：平凡 split **必被**任何树展示（叶边）。
+* ⇒ ★★★ **`card_nontrivialSplits_of_isBinary`**：`#nontrivialSplits = 2(|X| − 3)`
+  （= `|X| − 3` 个无序非平凡 split）。
+* ⇒ ★★★ **`nontrivialSplits_mem_rootedSplitFamily`（块 2 完成）**：`m = n+1` ⇒ 基数
+  `2(n−2)`，故任何二叉 `n` 叶有根树的非平凡 split 系统**就是** §11.7 载体的一个元素，
+  且 ★★★ `nontrivialSplits_rootedSplitTree` 把它还原。
+
+⚠️ **块 3（`Σ_ω rootedSplitWeight ω = 1`）仍未证**，且它**不能**由块 1+2 单独推出：
+块 1+2 给的是「族 ↔ 拓扑类」的**双射**（§11.9 的单射 ＋ 本节的击中），
+而 `Σ_ω weight ω = 1` 还需要**拓扑侧**的 `S_n := Σ_T 1/g(T) = n!/2^{n−1}`
+（等价于「`n` 叶标号历史总数 `= n!(n−1)!/2^{n−1}`」）—— 那是**另一条计数**，
+需要在拓扑上做「按 cherry 剥离」的归纳，本批未做。 -/
+
+/-- ★★ **二叉树的（有向）split 数恰为 `4|X| − 6`**。 -/
+theorem card_splits_of_isBinary {X : Type} [Fintype X] [DecidableEq X]
+    (T : Cladogram X) (hT : T.IsBinary) (h3 : 3 ≤ Fintype.card X) :
+    ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card = 4 * Fintype.card X - 6 := by
+  classical
+  have hE := T.two_mul_card_edgeFinset_le_card_splits
+  have hbin := hT.card_edgeFinset
+  have hleaf := T.card_leafFinset
+  have hlower : 4 * Fintype.card X - 6
+      ≤ ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card := by
+    omega
+  have hupper : ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card
+      ≤ 4 * Fintype.card X - 6 := by
+    have hne : Nonempty X := Fintype.card_pos_iff.mp (by omega)
+    have hup := Finset.card_add_six_le_four_mul_card_of_pairwise_compatible
+      ((Finset.univ : Finset (Split X)).filter T.IsSplitOf) (Classical.choice hne)
+      (by omega) ?_
+    · omega
+    · intro s hs t ht _
+      obtain ⟨-, hs'⟩ := Finset.mem_filter.mp hs
+      obtain ⟨-, ht'⟩ := Finset.mem_filter.mp ht
+      exact Cladogram.compatible_of_sameQuartetSystem (T := T) (T' := T)
+        (fun _ _ _ _ _ => Iff.rfl) hs' ht'
+  omega
+
+/-- ★★ **平凡（有向）split 恰 `2|X|` 个**（`3 ≤ |X|`）：`{x}` 一档 `|X|` 个、`{x}ᶜ` 一档 `|X|` 个。 -/
+theorem card_isTrivial_splits {X : Type} [Fintype X] [DecidableEq X]
+    (h3 : 3 ≤ Fintype.card X) :
+    ((Finset.univ : Finset (Split X)).filter (fun s => s.IsTrivial)).card
+      = 2 * Fintype.card X := by
+  classical
+  have hne : Nonempty X := Fintype.card_pos_iff.mp (by omega)
+  have hcompl : ∀ x : X, ({x} : Finset X)ᶜ.Nonempty := by
+    intro x
+    apply compl_nonempty_of_ne_univ
+    intro h
+    have : ({x} : Finset X).card = Fintype.card X := by rw [h, Finset.card_univ]
+    simp at this
+    omega
+  let f : X → Split X := fun x => splitOf ({x} : Finset X) (Finset.singleton_nonempty x) (hcompl x)
+  have hf : ∀ x : X, (f x).sideA = {x} := fun x => splitOf_sideA _ _ _
+  have hf_inj : Function.Injective f := by
+    intro x y hxy
+    have h1 : ({x} : Finset X) = {y} := by rw [← hf x, ← hf y, hxy]
+    simpa using h1
+  have hswap_inj : Function.Injective (fun x : X => (f x).swap) := by
+    intro x y hxy
+    apply hf_inj
+    have h := congrArg Split.swap hxy
+    simpa [Split.swap_swap] using h
+  have hset : (Finset.univ : Finset (Split X)).filter (fun s => s.IsTrivial)
+      = (Finset.univ.image f) ∪ (Finset.univ.image (fun x => (f x).swap)) := by
+    ext s
+    constructor
+    · intro hs
+      obtain ⟨-, htr⟩ := Finset.mem_filter.mp hs
+      rcases htr with ⟨x, hx⟩ | ⟨x, hx⟩
+      · exact Finset.mem_union.mpr (Or.inl (Finset.mem_image.mpr
+          ⟨x, Finset.mem_univ x, (Split.ext_sideA (by rw [hf x, hx])).symm⟩))
+      · exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr
+          ⟨x, Finset.mem_univ x, (Split.ext_sideA (by
+            rw [Split.swap_sideA, splitOf_sideB, hx])).symm⟩))
+    · intro hs
+      rcases Finset.mem_union.mp hs with h | h
+      · obtain ⟨x, -, rfl⟩ := Finset.mem_image.mp h
+        exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, Or.inl ⟨x, hf x⟩⟩
+      · obtain ⟨x, -, rfl⟩ := Finset.mem_image.mp h
+        exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, Or.inr ⟨x, by
+          rw [Split.swap_sideA, splitOf_sideB]⟩⟩
+  rw [hset]
+  have hdisj : Disjoint (Finset.univ.image f) (Finset.univ.image (fun x => (f x).swap)) := by
+    rw [Finset.disjoint_left]
+    intro s hs1 hs2
+    obtain ⟨x, -, hx⟩ := Finset.mem_image.mp hs1
+    obtain ⟨y, -, hy⟩ := Finset.mem_image.mp hs2
+    have h1 : ({x} : Finset X) = ({y} : Finset X)ᶜ := by
+      rw [← hf x, hx, ← hy, Split.swap_sideA, splitOf_sideB]
+    have h2 : ({x} : Finset X).card = Fintype.card X - 1 := by
+      rw [h1, Finset.card_compl, Finset.card_singleton]
+    simp at h2
+    omega
+  rw [Finset.card_union_of_disjoint hdisj,
+    Finset.card_image_of_injective _ hf_inj,
+    Finset.card_image_of_injective _ hswap_inj, Finset.card_univ]
+  omega
+
+/-- ★★ **平凡 split 必被任何树展示**（`Nontrivial X`）。 -/
+theorem isSplitOf_of_isTrivial {X : Type} [Fintype X] [DecidableEq X] [Nontrivial X]
+    (T : Cladogram X) {s : Split X} (hs : s.IsTrivial) : T.IsSplitOf s := by
+  rcases hs with ⟨x, hx⟩ | ⟨x, hx⟩
+  · obtain ⟨s', hs', hs'A⟩ := T.exists_isSplitOf_singleton x
+    exact (Split.ext_sideA (hs'A.trans hx.symm)).symm ▸ hs'
+  · obtain ⟨s', hs', hs'A⟩ := T.exists_isSplitOf_singleton x
+    have hgoal : (s'.swap).sideA = s.sideA := by
+      rw [Split.swap_sideA, Split.sideB_eq_sdiff, hs'A, hx, Finset.compl_eq_univ_sdiff]
+    exact (Split.ext_sideA hgoal).symm ▸ T.isSplitOf_swap hs'
+
+/-- ★★★ **二叉树恰有 `2(|X| − 3)` 个有向非平凡 split**（= `|X| − 3` 个无序）。 -/
+theorem card_nontrivialSplits_of_isBinary {X : Type} [Fintype X] [DecidableEq X]
+    (T : Cladogram X) (hT : T.IsBinary) (h3 : 3 ≤ Fintype.card X) :
+    T.nontrivialSplits.card = 2 * (Fintype.card X - 3) := by
+  classical
+  have hnt : Nontrivial X := Fintype.one_lt_card_iff_nontrivial.mp (by omega)
+  have hnontriv : T.nontrivialSplits.card
+      + ((Finset.univ : Finset (Split X)).filter (fun s => s.IsTrivial)).card
+      = ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).card := by
+    have hpart := Finset.card_filter_add_card_filter_not
+      (s := (Finset.univ : Finset (Split X)).filter T.IsSplitOf)
+      (p := fun s => s.IsTrivial)
+    -- 化简两边
+    have h1 : ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).filter
+        (fun s => ¬ s.IsTrivial) = T.nontrivialSplits := by
+      rw [Cladogram.nontrivialSplits, Finset.filter_filter]
+    have h2 : ((Finset.univ : Finset (Split X)).filter T.IsSplitOf).filter
+        (fun s => s.IsTrivial)
+        = (Finset.univ : Finset (Split X)).filter (fun s => s.IsTrivial) := by
+      refine Finset.Subset.antisymm ?_ ?_
+      · exact Finset.filter_subset_filter _ (Finset.filter_subset _ _)
+      · intro s hs
+        obtain ⟨-, htr⟩ := Finset.mem_filter.mp hs
+        exact Finset.mem_filter.mpr
+          ⟨Finset.mem_filter.mpr
+            ⟨Finset.mem_univ _, @isSplitOf_of_isTrivial X _ _ hnt T s htr⟩, htr⟩
+    rw [h1, h2] at hpart
+    omega
+  have hS := card_splits_of_isBinary T hT h3
+  have htr := card_isTrivial_splits (X := X) h3
+  omega
+
+/-- ★★★ **块 2（完成）**：任何 
+ 叶**二叉**有根树 U 的非平凡 split 系统都落在载体
+
+ootedSplitFamily n 里，且 
+ootedSplitTree 还原它。 -/
+theorem nontrivialSplits_mem_rootedSplitFamily {n : ℕ} (hn : 2 ≤ n)
+    (U : Cladogram (Fin n ⊕ Unit)) (hU : U.IsBinary) :
+    ∃ ω : rootedSplitFamily n, ω.val = U.nontrivialSplits ∧
+      (rootedSplitTree hn ω).nontrivialSplits = U.nontrivialSplits := by
+  have h3 : 3 ≤ Fintype.card (Fin n ⊕ Unit) := by
+    simp only [Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+    omega
+  have hcard := card_nontrivialSplits_of_isBinary U hU h3
+  have hV : Fintype.card (Fin n ⊕ Unit) = n + 1 := by
+    simp only [Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+  rw [hV] at hcard
+  have htarget : U.nontrivialSplits.card = 2 * (n - 2) := by omega
+  exact exists_rootedSplitFamily_of_card hn U htarget
+
 end Phylo.Stat.ReciprocalMonophyly
