@@ -36,6 +36,7 @@
   (a) 有根权重归一：Σ_T P_rooted(T) = 1
   (b) 「均匀选叶分裂」的**精确马尔可夫链**（在形状上）与 (★) 逐形状一致
   (c) 无根律归一：Σ_U P_unrooted(U) = 1；每个 U 恰有 2n−3 个 rootings
+  (c') 无根律是否**均匀**（★ 只有 n ≤ 5 均匀；n ≥ 6 不均匀 —— 勿把 n=4 的「三棵等权」外推）
   (d) Lemma 4.2 / 4.3 的概率值
   (e) Lemma 6.2 的 qn(|A|) —— 即缺口 `YHKClanLawGap` 右端的 `clanProb n A.card`
   (f) 形状表（count, g, 权重）：Lean 侧 `yhkRootWeight_four_total` / `_five_total` 的数据来源
@@ -229,6 +230,13 @@ def main():
               f"rootings/U ∈ {sorted(set(cnts.values()))} (2n-3 = {2*n-3})")
         chk(utot == 1, "unrooted normalisation")
         chk(set(cnts.values()) == {2 * n - 3}, "rootings per unrooted tree")
+
+        # (c') 无根律是否**均匀**？★ 只有 n ≤ 5 均匀；n = 6 起就不均匀
+        #      ⇒ 切勿把 `yhkLawFour` 的「三棵 quartet 等权」外推成「一般 n 均匀」（教训）
+        unif = len(set(U.values())) == 1
+        print(f"  (c') 无根律 uniform? {unif}   distinct values = "
+              f"{sorted(set(U.values()))[:4]}")
+        chk(unif == (n <= 5), "uniformity pattern (n<=5 uniform, n>=6 not)")
 
         # (d)(e) 逐 a 核对 Lemma 4.2 / 4.3 / 6.2
         for a in range(1, n):
