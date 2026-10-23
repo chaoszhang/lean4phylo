@@ -4564,3 +4564,232 @@ theorem not_weakCompatibilityRealization_gap_weights :
 
 end Split
 
+open Finset
+
+namespace Split
+
+/-! ## 8.13 ★★★★ 忠实公式的**可证半边**（与 `:3358` 的 `def` 修不修无关的真数学）
+
+本节把 BdD Thm 3 忠实半边的**三个可证结果**落地（`def` 的第三个合取项本身为假，见 `§8.12`）：
+
+1. `isolationIndex_splitMetric`：`δ = c·δ_u ⇒ α_u = 2c`（单 split 度量，**任意** `c`）；
+2. `isolationIndex_weights_singleton` / `isolationIndex_weights_swap_pair`：
+   `F = {s}` ⇒ `α_s = 2·w s`；`F = {s, s.swap}` ⇒ `α_s = 2·(w s + w s.swap)`
+   —— 后者正是「`s` 与 `s.swap` 系数**相加**」口径的机器验证；
+3. `isolationIndex_ge_two_mul_weight`：**一般族的下界**
+   `α_s ≥ 2·(w s + [s.swap ∈ F]·w s.swap)`（弱相容 ＋ `w > 0`）。
+
+★ **仍缺的**（见 `§8.12` 尾部）：一般族的**上界** `α_s ≤ 2(w_s + [s.swap∈F]w_swap)`，
+它等价于一条组合引理：存在 `a,a' ∈ s.sideA`、`b,b' ∈ s.sideB`，使 `F \ {s,s.swap}` 中
+没有成员把 `{a,a'}` 与 `{b,b'}` 分到两侧。 -/
+
+/-- `swap` 不是恒等（两侧非空且不交）。 -/
+theorem swap_ne {α : Type*} [Fintype α] [DecidableEq α] (s : Split α) : s.swap ≠ s := by
+  intro h
+  obtain ⟨a, ha⟩ := s.nonempty 0
+  have hb : a ∈ s.sideB := by
+    rw [← swap_sideA s, h]
+    exact ha
+  exact (Finset.disjoint_left.mp s.disjoint_sides) ha hb
+
+/-- ★ `SplitMetric` 对 `swap` 不变：同一无向 split 的两个编码给出**同一个**度量
+（`s` 与 `s.swap` 系数相加的**根因**）。 -/
+theorem splitMetric_swap {α : Type*} [Fintype α] [DecidableEq α]
+    (s : Split α) (x y : α) : SplitMetric s.swap x y = SplitMetric s x y := by
+  simp only [SplitMetric, swap_sideA, swap_sideB, or_comm]
+
+/-- ★★ **单 split 度量在 `A²×B²` 上的四点亏损恒为 `2c`**：
+`a,a' ∈ u.sideA`、`b,b' ∈ u.sideB` ⇒ `P_u = X_u = 2`、`I_u = 0` ⇒ `pd = 2c`。 -/
+theorem pairDeficit_splitMetric {α : Type*} [Fintype α] [DecidableEq α]
+    (u : Split α) (c : ℝ) {a a' b b' : α}
+    (ha : a ∈ u.sideA) (ha' : a' ∈ u.sideA) (hb : b ∈ u.sideB) (hb' : b' ∈ u.sideB) :
+    pairDeficit (fun x y => c * SplitMetric u x y) a a' b b' = 2 * c := by
+  have h1 : a ∉ u.sideB := fun h => (Finset.disjoint_left.mp u.disjoint_sides) ha h
+  have h2 : a' ∉ u.sideB := fun h => (Finset.disjoint_left.mp u.disjoint_sides) ha' h
+  have h3 : b ∉ u.sideA := fun h => (Finset.disjoint_left.mp u.disjoint_sides) h hb
+  have h4 : b' ∉ u.sideA := fun h => (Finset.disjoint_left.mp u.disjoint_sides) h hb'
+  rw [show pairDeficit (fun x y => c * SplitMetric u x y) a a' b b'
+      = max (c * 1 + c * 1) (c * 1 + c * 1) - (c * 0 + c * 0) from by
+    simp [pairDeficit, SplitMetric, ha, ha', hb, hb', h1, h2, h3, h4]]
+  rw [max_self]
+  ring
+
+/-- ★★ **单 split 度量的隔离指数**：`α_u(c·δ_u) = 2c`（对**任意** `c`；`A²×B²` 上每项都等于 `2c`）。 -/
+theorem isolationIndex_splitMetric {α : Type*} [Fintype α] [DecidableEq α]
+    (u : Split α) (c : ℝ) :
+    isolationIndex (fun x y => c * SplitMetric u x y) u.sideA u.sideB = 2 * c := by
+  rw [isolationIndex_eq_inf' (A := u.sideA) (B := u.sideB) _ (u.nonempty 0) (u.nonempty 1)]
+  refine Finset.inf'_eq_of_forall (isoQuadruples_nonempty (u.nonempty 0) (u.nonempty 1)) _ ?_
+  rintro ⟨⟨a, a'⟩, b, b'⟩ hq
+  obtain ⟨ha, ha', hb, hb'⟩ := mem_isoQuadruples.mp hq
+  exact pairDeficit_splitMetric u c ha ha' hb hb'
+
+/-- ★★★ **`F = {s}` 的精确公式**（BdD Thm 3 忠实半边的**单成员**情形，零额外假设）：
+`α_s = 2·w s`。 -/
+theorem isolationIndex_weights_singleton {α : Type*} [Fintype α] [DecidableEq α]
+    (s : Split α) (w : Split α → ℝ) :
+    isolationIndex (fun x y => ∑ u ∈ ({s} : Finset (Split α)), w u * SplitMetric u x y)
+      s.sideA s.sideB = 2 * w s := by
+  have hfun : (fun x y => ∑ u ∈ ({s} : Finset (Split α)), w u * SplitMetric u x y)
+      = fun x y => w s * SplitMetric s x y := by
+    funext x y
+    rw [Finset.sum_singleton]
+  rw [hfun]
+  exact isolationIndex_splitMetric s (w s)
+
+/-- ★★★★ **`F = {s, s.swap}` 的精确公式**：`α_s = 2·(w s + w s.swap)`。
+
+这是「`s` 与 `s.swap` 是同一无向 split 的两个编码 ⇒ 系数**相加**」口径的**机器验证**
+（`splitMetric_swap` 是根因；`s ≠ s.swap` 由 `swap_ne`）。 -/
+theorem isolationIndex_weights_swap_pair {α : Type*} [Fintype α] [DecidableEq α]
+    (s : Split α) (w : Split α → ℝ) :
+    isolationIndex (fun x y => ∑ u ∈ ({s, s.swap} : Finset (Split α)), w u * SplitMetric u x y)
+      s.sideA s.sideB = 2 * (w s + w s.swap) := by
+  have hne : s ∉ ({s.swap} : Finset (Split α)) := by
+    simp only [Finset.mem_singleton]
+    exact fun h => swap_ne s h.symm
+  have hfun : (fun x y => ∑ u ∈ ({s, s.swap} : Finset (Split α)), w u * SplitMetric u x y)
+      = fun x y => (w s + w s.swap) * SplitMetric s x y := by
+    funext x y
+    rw [Finset.sum_insert hne, Finset.sum_singleton, splitMetric_swap]
+    ring
+  rw [hfun]
+  exact isolationIndex_splitMetric s (w s + w s.swap)
+
+/-- ★★★★ **一般族逐四元组的四点亏损公式**：
+`pd(Σ_{u∈F} w_u δ_u) = 2·max (c_W − c_P) (c_W − c_X)`，
+其中 `c_W, c_P, c_X` 是 W/P/X 三种配对的权重和。
+
+证明：§7.2 的两条差分恒等式给 `X̂ − Î = 2(c_W − c_X)`、`X̂ − P̂ = 2(c_P − c_X)`，
+相减得 `P̂ − Î = 2(c_W − c_P)`；而 `pd = max P̂ X̂ − Î = max (P̂ − Î) (X̂ − Î)`。 -/
+theorem pairDeficit_sum_eq {α : Type*} [Fintype α] [DecidableEq α]
+    (F : Finset (Split α)) (w : Split α → ℝ) (a a' b b' : α) :
+    pairDeficit (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) a a' b b'
+      = 2 * max
+          ((∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+            - (∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u))
+          ((∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u)
+            - (∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u)) := by
+  set f : α → α → ℝ := fun x y => ∑ u ∈ F, w u * SplitMetric u x y with hf
+  set cW : ℝ := ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u with hcW
+  set cP : ℝ := ∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u with hcP
+  set cX : ℝ := ∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u with hcX
+  have hW : f a b' + f a' b - (f a a' + f b b') = 2 * cW - 2 * cX := by
+    rw [hf]
+    exact splitMetricSum_diff_qW F w a a' b b'
+  have hP : f a b' + f a' b - (f a b + f a' b') = 2 * cP - 2 * cX := by
+    rw [hf]
+    exact splitMetricSum_diff_qP F w a a' b b'
+  have hPi : f a b + f a' b' - (f a a' + f b b') = 2 * cW - 2 * cP := by linarith
+  have hmax : max (f a b + f a' b') (f a b' + f a' b) - (f a a' + f b b')
+      = max ((f a b + f a' b') - (f a a' + f b b'))
+          ((f a b' + f a' b) - (f a a' + f b b')) := by
+    rcases le_total (f a b + f a' b') (f a b' + f a' b) with h | h
+    · rw [max_eq_right h, max_eq_right (by linarith)]
+    · rw [max_eq_left h, max_eq_left (by linarith)]
+  have h2 : max (2 * cW - 2 * cP) (2 * cW - 2 * cX) = 2 * max (cW - cP) (cW - cX) := by
+    rcases le_total (cW - cP) (cW - cX) with h | h
+    · rw [max_eq_right h, max_eq_right (by linarith)]
+      ring
+    · rw [max_eq_left h, max_eq_left (by linarith)]
+      ring
+  unfold pairDeficit
+  rw [hmax, hPi, hW, h2]
+
+/-- ★★★★★ **一般下界**（BdD Thm 3 忠实半边的 `≥` 方向，弱相容 ＋ 正权重）：
+`α_s ≥ 2·(w s + [s.swap ∈ F]·w s.swap)`。
+
+证明：`pairDeficit_sum_eq` 给 `pd = 2·max (c_W − c_P) (c_W − c_X)`；
+弱相容 ⇒ `c_P·c_X = 0`（P-实现者与 X-实现者不能共存，否则三个配对同时被实现 = 冲突四点）；
+`c_P, c_X ≥ 0` ⇒ `max (c_W − c_P) (c_W − c_X) = c_W`；
+而 `s`（及 `s.swap`）实现 W-配对 ⇒ `c_W ≥ w s + [s.swap ∈ F]·w s.swap`。 -/
+theorem isolationIndex_ge_two_mul_weight {α : Type*} [Fintype α] [DecidableEq α]
+    (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
+    {s : Split α} (hs : s ∈ F) :
+    2 * (w s + (if s.swap ∈ F then w s.swap else 0))
+      ≤ isolationIndex (fun x y => ∑ u ∈ F, w u * SplitMetric u x y) s.sideA s.sideB := by
+  rw [isolationIndex_eq_inf' (A := s.sideA) (B := s.sideB) _ (s.nonempty 0) (s.nonempty 1)]
+  refine Finset.le_inf' (isoQuadruples_nonempty (s.nonempty 0) (s.nonempty 1)) _ ?_
+  rintro ⟨⟨a, a'⟩, b, b'⟩ hq
+  obtain ⟨ha, ha', hb, hb'⟩ := mem_isoQuadruples.mp hq
+  rw [pairDeficit_sum_eq]
+  set cW : ℝ := ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u with hcW
+  set cP : ℝ := ∑ u ∈ F.filter (fun u => qPairP u a a' b b' = true), w u with hcP
+  set cX : ℝ := ∑ u ∈ F.filter (fun u => qPairX u a a' b b' = true), w u with hcX
+  have hWsep : s.Separates a a' b b' := Or.inl ⟨ha, ha', hb, hb'⟩
+  have hWmem : s ∈ F.filter (fun u => qPairW u a a' b b' = true) := by
+    rw [Finset.mem_filter]
+    exact ⟨hs, (qPairW_eq_true_iff s a a' b b').mpr hWsep⟩
+  have hcW0 : 0 ≤ cW := by
+    rw [hcW]
+    exact Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+  have hcP0 : 0 ≤ cP := by
+    rw [hcP]
+    exact Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+  have hcX0 : 0 ≤ cX := by
+    rw [hcX]
+    exact Finset.sum_nonneg fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+  have hzero : cP = 0 ∨ cX = 0 := by
+    by_contra hcon
+    have hPne : cP ≠ 0 := fun h => hcon (Or.inl h)
+    have hXne : cX ≠ 0 := fun h => hcon (Or.inr h)
+    have hPpos : 0 < cP := lt_of_le_of_ne hcP0 (Ne.symm hPne)
+    have hXpos : 0 < cX := lt_of_le_of_ne hcX0 (Ne.symm hXne)
+    have hneP : (F.filter (fun u => qPairP u a a' b b' = true)).Nonempty := by
+      rw [hcP] at hPpos
+      exact Finset.nonempty_of_sum_ne_zero (ne_of_gt hPpos)
+    have hneX : (F.filter (fun u => qPairX u a a' b b' = true)).Nonempty := by
+      rw [hcX] at hXpos
+      exact Finset.nonempty_of_sum_ne_zero (ne_of_gt hXpos)
+    obtain ⟨u, hu⟩ := hneP
+    obtain ⟨v, hv⟩ := hneX
+    obtain ⟨huF, huP⟩ := Finset.mem_filter.mp hu
+    obtain ⟨hvF, hvX⟩ := Finset.mem_filter.mp hv
+    exact hF ⟨a, a', b, b', ⟨s, hs, hWsep⟩,
+      ⟨u, huF, (qPairP_eq_true_iff u a a' b b').mp huP⟩,
+      ⟨v, hvF, (qPairX_eq_true_iff v a a' b b').mp hvX⟩⟩
+  have hcWge : w s + (if s.swap ∈ F then w s.swap else 0) ≤ cW := by
+    by_cases hsw : s.swap ∈ F
+    · have hWmem2 : s.swap ∈ F.filter (fun u => qPairW u a a' b b' = true) := by
+        rw [Finset.mem_filter]
+        refine ⟨hsw, (qPairW_eq_true_iff s.swap a a' b b').mpr (Or.inr ?_)⟩
+        exact ⟨by rw [swap_sideB]; exact ha, by rw [swap_sideB]; exact ha',
+          by rw [swap_sideA]; exact hb, by rw [swap_sideA]; exact hb'⟩
+      have hsub : ({s, s.swap} : Finset (Split α))
+          ⊆ F.filter (fun u => qPairW u a a' b b' = true) := by
+        intro u hu
+        rw [Finset.mem_insert, Finset.mem_singleton] at hu
+        rcases hu with rfl | rfl
+        · exact hWmem
+        · exact hWmem2
+      have hnonneg : ∀ u ∈ F.filter (fun u => qPairW u a a' b b' = true),
+          u ∉ ({s, s.swap} : Finset (Split α)) → 0 ≤ w u := by
+        intro u hu _
+        exact le_of_lt (hw u (Finset.mem_filter.mp hu).1)
+      have hsum : (∑ u ∈ ({s, s.swap} : Finset (Split α)), w u) ≤ cW := by
+        rw [hcW]
+        exact Finset.sum_le_sum_of_subset_of_nonneg hsub hnonneg
+      have hpair : (∑ u ∈ ({s, s.swap} : Finset (Split α)), w u) = w s + w s.swap := by
+        rw [Finset.sum_insert (by
+          simp only [Finset.mem_singleton]
+          exact fun h => swap_ne s h.symm)]
+        rw [Finset.sum_singleton]
+      have hif : (if s.swap ∈ F then w s.swap else 0) = w s.swap := by simp [hsw]
+      rw [hif]
+      linarith
+    · have hif : (if s.swap ∈ F then w s.swap else 0) = 0 := by simp [hsw]
+      rw [hif]
+      have hsingle : w s ≤ ∑ u ∈ F.filter (fun u => qPairW u a a' b b' = true), w u :=
+        Finset.single_le_sum (fun u hu => le_of_lt (hw u (Finset.mem_filter.mp hu).1)) hWmem
+      rw [hcW]
+      linarith
+  have hmin : max (cW - cP) (cW - cX) = cW := by
+    rcases hzero with h | h
+    · rw [h, sub_zero, max_eq_left (by linarith)]
+    · rw [h, sub_zero, max_eq_right (by linarith)]
+  rw [hmin]
+  linarith
+
+end Split
+
