@@ -2402,4 +2402,191 @@ theorem not_isClade_iff_isClanMinusRoot_empty {X : Type} [Fintype X] [DecidableE
   intro h
   exact not_isClade_empty (rootedToCladogram U h3) (h.mpr (isClanMinusRoot_empty U))
 
+
+/-! ## 11. 一般 `n` 的 YHK 权重层（缺口 ① 的「数据槽 ＋ 权重公式」）
+
+### 11.1 权重公式：**从生成过程推**，不照抄
+
+文献 `:191-221`（§3 *The Yule-Harding-Kingman process*）把 YHK 律定义成**纯生过程**：
+「selecting a leaf uniformly at random and 'splitting' it into two new leaves」。
+把它在「形状 / 标号」两层算干净，得 `n` 叶**有根**拓扑 `T` 的权
+
+```text
+P_rooted(T) = 2^{n−1} / ( n! · ∏_{v 内部} (n_v − 1) ),      n_v = v 下方的叶数（根计入）
+```
+
+推导三行（`scripts/msc/yhk_weight_derive.py` 以精确有理数在 `n = 3..7` 上**穷举**核对）：
+1. 记 `g(T) = ∏_{v} (n_v − 1)`。根的两棵子树叶数为 `a, n − a` 时 `g(T) = (n−1)·g(T₁)·g(T₂)`，
+   故「标号有根树 ↦ 形状」每条纤维的大小恰为 `#hist(T) = (n−1)!/g(T)`；
+2. 纯生过程在**形状**层是「以 `1/k` 均匀选叶再分裂」，故形状概率 `= #hist/(n−1)!`；
+   按 `(EP)`（`:230-232`）在标号上均匀化，即得上式；
+3. 归一化 `∑_T P_rooted(T) = 1` ⟺ `S_n := ∑_T 1/g(T) = n!/2^{n−1}`，
+   而按根分裂归纳得 `S_n = (1/(2(n−1)))·∑_{a=1}^{n−1} C(n,a)·S_a·S_{n−a}`；
+   与无根律的关系是「对 `2n−3` 个 rootings 求和」（文献 `:996-1006`：
+   「the same unrooted tree can arise from different rootings」）。
+
+⚠️ **与旧笔记的区别**：本节的 `∏(n_v − 1)` 与分母里的 `n!` 都是上面三步推出来的，
+**不是**照抄的 `2^{n−1}/(n!·∏…)` 型记忆公式；`n = 4` 的对照（§11.2）与库内
+`yhkLawFour`（三棵 quartet **等权** `1/3`）逐值一致。
+
+⚠️ **本文件证到哪一步**：`n = 4`、`n = 5` 的**形状表归一化**（§11.2，纯算术）＋
+**无根过程历史空间**的精确归一化（§11.3，一般 `n`）。
+**未证**：一般 `n` 的「拓扑层归一化」（需要对 `Cladogram (Fin n)` 的有限性/计数，
+本库无 `Fintype (Cladogram X)`），以及 Lemma 6.2 的**概率层**。 -/
+
+/-- ★★ **YHK 有根权重** `P_rooted(T) = 2^{n−1}/(n!·g)`（§11.1 的公式），
+`g = ∏_{v 内部}(n_v − 1)` 是形状不变量（`n_v` = `v` 下方叶数，根计入）。
+
+本 `def` 只装**公式**（以 `g` 为参数），语义层（「它是 YHK 律」）见 §11.1 的推导与
+`scripts/msc/yhk_weight_derive.py` 的穷举核对。 -/
+noncomputable def yhkRootWeight (n g : ℕ) : ℝ :=
+  (2 : ℝ) ^ (n - 1) / ((n.factorial : ℝ) * (g : ℝ))
+
+/-- 权重非负。 -/
+theorem yhkRootWeight_nonneg (n g : ℕ) : 0 ≤ yhkRootWeight n g := by
+  unfold yhkRootWeight
+  positivity
+
+/-- 权重在 `g > 0` 时严格为正（每个真实形状都有 `g ≥ 1`）。 -/
+theorem yhkRootWeight_pos {n g : ℕ} (hg : 0 < g) : 0 < yhkRootWeight n g := by
+  unfold yhkRootWeight
+  have hg' : (0 : ℝ) < (g : ℝ) := by exact_mod_cast hg
+  have hf : (0 : ℝ) < (n.factorial : ℝ) := by
+    exact_mod_cast Nat.factorial_pos n
+  have hp : (0 : ℝ) < (2 : ℝ) ^ (n - 1) := by positivity
+  positivity
+
+/-- ★ `n = 4` 的**蝶形**形状（`4` 叶链）：`g = (4−1)(3−1)(2−1) = 6`，权 `2³/(4!·6) = 1/18`。 -/
+theorem yhkRootWeight_four_caterpillar : yhkRootWeight 4 6 = 1 / 18 := by
+  unfold yhkRootWeight
+  norm_num
+
+/-- ★ `n = 4` 的**平衡**形状（两个 cherry）：`g = (4−1)(2−1)(2−1) = 3`，权 `2³/(4!·3) = 1/9`。 -/
+theorem yhkRootWeight_four_balanced : yhkRootWeight 4 3 = 1 / 9 := by
+  unfold yhkRootWeight
+  norm_num
+
+/-- ★★ **`n = 4` 的有根归一化**：`4` 叶有根标号拓扑共 `15 = (2·4−3)!!` 棵 ——
+`12` 棵蝶形（`g = 6`）＋ `3` 棵平衡（`g = 3`）（`scripts/msc/yhk_weight_derive.py` 穷举），
+按 §11.1 的权重求和恰为 `1`：`12·(1/18) + 3·(1/9) = 1`。 -/
+theorem yhkRootWeight_four_total :
+    12 * yhkRootWeight 4 6 + 3 * yhkRootWeight 4 3 = 1 := by
+  rw [yhkRootWeight_four_caterpillar, yhkRootWeight_four_balanced]
+  norm_num
+
+/-- ★★★ **`n = 4` 的无根权重 ＝ `1/3`，与库内 `yhkLawFour` 的「三棵 quartet **等权** `1/3`」对齐**。
+
+`T − ρ` 有 `2n−3 = 5` 个 rootings（文献 `:996-1006`）：`1` 个走内部边（得平衡形状，`1/9`）、
+`4` 个走叶边（得蝶形，`1/18`）⇒ 无根权 `= 1/9 + 4·(1/18) = 1/3` ——
+正是 ★★★ `yhkLawFour`（`:1445`）的 `prob ≡ 1/3`，也是 `clanProb 4 2 = 1/3`（★★ `clanProb_four_two`）。 -/
+theorem yhkUnrootedWeight_four :
+    yhkRootWeight 4 3 + 4 * yhkRootWeight 4 6 = 1 / 3 := by
+  rw [yhkRootWeight_four_caterpillar, yhkRootWeight_four_balanced]
+  norm_num
+
+/-- ★★ **`n = 5` 的有根归一化**：`105` 棵有根标号拓扑分三个形状
+（`g = 24, 8, 12`，计数 `60, 30, 15`，脚本穷举）：
+`60·(1/180) + 30·(1/60) + 15·(1/90) = 1/3 + 1/2 + 1/6 = 1`。 -/
+theorem yhkRootWeight_five_total :
+    60 * yhkRootWeight 5 24 + 30 * yhkRootWeight 5 8 + 15 * yhkRootWeight 5 12 = 1 := by
+  unfold yhkRootWeight
+  norm_num
+
+/-! ### 11.3 无根过程的**历史空间**与它的精确归一化（一般 `n`）
+
+文献 `:1000-1006` 给出无根 YHK 律的一个**直接**生成过程：
+「a leaf is selected uniformly at random and a new leaf (with a random label) is
+attached to its incident edge」。
+
+从 `3` 叶的 `Y` 形出发，第 `k` 步（`4 ≤ k ≤ n`）在**现有 `k−1` 片叶**里均匀选一片，故
+历史（history）空间大小 `3·4···(n−1) = (n−1)!/2`，每条历史等概率 `2/(n−1)!`。
+下面把这两件在**一般 `n`** 上形式化（这是缺口 ① 的「数据槽」：`MSCTreeLaw n` 的
+`Ω` 与 `prob` 两个槽；`tree` 槽需要把历史送到 `Cladogram (Fin n)`，见 §11.1 末的说明）。 -/
+
+/-- ★★ **YHK 无根过程的历史空间**（文献 `:1000-1006`）：第 `k` 步在 `k−1` 片叶里选一片，
+故用 `Fin (n−3) → Fin (k+3)` 编码（`k` 从 `0` 起，第 `k` 步有 `k+3` 片叶）。
+
+`n = 4` 时 `Fin 1 → Fin 3`，即 `3` 条历史（无根 `4` 叶树共 `3` 棵，与 ★★★ `yhkLawFour`
+的 `Ω = Fin 3` 完全一致）。 -/
+abbrev yhkHistorySpace (n : ℕ) : Type := (k : Fin (n - 3)) → Fin (k.val + 3)
+
+/-- ★ `2·(3·4···(m+2)) = (m+2)!`（纯 `ℕ` 乘法形式，避开除法；`m = n − 3` 即历史数）。 -/
+theorem two_mul_prod_range_add_three (m : ℕ) :
+    2 * ∏ i ∈ Finset.range m, (i + 3) = (m + 2).factorial := by
+  induction m with
+  | zero => simp
+  | succ k ih =>
+      rw [Finset.prod_range_succ, ← Nat.mul_assoc, ih,
+        show k + 1 + 2 = k + 2 + 1 by omega, Nat.factorial_succ (k + 2),
+        show k + 2 + 1 = k + 3 by omega]
+      exact Nat.mul_comm _ _
+
+/-- ★★★ **历史空间的大小**：`|Ω_n| = 3·4···(n−1) = (n−1)!/2`
+（写成 `2·|Ω_n| = (n−1)!` 以免 `ℕ` 除法；`n ≥ 3` 时 `(n−1)!` 为偶数）。 -/
+theorem two_mul_card_yhkHistorySpace {n : ℕ} (hn : 3 ≤ n) :
+    2 * Fintype.card (yhkHistorySpace n) = (n - 1).factorial := by
+  rw [Fintype.card_pi]
+  simp only [Fintype.card_fin]
+  rw [← Finset.prod_range (fun i : ℕ => i + 3), two_mul_prod_range_add_three]
+  congr 1
+  omega
+
+/-- ★★ **历史空间的大小（除法形式）**：`|Ω_n| = (n−1)!/2`。 -/
+theorem card_yhkHistorySpace {n : ℕ} (hn : 3 ≤ n) :
+    Fintype.card (yhkHistorySpace n) = (n - 1).factorial / 2 := by
+  have h := two_mul_card_yhkHistorySpace hn
+  omega
+
+/-- ★★ **YHK 无根过程的历史概率** `2/(n−1)!`（每条历史等概率）。 -/
+noncomputable def yhkHistoryProb (n : ℕ) : ℝ := 2 / ((n - 1).factorial : ℝ)
+
+/-- 历史概率非负。 -/
+theorem yhkHistoryProb_nonneg (n : ℕ) : 0 ≤ yhkHistoryProb n := by
+  unfold yhkHistoryProb
+  positivity
+
+/-- 历史概率严格为正。 -/
+theorem yhkHistoryProb_pos (n : ℕ) : 0 < yhkHistoryProb n := by
+  unfold yhkHistoryProb
+  have hN : (0 : ℝ) < ((n - 1).factorial : ℝ) := by
+    exact_mod_cast Nat.factorial_pos (n - 1)
+  positivity
+
+/-- ★★★ **YHK 无根过程的全概率为 `1`**（一般 `n ≥ 3`）：
+`|Ω_n| · 2/(n−1)! = ((n−1)!/2)·(2/(n−1)!) = 1`。 -/
+theorem sum_yhkHistoryProb {n : ℕ} (hn : 3 ≤ n) :
+    ∑ _ω : yhkHistorySpace n, yhkHistoryProb n = 1 := by
+  have hcard := two_mul_card_yhkHistorySpace hn
+  have hN : ((n - 1).factorial : ℝ) ≠ 0 := by
+    have : 0 < (n - 1).factorial := Nat.factorial_pos _
+    exact_mod_cast this.ne'
+  have hcast : (2 : ℝ) * (Fintype.card (yhkHistorySpace n) : ℝ) = ((n - 1).factorial : ℝ) := by
+    rw [← Nat.cast_two, ← Nat.cast_mul, hcard]
+  have hhalf : (Fintype.card (yhkHistorySpace n) : ℝ) = ((n - 1).factorial : ℝ) / 2 := by
+    linarith
+  rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  unfold yhkHistoryProb
+  rw [hhalf]
+  field_simp
+
+/-- ★★★ **`n = 4` 的历史空间与库内 `yhkLawFour`（`Ω = Fin 3`、`prob ≡ 1/3`）完全一致**：
+`|Ω_4| = 3! / 2 = 3`、`prob = 2/3! = 1/3`。 -/
+theorem yhkHistoryLawFour_match :
+    Fintype.card (yhkHistorySpace 4) = 3 ∧ yhkHistoryProb 4 = (1 : ℝ) / 3 := by
+  have h3 : (4 - 1).factorial = 6 := by decide
+  refine ⟨?_, ?_⟩
+  · have h := card_yhkHistorySpace (n := 4) (by norm_num)
+    rw [h, h3]
+  · unfold yhkHistoryProb
+    rw [h3]
+    norm_num
+
+/-- ★★ **`n = 4`：历史空间是 `MSCTreeLaw 4` 的 `Ω` 与 `prob` 两个槽**
+（`tree` 槽取 ★★★ `yhkLawFour` 的 `qTree`；两者的 `prob_sum` 因此是**同一条**算术）。 -/
+theorem yhkHistoryLawFour_prob_sum :
+    (∑ _ω : yhkHistorySpace 4, yhkHistoryProb 4) = ∑ _i : Fin 3, (1 : ℝ) / 3 := by
+  rw [sum_yhkHistoryProb (by norm_num)]
+  rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+  norm_num
+
 end Phylo.Stat.ReciprocalMonophyly
