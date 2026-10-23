@@ -4991,6 +4991,101 @@ theorem newClade_reconstruct {n : ℕ} (hn : 2 ≤ n)
     _ = (σ k).1 :=
         blockAt_succ_of_mem (laminarFamily_cladesOf f) hσT hinj' hord' hk (Finset.min'_mem _ _)
 
+
+/-- ★★★★ **层归纳**：第 `L` 层的任一（非空）纤维，**要么是单点、要么是某一步的新块**。
+
+归纳用 `chainMap_succ` ＋ `fiberOf_stepMap`（三种情形：`v = x` 给出当层新块、
+`v = y` 给出空集（与非空矛盾）、其余交回归纳假设）。
+注意本引理**不需要** `2 ≤ n`：只用 `L < n-1`（`chainMap_succ` 的条件），
+`n = 0/1` 时递归分支根本不存在，等式两端同为空/单点集。 -/
+theorem fiber_chainMap_eq_singleton_or_newClade {n : ℕ} {h : Fin (n - 1) → Fin n × Fin n} :
+    ∀ (L : ℕ), L ≤ n - 1 → ∀ v : Fin n,
+      (fiberOf (chainMap n h L) v).Nonempty →
+      (∃ z : Fin n, fiberOf (chainMap n h L) v = {z})
+        ∨ ∃ j : Fin (n - 1), (j : ℕ) < L ∧ fiberOf (chainMap n h L) v = newClade h j := by
+  intro L
+  induction L with
+  | zero =>
+    intro _ v _
+    exact Or.inl ⟨v, by rw [show chainMap n h 0 = (id : Fin n → Fin n) from rfl, fiberOf_id]⟩
+  | succ L ih =>
+    intro hL v hv
+    have hL' : L < n - 1 := by omega
+    have hstep : chainMap n h (L + 1)
+        = stepMap (chainMap n h L) (h ⟨L, hL'⟩).1 (h ⟨L, hL'⟩).2 := by
+      rw [chainMap_succ, dite_eq_left hL']
+    rw [hstep] at hv ⊢
+    rw [fiberOf_stepMap] at hv ⊢
+    by_cases hvx : v = (h ⟨L, hL'⟩).1
+    · rw [ite_eq_left hvx] at hv ⊢
+      exact Or.inr ⟨⟨L, hL'⟩, by simp, rfl⟩
+    · rw [ite_eq_right hvx] at hv ⊢
+      by_cases hvy : v = (h ⟨L, hL'⟩).2
+      · rw [ite_eq_left hvy] at hv
+        exact absurd hv (by simp)
+      · rw [ite_eq_right hvy] at hv ⊢
+        rcases ih (by omega) v hv with ⟨z, hz⟩ | ⟨j, hj, hje⟩
+        · exact Or.inl ⟨z, hz⟩
+        · exact Or.inr ⟨j, by omega, hje⟩
+
+/-- ★★★★ **`cladesOf` 的分解式**：`cladesOf` 恰是「全部单点」∪「全部新块」。
+
+（本引理不需要 `2 ≤ n`：`n = 0` 时两端皆空，`n = 1` 时两端皆 `{{0}}`。） -/
+theorem cladesOf_eq_singleton_union_newClade {n : ℕ} {h : Fin (n - 1) → Fin n × Fin n}
+    (hh : IsMergeHistory n h) :
+    cladesOf n h
+      = (Finset.univ.image (fun z : Fin n => ({z} : Finset (Fin n))))
+        ∪ (Finset.univ.image (fun k : Fin (n - 1) => newClade h k)) := by
+  refine Finset.Subset.antisymm ?_ ?_
+  · intro D hD
+    obtain ⟨L, hL, hLD⟩ := mem_cladesOf.mp hD
+    obtain ⟨z, hz⟩ := exists_fiberOf_of_mem_blocksOf hLD
+    have hne : (fiberOf (chainMap n h L) (chainMap n h L z)).Nonempty :=
+      ⟨z, mem_fiberOf.mpr rfl⟩
+    rcases fiber_chainMap_eq_singleton_or_newClade L (by omega) (chainMap n h L z) hne with
+      ⟨w, hw⟩ | ⟨j, hj, hje⟩
+    · exact Finset.mem_union_left _
+        (Finset.mem_image.mpr ⟨w, Finset.mem_univ w, (hz.trans hw).symm⟩)
+    · exact Finset.mem_union_right _
+        (Finset.mem_image.mpr ⟨j, Finset.mem_univ j, (hz.trans hje).symm⟩)
+  · intro D hD
+    rcases Finset.mem_union.mp hD with hD | hD
+    · obtain ⟨z, -, rfl⟩ := Finset.mem_image.mp hD
+      have hzn : 0 < n := by have := z.isLt; omega
+      refine mem_cladesOf.mpr ⟨0, hzn, ?_⟩
+      rw [blocksOf_zero]
+      exact Finset.mem_image.mpr ⟨z, Finset.mem_univ z, rfl⟩
+    · obtain ⟨j, -, rfl⟩ := Finset.mem_image.mp hD
+      exact mem_cladesOf_newClade hh j
+
+/-- ★★★★ **(a) 的第四件：`cladesOf` 不变**。 -/
+theorem cladesOf_reconstruct_eq {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) :
+    cladesOf n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) = cladesOf n f := by
+  have hg : IsMergeHistory n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) :=
+    isMergeHistory_reconstruct hn hf σ hinj hord d
+  calc cladesOf n (reconstruct (cladesOf n f) (fun j => (σ j).1) d)
+      = (Finset.univ.image (fun z : Fin n => ({z} : Finset (Fin n))))
+          ∪ (Finset.univ.image (fun k : Fin (n - 1) =>
+              newClade (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k)) :=
+        cladesOf_eq_singleton_union_newClade hg
+    _ = (Finset.univ.image (fun z : Fin n => ({z} : Finset (Fin n))))
+          ∪ (Finset.univ.image (fun k : Fin (n - 1) => (σ k).1)) := by
+        rw [show (fun k : Fin (n - 1) =>
+              newClade (reconstruct (cladesOf n f) (fun j => (σ j).1) d) k)
+            = (fun k : Fin (n - 1) => (σ k).1) from
+          funext fun k => newClade_reconstruct hn hf σ hinj hord d k]
+    _ = (Finset.univ.image (fun z : Fin n => ({z} : Finset (Fin n))))
+          ∪ (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+        rw [image_σ_eq_filter hf σ hinj]
+    _ = (Finset.univ.image (fun z : Fin n => ({z} : Finset (Fin n))))
+          ∪ (Finset.univ.image (fun k : Fin (n - 1) => newClade f k)) := by
+        rw [image_newClade hf]
+    _ = cladesOf n f := (cladesOf_eq_singleton_union_newClade hf).symm
+
 end Phylo.Stat.HookLength
 
 
