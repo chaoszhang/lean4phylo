@@ -4791,5 +4791,62 @@ theorem isolationIndex_ge_two_mul_weight {α : Type*} [Fintype α] [DecidableEq 
   rw [hmin]
   linarith
 
+/-! ## 8.14 ★★★★ `weakCompatibilityRealization_gap_weights_v2` 的登记（量词修正 `s ∈ F`）
+
+### 与 `§8.9` 的 `def weakCompatibilityRealization_gap_weights`（`:3358`）的关系
+
+`§8.12` 已**机器证伪** `:3358`：它的第三个合取项量化
+`∀ s, (s ∈ F ∨ s.swap ∈ F) → …`，当 `s ∉ F` 而 `s.swap ∈ F` 时前提成立，但 `w s` **无任何约束**
+（假设只给 `∀ s ∈ F, 0 < w s`），而 `δ = Σ_{u∈F} w_u δ_u` 根本不含 `w s` 项
+⇒ 右侧可任意大。本节的 `_v2` 把量词收紧为 `∀ s, s ∈ F → …`（**唯一**实质差别），
+其余形态（`δ = Σ_{u∈F} w_u δ_u`、`2·(w s + [s.swap∈F]·w s.swap)`）不变。 -/
+
+/-- **`Σ_{u∈F} w_u · δ_u`**（BdD Thm 3 的 `d = Σ_{S∈𝒮} λ_S δ_S`；`δ_S` 即
+`SplitMetric`，`Phylo/SplitWeak.lean:394`）。
+
+★ 这是**记号**而非新数学：库里 `splitMetricSum_*` 系列（`§10`）一直用其展开式
+`fun x y => ∑ u ∈ F, w u * SplitMetric u x y`；登记成 `def` 只是让 `§8.14` 的结论**可命名**。 -/
+noncomputable def sumMetric {α : Type*} [Fintype α] [DecidableEq α]
+    (F : Finset (Split α)) (w : Split α → ℝ) : α → α → ℝ :=
+  fun x y => ∑ u ∈ F, w u * SplitMetric u x y
+
+/-- ★★★★★ **忠实形态 v2**（BdD Theorem 3 的两条断言一起；`§8.9` `:3358` 的**量词修正版**）。
+
+**四要素**
+
+* **旧形态（已证伪）**：`weakCompatibilityRealization_gap_weights`（本文件 `:3358`，`§8.9`）的
+  第三合取项为 `∀ s, (s ∈ F ∨ s.swap ∈ F) → α_s = 2·(w s + [s.swap ∈ F]·w s.swap)`；
+  `§8.12` 的 `not_weakCompatibilityRealization_gap_weights`（`:4528`）已**机器证伪**它
+  （`Fin 4`、`F = {s₀}`、`w s₀ = 1`、`w s₀.swap = 5`：`∨` 前提在 `s₀.swap` 上成立，
+  但右侧给 `12`，而 `α = 2`）。
+* **新形态（本节登记）**：量词收紧为 `∀ s, s ∈ F → α_s = 2·(w s + [s.swap ∈ F]·w s.swap)`；
+  `s ∉ F` 时**不再**声称任何等式（这时 `w s` 在 `δ` 里根本不出现）。
+  第一合取项（`δ` 的 d-split 集 = `F` 编码的无向 split 集）与 `:3358` **相同**、未动；
+  其形态照抄 **已有的** `splitMetricSum_isDSplit_iff`（`Phylo/SplitWeak.lean:1083`）的 `↔` 形状，
+  **不**重复登记。
+* **文献**：md `:1683-1699`（Theorem 3）逐字：
+  > "THEOREM 3. The d-splits with respect to any symmetric function d on a set X are weakly
+  >  compatible. Conversely, let 𝒮 be any collection of weakly compatible splits of X. For each
+  >  S ∈ 𝒮 choose some λ_S > 0 and consider d := Σ_{S∈𝒮} λ_S δ_S. Then 𝒮 is the set of all
+  >  d-splits, and moreover, the isolation index α_S = λ_S, for each S ∈ 𝒮."
+  `α` 的定标见 md `:437-441`：`α_{A,B} = ½·min{max{d(a,b)+d(a',b'), d(a,b')+d(a',b),
+  d(a,a')+d(b,b')} − d(a,a') − d(b,b')}`（**带 ½**）。本库 `SplitMetric` 取 `0/1`
+  （`d = δ_S` 时 `α_S = ½·2 = 1`），而 `pairDeficit`（`Phylo/SplitWeak.lean:251`）与
+  `isolationIndex`（本文件 `:942`）**省去 ½** ⇒ 库内 `isolationIndex = 2·α_BD`，
+  这就是结论里因子 `2` 的来源；`s` 与 `s.swap` 是**同一**无向 split 的两个编码、
+  `δ_s = δ_{s.swap}`（`splitMetric_swap`）⇒ 系数**相加**。
+* **理由（为何必须收紧量词）**：`w` 只在 `F` 上受 `0 < w` 约束，`s ∉ F` 时 `w s` **完全自由**；
+  `δ = Σ_{u∈F} w_u δ_u` 不含 `w s` 项 ⇒ 旧形态的等式在 `s ∉ F` 时可能任意失败
+  （`§8.12` 的反例正是 `s = s₀.swap ∉ F`、`s.swap = s₀ ∈ F`）。
+
+★ **状态**：本 `def` 是**待证形态**；`_holds` 见本节末尾（上界 = 唯一具名缺件 (B)）。
+`_holds` 只在真证成时使用。 -/
+def weakCompatibilityRealization_gap_weights_v2 : Prop :=
+  ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
+    WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
+      (∀ s : Split α, IsDSplit (sumMetric F w) s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s)
+      ∧ ∀ s : Split α, s ∈ F → isolationIndex (sumMetric F w) s.sideA s.sideB
+          = 2 * (w s + (if s.swap ∈ F then w s.swap else 0))
+
 end Split
 
