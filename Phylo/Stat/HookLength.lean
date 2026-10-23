@@ -4794,6 +4794,85 @@ theorem fiberOf_chainMap_reconstruct {n : ℕ} (hn : 2 ≤ n)
   · intro hw
     exact (hval w).trans ((min'_blockAt_eq (hpart hw)).trans (hval z).symm)
 
+
+/-- `IsStep` 的构造式（把三合一 ∧ 化开）。 -/
+theorem isStep_mk {n : ℕ} {r : Fin n → Fin n} {x y : Fin n}
+    (hx : r x = x) (hy : r y = y) (hlt : x < y) : IsStep r x y := ⟨hx, hy, hlt⟩
+
+/-- ★★★★ **(a) 的第一件：`reconstruct` 出来的第 `k` 步是**合法步**（`IsStep`）。
+
+即 `x`、`y` 各自是所在块的**最小元**、且 `x < y` —— 这是「`g` 真的是合并史」的核心一环。
+用的砖：`reconstructStep_eq_children`（读出 `(C.min', b.min')`）、`blockAt_eq_child`
+（孩子里的元素所在块 = 那个孩子）、`blockAt_min'_eq`、`chainMap_reconstruct_eq_min`。 -/
+theorem isStep_reconstruct {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) (k : Fin (n - 1)) :
+    IsStep (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (k : ℕ))
+      (reconstruct (cladesOf n f) (fun j => (σ j).1) d k).1
+      (reconstruct (cladesOf n f) (fun j => (σ j).1) d k).2 := by
+  classical
+  have hk : (k : ℕ) < n - 1 := k.isLt
+  have hCcl : (σ k).1 ∈ cladesOf n f := (Finset.mem_filter.mp (σ k).2).1
+  have hC2 : 2 ≤ (σ k).1.card := (Finset.mem_filter.mp (σ k).2).2
+  have hCne : (σ k).1.Nonempty := Finset.card_pos.mp (by omega)
+  have hgval : ∀ w : Fin n, chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (k : ℕ) w
+      = (blockAt (fun j => (σ j).1) (k : ℕ) w).min' ⟨w, mem_blockAt _ (k : ℕ) w⟩ :=
+    fun w => chainMap_reconstruct_eq_min hn hf σ hinj hord d (k : ℕ) (by omega) w
+  obtain ⟨A, B, hAB, hch⟩ := exists_children_pair_cladesOf hf hCcl hC2
+  have hcover : (σ k).1 = A ∪ B := by
+    have h := children_cover hf hCcl hC2
+    rw [hch] at h
+    simpa using h
+  have hdisj : Disjoint A B := children_pair_disjoint (laminarFamily_cladesOf f) hch hAB
+  have hAcl : A ∈ cladesOf n f := children_mem (by rw [hch]; simp)
+  have hBcl : B ∈ cladesOf n f := children_mem (by rw [hch]; simp)
+  have hAne : A.Nonempty := by
+    obtain ⟨j, -, hjA⟩ := mem_cladesOf.mp hAcl
+    exact nonempty_of_mem_blocksOf hjA
+  have hBne : B.Nonempty := by
+    obtain ⟨j, -, hjB⟩ := mem_cladesOf.mp hBcl
+    exact nonempty_of_mem_blocksOf hjB
+  suffices key : ∀ (a b : Finset (Fin n)) (ha : a.Nonempty) (hb : b.Nonempty),
+      children (cladesOf n f) (σ k).1 = {a, b} → a ≠ b → (σ k).1 = a ∪ b → Disjoint a b →
+      (σ k).1.min' hCne ∈ a →
+      IsStep (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (k : ℕ))
+        (reconstruct (cladesOf n f) (fun j => (σ j).1) d k).1
+        (reconstruct (cladesOf n f) (fun j => (σ j).1) d k).2 by
+    have hub : (σ k).1.min' hCne ∈ A ∪ B := by rw [← hcover]; exact Finset.min'_mem _ _
+    rcases Finset.mem_union.mp hub with hxA | hxB
+    · exact key A B hAne hBne hch hAB hcover hdisj hxA
+    · exact key B A hBne hAne (by rw [hch, Finset.pair_comm]) hAB.symm
+        (by rw [hcover, Finset.union_comm]) hdisj.symm hxB
+  intro a b ha hb hcha hab hcaba hdisja hxa
+  have hminA : a.min' ha = (σ k).1.min' hCne := by
+    refine le_antisymm ?_ ?_
+    · exact Finset.min'_le _ _ hxa
+    · exact Finset.min'_le _ _
+        (by rw [hcaba]; exact Finset.mem_union_left _ (Finset.min'_mem _ _))
+  have hgk : reconstructStep (cladesOf n f) ((σ k).1) d = ((σ k).1.min' hCne, b.min' hb) :=
+    reconstructStep_eq_children _ _ d ha hb hCne hcaba hdisja hcha hxa
+  rw [show reconstruct (cladesOf n f) (fun j => (σ j).1) d k
+      = (reconstructStep (cladesOf n f) ((σ k).1) d) from rfl, hgk]
+  show IsStep (chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (k : ℕ))
+    ((σ k).1.min' hCne) (b.min' hb)
+  refine isStep_mk ?_ ?_ ?_
+  · rw [hgval]
+    exact (blockAt_min'_eq (fun j => (σ j).1) ha
+      (blockAt_eq_child hn hf σ hinj hord hk (D := a) (by rw [hcha]; simp) hxa)).trans hminA
+  · rw [hgval]
+    exact blockAt_min'_eq (fun j => (σ j).1) hb
+      (blockAt_eq_child hn hf σ hinj hord hk (D := b) (by rw [hcha]; simp) (Finset.min'_mem _ _))
+  · have hyC : b.min' hb ∈ (σ k).1 := by
+      rw [hcaba]; exact Finset.mem_union_right _ (Finset.min'_mem _ _)
+    have hle : (σ k).1.min' hCne ≤ b.min' hb := Finset.min'_le _ _ hyC
+    have hne : (σ k).1.min' hCne ≠ b.min' hb := by
+      intro heq
+      have hmem : b.min' hb ∈ a := by rw [← heq]; exact hxa
+      exact Finset.disjoint_left.mp hdisja hmem (Finset.min'_mem _ _)
+    exact lt_of_le_of_ne hle hne
+
 end Phylo.Stat.HookLength
 
 
