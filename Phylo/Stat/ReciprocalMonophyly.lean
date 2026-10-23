@@ -6,6 +6,7 @@ Authors: ASTER LAB
 import Phylo.Stat.MSCProof
 import Phylo.InternalEdge
 import Phylo.CladogramBuild
+import Mathlib.Combinatorics.SimpleGraph.Star
 
 /-!
 # `Phylo.Stat.ReciprocalMonophyly` —— Zhu–Degnan–Steel 2011 的 clade/clan 闭形式
@@ -2802,5 +2803,261 @@ theorem yhkClanLawGap_slice_of_rootedClanEvent
       (fun ω => (rootedToCladogram (U ω) (by simpa using h3)).IsClade A), prob ω)
       = clanProb n A.card
   exact hkey.trans (hU A hA hlt)
+
+
+/-! ### 11.6 缺口 `n = 2` 的边角（★ 现成 2 叶树）＋ 条件收口的**完整版**
+
+`rootedToCladogram`（§10.3）要求 `3 ≤ |X|`，而 `Cladogram (Fin 2)` 在库内**没有**现成件
+（`Cladogram.ofCompatibleSplits` 同样要求 `3 ≤ |X|`）。本节把它补上：
+`V = Fin 2`、`graph = starGraph 0`（单边）、`leaf = id` —— 度全为 `1`、无度 2 顶点、
+单边连通无圈（`SimpleGraph.isTree_starGraph`）。
+
+于是 ★★★ `yhkClanLawGap_of_rootedClanEvent` 把缺口**完整**归约到有根 carrier 上
+（不再留 `n = 2` 的洞）。 -/
+
+/-- ★ `starGraph 0` 在 `Fin 2` 上处处度 `1`（两个顶点互为唯一邻居）。 -/
+theorem degree_starGraph_fin_two (v : Fin 2) :
+    (SimpleGraph.starGraph (0 : Fin 2)).degree v = 1 := by
+  fin_cases v
+  · simpa using SimpleGraph.degree_starGraph_center (r := (0 : Fin 2))
+  · exact SimpleGraph.degree_starGraph_of_ne_center (by decide : (1 : Fin 2) ≠ 0)
+
+/-- ★★ **2 叶 `Cladogram` 的现成件**（缺口 `n = 2` 边角）：`V = Fin 2`、
+`graph = starGraph 0`（即单边 `0—1`）、`leaf = id`（两顶点都是叶）。
+
+这是 ★★★ `yhkClanLawGap_two_slice` 与 ★★ `yhkClanLawGap_of_rootedClanEvent` 的唯一缺口 ——
+库内 `Cladogram.ofCompatibleSplits` 要求 `3 ≤ |X|`，故 `|X| = 2` 必须**单独造**。 -/
+noncomputable def twoLeafCladogram : Cladogram (Fin 2) where
+  V := Fin 2
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := SimpleGraph.starGraph (0 : Fin 2)
+  decAdj := inferInstance
+  isTree := SimpleGraph.isTree_starGraph 0
+  leaf := Function.Embedding.refl (Fin 2)
+  leaf_iff_degree_one := by
+    intro v
+    exact ⟨fun _ => degree_starGraph_fin_two v, fun _ => ⟨v, rfl⟩⟩
+  no_degree_two := by
+    intro v h
+    have := degree_starGraph_fin_two v
+    omega
+
+/-- ★★★ **缺口在 `n = 2` 上的整条**：`Ω = PUnit`、`prob ≡ 1`、`tree ≡ twoLeafCladogram`。
+（`A.card < 2` 且 `A.Nonempty` ⇒ `A.card = 1`，走 ★★★ `yhkClanLawGap_trivial_card_slice`。） -/
+theorem yhkClanLawGap_two_slice :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 2)),
+      ∀ A : Finset (Fin 2), A.Nonempty → A.card < 2 →
+        (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A), prob ω)
+          = clanProb 2 A.card := by
+  have hsum1 : (∑ _ω : PUnit, (1 : ℝ)) = 1 := by simp
+  refine ⟨PUnit, inferInstance, fun _ => 1, fun _ => by norm_num, hsum1,
+    fun _ => twoLeafCladogram, ?_⟩
+  intro A hA hlt
+  have hcard : A.card = 1 ∨ A.card = 2 - 1 := by
+    left
+    have h1 : 1 ≤ A.card := Finset.card_pos.mpr hA
+    omega
+  exact yhkClanLawGap_trivial_card_slice (n := 2) (by norm_num) (fun _ => 1) hsum1
+    (fun _ => twoLeafCladogram) hA hcard
+
+/-- ★★ **条件收口的完整版（覆盖 `∀ n, 2 ≤ n`）**：有根 carrier 上的同一命题 ⟹ `YHKClanLawGap`。
+（`n = 2` 由 ★★★ `yhkClanLawGap_two_slice` 补，`n ≥ 3` 由
+★★ `yhkClanLawGap_slice_of_rootedClanEvent` 转。） -/
+theorem yhkClanLawGap_of_rootedClanEvent
+    (H : ∀ n : ℕ, 3 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
+      (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
+      (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit)),
+      ∀ A : Finset (Fin n), A.Nonempty → A.card < n →
+        (∑ ω ∈ (Finset.univ : Finset Ω).filter (fun ω => IsClanMinusRoot (U ω) A), prob ω)
+          = clanProb n A.card) :
+    YHKClanLawGap := by
+  intro n hn
+  rcases Nat.lt_or_ge n 3 with h2 | h3
+  · have hn2 : n = 2 := by omega
+    subst hn2
+    exact yhkClanLawGap_two_slice
+  · exact yhkClanLawGap_slice_of_rootedClanEvent H n h3
+
+
+/-! ### 11.7 有根 YHK 律的 **split 族载体**（`Fintype (Cladogram X)` 死结的绕法）
+
+§11.5 的收口把缺口归约到「造有根 `n` 叶 YHK 律并算 `IsClanMinusRoot` 的概率」。**障碍**是
+`Fintype (Cladogram X)` 在库内不存在（`Cladogram.V : Type*` 任意），故「对拓扑求和/归一化」
+连陈述都不能。
+
+**绕法（本节落地）**：把样本空间换成 **split 族** —— `Finset (Split X)` 是有限类型
+（`instFintypeKPartition` ＋ `instFintypeFinset`），而**树由族给出**（★★★
+`Cladogram.ofCompatibleSplits`），且其 split 系统被**完全刻画**（★★
+`isSplitOf_ofCompatibleSplits`）。于是：
+
+* `rootedSplitFamily n` —— 载体（相容 ＋ 非平凡 ＋ `swap`-封闭 ＋ 恰 `2(n−2)` 个定向 split）；
+* ★★ `rootedSplitFamilyFintype n` —— **`Fintype` 实例**（死结在此绕开）；
+* ★★ `rootedSplitTree` —— 族 ↦ 有根树；
+* ★★★ `isClanMinusRoot_rootedSplitTree` —— **clan 事件 = 「族里有该 split」**（＋ `A.card ∈ {1, n−1}`
+  两档平凡情形），这正是第 3 步（Lemma 6.2 的求和）要的接口；
+* ★★★ `rootedSplitWeight` ＋ 非负/正 —— §11.1 的 YHK 权在载体上的显式形式；
+* ★★ `rootedSplitFamily_two_card` —— `n = 2` 的载体恰 `1` 个元素（不空转）。
+
+⚠️ **本节的 `Σ = 1` 未证**：那正是 ① 的「拓扑层归一化」，等价于
+`S_n := Σ_T 1/g(T) = n!/2^{n−1}`（§11.1 推导第 3 步），需要一个**计数**论证
+（`rootedSplitFamily n` 的元素 ↔ 有根二叉标号拓扑），本批未做。 -/
+
+/-! ## ② 有根 YHK 律的 split 族载体 -/
+
+/-- ★★★ **有根 `n` 叶 YHK 律的 split 族载体**：`Ω_n` = 「相容 ＋ 非平凡 ＋ `swap`-封闭 ＋
+恰 `2(n−2)` 个定向 split」的族，作用在 `Cladogram (Fin n ⊕ Unit)` 的 split 系统上。
+
+**为什么用族而不是树**：`Fintype (Cladogram X)` 在库内**不存在**（`Cladogram.V : Type*` 任意），
+故「对拓扑求和」连陈述都不能；而 `Finset (Split X)` 是有限类型（`instFintypeKPartition`），
+树由 ★★★ `Cladogram.ofCompatibleSplits` 给出 ⇒ `Ω_n` **是** `Fintype`。
+
+`2(n−2)` 的来源：有根二叉树加根叶后是 `n+1` 叶无根二叉树，边数 `2n−1`，其中 `n+1` 条叶边
+（平凡），故非平凡 split 恰 `n−2` 个；`Split` 是**定向**的，`swap`-封闭使计数翻倍。 -/
+abbrev rootedSplitFamily (n : ℕ) : Type :=
+  { fam : Finset (Split (Fin n ⊕ Unit)) //
+      (∀ s ∈ fam, ∀ t ∈ fam, Split.Compatible s t) ∧
+      (∀ s ∈ fam, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card) ∧
+      (∀ s ∈ fam, s.swap ∈ fam) ∧
+      fam.card = 2 * (n - 2) }
+
+/-- ★★ **`Ω_n` 是有限类型**（缺口 ② 的死结在这里被绕开）。 -/
+noncomputable instance rootedSplitFamilyFintype (n : ℕ) : Fintype (rootedSplitFamily n) := by
+  classical
+  exact Subtype.fintype _
+
+/-- ★★★ **把 split 族送成一棵有根树**（`Cladogram.ofCompatibleSplits`）。
+前提「相容 / 非平凡 / `swap`-封闭」直接从 `ω` 的字段读出；`3 ≤ |Fin n ⊕ Unit|` 来自 `n ≥ 2`。 -/
+noncomputable def rootedSplitTree {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n) :
+    Cladogram.{0, 0} (Fin n ⊕ Unit) :=
+  Cladogram.ofCompatibleSplits ω.val (Sum.inr ()) ω.2.1 ω.2.2.1 ω.2.2.2.1 (by
+    simp only [Fintype.card_sum, Fintype.card_fin, Fintype.card_unit]
+    omega)
+
+/-- ★★ **`rootedSplitTree` 的 split 系统被完全刻画**：恰为「族 ∪ 平凡 split」。 -/
+theorem isSplitOf_rootedSplitTree {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n)
+    (s : Split (Fin n ⊕ Unit)) :
+    (rootedSplitTree hn ω).IsSplitOf s ↔
+      s ∈ ω.val ∨ (∃ x : Fin n ⊕ Unit, s.sideA = {x}) ∨
+        (∃ x : Fin n ⊕ Unit, s.sideA = {x}ᶜ) :=
+  Cladogram.isSplitOf_ofCompatibleSplits ω.val (Sum.inr ()) ω.2.1 ω.2.2.1 ω.2.2.2.1 _ s
+
+/-- ★★ **`n = 2` 的载体非空**：空族（`card = 2·(2−2) = 0`）满足全部条件。 -/
+theorem rootedSplitFamily_two_nonempty : Nonempty (rootedSplitFamily 2) :=
+  ⟨⟨∅, by refine ⟨?_, ?_, ?_, by simp⟩ <;> simp⟩⟩
+
+/-- ★★★ **`n = 2` 的载体恰有一个元素**（唯一的 2 叶有根拓扑 = 三叶星）⇒ 载体不空转。 -/
+theorem rootedSplitFamily_two_card : Fintype.card (rootedSplitFamily 2) = 1 := by
+  have hempty : ∀ x : rootedSplitFamily 2, x.val = ∅ := by
+    intro x
+    apply Finset.card_eq_zero.mp
+    calc x.val.card = 2 * (2 - 2) := x.2.2.2.2
+      _ = 0 := by norm_num
+  have hle : Fintype.card (rootedSplitFamily 2) ≤ 1 := by
+    rw [Fintype.card_le_one_iff_subsingleton]
+    exact ⟨fun a b => Subtype.ext ((hempty a).trans (hempty b).symm)⟩
+  have hpos : 0 < Fintype.card (rootedSplitFamily 2) :=
+    Fintype.card_pos_iff.mpr rootedSplitFamily_two_nonempty
+  omega
+
+/-- ★★★ **有根 YHK 权**（§11.1 的 `P_rooted`）在 split 族载体上的形式：
+`g = (n−1) · ∏_{s ∈ fam, ρ ∉ s.sideA} (|s.sideA| − 1)`。
+
+依据：有根树 `T` 的每个内部顶点 `v ≠ root` 对应 `T − ρ` 的一个非平凡 split，
+`n_v` = **不含 `ρ` 的那一侧**的叶数（该侧无根叶，故就是 `|s.sideA|`）；
+根顶点给出 `n_{root} = n`，即因子 `(n−1)`。`swap`-封闭保证每个（无序）split 里
+**恰有一个**定向满足 `ρ ∉ sideA`。 -/
+noncomputable def rootedSplitWeight {n : ℕ} (ω : rootedSplitFamily n) : ℝ :=
+  yhkRootWeight n
+    ((n - 1) * ∏ s ∈ ω.val.filter (fun s => Sum.inr () ∉ s.sideA), (s.sideA.card - 1))
+
+/-- ★★ **权的形状不变量为正**：`0 < (n−1)·∏(…)`（每个因子 `≥ 1`）。 -/
+theorem rootedSplitWeight_shape_pos {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n) :
+    0 < (n - 1) * ∏ s ∈ ω.val.filter (fun s => Sum.inr () ∉ s.sideA), (s.sideA.card - 1) := by
+  have hn1 : 0 < n - 1 := by omega
+  have hprod : 0 < ∏ s ∈ ω.val.filter (fun s => Sum.inr () ∉ s.sideA),
+      (s.sideA.card - 1) := by
+    refine Finset.prod_pos (fun s hs => ?_)
+    have hmem : s ∈ ω.val := (Finset.mem_filter.mp hs).1
+    have h2 : 2 ≤ s.sideA.card := (ω.2.2.1 s hmem).1
+    omega
+  exact Nat.mul_pos hn1 hprod
+
+/-- ★★★ **权严格为正**（故非负）。 -/
+theorem rootedSplitWeight_pos {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n) :
+    0 < rootedSplitWeight ω := by
+  unfold rootedSplitWeight
+  exact yhkRootWeight_pos (rootedSplitWeight_shape_pos hn ω)
+
+/-- ★★ **权非负**。 -/
+theorem rootedSplitWeight_nonneg {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n) :
+    0 ≤ rootedSplitWeight ω :=
+  (rootedSplitWeight_pos hn ω).le
+
+/-- clan 事件在 split 族载体上的精确刻画（第 3 步的接口）。 -/
+theorem isClanMinusRoot_rootedSplitTree {n : ℕ} (hn : 2 ≤ n) (ω : rootedSplitFamily n)
+    {A : Finset (Fin n)} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    IsClanMinusRoot (rootedSplitTree hn ω) A ↔
+      (∃ s ∈ ω.val, realLeaves s.sideA = A) ∨ A.card = 1 ∨ A.card = n - 1 := by
+  constructor
+  · intro h
+    obtain ⟨s, hs, hside⟩ :=
+      (isClanMinusRoot_iff_exists (rootedSplitTree hn ω) A).mp h
+    rcases (isSplitOf_rootedSplitTree hn ω s).mp hs with hfam | ⟨x, hx⟩ | ⟨x, hx⟩
+    · exact Or.inl ⟨s, hfam, hside⟩
+    · rcases x with a | u
+      · rw [hx, realLeaves_singleton_inl] at hside
+        exact Or.inr (Or.inl (by rw [← hside]; simp))
+      · cases u
+        rw [hx, realLeaves_singleton_inr] at hside
+        rw [← hside] at hA
+        exact absurd hA (by simp)
+    · rcases x with a | u
+      · rw [hx, realLeaves_compl_singleton_inl] at hside
+        exact Or.inr (Or.inr (by
+          rw [← hside, Finset.card_compl, Finset.card_singleton, Fintype.card_fin]))
+      · cases u
+        rw [hx, realLeaves_compl_singleton_inr] at hside
+        rw [← hside] at hAc
+        exact absurd hAc (by simp)
+  · rintro (⟨s, hfam, hside⟩ | h1 | h1)
+    · exact (isClanMinusRoot_iff_exists _ A).mpr
+        ⟨s, (isSplitOf_rootedSplitTree hn ω s).mpr (Or.inl hfam), hside⟩
+    · obtain ⟨a, rfl⟩ := Finset.card_eq_one.mp h1
+      have hB : ({Sum.inl a} : Finset (Fin n ⊕ Unit)).Nonempty := ⟨Sum.inl a, by simp⟩
+      have hBc : (({Sum.inl a} : Finset (Fin n ⊕ Unit))ᶜ).Nonempty := ⟨Sum.inr (), by simp⟩
+      refine (isClanMinusRoot_iff_exists _ ({a} : Finset (Fin n))).mpr
+        ⟨splitOf ({Sum.inl a} : Finset (Fin n ⊕ Unit)) hB hBc, ?_, ?_⟩
+      · exact (isSplitOf_rootedSplitTree hn ω _).mpr (Or.inr (Or.inl ⟨Sum.inl a, rfl⟩))
+      · rw [splitOf_sideA, realLeaves_singleton_inl]
+    · have hcomp : Aᶜ.card = 1 := by
+        rw [Finset.card_compl, Fintype.card_fin]; omega
+      obtain ⟨a, ha⟩ := Finset.card_eq_one.mp hcomp
+      have hAeq : A = ({a} : Finset (Fin n))ᶜ := by rw [← ha]; simp
+      have hB : (({Sum.inl a} : Finset (Fin n ⊕ Unit))ᶜ).Nonempty := ⟨Sum.inr (), by simp⟩
+      have hBc : ((({Sum.inl a} : Finset (Fin n ⊕ Unit))ᶜ)ᶜ).Nonempty := by
+        rw [compl_compl]; exact ⟨Sum.inl a, by simp⟩
+      rw [hAeq]
+      refine (isClanMinusRoot_iff_exists _ (({a} : Finset (Fin n))ᶜ)).mpr
+        ⟨splitOf (({Sum.inl a} : Finset (Fin n ⊕ Unit))ᶜ) hB hBc, ?_, ?_⟩
+      · exact (isSplitOf_rootedSplitTree hn ω _).mpr (Or.inr (Or.inr ⟨Sum.inl a, rfl⟩))
+      · rw [splitOf_sideA, realLeaves_compl_singleton_inl]
+
+/-- clan 事件在载体上的求和形式（第 3 步要算的对象）。 -/
+theorem clanEvent_rootedSplitFamily {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
+    {A : Finset (Fin n)} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    (∑ ω ∈ (Finset.univ : Finset (rootedSplitFamily n)).filter
+        (fun ω => (rootedToCladogram (rootedSplitTree hn ω) (by simpa using h3)).IsClade A),
+        rootedSplitWeight ω)
+      = ∑ ω ∈ (Finset.univ : Finset (rootedSplitFamily n)).filter
+          (fun ω => (∃ s ∈ ω.val, realLeaves s.sideA = A) ∨ A.card = 1 ∨ A.card = n - 1),
+          rootedSplitWeight ω := by
+  rw [clanEvent_rootedToCladogram (by simpa using h3) rootedSplitWeight
+    (fun ω => rootedSplitTree hn ω) hA hAc]
+  refine Finset.sum_congr ?_ (fun _ _ => rfl)
+  ext ω
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  exact isClanMinusRoot_rootedSplitTree hn ω hA hAc
 
 end Phylo.Stat.ReciprocalMonophyly
