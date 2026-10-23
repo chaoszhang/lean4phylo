@@ -2714,4 +2714,93 @@ theorem sum_mul_clanProb {n : ℕ} (hn : 2 ≤ n) :
   field_simp
   ring
 
+
+/-! ### 11.5 有根 carrier 上的**概率层运输**（缺口 ②(b) 的概率层 —— 无条件）＋ 条件收口
+
+★ 本节的定位：缺口 `YHKClanLawGap` 要的是「无根树上的 clan 事件概率」。而 YHK 过程是**有根**的
+（文献 `:191-221`），其载体在库内是 `Cladogram (X ⊕ Unit)`（§10 的「有根树 = 加一片名为 root 的
+标记叶」）。★ `clanEvent_rootedToCladogram` 把两者的**事件求和**精确接起来 ——
+这一步是**无条件**真证，且正是 §8.4 ②(b) 登记为缺的「有根 → 无根桥」的**概率层**（树层已由
+★★★ `isClade_rootedToCladogram_iff_of_nonempty`（§10.3）给出）。
+
+★ `yhkClanLawGap_slice_of_rootedClanEvent` 是**条件收口**（命名带 `_of_`，**不是** `_holds`）：
+它把缺口在 `n ≥ 3` 上**归约**为有根 carrier 上的同一条命题。剩下要证的因此**只有一件**：
+
+```text
+∀ n ≥ 3, ∃ 有根 n 叶 YHK 型律 (Ω, prob, U : Ω → Cladogram (Fin n ⊕ Unit)),
+  ∀ A, A.Nonempty → A.card < n →  ∑_{ω : IsClanMinusRoot (U ω) A} prob ω = clanProb n A.card
+```
+
+即「Lemma 6.1 的**概率层**」：`qₙ(A) = pₙ(a) + pₙ(n−a) − p̂ₙ(a, n−a)`（文献 `:1040`），
+右端三件闭形式库内都已有（`pn`、`pnHatExh`），算术恒等式也已证
+（★★★ `clanProb_eq_inclusionExclusion`，`:404`）；缺的是**权重层**：
+`pn(a)` 与 `p̂n(a, n−a)` 的**概率**意义，即对有根 YHK 权（§11.1）求和。
+⚠️ 另有一件**小缺口**：`n = 2`。`rootedToCladogram` 要求 `3 ≤ |X|`，而 `Cladogram (Fin 2)`
+在库内**没有现成件**（`Cladogram.ofCompatibleSplits` 同样要求 `3 ≤ |X|`）——
+这是 `_holds` 之外仅剩的边角（`n = 2` 的等式本身是平凡的：`A.card = 1` 且 `clanProb 2 1 = 1`）。 -/
+
+/-- ★★★ **去根映射下的 clan 事件求和恒等**（**无条件**）：对任意有限概率空间、任意有根树族
+`U : Ω → Cladogram (Fin n ⊕ Unit)`、任意非空**真**子集 `A`（`A.Nonempty` ＋ `Aᶜ.Nonempty`），
+
+`∑_{ω : A 是 rootedToCladogram (U ω) 的 clan} prob ω = ∑_{ω : IsClanMinusRoot (U ω) A} prob ω`。
+
+即 ★★★ `isClade_rootedToCladogram_iff_of_nonempty`（§10.3）的**概率层**：无根侧的 `clanEvent`
+被精确换成有根侧的 `IsClanMinusRoot`（ZDS Lemma 6.1 的载体形态，`:991-992`）。
+
+⚠️ 它**不是** `YHKClanLawGap` 的证明：右端的具体值（`= clanProb n |A|`）仍需要有根 YHK 律上的
+`pn(a) + pn(n−a) − p̂n(a, n−a)` 计算。前提 `hAc` 不是可以省的：`A = univ` 时 `IsClade` 为假而
+`IsClanMinusRoot` 为真（§10.4 的 ★★★ `isClanMinusRoot_univ`）；缺口的 `A.card < n` 恰好排除它。 -/
+theorem clanEvent_rootedToCladogram {n : ℕ} {Ω : Type} [Fintype Ω]
+    (h3 : 3 ≤ Fintype.card (Fin n))
+    (prob : Ω → ℝ) (U : Ω → Cladogram (Fin n ⊕ Unit)) {A : Finset (Fin n)}
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    (∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => (rootedToCladogram (U ω) h3).IsClade A), prob ω)
+      = ∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => IsClanMinusRoot (U ω) A), prob ω := by
+  have h : (Finset.univ : Finset Ω).filter
+      (fun ω => (rootedToCladogram (U ω) h3).IsClade A)
+      = (Finset.univ : Finset Ω).filter (fun ω => IsClanMinusRoot (U ω) A) := by
+    ext ω
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact isClade_rootedToCladogram_iff_of_nonempty (U ω) h3 hA hAc
+  rw [h]
+
+/-- ★★ **`n ≥ 3` 的条件收口**（**不是** `_holds`）：若在有根 carrier 上，
+对每个 `n ≥ 3` 都有一个 YHK 型律使 `IsClanMinusRoot` 事件的概率 `= clanProb n |A|`，
+则缺口 `YHKClanLawGap` 在 `n ≥ 3` 上成立。
+
+**为什么这不是空转**：`H` 不是缺口本身 —— 命中它要**造出** `U : Ω → Cladogram (Fin n ⊕ Unit)`
+（有根载体）并算出 `IsClanMinusRoot` 的概率，而缺口的 `∃` 只要求无根 `Cladogram (Fin n)`；
+两者的差别由 ★★★ `clanEvent_rootedToCladogram` ＋ §10 的载体桥精确支付。
+（口径参考 `scripts/gap_ledger.py`：本条的命名后缀 `_of_rootedClanEvent` 不在收口后缀表内，
+故台账**不会**把 `YHKClanLawGap` 记成已收口 ✓ —— 它仍应是 `[真开放]`。） -/
+theorem yhkClanLawGap_slice_of_rootedClanEvent
+    (H : ∀ n : ℕ, 3 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
+      (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
+      (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit)),
+      ∀ A : Finset (Fin n), A.Nonempty → A.card < n →
+        (∑ ω ∈ (Finset.univ : Finset Ω).filter (fun ω => IsClanMinusRoot (U ω) A), prob ω)
+          = clanProb n A.card) :
+    ∀ n : ℕ, 3 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
+      (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
+      (tree : Ω → Cladogram.{0, 0} (Fin n)),
+      ∀ A : Finset (Fin n), A.Nonempty → A.card < n →
+        (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A), prob ω)
+          = clanProb n A.card := by
+  intro n h3
+  obtain ⟨Ω, hF, prob, hnn, hsum, U, hU⟩ := H n h3
+  refine ⟨Ω, hF, prob, hnn, hsum,
+    fun ω => rootedToCladogram (U ω) (by simpa using h3), ?_⟩
+  intro A hA hlt
+  have hAc : Aᶜ.Nonempty := by
+    apply Finset.card_pos.mp
+    rw [Finset.card_compl, Fintype.card_fin]
+    omega
+  have hkey := clanEvent_rootedToCladogram (by simpa using h3) prob U hA hAc
+  show (∑ ω ∈ (Finset.univ : Finset Ω).filter
+      (fun ω => (rootedToCladogram (U ω) (by simpa using h3)).IsClade A), prob ω)
+      = clanProb n A.card
+  exact hkey.trans (hU A hA hlt)
+
 end Phylo.Stat.ReciprocalMonophyly
