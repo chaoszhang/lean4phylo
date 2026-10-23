@@ -3734,12 +3734,14 @@ def dSplitsPeelDecrease : Prop :=
     ∀ s : Split α, IsDSplit δ s.sideA s.sideB →
       (dSplits (peelMetric δ s)).card < (dSplits δ).card
 
+universe u
+
 /-- ★★★★ **一行装配**：`(P1)` ⟹ `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改**）。
 
 ★ 本定理**不叫** `_holds`：前提 `dSplitsPeelDecrease` **未证**。
 一旦 (P1) 证成（`h := …`），`canonicalSplitDecomposition_gap_faithful_v2_holds` 即本定理的直接实例。 -/
 theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease
-    (h : dSplitsPeelDecrease.{0}) : canonicalSplitDecomposition_gap_faithful_v2.{0} := by
+    (h : dSplitsPeelDecrease.{u}) : canonicalSplitDecomposition_gap_faithful_v2.{u} := by
   intro α _ _ δ hδ hdiag hnn htri
   exact canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
     (fun (δ : α → α → ℝ) hδ hdiag hnn htri s hds => h δ hδ hdiag hnn htri s hds)
@@ -4359,6 +4361,65 @@ theorem isDSplit_of_isDSplit_peelMetric_general {α : Type*} [Fintype α] [Decid
     have hy : SplitMetric s a b' + SplitMetric s a' b = SplitMetric s a a' + SplitMetric s b b' := by rw [h3, h4, h5, h6]; try ring
     rw [pairDeficit_peelMetric_of_sums_diag hx hy] at hpos
     exact hpos
+
+
+/-! ## 8.13 ★★★★★ W28 泳道 e：**收口** —— `canonicalSplitDecomposition_gap_faithful_v2_holds`
+
+`§8.12` 证了 (P1) 的核心「剥离下 d-split 无条件存活」。本节把它接成三级：
+
+1. `dSplits_peelMetric_subset`：`dSplits δ' ⊆ dSplits δ`（逐点用 `§8.12` 的存活引理）；
+2. ★★★ `dSplitsPeelDecrease_holds`：**(P1) 成立** —— `(dSplits δ').card < (dSplits δ).card`
+   （真子集：`s` 是 `δ` 的 d-split 而 `peelMetric_not_isDSplit` 说它**不再**是 `δ'` 的）；
+3. ★★★★★ `canonicalSplitDecomposition_gap_faithful_v2_holds`：
+   **BdD Thm 2 的存在性一半**（`§8.4` 的 `canonicalSplitDecomposition_gap_faithful_v2`，`:1154`，
+   `def` **未改一字**）—— 由 `§8.11` 的收口归约 `…_of_dSplitsPeelDecrease` 一步得出。
+
+★ 链条回顾（全部机器验证、零 `sorry`/`axiom`）：
+`§8.7` 基例（`δ` 本身 split-prime ⇒ `F = ∅`）＋ `§8.8` 归纳步（并回 `c·δ_s`）＋
+`§8.10` 对 `(dSplits δ).card` 的强归纳 ＋ `§8.12` 的 (P1)（基数严格下降）⇒ 存在性 ①。 -/
+
+/-- ★★★ **(P1) 的第一步**：剥离后 `dSplits` **只减不增**。 -/
+theorem dSplits_peelMetric_subset {α : Type*} [Fintype α] [DecidableEq α]
+    {δ : α → α → ℝ} {s : Split α} (hδ : ∀ x y, δ x y = δ y x)
+    (hds : IsDSplit δ s.sideA s.sideB) :
+    dSplits (peelMetric δ s) ⊆ dSplits δ := by
+  intro t ht
+  have hc : 0 ≤ peelCoeff δ s :=
+    le_of_lt (peelCoeff_pos (s.nonempty 0) (s.nonempty 1) hds)
+  exact mem_dSplits.mpr
+    (isDSplit_of_isDSplit_peelMetric_general (s := s) (t := t) hδ hc (mem_dSplits.mp ht))
+
+/-- ★★★ **(P1) 成立**（`§8.11` 的 `dSplitsPeelDecrease`）：剥离 `δ` 的任一 d-split 后，
+`dSplits` 的基数**严格下降**。
+
+真子集论证：`dSplits δ' ⊆ dSplits δ`（`dSplits_peelMetric_subset`），且
+`s ∈ dSplits δ \ dSplits δ'`（`s` 是 `δ` 的 d-split，而 `peelMetric_not_isDSplit` 给出
+`s` **不是** `δ'` 的 d-split）。 -/
+theorem dSplitsPeelDecrease_holds : dSplitsPeelDecrease := by
+  intro α _ _ δ hδ _ _ _ s hds
+  have hsub : dSplits (peelMetric δ s) ⊆ dSplits δ :=
+    dSplits_peelMetric_subset (δ := δ) (s := s) hδ hds
+  have hne : dSplits (peelMetric δ s) ≠ dSplits δ := by
+    intro heq
+    have hm : s ∈ dSplits (peelMetric δ s) := by
+      rw [heq]
+      exact mem_dSplits.mpr hds
+    exact peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1) (mem_dSplits.mp hm)
+  exact Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩)
+
+/-- ★★★★★ **BdD Thm 2 的存在性一半 —— 收口**：
+`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改一字**）**成立**。
+
+即：任意有限度量 `δ`（对称、对角 `0`、非负、三角不等式）都存在
+`F`、正系数 `c`、残差 `δ₀`，使 `δ = δ₀ + Σ_{s∈F} c_s·δ_s`，`δ₀` **划分版 split-prime**、
+非负、对角 `0`，且 `F` 上系数**全正**。
+
+★ 证明：`§8.11` 的 `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease`
+（对 `(dSplits δ).card` 的强归纳；基例 `§8.7`、归纳步 `§8.8`）＋ `dSplitsPeelDecrease_holds`（(P1)）。
+★ **零 `sorry` / `admit` / `axiom` / `opaque`，零额外前提**。 -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_holds :
+    canonicalSplitDecomposition_gap_faithful_v2 :=
+  canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease dSplitsPeelDecrease_holds
 
 end Split
 
