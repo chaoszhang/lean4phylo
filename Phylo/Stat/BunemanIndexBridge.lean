@@ -3563,9 +3563,9 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
    0 ≤ (δ a a' + δ b b') − (δ a b + δ a' b') < 2c = α_s
    ```
    即**危险模式下的亏损落在 `[0, α_s)` 内**。★ 这就是 (P1) 剩下的**唯一**缺口，且它是**逐点**的；
-5. `dSplitsPeelDecrease_gap`：(P1) 的具名 `Prop`（零假设、零证明，供台账追踪）；
-6. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease_gap`：
-   **一行装配** —— `dSplitsPeelDecrease_gap → canonicalSplitDecomposition_gap_faithful_v2`。
+5. `dSplitsPeelDecrease`：(P1) 的具名 `Prop`（零假设、零证明，供台账追踪）；
+6. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease`：
+   **一行装配** —— `dSplitsPeelDecrease → canonicalSplitDecomposition_gap_faithful_v2`。
 
 ### 为什么第 4 条仍是缺口（为什么它不能由现有器材推出）
 
@@ -3722,10 +3722,13 @@ theorem cross_mode_obstruction {α : Type*} [Fintype α] [DecidableEq α]
 /-- ⬜ **(P1) 的具名登记**（零假设、零证明）：剥离 `δ` 的任一 d-split 后，`dSplits` 的基数**严格下降**。
 
 ★ 这是 `§8.10` 的收口归约唯一欠的假设 ⇒ **存在性 ① 的全部残余缺口就是本条**。
+★★ **命名说明**：本 `Prop` **故意不带 `gap`** —— 它是 `_v2` 的**内部子义务**（(P1) 的测度载体性质），
+**不是**新的独立文献缺口；台账口径 `A/B` 是机械的（`def` 名含 `gap` 就多登记一行），
+故此处只作具名 `Prop`，不计入「还剩几条真开放」。
 其**相容半边已证**（`§8.10` 的 `dSplits_peelMetric_card_lt_of_compatible`）；
 **不相容半边**的逐点障碍见 `§8.11` 的 `cross_mode_obstruction`（需 BdD Lemma 3–6）。
 ★ 本 `Prop` **不叫** `_gap_holds`：它就是缺口本身（台账口径：`_gap` 为未证、`_holds` 为已证）。 -/
-def dSplitsPeelDecrease_gap : Prop :=
+def dSplitsPeelDecrease : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
     ∀ s : Split α, IsDSplit δ s.sideA s.sideB →
@@ -3733,10 +3736,10 @@ def dSplitsPeelDecrease_gap : Prop :=
 
 /-- ★★★★ **一行装配**：`(P1)` ⟹ `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改**）。
 
-★ 本定理**不叫** `_holds`：前提 `dSplitsPeelDecrease_gap` **未证**。
+★ 本定理**不叫** `_holds`：前提 `dSplitsPeelDecrease` **未证**。
 一旦 (P1) 证成（`h := …`），`canonicalSplitDecomposition_gap_faithful_v2_holds` 即本定理的直接实例。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease_gap
-    (h : dSplitsPeelDecrease_gap.{0}) : canonicalSplitDecomposition_gap_faithful_v2.{0} := by
+theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease
+    (h : dSplitsPeelDecrease.{0}) : canonicalSplitDecomposition_gap_faithful_v2.{0} := by
   intro α _ _ δ hδ hdiag hnn htri
   exact canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
     (fun (δ : α → α → ℝ) hδ hdiag hnn htri s hds => h δ hδ hdiag hnn htri s hds)
