@@ -3178,4 +3178,66 @@ theorem rootedSplitTree_family_eq {n : ℕ} (hn : 2 ≤ n) {ω₁ ω₂ : rooted
       exact h s hs
   exact Subtype.ext hfam
 
+
+/-! ### 11.10 权重的乘积**恰好 `n − 2` 个因子**（`g` 的形状对得上）
+
+`rootedSplitWeight`（§11.7）是 `yhkRootWeight n ((n−1) · ∏_{s ∈ fam, ρ ∉ s.sideA}(|s.sideA| − 1))`；
+要让它真的是 `∏_{v 内部}(n_v − 1)`（§11.1），乘积必须有**恰好 `n − 2` 个因子** ——
+因为非根内部顶点恰 `n − 2` 个。
+
+★ `rootedSplitWeight_filter_card` 证明的就是这件事：`swap`-封闭把 `2(n−2)` 个定向 split 配成
+`n−2` 对，每对里**恰有一个**定向的 `sideA` 不含 `ρ`（`ρ` 必在两侧之一，且两侧不交）。 -/
+
+/-- ★ SWAP 是对合，故单射。 -/
+theorem swap_injective_fin {n : ℕ} : Function.Injective (Split.swap : Split (Fin n ⊕ Unit) → _) := by
+  intro a b h
+  have := congrArg Split.swap h
+  simpa [Split.swap_swap] using this
+
+/-- ★★ **权重乘积的因子数恰为 `n − 2`**（= 非根内部顶点数）：`swap`-封闭把族配成对，
+每对里**恰有一个**定向满足 `ρ ∉ sideA`（`ρ` 恰在两侧之一）。 -/
+theorem rootedSplitWeight_filter_card {n : ℕ} (ω : rootedSplitFamily n) :
+    (ω.val.filter (fun s => Sum.inr () ∉ s.sideA)).card = n - 2 := by
+  have hcard : ω.val.card = 2 * (n - 2) := ω.2.2.2.2
+  have hmem : ∀ s : Split (Fin n ⊕ Unit), Sum.inr () ∉ s.sideA → Sum.inr () ∈ s.sideB := by
+    intro s hs
+    have h : Sum.inr () ∈ s.sideA ∪ s.sideB := by
+      rw [Split.union_sides]; exact Finset.mem_univ _
+    rcases Finset.mem_union.mp h with h' | h'
+    · exact absurd h' hs
+    · exact h'
+  have hnot : ∀ s : Split (Fin n ⊕ Unit), Sum.inr () ∈ s.sideB → Sum.inr () ∉ s.sideA := by
+    intro s hs hA
+    exact (Finset.disjoint_left.mp (Split.disjoint_sides s)) hA hs
+  have himg : (ω.val.filter (fun s => Sum.inr () ∉ s.sideA)).image Split.swap
+      = ω.val.filter (fun s => Sum.inr () ∈ s.sideA) := by
+    ext t
+    constructor
+    · intro ht
+      obtain ⟨s, hs, hst⟩ := Finset.mem_image.mp ht
+      obtain ⟨hsfam, hP⟩ := Finset.mem_filter.mp hs
+      refine Finset.mem_filter.mpr ⟨?_, ?_⟩
+      · rw [← hst]; exact ω.2.2.2.1 s hsfam
+      · rw [← hst, Split.swap_sideA]
+        exact hmem s hP
+    · intro ht
+      obtain ⟨htfam, hQ⟩ := Finset.mem_filter.mp ht
+      refine Finset.mem_image.mpr ⟨t.swap, ?_, by rw [Split.swap_swap]⟩
+      refine Finset.mem_filter.mpr ⟨ω.2.2.2.1 t htfam, ?_⟩
+      rw [Split.swap_sideA]
+      exact hnot t.swap (by rw [Split.swap_sideB]; exact hQ)
+  have hsame : (ω.val.filter (fun s => Sum.inr () ∉ s.sideA)).card
+      = (ω.val.filter (fun s => Sum.inr () ∈ s.sideA)).card := by
+    rw [← himg, Finset.card_image_of_injective _ swap_injective_fin]
+  have hpart : (ω.val.filter (fun s => Sum.inr () ∉ s.sideA)).card
+      + (ω.val.filter (fun s => Sum.inr () ∈ s.sideA)).card = ω.val.card := by
+    have h := Finset.card_filter_add_card_filter_not (s := ω.val)
+      (p := fun s => Sum.inr () ∉ s.sideA)
+    have hneg : (ω.val.filter (fun s => ¬ Sum.inr () ∉ s.sideA))
+        = (ω.val.filter (fun s => Sum.inr () ∈ s.sideA)) := by
+      refine Finset.filter_congr (fun s _ => ?_)
+      simp
+    rwa [hneg] at h
+  omega
+
 end Phylo.Stat.ReciprocalMonophyly
