@@ -3374,5 +3374,174 @@ theorem weakCompatibilityRealization_gap_of_weights :
   obtain ⟨δ, hsymm, hiff, _⟩ := h F w hF hw
   exact ⟨δ, hsymm, hiff⟩
 
+
+/-! ## 8.10 ★★★★ W28 泳道 e：`_v2` 的**收口归约** —— 存在性 ① 只剩 (P1) 一条具名假设
+
+### 本节做了什么
+
+`§8.7` 给了基例（残差取 `δ` 本身、`F = ∅`）、`§8.8` 给了归纳步（再加一条正系数 split 度量）、
+`§8.6` 给了单步剥离的全部度量保形。本节把三者**接起来**，并给出 (P1) 的**相容半边**：
+
+1. `splitPrimeFaithfulPartition_iff_forall_not_isDSplit`：`δ` 划分版 split-prime ⟺
+   **没有**任何 `Split α` 是 `δ` 的 d-split（「剥离链终止态」与「§8.7 基例」之间的桥）；
+2. `dSplits_eq_empty_iff_splitPrimeFaithfulPartition`：`dSplits δ = ∅` ⟺ `δ` 划分版 split-prime；
+3. ★★★ `dSplits_peelMetric_card_lt_of_compatible`：**(P1) 的相容半边** —— 若剥离后活下来的
+   d-split **都与 `s` 相容**，则 `dSplits` 的基数**严格下降**（终止测度成立）；
+4. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease`：
+   **对 `(dSplits δ).card` 作强归纳**，把 `_v2` 的**完整结论（零额外假设）**归约到**唯一**一条
+   具名假设 (P1)：「剥离任一 d-split 后 `dSplits` 的基数严格下降」。
+
+### 为什么 (P1) 就是全部（终止性 ＋ 装配都在本节内部完成）
+
+* 归纳步：`s ∈ dSplits δ` ⇒ `c := α_s/2 > 0`（`peelCoeff_pos`）、`δ' := δ - c·δ_s` 仍是度量
+  （`§8.6`）、`s ∉ dSplits δ'`（`peelMetric_not_isDSplit`）；由 (P1) 得
+  `card(dSplits δ') < card(dSplits δ)` ⇒ 归纳假设给 `δ'` 的分解 ⇒ `§8.8` 的
+  `…_conclusion_add_split` 把 `c·δ_s` 并回去（`δ' x y + c·δ_s x y = δ x y` 由 `ring`）；
+* 基例：`dSplits δ = ∅` ⇒ `§8.7` 的 `…_conclusion_of_splitPrime`（残差取 `δ`、`F = ∅`）。
+
+### (P1) 的现状（**未证**；两半各说清，★ 不冒充 `_holds`）
+
+* **相容半边（已证，就在本节）**：`§8.9` 的 `isDSplit_of_isDSplit_peelMetric` ＋ 第 3 条 ——
+  `dSplits δ' ⊆ dSplits δ` 且 `s ∈ dSplits δ \ dSplits δ'` ⇒ 真子集 ⇒ 基数严格下降；
+* **不相容半边（仍缺，BdD Lemma 3–6）**：`t` 与 `s` 不相容时四元组相对 `s` 可呈
+  `(2,0,2)`/`(0,2,2)` 模式，`pd(δ,q) = pd(δ',q) + c·pd_s(q)` 中 `pd_s(q) = -2`
+  ⇒ `pd(δ',q) > 0` 只给出 `pd(δ,q) > -2c`，**推不出** `pd(δ,q) > 0`。
+  直接用 `isolationIndex_le_cross_gap_of_mem_sideA/B` 夹逼会**循环**：取
+  `a,b ∈ A_s`、`a',b' ∈ B_s`（此时 `s` 与 `t` 四交全非空，正是**不相容**），
+  由 `α_s ≤ δ a a' + δ a b' − δ a' b'` 得 `δ a' b' − δ a a' ≤ δ a b' − α_s`，代入
+  `pd(δ,q) = δ a b + δ a' b' − δ a a' − δ b b'` 只得到 `pd(δ,q) ≤ δ a b + δ a b' − α_s − δ b b'`，
+  而三角不等式给的是**相反**方向的界 ⇒ 必须引入 BdD 的 convexity / `s(S)`-cluster 弱层级
+  （Lemma 3 `md:5581`、Lemma 4 `:6094`、Lemma 5 `:6159`、Lemma 6 `:6504`）。 -/
+
+/-- ★★★ **划分版 split-prime ⟺ 没有任何 `Split` 是 d-split**（「剥离链终止态」的形式化）。
+
+`⇒`：`s.sideA | s.sideB` 本身就是 `X` 的划分（`disjoint_sides` ＋ `union_sides` ＋ 两侧非空）；
+`⇐`：给定划分 `A | B`，取 `s := Split.ofSideA A …`，则 `s.sideA = A`、`s.sideB = Aᶜ = B`
+（`Aᶜ = B` 由 `A ∪ B = univ` ＋ `A ⊥ B` 立得）。 -/
+theorem splitPrimeFaithfulPartition_iff_forall_not_isDSplit
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} :
+    SplitPrimeFaithfulPartition δ ↔ ∀ s : Split α, ¬ IsDSplit δ s.sideA s.sideB := by
+  constructor
+  · intro hsp s hds
+    exact hsp s.sideA s.sideB (s.nonempty 0) (s.nonempty 1) s.disjoint_sides s.union_sides hds
+  · intro h A B hA hB hdisj hunion hds
+    have hcB : Aᶜ = B := by
+      ext x
+      simp only [Finset.mem_compl]
+      constructor
+      · intro hx
+        have hmem : x ∈ A ∪ B := by rw [hunion]; exact Finset.mem_univ x
+        rcases Finset.mem_union.mp hmem with h' | h'
+        · exact absurd h' hx
+        · exact h'
+      · intro hx hxA
+        exact Finset.disjoint_left.mp hdisj hxA hx
+    have hAc : Aᶜ.Nonempty := by rw [hcB]; exact hB
+    have hneg := h (Split.ofSideA A hA hAc)
+    rw [Split.ofSideA_sideA, Split.ofSideA_sideB, hcB] at hneg
+    exact hneg hds
+
+/-- ★★ **`dSplits δ = ∅` ⟺ `δ` 划分版 split-prime**（（P2）的**基例判据**：
+剥离链终止 ⟺ 残差无 d-split ⟺ 残差 split-prime ⇒ `§8.7` 基例可用）。 -/
+theorem dSplits_eq_empty_iff_splitPrimeFaithfulPartition
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} :
+    dSplits δ = ∅ ↔ SplitPrimeFaithfulPartition δ := by
+  rw [splitPrimeFaithfulPartition_iff_forall_not_isDSplit]
+  constructor
+  · intro h s hds
+    have hmem : s ∈ dSplits δ := mem_dSplits.mpr hds
+    rw [h] at hmem
+    exact absurd hmem (Finset.notMem_empty s)
+  · intro h
+    ext s
+    simp only [mem_dSplits, Finset.notMem_empty]
+    exact ⟨fun hds => h s hds, fun hf => hf.elim⟩
+
+/-- ★★★ **(P1) 的相容半边**：若剥离后活下来的 d-split **都与 `s` 相容**，则 `dSplits` 的基数**严格下降**。
+
+证明：`dSplits δ' ⊆ dSplits δ`（逐点用 `§8.9` 的 `isDSplit_of_isDSplit_peelMetric`），
+且 `s ∈ dSplits δ \ dSplits δ'`（`s` 是 `δ` 的 d-split 而**不再**是 `δ'` 的，`peelMetric_not_isDSplit`）
+⇒ 真子集 ⇒ `card_lt_card`。
+
+★ 本定理**把 (P1) 精确压到不相容情形**：剩下的唯一障碍是「存在 `t ∈ dSplits δ'` 与 `s` 不相容」。 -/
+theorem dSplits_peelMetric_card_lt_of_compatible
+    {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} {s : Split α}
+    (hds : IsDSplit δ s.sideA s.sideB)
+    (hcompat : ∀ t : Split α, IsDSplit (peelMetric δ s) t.sideA t.sideB → s.Compatible t) :
+    (dSplits (peelMetric δ s)).card < (dSplits δ).card := by
+  have hc : 0 ≤ peelCoeff δ s := le_of_lt (peelCoeff_pos (s.nonempty 0) (s.nonempty 1) hds)
+  have hsub : dSplits (peelMetric δ s) ⊆ dSplits δ := by
+    intro t ht
+    exact mem_dSplits.mpr
+      (isDSplit_of_isDSplit_peelMetric hc (hcompat t (mem_dSplits.mp ht)) (mem_dSplits.mp ht))
+  have hne : dSplits (peelMetric δ s) ≠ dSplits δ := by
+    intro heq
+    have hm : s ∈ dSplits (peelMetric δ s) := by
+      rw [heq]
+      exact mem_dSplits.mpr hds
+    exact peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1) (mem_dSplits.mp hm)
+  exact Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩)
+
+/-- ★★★★ **`_v2` 的收口归约（W28 核心）**：`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，
+**def 未改一字**）的**完整结论**（零额外假设、含存在性 ①）由**唯一一条具名假设 (P1)** 推出：
+
+`hdec`：(P1) —— 对任意度量 `δ` 与 `δ` 的任一 d-split `s`，剥离后 `dSplits` 的基数**严格下降**。
+
+证明：对 `(dSplits δ).card` 作**强归纳**（`Nat.strong_induction_on`）。
+* `dSplits δ = ∅`：`§8.7` 基例 `…_conclusion_of_splitPrime`；
+* 否则取 `s ∈ dSplits δ`：`§8.6` 给 `0 < c := α_s/2`、`δ' := peelMetric δ s` 仍是度量、
+  `s ∉ dSplits δ'`；(P1) 给基数严格下降 ⇒ 归纳假设给 `δ'` 的分解 ⇒ `§8.8` 的
+  `…_conclusion_add_split` 并回 `c·δ_s`。
+
+★ 本定理**不叫** `_holds`：前提 `hdec`（(P1) 的不相容半边，BdD Lemma 3–6）**未证**，
+半成品不许用 `_holds` 命名（台账只认该后缀为「已证」）。
+★ 一旦 (P1) 证成，`_holds` 只需 `canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+  (fun δ hδ hdiag hnn htri s hds => …)` 一行装配。 -/
+theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+    {α : Type*} [Fintype α] [DecidableEq α]
+    (hdec : ∀ (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) →
+      (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) → ∀ s : Split α,
+      IsDSplit δ s.sideA s.sideB → (dSplits (peelMetric δ s)).card < (dSplits δ).card) :
+    ∀ (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) →
+      (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
+      ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+        (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+          (∀ x y, 0 ≤ δ₀ x y) ∧
+            ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y := by
+  classical
+  suffices H : ∀ n (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) →
+      (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) → (dSplits δ).card ≤ n →
+      ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
+        (∀ s ∈ F, 0 < c s) ∧ SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧
+          (∀ x y, 0 ≤ δ₀ x y) ∧
+            ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y from
+    fun δ hδ hdiag hnn htri => H (dSplits δ).card δ hδ hdiag hnn htri le_rfl
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    intro δ hδ hdiag hnn htri hle
+    by_cases hemp : dSplits δ = ∅
+    · exact canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
+        (dSplits_eq_empty_iff_splitPrimeFaithfulPartition.mp hemp) hdiag hnn
+    · obtain ⟨s, hs⟩ := Finset.nonempty_iff_ne_empty.mpr hemp
+      have hdss : IsDSplit δ s.sideA s.sideB := mem_dSplits.mp hs
+      have hcpos : 0 < peelCoeff δ s := peelCoeff_pos (s.nonempty 0) (s.nonempty 1) hdss
+      have hcard : (dSplits (peelMetric δ s)).card < (dSplits δ).card :=
+        hdec δ hδ hdiag hnn htri s hdss
+      have hlt : (dSplits (peelMetric δ s)).card < n := lt_of_lt_of_le hcard hle
+      obtain ⟨F, c, δ₀, hpos, hsp, hdiag', hnn', heq⟩ :=
+        ih _ hlt (peelMetric δ s) (peelMetric_symm hδ s) (peelMetric_diag hdiag s)
+          (peelMetric_nonneg hδ hdiag hnn (s.nonempty 0) (s.nonempty 1))
+          (peelMetric_triangle hδ hdiag htri (s.nonempty 0) (s.nonempty 1)) le_rfl
+      obtain ⟨F', c', δ₀', hpos', hsp', hdiag'', hnn'', heq'⟩ :=
+        canonicalSplitDecomposition_gap_faithful_v2_conclusion_add_split
+          (δ := peelMetric δ s) (s₀ := s) (c₀ := peelCoeff δ s) hcpos
+          ⟨F, c, δ₀, hpos, hsp, hdiag', hnn', heq⟩
+      refine ⟨F', c', δ₀', hpos', hsp', hdiag'', hnn'', ?_⟩
+      intro x y
+      rw [← heq' x y]
+      unfold peelMetric
+      ring
+
 end Split
 
