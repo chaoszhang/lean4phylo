@@ -4097,4 +4097,112 @@ theorem mem_restrictToFinset_sideA_iff' (A : Finset (Fin n)) (s : Split (Fin n �
   rw [restrictToFinset_sideA, mem_restrictSet_iff, Split.away_of_mem _ hρ]
 
 
+
+/-! ### 11.18 续：`restrictToFinset` 的 **相容性搬运**（七轮的第二件）
+
+`pullSet A W := {y : A ⊕ Unit | inlEmbed A y ∈ W}`：把大集的子集拉回 `A ⊕ Unit`。
+`restrictToFinset` 的两侧恰是 `pullSet A (away ρ)` 与 `pullSet A ((away ρ)ᶜ)`，
+而 `pullSet` 保持不交（`disjoint_pullSet`）⇒ ★★★ `compatible_restrictToFinset`。
+证明按 `ρ ∈ s.sideA` / `ρ ∈ t.sideA` 四情形（`away` 取哪一侧），逐情形把目标四支与大集
+`Compatible` 的四支对表。 -/
+
+
+/-- `Finset` 的补的补。 -/
+theorem compl_compl_finset {α : Type*} [Fintype α] [DecidableEq α] (s : Finset α) :
+    sᶜᶜ = s := by
+  ext x
+  simp only [Finset.mem_compl]
+  tauto
+
+/-- 「原像」集合：`A ⊕ Unit` 中落在 `W` 里的点（`restrictSet` 的一般形态）。 -/
+noncomputable def pullSet (A : Finset (Fin n)) (W : Finset (Fin n ⊕ Unit)) : Finset (A ⊕ Unit) :=
+  Finset.univ.filter (fun y => inlEmbed A y ∈ W)
+
+theorem restrictSet_eq_pullSet (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit)) :
+    restrictSet A s = pullSet A (s.away (Sum.inr ())) := rfl
+
+theorem mem_pullSet_iff (A : Finset (Fin n)) (W : Finset (Fin n ⊕ Unit)) (y : A ⊕ Unit) :
+    y ∈ pullSet A W ↔ inlEmbed A y ∈ W := by
+  simp only [pullSet, Finset.mem_filter, Finset.mem_univ, true_and]
+
+theorem compl_pullSet (A : Finset (Fin n)) (W : Finset (Fin n ⊕ Unit)) :
+    (pullSet A W)ᶜ = pullSet A Wᶜ := by
+  ext y
+  rw [Finset.mem_compl, mem_pullSet_iff, mem_pullSet_iff, Finset.mem_compl]
+
+theorem disjoint_pullSet (A : Finset (Fin n)) {X Y : Finset (Fin n ⊕ Unit)}
+    (h : Disjoint X Y) : Disjoint (pullSet A X) (pullSet A Y) := by
+  rw [Finset.disjoint_left] at h ⊢
+  intro y hy1 hy2
+  exact h ((mem_pullSet_iff A X y).mp hy1) ((mem_pullSet_iff A Y y).mp hy2)
+
+theorem restrictToFinset_sideA_pull (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) :
+    (restrictToFinset A s h).sideA = pullSet A (s.away (Sum.inr ())) := by
+  rw [restrictToFinset_sideA]
+  exact restrictSet_eq_pullSet A s
+
+theorem restrictToFinset_sideB_pull (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) :
+    (restrictToFinset A s h).sideB = pullSet A ((s.away (Sum.inr ()))ᶜ) := by
+  rw [Split.sideB_eq_compl, restrictToFinset_sideA_pull, compl_pullSet]
+
+/-- ★★★ **限制保持相容**（`inlEmbed` 下）。 -/
+theorem compatible_restrictToFinset (A : Finset (Fin n)) (s t : Split (Fin n ⊕ Unit))
+    (hs : awayLeaves s ⊆ A) (ht : awayLeaves t ⊆ A) (h : Split.Compatible s t) :
+    Split.Compatible (restrictToFinset A s hs) (restrictToFinset A t ht) := by
+  rw [Split.Compatible]
+  rw [restrictToFinset_sideA_pull, restrictToFinset_sideB_pull,
+    restrictToFinset_sideA_pull, restrictToFinset_sideB_pull]
+  rw [Split.Compatible] at h
+  by_cases hsρ : Sum.inr () ∈ s.sideA <;> by_cases htρ : Sum.inr () ∈ t.sideA
+  · have es : s.away (Sum.inr ()) = s.sideB := Split.away_of_mem _ hsρ
+    have es' : (s.away (Sum.inr ()))ᶜ = s.sideA := by
+      rw [es, Split.sideB_eq_compl, compl_compl_finset]
+    have et : t.away (Sum.inr ()) = t.sideB := Split.away_of_mem _ htρ
+    have et' : (t.away (Sum.inr ()))ᶜ = t.sideA := by
+      rw [et, Split.sideB_eq_compl, compl_compl_finset]
+    rw [es', es, et', et]
+    rcases h with h | h | h | h
+    · exact Or.inr (Or.inr (Or.inr (disjoint_pullSet A h)))
+    · exact Or.inr (Or.inr (Or.inl (disjoint_pullSet A h)))
+    · exact Or.inr (Or.inl (disjoint_pullSet A h))
+    · exact Or.inl (disjoint_pullSet A h)
+  · have es : s.away (Sum.inr ()) = s.sideB := Split.away_of_mem _ hsρ
+    have es' : (s.away (Sum.inr ()))ᶜ = s.sideA := by
+      rw [es, Split.sideB_eq_compl, compl_compl_finset]
+    have et : t.away (Sum.inr ()) = t.sideA := Split.away_of_notMem _ htρ
+    have et' : (t.away (Sum.inr ()))ᶜ = t.sideB := by
+      rw [et, Split.sideB_eq_compl]
+    rw [es', es, et', et]
+    rcases h with h | h | h | h
+    · exact Or.inr (Or.inr (Or.inl (disjoint_pullSet A h)))
+    · exact Or.inr (Or.inr (Or.inr (disjoint_pullSet A h)))
+    · exact Or.inl (disjoint_pullSet A h)
+    · exact Or.inr (Or.inl (disjoint_pullSet A h))
+  · have es : s.away (Sum.inr ()) = s.sideA := Split.away_of_notMem _ hsρ
+    have es' : (s.away (Sum.inr ()))ᶜ = s.sideB := by
+      rw [es, Split.sideB_eq_compl]
+    have et : t.away (Sum.inr ()) = t.sideB := Split.away_of_mem _ htρ
+    have et' : (t.away (Sum.inr ()))ᶜ = t.sideA := by
+      rw [et, Split.sideB_eq_compl, compl_compl_finset]
+    rw [es', es, et', et]
+    rcases h with h | h | h | h
+    · exact Or.inr (Or.inl (disjoint_pullSet A h))
+    · exact Or.inl (disjoint_pullSet A h)
+    · exact Or.inr (Or.inr (Or.inr (disjoint_pullSet A h)))
+    · exact Or.inr (Or.inr (Or.inl (disjoint_pullSet A h)))
+  · have es : s.away (Sum.inr ()) = s.sideA := Split.away_of_notMem _ hsρ
+    have es' : (s.away (Sum.inr ()))ᶜ = s.sideB := by
+      rw [es, Split.sideB_eq_compl]
+    have et : t.away (Sum.inr ()) = t.sideA := Split.away_of_notMem _ htρ
+    have et' : (t.away (Sum.inr ()))ᶜ = t.sideB := by
+      rw [et, Split.sideB_eq_compl]
+    rw [es', es, et', et]
+    rcases h with h | h | h | h
+    · exact Or.inl (disjoint_pullSet A h)
+    · exact Or.inr (Or.inl (disjoint_pullSet A h))
+    · exact Or.inr (Or.inr (Or.inl (disjoint_pullSet A h)))
+    · exact Or.inr (Or.inr (Or.inr (disjoint_pullSet A h)))
+
 end Phylo.Stat.ReciprocalMonophyly
