@@ -4295,4 +4295,74 @@ theorem two_le_card_restrictToFinset_sideB (A : Finset (Fin n)) (s : Split (Fin 
   intro hc
   cases hc
 
+
+/-! ### 11.20 子族 `subFamily`（`Finset (Split (A ⊕ Unit))`）＋ 限制的 2 对 1
+
+第九轮。`subFamily ω A` = `ω` 里「away 真叶集是 `A` 的**真**子集」的那些 split **限制到 `A ⊕ Unit`**。
+
+跨过「依赖证明的映射」（`Finset.image` 只接受非依赖函数）的办法：先取**子类型**
+`{s // s ∈ ω.val ∧ awayLeaves s ⊂ A}`，再用 ★ `subset_of_ssubset_finset` 把 `⊂` 弱化成
+`restrictToFinset` 需要的 `⊆`。
+
+★ **`restrictToFinset_swap` 的正确陈述**：`s` 与 `s.swap` 限制到**同一条**（不是「`(限制 s).swap = 限制 s.swap`」—— 后者**为假**：
+左边 `sideA = (pull Set (away s))ᶜ`，右边 `sideA = pullSet (away s.swap) = pullSet (away s)`，互为补）。
+「相同」正是「限制在 `swap`-封闭族上**2 对 1**」的确切形式，也是块 2（swap-闭）的直接前置。
+
+**下一轮的目标陈述（本批未证）**：`(subFamily ω A).card = 2 * (A.card - 2)`（`A` 为 `ω` 的极大 clade 时）。 -/
+
+/-- `⊂` 弱化为 `⊆`。 -/
+theorem subset_of_ssubset_finset {α : Type*} [DecidableEq α] {s t : Finset α}
+    (h : s ⊂ t) : s ⊆ t :=
+  (Finset.ssubset_iff_subset_ne.mp h).1
+
+/-- ★★★ **`s` 与 `s.swap` 限制到同一条**（`away` 对换向不变 ⇒ `pullSet (away s.swap) = pullSet (away s)`）。
+
+⚠️ 注意：正确的陈述是「**相同**」而不是「`(限制 s).swap = 限制 s.swap`」——
+后者**为假**：左边 `sideA = (pullSet (away s))ᶜ`，右边 `sideA = pullSet (away s.swap) = pullSet (away s)`，
+互为补（这正是「限制在 `swap`-封闭族上是 2 对 1」）。 -/
+theorem restrictToFinset_swap (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) :
+    restrictToFinset A s.swap (by rw [awayLeaves_swap]; exact h) =
+      restrictToFinset A s h := by
+  refine Split.ext_sideA ?_
+  rw [restrictToFinset_sideA_pull, restrictToFinset_sideA_pull, Split.away_swap]
+
+/-- ★★★ **子族**：`ω` 中「away 真叶集是 `A` 的真子集」的那些 split，**限制到 `A ⊕ Unit`** 后的集合。
+
+跨过「依赖证明的映射」的办法：先取**子类型**
+`{s // s ∈ ω.val ∧ awayLeaves s ⊂ A}`（`Finset.image` 只接受非依赖函数），
+再用 `subset_of_ssubset_finset` 把 `⊂` 弱化成 `restrictToFinset` 需要的 `⊆`。 -/
+noncomputable def subFamily (ω : rootedSplitFamily n) (A : Finset (Fin n)) :
+    Finset (Split (A ⊕ Unit)) :=
+  Finset.univ.image
+    (fun s : {s : Split (Fin n ⊕ Unit) // s ∈ ω.val ∧ awayLeaves s ⊂ A} =>
+      restrictToFinset A s.1 (subset_of_ssubset_finset s.2.2))
+
+/-- ★★ `subFamily` 的成员刻画。 -/
+theorem mem_subFamily {ω : rootedSplitFamily n} {A : Finset (Fin n)}
+    {t : Split (A ⊕ Unit)} :
+    t ∈ subFamily ω A ↔ ∃ (s : Split (Fin n ⊕ Unit)) (_ : s ∈ ω.val)
+      (hp : awayLeaves s ⊂ A),
+      restrictToFinset A s (subset_of_ssubset_finset hp) = t := by
+  constructor
+  · intro ht
+    obtain ⟨s, -, hs⟩ := Finset.mem_image.mp ht
+    exact ⟨s.1, s.2.1, s.2.2, hs⟩
+  · rintro ⟨s, hs, hp, rfl⟩
+    exact Finset.mem_image.mpr ⟨⟨s, hs, hp⟩, Finset.mem_univ _, rfl⟩
+
+/-- ★★ **子族的每个成员都非平凡**（`⊂` 的必要性见 §11.19）。 -/
+theorem subFamily_sides_card {ω : rootedSplitFamily n} {A : Finset (Fin n)}
+    {t : Split (A ⊕ Unit)} (ht : t ∈ subFamily ω A) :
+    2 ≤ t.sideA.card ∧ 2 ≤ t.sideB.card := by
+  obtain ⟨s, hs, hp, rfl⟩ := (mem_subFamily).mp ht
+  have hnt := ω.2.2.1 s hs
+  refine ⟨two_le_card_restrictToFinset_sideA A s (subset_of_ssubset_finset hp) ?_,
+    two_le_card_restrictToFinset_sideB A s (subset_of_ssubset_finset hp)
+      (Finset.card_lt_card hp)⟩
+  -- `2 ≤ |away 侧|`：away 侧是 `s` 的某一侧，非平凡 ⇒ ≥ 2
+  by_cases hρ : Sum.inr () ∈ s.sideA
+  · rw [Split.away_of_mem _ hρ]; exact hnt.2
+  · rw [Split.away_of_notMem _ hρ]; exact hnt.1
+
 end Phylo.Stat.ReciprocalMonophyly
