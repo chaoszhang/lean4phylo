@@ -2589,4 +2589,129 @@ theorem yhkHistoryLawFour_prob_sum :
   rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
   norm_num
 
+
+/-! ### 11.4 `clanProb` 的**一致性恒等式**（缺口的任何见证都必须满足的必要条件）
+
+★★★ **`sum_mul_clanProb`**：`∑_{a=1}^{n−1} C(n,a)·clanProb(n,a) = 4n − 6`（`Ico 1 n = Icc 1 (n−1)`）。
+
+两侧的语义：
+* 左端 = 随机无根 YHK 树的 **proper clan 数**的期望 —— 基数 `a` 的子集有 `C(n,a)` 个，
+  每个是 clan 的概率都恰是 `clanProb n a`（这正是缺口 `YHKClanLawGap` 的结论对 `A` 求和）；
+* 右端 = `2·(2n−3)`：无根二叉树恰有 `2n−3` 条边，每条边给**两侧**两个 proper clan。
+
+⇒ 缺口 `YHKClanLawGap` 的**任何**见证都必须让这条等式成立；本节证明**库内 `clanProb`
+的闭形式自动满足它**（即闭形式与「树是二叉、共 `2n−3` 条边」这一事实相容）。
+
+⚠️ 这仍是**闭形式之间的算术**（§4 的体例），**不是**概率层 —— `YHKClanLawGap` 本身未证；
+本定理**不**以任何「存在一个律」为前提（无条件）。
+
+推导：逐项用 ★★ `clanProb_eq_unfolded`（`C(n,a)^{-1}` 约掉）得三项分解
+`2n/(a(a+1)) + 2n/((n−a)((n−a)+1)) − 2/(n−1)`，其中
+* `∑_{a=1}^{n−1} 1/(a(a+1)) = 1 − 1/n`（望远镜，★ `sum_Ico_inv_mul_succ`）；
+* 第二项由 `a ↦ n−a` 的双射与之相同（★ `sum_Ico_inv_mul_succ_tsub`）；
+* 常数项 `(n−1)·2/(n−1) = 2`。
+故总和 `= 2n(1−1/n) + 2n(1−1/n) − 2 = 4n − 6`。
+（`scripts/msc/yhk_weight_derive.py` 在 `n = 3..7` 上以精确有理数核对同一条恒等式。） -/
+
+/-- ★ 望远镜：`∑_{k<m} 1/((k+1)(k+2)) = 1 − 1/(m+1)`。 -/
+theorem sum_range_inv_mul_succ (m : ℕ) :
+    ∑ k ∈ Finset.range m, (1 : ℝ) / (((k : ℝ) + 1) * ((k : ℝ) + 2))
+      = 1 - 1 / ((m : ℝ) + 1) := by
+  induction m with
+  | zero => simp
+  | succ j ih =>
+      rw [Finset.sum_range_succ, ih]
+      push_cast
+      have h1 : ((j : ℝ) + 1 + 1) ≠ 0 := by positivity
+      have h2 : ((j : ℝ) + 1 + 2) ≠ 0 := by positivity
+      field_simp
+      ring
+
+/-- ★ `∑_{a=1}^{n−1} 1/(a(a+1)) = 1 − 1/n`（望远镜）。 -/
+theorem sum_Ico_inv_mul_succ {n : ℕ} (hn : 1 ≤ n) :
+    ∑ a ∈ Finset.Ico 1 n, (1 : ℝ) / ((a : ℝ) * ((a : ℝ) + 1)) = 1 - 1 / (n : ℝ) := by
+  rw [Finset.sum_Ico_eq_sum_range]
+  have h := sum_range_inv_mul_succ (n - 1)
+  have hcast : ((n - 1 : ℕ) : ℝ) = (n : ℝ) - 1 := by rw [Nat.cast_sub hn]; norm_num
+  rw [hcast, show (n : ℝ) - 1 + 1 = (n : ℝ) by ring] at h
+  rw [← h]
+  refine Finset.sum_congr rfl (fun k _ => ?_)
+  push_cast
+  ring_nf
+
+/-- ★ **换向**：`a ↦ n−a` 是 `{1,…,n−1}` 上的双射，故
+`∑_{a=1}^{n−1} 1/((n−a)(n−a+1)) = ∑_{a=1}^{n−1} 1/(a(a+1)) = 1 − 1/n`。 -/
+theorem sum_Ico_inv_mul_succ_tsub {n : ℕ} (hn : 1 ≤ n) :
+    ∑ a ∈ Finset.Ico 1 n, (1 : ℝ) / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1))
+      = 1 - 1 / (n : ℝ) := by
+  rw [← sum_Ico_inv_mul_succ hn]
+  refine Finset.sum_nbij' (fun a => n - a) (fun a => n - a) ?_ ?_ ?_ ?_ ?_
+  · intro a ha
+    simp only [Finset.mem_Ico] at ha ⊢
+    omega
+  · intro a ha
+    simp only [Finset.mem_Ico] at ha ⊢
+    omega
+  · intro a ha
+    simp only [Finset.mem_Ico] at ha
+    omega
+  · intro a ha
+    simp only [Finset.mem_Ico] at ha
+    omega
+  · intro a _
+    rfl
+
+/-- ★★★ **`clanProb` 的一致性恒等式**（§11.4）：`∑_{a=1}^{n−1} C(n,a)·clanProb(n,a) = 4n − 6`。
+
+即「随机无根二叉树的 proper clan 数的期望 = `2·(2n−3)`」—— 缺口 `YHKClanLawGap` 的
+任何见证都必须满足它；本定理证明库内闭形式无条件满足它。 -/
+theorem sum_mul_clanProb {n : ℕ} (hn : 2 ≤ n) :
+    ∑ a ∈ Finset.Ico 1 n, ((n.choose a : ℝ) * clanProb n a) = 4 * (n : ℝ) - 6 := by
+  have hn1 : (1 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+  have hnm1 : (n : ℝ) - 1 ≠ 0 := by linarith
+  have hn0 : (n : ℝ) ≠ 0 := by positivity
+  have hterm : ∀ a ∈ Finset.Ico 1 n,
+      ((n.choose a : ℝ) * clanProb n a)
+        = 2 * (n : ℝ) * (1 / ((a : ℝ) * ((a : ℝ) + 1)))
+          + 2 * (n : ℝ) * (1 / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1)))
+          - 2 / ((n : ℝ) - 1) := by
+    intro a ha
+    obtain ⟨h1, h2⟩ := Finset.mem_Ico.mp ha
+    have hc : ((n.choose a : ℝ)) ≠ 0 := by
+      have hpos : 0 < n.choose a := Nat.choose_pos (le_of_lt h2)
+      exact_mod_cast hpos.ne'
+    rw [clanProb_eq_unfolded hn]
+    have hcc : ((n.choose a : ℝ)) * ((n.choose a : ℝ))⁻¹ = 1 := mul_inv_cancel₀ hc
+    calc ((n.choose a : ℝ))
+          * ((2 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1))
+             + 2 * (n : ℝ) / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1))
+             - 2 / ((n : ℝ) - 1)) * ((n.choose a : ℝ))⁻¹)
+        = (2 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1))
+             + 2 * (n : ℝ) / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1))
+             - 2 / ((n : ℝ) - 1)) * (((n.choose a : ℝ)) * ((n.choose a : ℝ))⁻¹) := by
+          ring
+      _ = 2 * (n : ℝ) * (1 / ((a : ℝ) * ((a : ℝ) + 1)))
+          + 2 * (n : ℝ) * (1 / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1)))
+          - 2 / ((n : ℝ) - 1) := by
+          rw [hcc, mul_one]
+          ring
+  rw [Finset.sum_congr rfl hterm]
+  rw [Finset.sum_sub_distrib, Finset.sum_add_distrib]
+  have hA : ∑ a ∈ Finset.Ico 1 n, 2 * (n : ℝ) * (1 / ((a : ℝ) * ((a : ℝ) + 1)))
+      = 2 * (n : ℝ) * (1 - 1 / (n : ℝ)) := by
+    rw [← Finset.mul_sum, sum_Ico_inv_mul_succ (by omega)]
+  have hB : ∑ a ∈ Finset.Ico 1 n,
+        2 * (n : ℝ) * (1 / (((n - a : ℕ) : ℝ) * (((n - a : ℕ) : ℝ) + 1)))
+      = 2 * (n : ℝ) * (1 - 1 / (n : ℝ)) := by
+    rw [← Finset.mul_sum, sum_Ico_inv_mul_succ_tsub (by omega)]
+  have hC : ∑ _a ∈ Finset.Ico 1 n, (2 / ((n : ℝ) - 1)) = 2 := by
+    rw [Finset.sum_const, Nat.card_Ico, nsmul_eq_mul]
+    have hcast : ((n - 1 : ℕ) : ℝ) = (n : ℝ) - 1 := by
+      rw [Nat.cast_sub (by omega : 1 ≤ n)]; norm_num
+    rw [hcast]
+    field_simp
+  rw [hA, hB, hC]
+  field_simp
+  ring
+
 end Phylo.Stat.ReciprocalMonophyly
