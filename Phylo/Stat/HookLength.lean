@@ -4873,6 +4873,76 @@ theorem isStep_reconstruct {n : ℕ} (hn : 2 ≤ n)
       exact Finset.disjoint_left.mp hdisja hmem (Finset.min'_mem _ _)
     exact lt_of_le_of_ne hle hne
 
+
+/-- ★★★ **`σ` 的像恰是非单点 clade 集**（`σ` 单射 ＋ 两边同基数）。
+这是「`σ` 满射到非单点 clade 集」的机器形式，末步恒常要用。 -/
+theorem image_σ_eq_filter {n : ℕ} {f : Fin (n - 1) → Fin n × Fin n}
+    (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j) :
+    (Finset.univ.image (fun j : Fin (n - 1) => (σ j).1))
+      = (cladesOf n f).filter (fun C => 2 ≤ C.card) := by
+  have hinj' : Function.Injective (fun j : Fin (n - 1) => (σ j).1) := by
+    intro i j hij
+    by_contra hne
+    exact hinj i j hne (Subtype.ext hij)
+  refine Finset.eq_of_subset_of_card_le ?_ ?_
+  · intro E hE
+    obtain ⟨i, -, rfl⟩ := Finset.mem_image.mp hE
+    exact (σ i).2
+  · rw [Finset.card_image_of_injective _ hinj', Finset.card_univ, Fintype.card_fin,
+      card_filter_nonsingleton_cladesOf hf]
+
+/-- ★★★★ **(a) 的第二件：末步恒常** —— 第 `n-1` 步之后全体元素在同一块（即 `univ`）。
+
+关键：`univ` 是非单点 clade（`univ_mem_cladesOf` ＋ `2 ≤ n`），故它是某个 `σ j`（`j < n-1`）；
+于是 `univ ∈ procClades σ (n-1)`，`subset_blockAt` 给出 `univ ⊆ blockAt σ (n-1) w`，反向平凡。
+（本证明**不**用 `chainMap_succ`，故避开 `L = n-1` 的边界问题。） -/
+theorem final_const_reconstruct {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) :
+    ∀ w w' : Fin n,
+      chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (n - 1) w
+        = chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (n - 1) w' := by
+  classical
+  have hU : (Finset.univ : Finset (Fin n)) ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card) :=
+    Finset.mem_filter.mpr ⟨univ_mem_cladesOf (by omega) hf, by simpa using hn⟩
+  have himg := image_σ_eq_filter hf σ hinj
+  have hmem : (Finset.univ : Finset (Fin n))
+      ∈ Finset.univ.image (fun j : Fin (n - 1) => (σ j).1) := by
+    rw [himg]; exact hU
+  obtain ⟨j, -, hj⟩ := Finset.mem_image.mp hmem
+  have hval : ∀ w : Fin n,
+      chainMap n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) (n - 1) w
+        = (blockAt (fun j => (σ j).1) (n - 1) w).min' ⟨w, mem_blockAt _ (n - 1) w⟩ :=
+    fun w => chainMap_reconstruct_eq_min hn hf σ hinj hord d (n - 1) (by omega) w
+  have hblk : ∀ w : Fin n, blockAt (fun i => (σ i).1) (n - 1) w = Finset.univ := by
+    intro w
+    have hproc : (σ j).1 ∈ procClades (fun i => (σ i).1) (n - 1) :=
+      (mem_procClades _).mpr ⟨j, j.isLt, rfl⟩
+    have hsub : (Finset.univ : Finset (Fin n)) ⊆ blockAt (fun i => (σ i).1) (n - 1) w := by
+      rw [← hj]
+      exact subset_blockAt _ hproc (by rw [hj]; exact Finset.mem_univ w)
+    exact Finset.Subset.antisymm (Finset.subset_univ _) hsub
+  intro w w'
+  have hpart : blockAt (fun i => (σ i).1) (n - 1) w' = blockAt (fun i => (σ i).1) (n - 1) w :=
+    blockAt_eq_of_mem (laminarFamily_cladesOf f)
+      (fun i => (Finset.mem_filter.mp (σ i).2).1)
+      (by rw [hblk w]; exact Finset.mem_univ w')
+  exact (hval w).trans ((min'_blockAt_eq hpart).symm.trans (hval w').symm)
+
+/-- ★★★★ **(a) 的前两件合起来：`reconstruct` 出来的确实是合并史**。 -/
+theorem isMergeHistory_reconstruct {n : ℕ} (hn : 2 ≤ n)
+    {f : Fin (n - 1) → Fin n × Fin n} (hf : IsMergeHistory n f)
+    (σ : Fin (n - 1) → {D // D ∈ (cladesOf n f).filter (fun C => 2 ≤ C.card)})
+    (hinj : ∀ i j : Fin (n - 1), i ≠ j → σ i ≠ σ j)
+    (hord : ∀ i j : Fin (n - 1), i < j → ¬ (σ j).1 ⊂ (σ i).1) (d : Fin n) :
+    IsMergeHistory n (reconstruct (cladesOf n f) (fun j => (σ j).1) d) :=
+  ⟨fun k => isStep_reconstruct hn hf σ hinj hord d k,
+    final_const_reconstruct hn hf σ hinj hord d⟩
+
 end Phylo.Stat.HookLength
 
 
