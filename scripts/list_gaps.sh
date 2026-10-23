@@ -41,12 +41,38 @@
 set -u
 cd "$(dirname "$0")/.." || exit 9
 
-echo "=== 口径 A：机械扫「def 名含 gap/Gap」==="
-mapfile -t DEFS < <(grep -rnE '^def +[A-Za-z0-9_]*(gap|Gap)[A-Za-z0-9_]*' Phylo/ | sort)
+echo "=== 口径 A：机械扫「def 名含 gap/Gap」（★ 先剥 Lean 注释）==="
+# ★ W28-D 修正：旧版是 `grep -rnE '^def …'`，会被**注释里**的 `def rankedTree_card_gap`
+#   （`Phylo/Stat/CoalescentHistoryCount.lean` 的模块 docstring 代码围栏）骗到 ⇒ A 报 71 行，
+#   而真实登记只有 70 个名字。改用与 gap_ledger.py 同一套 `strip_lean_comments()`，A 与 B 从此一致。
+mapfile -t DEFS < <(python3 - <<'PYSCAN'
+import io, os, re, sys
+sys.path.insert(0, os.path.join(os.getcwd(), "scripts"))
+from gap_ledger import strip_lean_comments
+DECL = re.compile(r"^(?:noncomputable\s+|private\s+|protected\s+|scoped\s+)*def\s+([A-Za-z0-9_'.’]+)")
+out = []
+for root, _, fs in os.walk("Phylo"):
+    for f in sorted(fs):
+        if not f.endswith(".lean"):
+            continue
+        p = os.path.join(root, f)
+        raw = io.open(p, encoding="utf-8").read().replace("\r\n", "\n")
+        for i, ln in enumerate(strip_lean_comments(raw).split("\n"), 1):
+            m = DECL.match(ln)
+            if m and re.search(r"(gap|Gap)", m.group(1)):
+                out.append("%s:%d:%s" % (p.replace(os.sep, "/"), i, ln.strip()))
+for l in sorted(out):
+    print(l)
+PYSCAN
+)
 printf '%s\n' "${DEFS[@]}" | sed 's/^/  /'
-echo "  口径 A 条数 = ${#DEFS[@]}（**行数**；同名重复会使其大于『不同名数』，后者见口径 B 的合计行）"
-DUP="$(printf '%s\n' "${DEFS[@]}" | sed -E 's/.*def +([A-Za-z0-9_]+).*/\1/' | sort | uniq -d | tr '\n' ' ')"
-echo "  ⚠️ 同名定义两次（行数 > 名字数）：**${DUP}** —— 同名同体、落在两个文件；★ **不去重**（去重会破坏与历史数字的对账）。"
+echo "  口径 A 条数 = ${#DEFS[@]}（**剥注释后**的行数；应与口径 B 的合计行相等）"
+DUP="$(printf '%s\n' "${DEFS[@]}" | sed -E 's/.*:[0-9]+:def +([A-Za-z0-9_]+).*/\1/' | sort | uniq -d | tr '\n' ' ')"
+if [ -n "${DUP// /}" ]; then
+  echo "  ⚠️ 同名定义两次（行数 > 名字数）：**${DUP}** —— 真·同名同体落在两个文件；★ **不去重**（去重会破坏与历史数字的对账）。"
+else
+  echo "  ✓ 无同名重复（★ W28-D 修正：旧提示里的 rankedTree_card_gap「同名两次」其实是**注释里的幽灵**，已随剥注释消失）"
+fi
 
 echo
 if ! command -v python3 >/dev/null 2>&1; then

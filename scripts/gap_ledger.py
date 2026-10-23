@@ -453,8 +453,8 @@ def main():
           % (len(buckets["open"]), len(buckets["closed"]), len(buckets["cond"]),
              len(buckets["refuted"]), len(buckets["trace"]), len(buckets["judged"]),
              len(buckets["longterm"])))
-    print("  ✓ 七桶加总 = %d = 本脚本解析条数 %d（★ 口径 A 的**行数**可能因同名重复而更多，"
-          "见 list_gaps.sh 的『同名定义两次』提示）" % (total, len(gaps)))
+    print("  ✓ 七桶加总 = %d = 本脚本解析条数 %d（★ W28-D 起 `list_gaps.sh` 的口径 A 也先剥注释，"
+          "故 A 的行数应与此处相等；旧版差异源自 docstring 里的幽灵声明）" % (total, len(gaps)))
     if total != len(gaps):
         print("  ✗ 加总不守恒！", file=sys.stderr)
         return 1
