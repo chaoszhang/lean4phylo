@@ -4205,4 +4205,94 @@ theorem compatible_restrictToFinset (A : Finset (Fin n)) (s t : Split (Fin n ⊕
     · exact Or.inr (Or.inr (Or.inl (disjoint_pullSet A h)))
     · exact Or.inr (Or.inr (Or.inr (disjoint_pullSet A h)))
 
+
+/-! ### 11.19 子族条件之【非平凡】—— ★ 注意：第二条要 `⊊`，不是 `⊆`
+
+第八轮块 1。**关键口径修正**：`restrictToFinset A s h` 的
+* `sideA = pullSet A (away s)`：基数 = away 侧基数 ≥ 2（`s` 非平凡 ⇒ 两侧各 ≥ 2）；
+* `sideB = pullSet A ((away s)ᶜ)`：它是 **`A ⊕ Unit` 内部的补**，基数为
+  `|A| + 1 − |awayLeaves s|`。故 `awayLeaves s = A`（只是 `⊆` 而非 `⊊`）时 `sideB = {ρ}`，
+  **限制出的 split 退化成平凡**！
+
+⇒ 子族必须取 `{s ∈ ω.val | awayLeaves s ⊊ A}`（**proper**），不能取 `⊆`。
+这与 §11.17 规格里的 `⊊` 一致；第八轮派单的块 1 文字只写了「用 `sides_card_of_mem_nontrivialSplits`
+传下来」，按 `⊆` 写下会得到**假命题**（反例：`A` 自己的那条 split）。
+
+本节交付：
+* ★ `mem_pullSet_iff'`、★ `away_subset_union`（away 侧 ⊆ `A ∪ {ρ}`）；
+* ★ `exists_preimage_of_mem_away`（away 侧每点都有 `A ⊕ Unit` 里的原像）；
+* ★★ `two_le_card_restrictToFinset_sideA`（需 `2 ≤ |away 侧|`，即 `s` 非平凡）；
+* ★★ `two_le_card_restrictToFinset_sideB`（需 `|awayLeaves s| < |A|`，即 **proper**）。 -/
+
+theorem mem_pullSet_iff' (A : Finset (Fin n)) (W : Finset (Fin n ⊕ Unit)) (y : A ⊕ Unit) :
+    y ∈ pullSet A W ↔ inlEmbed A y ∈ W := by
+  simp only [pullSet, Finset.mem_filter, Finset.mem_univ, true_and]
+
+/-- away 侧含于 `A ∪ {ρ}`。 -/
+theorem away_subset_union (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) :
+    s.away (Sum.inr ()) ⊆ A.image Sum.inl ∪ {Sum.inr ()} := by
+  intro y hy
+  have hρ : Sum.inr () ∉ s.away (Sum.inr ()) := Split.not_mem_away (Sum.inr ()) s
+  rcases y with a | u
+  · exact Finset.mem_union.mpr (Or.inl (Finset.mem_image_of_mem Sum.inl
+      (h (by simpa only [awayLeaves, mem_realLeaves] using hy))))
+  · cases u
+    exact absurd hy hρ
+
+/-- ★ away 侧的每个点都是 `A ⊕ Unit` 里某点的像。 -/
+theorem exists_preimage_of_mem_away (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) {x : Fin n ⊕ Unit} (hx : x ∈ s.away (Sum.inr ())) :
+    ∃ y : A ⊕ Unit, inlEmbed A y = x := by
+  have hU := away_subset_union A s h hx
+  have hne : Sum.inr () ∉ s.away (Sum.inr ()) := Split.not_mem_away (Sum.inr ()) s
+  rcases x with a | u
+  · have haA : a ∈ A := by
+      rcases Finset.mem_union.mp hU with hh | hh
+      · obtain ⟨a', ha', heq⟩ := Finset.mem_image.mp hh
+        rwa [Sum.inl.inj heq] at ha'
+      · rw [Finset.mem_singleton] at hh
+        exact absurd hh (by simp)
+    exact ⟨Sum.inl ⟨a, haA⟩, rfl⟩
+  · cases u
+    exact absurd hx hne
+
+/-- ★★ **`sideA` 至少两个元素**（`away` 侧有 ≥ 2 个元素，每个都有原像）。 -/
+theorem two_le_card_restrictToFinset_sideA (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) (h2 : 2 ≤ (s.away (Sum.inr ())).card) :
+    2 ≤ (restrictToFinset A s h).sideA.card := by
+  rw [restrictToFinset_sideA_pull]
+  obtain ⟨x, hx, y, hy, hxy⟩ := Finset.one_lt_card.mp h2
+  obtain ⟨xa, hxa⟩ := exists_preimage_of_mem_away A s h hx
+  obtain ⟨ya, hya⟩ := exists_preimage_of_mem_away A s h hy
+  refine Finset.one_lt_card.mpr ⟨xa, ?_, ya, ?_, ?_⟩
+  · rw [mem_pullSet_iff']; rw [hxa]; exact hx
+  · rw [mem_pullSet_iff']; rw [hya]; exact hy
+  · intro hc
+    exact hxy (by rw [← hxa, ← hya, hc])
+
+/-- ★★ **`sideB` 至少两个元素**（`awayLeaves s ⊊ A` ⇒ `ρ` 与某个 `a ∈ A ∖ away` 都在 `sideB`）。 -/
+theorem two_le_card_restrictToFinset_sideB (A : Finset (Fin n)) (s : Split (Fin n ⊕ Unit))
+    (h : awayLeaves s ⊆ A) (hlt : (awayLeaves s).card < A.card) :
+    2 ≤ (restrictToFinset A s h).sideB.card := by
+  rw [restrictToFinset_sideB_pull]
+  have hproper : awayLeaves s ⊂ A := by
+    rw [Finset.ssubset_iff_subset_ne]
+    exact ⟨h, fun heq => by rw [heq] at hlt; exact absurd hlt (lt_irrefl _)⟩
+  obtain ⟨a, haA, haW⟩ := Finset.exists_of_ssubset hproper
+  have h1 : Sum.inr () ∈ pullSet A ((s.away (Sum.inr ()))ᶜ) := by
+    rw [mem_pullSet_iff']
+    show Sum.inr () ∈ (s.away (Sum.inr ()))ᶜ
+    rw [Finset.mem_compl]
+    exact Split.not_mem_away (Sum.inr ()) s
+  have h2 : Sum.inl ⟨a, haA⟩ ∈ pullSet A ((s.away (Sum.inr ()))ᶜ) := by
+    rw [mem_pullSet_iff']
+    show Sum.inl a ∈ (s.away (Sum.inr ()))ᶜ
+    rw [Finset.mem_compl]
+    intro hmem
+    exact haW (by simpa only [awayLeaves, mem_realLeaves] using hmem)
+  refine Finset.one_lt_card.mpr ⟨_, h1, _, h2, ?_⟩
+  intro hc
+  cases hc
+
 end Phylo.Stat.ReciprocalMonophyly
