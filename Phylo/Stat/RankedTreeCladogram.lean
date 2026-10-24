@@ -242,4 +242,54 @@ theorem rankedTreeCladogram_eq_of_three {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
   unfold rankedTreeCladogram
   rw [dite_eq_left h3]
 
+/-! ## 6. ★★★ 关键刻画：`IsClade` ⟺ 「`A` 或 `Aᶜ` 是非单点块」 -/
+
+/-- ★★★ **本文件的核心引理**：`A` 是 `rankedTreeCladogramOfThree hn ω` 的 clan
+**⟺** `A` 或 `Aᶜ` 是 `ω` 的某个非单点块，或 `A` 平凡（单点集 / 单点集的补）。
+
+⚠️ `Cladogram` 是**无根**载体 ⇒ 一条 split 的**两侧都是** clan，故右端出现
+「`A` **或** `Aᶜ`」。这正是 ZDS Lemma 6.1 的包含-排除
+`q_n(A) = p_n(a) + p_n(n−a) − p̂_n(a,n−a)` 所需的形状。 -/
+theorem isClade_rankedTreeCladogramOfThree_iff {n : ℕ} (hn : 3 ≤ n)
+    (ω : RankedGeneTree.RankedTree n) (A : Finset (Fin n)) :
+    (rankedTreeCladogramOfThree hn ω).IsClade A ↔
+      A ∈ blockFamily n ω ∨ Aᶜ ∈ blockFamily n ω ∨
+        (∃ x : Fin n, A = {x}) ∨ (∃ x : Fin n, A = {x}ᶜ) := by
+  have hchar := isSplitOf_rankedTreeCladogramOfThree hn ω
+  have hcompl : ∀ x : Fin n, ({x}ᶜ : Finset (Fin n)).Nonempty := by
+    intro x
+    rw [← Finset.card_pos, card_compl_eq n {x}, Finset.card_singleton]
+    omega
+  constructor
+  · intro h
+    simp only [Cladogram.IsClade] at h
+    obtain ⟨s, hs, rfl⟩ := h
+    rw [hchar] at hs
+    rcases hs with hmem | htriv | htriv
+    · rcases Finset.mem_union.mp hmem with hb | hb
+      · exact Or.inl (sideA_mem_blockFamily_of_mem_baseSplits hb)
+      · obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp hb
+        refine Or.inr (Or.inl ?_)
+        have htA : t.sideA ∈ blockFamily n ω := sideA_mem_blockFamily_of_mem_baseSplits ht
+        have heq : ((t.swap).sideA)ᶜ = t.sideA := by
+          rw [Split.swap_sideA, Split.sideB_eq_compl, compl_compl]
+        rw [heq]
+        exact htA
+    · exact Or.inr (Or.inr (Or.inl htriv))
+    · exact Or.inr (Or.inr (Or.inr htriv))
+  · rintro (h | h | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · obtain ⟨s, hs, hside⟩ := exists_mem_baseSplits_of_mem_blockFamily h
+      exact ⟨s, (hchar s).mpr (Or.inl (Finset.mem_union.mpr (Or.inl hs))), hside⟩
+    · obtain ⟨s, hs, hside⟩ := exists_mem_baseSplits_of_mem_blockFamily h
+      refine ⟨s.swap, (hchar s.swap).mpr (Or.inl ?_), ?_⟩
+      · exact Finset.mem_union.mpr (Or.inr (Finset.mem_image.mpr ⟨s, hs, rfl⟩))
+      · rw [Split.swap_sideA, Split.sideB_eq_compl, hside, compl_compl]
+    · simp only [Cladogram.IsClade, hx]
+      exact ⟨splitOf {x} (Finset.singleton_nonempty x) (hcompl x),
+        (hchar _).mpr (Or.inr (Or.inl ⟨x, by simp⟩)), by simp⟩
+    · simp only [Cladogram.IsClade, hx]
+      exact ⟨(splitOf {x} (Finset.singleton_nonempty x) (hcompl x)).swap,
+        (hchar _).mpr (Or.inr (Or.inr ⟨x, by rw [Split.swap_sideA]; simp⟩)),
+        by rw [Split.swap_sideA]; simp⟩
+
 end Phylo.Stat.RankedTreeCladogram
