@@ -5052,3 +5052,410 @@ def candidateTripleCore : Prop :=
 
 end Split
 
+/-! ## 8.15 ★★★★ W30 泳道 a：BdD Thm 2 的完整形态（系数钉成隔离指数）⇒ _v2
+
+本节按 Bandelt–Dress 1992（期刊 pp.56–62 = PDF 10–14）的**原文路线**落地三件：
+
+1. ★D 更正：派工书 §1.3 (C) 的**字面对全 dSplits 求和**形态为**假** —— dSplits 在对称 δ 下是
+   swap-封闭的（mem_dSplits_swap），故系数都取 peelCoeff 会**双计**同一无向 split 的两个编码。
+   机器反例 
+ot_nonneg_residual_of_dSplits_peelCoeff（Fin 4、δ = δ_{0,1|2,3}、点 (0,2)：
+   右端 ≥ 2 而 δ = 1，故非负残差不存在）。**正确形态 = 每个无向 split 只取一个定向**，
+   见 coeffFaithfulDecomposition；
+2. d := sumMetric F w 的**度量公理**（splitMetric_triangle / sumMetric_symm / _diag / _nonneg /
+   _triangle）—— BdD Thm 2 是度量定理，本节把它对本库的 d 实例化；
+3. ★★★★★ weakCompatibilityRealization_gap_weights_v2_of_coeffFaithful：把 _v2 **归约到唯一具名缺件**
+   coeffFaithfulDecomposition（= BdD Thm 2 的「More generally」从句：剥一个 d-split 后
+   α'_{A,B} = α_{A,B} − λ_{A,B} **对所有 A,B**）。归约本身 = BdD p.62 那条**逐点非负链**（不需要线性无关）。
+
+★ 缺件的证明机制（BdD pp.58–59 的正文）：逐四元组的 β̃ = β（除非四元组 refining A₀,B₀，
+那时 β̃ = β − λ）＋ **Corollary 1**（若 α_{A,B} = β 在某四元组上取到，则 A,B 是**唯一**延伸该
+「部分 d-split」的 d-split，其证明用 **Theorem 1**：Σ{α_{A',B'} | A',B' 延伸 A₀,B₀} ≤ α_{A₀,B₀}）。
+这两个件未在库内，见 W30 泳道 a 报告 §机制摘要。 -/
+
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-- `dSplits` 在**对称** `δ` 下是 `swap`-封闭的：`s` 是 d-split ⟺ `s.swap` 是 d-split。 -/
+theorem mem_dSplits_swap {δ : α → α → ℝ} (hδ : ∀ x y, δ x y = δ y x) {s : Split α} :
+    s ∈ dSplits δ ↔ s.swap ∈ dSplits δ := by
+  rw [mem_dSplits, mem_dSplits, swap_sideA, swap_sideB]
+  exact isDSplit_comm hδ
+
+/-- ★D（W30 泳道 a）：**派工书 §1.3 的 (C) 字面形态为假** —— 全 `dSplits` 求和 + `peelCoeff` 会
+**双计**同一无向 split 的两个编码（`dSplits` 是 `swap`-封闭的），残差不可能非负。
+
+反例：`δ := δ_{s₀}`（`s₀ = {0,1}|{2,3}`，`Fin 4`）。`dSplits δ ∋ s₀, s₀.swap`、
+`peelCoeff δ s₀ = peelCoeff δ s₀.swap = 1`（各自 `α = 2`）⇒ 在 `(0,2)` 处右端
+`Σ ≥ 2` 而 `δ 0 2 = 1` ⇒ `δ₀ 0 2 ≤ -1 < 0`。
+
+正确的形态：**每个无向 split 只取一个定向**（`swap`-自由代表集）系数 `peelCoeff`，
+等价地：全 `dSplits` 求和时系数要取 `peelCoeff/2`。 -/
+theorem not_nonneg_residual_of_dSplits_peelCoeff :
+    ¬ ∃ δ₀ : Fin 4 → Fin 4 → ℝ, (∀ x y, 0 ≤ δ₀ x y) ∧
+      ∀ x y, SplitMetric cexSplit4 x y
+        = δ₀ x y + ∑ t ∈ dSplits (SplitMetric cexSplit4),
+            peelCoeff (SplitMetric cexSplit4) t * SplitMetric t x y := by
+  rintro ⟨δ₀, hnn, heq⟩
+  have hsym : ∀ x y : Fin 4, SplitMetric cexSplit4 x y = SplitMetric cexSplit4 y x :=
+    fun x y => splitMetric_symm cexSplit4 x y
+  have hα : isolationIndex (SplitMetric cexSplit4) cexSplit4.sideA cexSplit4.sideB = 2 := by
+    have h := isolationIndex_splitMetric cexSplit4 (1 : ℝ)
+    simpa using h
+  have hmem1 : cexSplit4 ∈ dSplits (SplitMetric cexSplit4) := by
+    rw [mem_dSplits]
+    refine (isolationIndex_pos_iff_isDSplit _ (cexSplit4.nonempty 0) (cexSplit4.nonempty 1)).mp ?_
+    rw [show cexSplit4.parts 0 = cexSplit4.sideA from rfl,
+      show cexSplit4.parts 1 = cexSplit4.sideB from rfl, hα]
+    norm_num
+  have hmem2 : cexSplit4.swap ∈ dSplits (SplitMetric cexSplit4) :=
+    (mem_dSplits_swap hsym).mp hmem1
+  have hc1 : peelCoeff (SplitMetric cexSplit4) cexSplit4 = 1 := by
+    unfold peelCoeff
+    rw [hα]; norm_num
+  have hc2 : peelCoeff (SplitMetric cexSplit4) cexSplit4.swap = 1 := by
+    have hα2 : isolationIndex (SplitMetric cexSplit4) cexSplit4.swap.sideA
+        cexSplit4.swap.sideB = 2 := by
+      have h := isolationIndex_splitMetric cexSplit4.swap (1 : ℝ)
+      simpa [splitMetric_swap] using h
+    unfold peelCoeff
+    rw [hα2]; norm_num
+  have hkey : (2 : ℝ) ≤ ∑ t ∈ dSplits (SplitMetric cexSplit4),
+      peelCoeff (SplitMetric cexSplit4) t * SplitMetric t (0 : Fin 4) 2 := by
+    have hsub : ({cexSplit4, cexSplit4.swap} : Finset (Split (Fin 4)))
+        ⊆ dSplits (SplitMetric cexSplit4) := by
+      intro t ht
+      rcases Finset.mem_insert.mp ht with rfl | ht
+      · exact hmem1
+      · rw [Finset.mem_singleton.mp ht]; exact hmem2
+    have hnonneg : ∀ t ∈ dSplits (SplitMetric cexSplit4),
+        t ∉ ({cexSplit4, cexSplit4.swap} : Finset (Split (Fin 4))) →
+        0 ≤ peelCoeff (SplitMetric cexSplit4) t * SplitMetric t (0 : Fin 4) 2 := by
+      intro t ht _
+      exact mul_nonneg (le_of_lt (peelCoeff_pos (t.nonempty 0) (t.nonempty 1) (mem_dSplits.mp ht)))
+        (splitMetric_nonneg t 0 2)
+    have hle := Finset.sum_le_sum_of_subset_of_nonneg hsub hnonneg
+    have htwo : ∑ t ∈ ({cexSplit4, cexSplit4.swap} : Finset (Split (Fin 4))),
+        peelCoeff (SplitMetric cexSplit4) t * SplitMetric t (0 : Fin 4) 2 = 2 := by
+      rw [Finset.sum_insert (by simp [Ne.symm (swap_ne cexSplit4)]),
+        Finset.sum_singleton, hc1, hc2]
+      have h1 : SplitMetric cexSplit4 (0 : Fin 4) 2 = 1 := by
+        simp [SplitMetric, cexSplit4, Split.ofSideA_sideA, Split.ofSideA_sideB]
+      have h2 : SplitMetric cexSplit4.swap (0 : Fin 4) 2 = 1 := by
+        rw [splitMetric_swap]; exact h1
+      rw [h1, h2]; norm_num
+    rw [htwo] at hle
+    linarith
+  have h02 : SplitMetric cexSplit4 (0 : Fin 4) 2 = 1 := by
+    simp [SplitMetric, cexSplit4, Split.ofSideA_sideA, Split.ofSideA_sideB]
+  have he := heq 0 2
+  rw [h02] at he
+  linarith [hnn 0 2]
+
+/-! ### 8.15.2 `sumMetric` 的度量公理（`d := Σ_{u∈F} w_u δ_u` 是度量） -/
+
+/-- `SplitMetric` 的三角不等式（`0/1` 值；由 `sideB = sideAᶜ` 得）。 -/
+theorem splitMetric_triangle (s : Split α) (x y z : α) :
+    SplitMetric s x z ≤ SplitMetric s x y + SplitMetric s y z := by
+  by_cases hx : x ∈ s.sideA
+  · by_cases hz : z ∈ s.sideA
+    · rw [splitMetric_eq_zero_of_mem_sideA hx hz]
+      exact add_nonneg (splitMetric_nonneg s x y) (splitMetric_nonneg s y z)
+    · have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+      rw [splitMetric_eq_one_of_mem_sideA_mem_sideB hx hzB]
+      by_cases hy : y ∈ s.sideA
+      · have h1 : SplitMetric s y z = 1 :=
+          splitMetric_eq_one_of_mem_sideA_mem_sideB hy hzB
+        linarith [splitMetric_nonneg s x y]
+      · have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+        have h1 : SplitMetric s x y = 1 :=
+          splitMetric_eq_one_of_mem_sideA_mem_sideB hx hyB
+        linarith [splitMetric_nonneg s y z]
+  · have hxB : x ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s x).mpr hx
+    by_cases hz : z ∈ s.sideA
+    · rw [splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hz]
+      by_cases hy : y ∈ s.sideA
+      · have h1 : SplitMetric s x y = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA hxB hy
+        linarith [splitMetric_nonneg s y z]
+      · have hyB : y ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s y).mpr hy
+        have h1 : SplitMetric s y z = 1 := splitMetric_eq_one_of_mem_sideB_mem_sideA hyB hz
+        linarith [splitMetric_nonneg s x y]
+    · have hzB : z ∈ s.sideB := (mem_sideB_iff_not_mem_sideA s z).mpr hz
+      rw [splitMetric_eq_zero_of_mem_sideB hxB hzB]
+      exact add_nonneg (splitMetric_nonneg s x y) (splitMetric_nonneg s y z)
+
+/-- `sumMetric` 对称。 -/
+theorem sumMetric_symm (F : Finset (Split α)) (w : Split α → ℝ) :
+    ∀ x y, sumMetric F w x y = sumMetric F w y x :=
+  fun x y => Finset.sum_congr rfl fun u _ => by rw [splitMetric_symm]
+
+/-- `sumMetric` 对角为零。 -/
+theorem sumMetric_diag (F : Finset (Split α)) (w : Split α → ℝ) :
+    ∀ x, sumMetric F w x x = 0 := by
+  intro x
+  simp [sumMetric, splitMetric_self]
+
+/-- `sumMetric` 非负（正权重）。 -/
+theorem sumMetric_nonneg (F : Finset (Split α)) (w : Split α → ℝ)
+    (hw : ∀ u ∈ F, 0 < w u) : ∀ x y, 0 ≤ sumMetric F w x y := by
+  intro x y
+  exact Finset.sum_nonneg fun u hu =>
+    mul_nonneg (le_of_lt (hw u hu)) (splitMetric_nonneg u x y)
+
+/-- `sumMetric` 满足三角不等式（正权重 + `splitMetric_triangle`）。 -/
+theorem sumMetric_triangle (F : Finset (Split α)) (w : Split α → ℝ)
+    (hw : ∀ u ∈ F, 0 < w u) :
+    ∀ x y z, sumMetric F w x z ≤ sumMetric F w x y + sumMetric F w y z := by
+  intro x y z
+  rw [sumMetric, sumMetric, sumMetric, ← Finset.sum_add_distrib]
+  refine Finset.sum_le_sum fun u hu => ?_
+  have h := splitMetric_triangle u x y z
+  have hw' : 0 ≤ w u := le_of_lt (hw u hu)
+  nlinarith [mul_le_mul_of_nonneg_left h hw']
+
+/-! ### 8.15.3 唯一具名缺件：**系数钉成 `peelCoeff` 的典范分解**（BdD Thm 2 完整形态） -/
+
+/-- ★★★★ **具名缺件（BdD 1992 Theorem 2 的完整形态）**：任意度量 `δ` 都存在典范分解
+
+`δ = δ₀ + Σ_{t∈F} peelCoeff δ t · δ_t`，
+
+其中 `F` 是 `dSplits δ` 的 **`swap`-自由代表集**（每个无向 split 恰好一个定向）、
+系数**恰为** `peelCoeff δ t = α_t/2`（BdD 的 `α_S`）、`δ₀` 非负且划分版 split-prime。
+
+★ **与 `canonicalSplitDecomposition_gap_faithful_v2_holds`（`:4424`）的差别**：那里系数只是
+「某个正数」（存在性），没有钉成 `α_S`；本 `def` 钉死了。
+★ **与派工书 §1.3 (C) 的差别（★D 更正）**：不能对**全** `dSplits` 求和（会双计 `s` 与 `s.swap`，
+见 `not_nonneg_residual_of_dSplits_peelCoeff`）；必须取代表集。
+★ **文献依据**：BdD 1992 期刊 p.57「More generally … `α'_{A,B} = α_{A,B} − λ_{A,B}` for all pairs
+`A,B`」——即「剥一个 d-split 后，**其余** split 的隔离指数**精确不变**」。 -/
+def coeffFaithfulDecomposition (δ : α → α → ℝ) : Prop :=
+  ∃ (F : Finset (Split α)) (δ₀ : α → α → ℝ),
+    (∀ t ∈ F, t.swap ∉ F) ∧ (∀ t ∈ F, 0 < peelCoeff δ t) ∧
+      (∀ s : Split α, IsDSplit δ s.sideA s.sideB → ∃ t ∈ F, t = s ∨ t.swap = s) ∧
+        SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧ (∀ x y, 0 ≤ δ₀ x y) ∧
+          ∀ x y, δ x y = δ₀ x y + ∑ t ∈ F, peelCoeff δ t * SplitMetric t x y
+
+/-- ★★★★★ **W30 泳道 a：`_v2` 归约到唯一具名缺件 `coeffFaithfulDecomposition`**。
+
+即：**BdD Thm 2 的完整形态（系数 = 隔离指数）⇒ `weakCompatibilityRealization_gap_weights_v2`**。
+
+证明 = 派工书 §1.3 的 (D) 链（BdD p.62 的**逐点非负**论证，不需要线性无关）：
+
+记 `μ t := Σ_{u∈F, rep(u)=t} w u`（`rep` 由 (C) 的覆盖性给出）。则
+1. `d = Σ_{t∈F₀} μ t · δ_t`（纤维重排，`sum_fiberwise_eq_sum_filter`）；
+2. `μ t ≤ peelCoeff d t`：`t ∈ F` 用 (A) `isolationIndex_ge_two_mul_weight`，
+   `t ∉ F` 而 `t.swap ∈ F` 用 (A) + `isolationIndex_comm`，其余 `μ t ≤ 0 ≤ c`；
+3. 逐点：`0 = δ₀ + Σ_t (peelCoeff d t − μ t)·δ_t`，各项非负 ⇒ 逐项为零 ⇒
+   **`peelCoeff d t = μ t`**（取 `x ∈ t.sideA`、`y ∈ t.sideB`，`δ_t x y = 1`）；
+4. (ii)：`α_s/2 = peelCoeff d (rep s) = μ (rep s) ≤ λ_s`，与 (A) `α_s/2 ≥ λ_s` 夹成等式；
+   (i) ⟹：`α_s > 0 ⇒ μ (rep s) > 0 ⇒` 纤维非空 ⇒ 有成员落在 `s` 的无向类里；
+   (i) ⟸：`SplitWeak:975`（已有）。
+
+★ 本定理**不叫** `_holds`：缺件 `coeffFaithfulDecomposition` 未证（BdD pp.58–60 的正文，
+含 Corollary 1 / Theorem 1 的「延伸 d-split 的 `α` 和 ≤ `α`」估计）。 -/
+theorem weakCompatibilityRealization_gap_weights_v2_of_coeffFaithful
+    (hC : ∀ {β : Type u} [Fintype β] [DecidableEq β] (δ : β → β → ℝ),
+      (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) →
+      (∀ x y z, δ x z ≤ δ x y + δ y z) → coeffFaithfulDecomposition δ) :
+    weakCompatibilityRealization_gap_weights_v2.{u} := by
+  classical
+  intro β _ _ F w hF hw
+  have hCd : coeffFaithfulDecomposition (sumMetric F w) :=
+    hC (sumMetric F w) (sumMetric_symm F w) (sumMetric_diag F w) (sumMetric_nonneg F w hw)
+      (sumMetric_triangle F w hw)
+  obtain ⟨F₀, δ₀, hswap, hpos, hcov, hsp, hdiag₀, hnn₀, heq⟩ := hCd
+  -- (B)：成员是 d-split
+  have hmemds : ∀ u ∈ F, IsDSplit (sumMetric F w) u.sideA u.sideB :=
+    fun u hu => isDSplit_splitMetricSum_of_mem_of_weaklyCompatible F w hF hw hu
+  -- 每个成员在代表集里有一个 `δ`-等价的代表
+  have hmem : ∀ u ∈ F, ∃ t ∈ F₀, (t = u ∨ t.swap = u) ∧
+      (∀ x y, SplitMetric t x y = SplitMetric u x y) := by
+    intro u hu
+    obtain ⟨t, htF, htu⟩ := hcov u (hmemds u hu)
+    refine ⟨t, htF, htu, ?_⟩
+    rcases htu with rfl | hts
+    · intro x y; rfl
+    · intro x y
+      rw [← hts, splitMetric_swap]
+  set τ : Split β → Split β :=
+    fun u => if h : u ∈ F then Classical.choose (hmem u h) else u with hτdef
+  have hτspec : ∀ u (hu : u ∈ F), τ u ∈ F₀ ∧ ((τ u = u ∨ (τ u).swap = u) ∧
+      ∀ x y, SplitMetric (τ u) x y = SplitMetric u x y) := by
+    intro u hu
+    rw [hτdef]
+    simp only [hu]
+    exact Classical.choose_spec (hmem u hu)
+  set μ : Split β → ℝ := fun t => ∑ u ∈ F.filter (fun u => τ u = t), w u with hμdef
+  -- (1) `d = Σ_{t∈F₀} μ t · δ_t`
+  have hμeq : ∀ x y, ∑ t ∈ F₀, μ t * SplitMetric t x y = sumMetric F w x y := by
+    intro x y
+    have s1 : ∑ t ∈ F₀, μ t * SplitMetric t x y
+        = ∑ t ∈ F₀, ∑ u ∈ F.filter (fun u => τ u = t), w u * SplitMetric t x y := by
+      refine Finset.sum_congr rfl fun t _ => ?_
+      rw [hμdef, Finset.sum_mul]
+    have s2 : ∑ t ∈ F₀, ∑ u ∈ F.filter (fun u => τ u = t), w u * SplitMetric t x y
+        = ∑ t ∈ F₀, ∑ u ∈ F.filter (fun u => τ u = t), w u * SplitMetric u x y := by
+      refine Finset.sum_congr rfl fun t _ => Finset.sum_congr rfl fun u hu => ?_
+      obtain ⟨huF, hτu⟩ := Finset.mem_filter.mp hu
+      have hsm := (hτspec u huF).2.2
+      rw [hτu] at hsm
+      rw [hsm x y]
+    have s3 : ∑ t ∈ F₀, ∑ u ∈ F.filter (fun u => τ u = t), w u * SplitMetric u x y
+        = ∑ u ∈ F.filter (fun u => τ u ∈ F₀), w u * SplitMetric u x y :=
+      Finset.sum_fiberwise_eq_sum_filter F F₀ τ (fun u => w u * SplitMetric u x y)
+    have s4 : ∑ u ∈ F.filter (fun u => τ u ∈ F₀), w u * SplitMetric u x y
+        = ∑ u ∈ F, w u * SplitMetric u x y := by
+      rw [Finset.filter_true_of_mem]
+      intro u hu
+      exact (hτspec u hu).1
+    rw [s1, s2, s3, s4]
+    rfl
+  -- (2) `μ t ≤ w t + [t.swap ∈ F]·w t.swap`
+  have hμbound : ∀ t ∈ F₀,
+      μ t ≤ (if t ∈ F then w t else 0) + (if t.swap ∈ F then w t.swap else 0) := by
+    intro t ht
+    have hsub : F.filter (fun u => τ u = t)
+        ⊆ ({t, t.swap} : Finset (Split β)) ∩ F := by
+      intro u hu
+      obtain ⟨huF, hτu⟩ := Finset.mem_filter.mp hu
+      have hp := (hτspec u huF).2.1
+      rw [hτu] at hp
+      refine Finset.mem_inter.mpr ⟨?_, huF⟩
+      rcases hp with h | h
+      · rw [h]; exact Finset.mem_insert_self _ _
+      · rw [← h]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _)
+    have h1 : μ t ≤ ∑ u ∈ ({t, t.swap} : Finset (Split β)) ∩ F, w u := by
+      rw [hμdef]
+      exact Finset.sum_le_sum_of_subset_of_nonneg hsub
+        (fun u hu _ => le_of_lt (hw u (Finset.mem_inter.mp hu).2))
+    have h2 : ∑ u ∈ ({t, t.swap} : Finset (Split β)) ∩ F, w u
+        = (if t ∈ F then w t else 0) + (if t.swap ∈ F then w t.swap else 0) := by
+      have hne : t ≠ t.swap := fun h => swap_ne t h.symm
+      rw [← Finset.filter_mem_eq_inter, Finset.sum_filter,
+        Finset.sum_insert (by simp [hne]), Finset.sum_singleton]
+    linarith
+  -- (3) `μ t ≤ peelCoeff d t`
+  have hμle : ∀ t ∈ F₀, μ t ≤ peelCoeff (sumMetric F w) t := by
+    intro t ht
+    have hb := hμbound t ht
+    have hc2 : 2 * peelCoeff (sumMetric F w) t
+        = isolationIndex (sumMetric F w) t.sideA t.sideB := by
+      unfold peelCoeff; ring
+    by_cases htF : t ∈ F
+    · simp only [htF, ↓reduceIte] at hb
+      have hA : 2 * (w t + (if t.swap ∈ F then w t.swap else 0))
+          ≤ isolationIndex (sumMetric F w) t.sideA t.sideB :=
+        isolationIndex_ge_two_mul_weight F w hF hw htF
+      linarith
+    · by_cases hts : t.swap ∈ F
+      · simp only [htF, hts, ↓reduceIte] at hb
+        have hA : 2 * (w t.swap + (if (t.swap).swap ∈ F then w (t.swap).swap else 0))
+            ≤ isolationIndex (sumMetric F w) (t.swap).sideA (t.swap).sideB :=
+          isolationIndex_ge_two_mul_weight F w hF hw hts
+        have hA' : 2 * w t.swap ≤ isolationIndex (sumMetric F w) t.sideB t.sideA := by
+          simpa [swap_swap, htF] using hA
+        have hcomm : isolationIndex (sumMetric F w) t.sideB t.sideA
+            = isolationIndex (sumMetric F w) t.sideA t.sideB :=
+          (isolationIndex_comm (sumMetric F w) (sumMetric_symm F w) t.sideA t.sideB).symm
+        linarith
+      · simp only [htF, hts, ↓reduceIte] at hb
+        linarith [hpos t ht]
+  -- (4) 逐点非负 ⇒ 系数相等
+  have hcμ : ∀ t ∈ F₀, peelCoeff (sumMetric F w) t = μ t := by
+    intro t ht
+    obtain ⟨a, ha⟩ := t.nonempty 0
+    obtain ⟨b, hb⟩ := t.nonempty 1
+    have h1 : SplitMetric t a b = 1 := splitMetric_eq_one_of_mem_sideA_mem_sideB ha hb
+    have hnn_term : ∀ s ∈ F₀, 0 ≤ (peelCoeff (sumMetric F w) s - μ s) * SplitMetric s a b :=
+      fun s hs => mul_nonneg (by linarith [hμle s hs]) (splitMetric_nonneg s a b)
+    have hsplit : ∑ s ∈ F₀, (peelCoeff (sumMetric F w) s - μ s) * SplitMetric s a b
+        = ∑ s ∈ F₀, peelCoeff (sumMetric F w) s * SplitMetric s a b
+          - ∑ s ∈ F₀, μ s * SplitMetric s a b := by
+      rw [← Finset.sum_sub_distrib]
+      exact Finset.sum_congr rfl fun s _ => by ring
+    have hzero : ∑ s ∈ F₀, (peelCoeff (sumMetric F w) s - μ s) * SplitMetric s a b = 0 := by
+      have he := heq a b
+      have hμ := hμeq a b
+      have hsum0 : δ₀ a b + ∑ s ∈ F₀, (peelCoeff (sumMetric F w) s - μ s) * SplitMetric s a b
+          = 0 := by
+        rw [hsplit]
+        linarith
+      have hsum_nonneg : 0 ≤ ∑ s ∈ F₀,
+          (peelCoeff (sumMetric F w) s - μ s) * SplitMetric s a b :=
+        Finset.sum_nonneg hnn_term
+      linarith [hnn₀ a b]
+    have hterm := (Finset.sum_eq_zero_iff_of_nonneg hnn_term).mp hzero t ht
+    rw [h1, mul_one] at hterm
+    linarith
+  constructor
+  · intro s
+    constructor
+    · -- ⟹：d-split ⇒ 成员（或其 swap）
+      intro hds
+      obtain ⟨t, htF, htu⟩ := hcov s hds
+      have hcpos : 0 < peelCoeff (sumMetric F w) t := hpos t htF
+      have hμpos : 0 < μ t := by rw [← hcμ t htF]; exact hcpos
+      have hne : (F.filter (fun u => τ u = t)).Nonempty := by
+        rcases Finset.eq_empty_or_nonempty (F.filter (fun u => τ u = t)) with h | h
+        · have hzero : μ t = 0 := by simp [hμdef, h]
+          linarith
+        · exact h
+      obtain ⟨u, hu⟩ := hne
+      obtain ⟨huF, hτu⟩ := Finset.mem_filter.mp hu
+      have hp := (hτspec u huF).2.1
+      rw [hτu] at hp
+      refine ⟨u, huF, ?_⟩
+      rcases htu with h | h
+      · rcases hp with h' | h'
+        · left; exact h'.symm.trans h
+        · right; rw [← h', swap_swap, h]
+      · rcases hp with h' | h'
+        · right; rw [← h', h]
+        · left; rw [← h', h]
+    · -- ⟸：成员（或其 swap）是 d-split（`SplitWeak:975`，已有）
+      rintro ⟨t, htF, hts⟩
+      rcases hts with rfl | hts
+      · exact hmemds t htF
+      · have hsw : s.swap = t := by rw [← hts, swap_swap]
+        exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+          (Or.inr (by rw [hsw]; exact htF))
+  · -- (ii)：`α_s = 2·(w s + [s.swap∈F]·w s.swap)`
+    intro s hs
+    obtain ⟨htF₀, hcases, hsm⟩ := hτspec s hs
+    have hc := hcμ (τ s) htF₀
+    have hc2 : 2 * peelCoeff (sumMetric F w) (τ s)
+        = isolationIndex (sumMetric F w) (τ s).sideA (τ s).sideB := by
+      unfold peelCoeff; ring
+    have hα : isolationIndex (sumMetric F w) s.sideA s.sideB
+        = isolationIndex (sumMetric F w) (τ s).sideA (τ s).sideB := by
+      rcases hcases with h | h
+      · rw [h]
+      · have e1 : s.sideA = (τ s).sideB := by
+          conv_lhs => rw [h.symm]
+          exact swap_sideA (τ s)
+        have e2 : s.sideB = (τ s).sideA := by
+          conv_lhs => rw [h.symm]
+          exact swap_sideB (τ s)
+        rw [e1, e2]
+        exact (isolationIndex_comm (sumMetric F w) (sumMetric_symm F w) (τ s).sideA
+          (τ s).sideB).symm
+    have hb := hμbound (τ s) htF₀
+    have hwlam : (if τ s ∈ F then w (τ s) else 0) + (if (τ s).swap ∈ F then w (τ s).swap else 0)
+        = w s + (if s.swap ∈ F then w s.swap else 0) := by
+      rcases hcases with h | h
+      · rw [h]
+        simp only [hs, ↓reduceIte]
+      · have hτ : τ s = s.swap := by rw [← swap_swap (τ s), h]
+        rw [hτ]
+        simp only [swap_swap, hs, ↓reduceIte]
+        ring
+    have hA : 2 * (w s + (if s.swap ∈ F then w s.swap else 0))
+        ≤ isolationIndex (sumMetric F w) s.sideA s.sideB :=
+      isolationIndex_ge_two_mul_weight F w hF hw hs
+    rw [hα, ← hc2]
+    nlinarith [hA, hα, hb, hwlam, hc, hc2]
+
+end Split
