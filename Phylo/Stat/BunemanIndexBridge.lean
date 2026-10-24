@@ -5813,3 +5813,131 @@ theorem sum_filter_extends_split (δ : α → α → ℝ) (f : Split α → ℝ)
   rw [← Finset.sum_filter_add_sum_filter_not (s := T) (p := fun s => x ∈ s.sideA) (f := f), h1, h2]
 
 end Split
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-! ### Theorem 1 的基例与强归纳 -/
+
+/-- **基例**：`X − (A₀∪B₀) = ∅` ⇒ 只剩 `A₀,B₀` 一个候选 split，和 ≤ `max iso 0`。 -/
+theorem extends_split_sum_le_of_compl_empty (δ : α → α → ℝ) {A₀ B₀ : Finset α}
+    (hA₀ : A₀.Nonempty) (hB₀ : B₀.Nonempty) (hdisj : Disjoint A₀ B₀)
+    (hfull : Finset.univ \ (A₀ ∪ B₀) = ∅) :
+    (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB),
+        isolationIndex δ s.sideA s.sideB) ≤ max (isolationIndex δ A₀ B₀) 0 := by
+  classical
+  have hfull' : A₀ ∪ B₀ = Finset.univ := by
+    refine Finset.Subset.antisymm (Finset.subset_univ _) ?_
+    intro z _
+    by_contra hz
+    have hmem : z ∈ Finset.univ \ (A₀ ∪ B₀) := Finset.mem_sdiff.mpr ⟨Finset.mem_univ z, hz⟩
+    rw [hfull] at hmem
+    simp at hmem
+  have hB₀eq : B₀ = A₀ᶜ := by
+    ext z
+    constructor
+    · intro hz
+      exact Finset.mem_compl.mpr fun h => (Finset.disjoint_left.mp hdisj) h hz
+    · intro hz
+      have h : z ∈ A₀ ∪ B₀ := by rw [hfull']; exact Finset.mem_univ z
+      rcases Finset.mem_union.mp h with h' | h'
+      · exact absurd h' (Finset.mem_compl.mp hz)
+      · exact h'
+  obtain ⟨z, hz⟩ := hB₀
+  have hA₀c : A₀ᶜ.Nonempty := ⟨z, by rw [← hB₀eq]; exact hz⟩
+  set s₀ : Split α := ofSideA A₀ hA₀ hA₀c with hs₀
+  have hs₀A : s₀.sideA = A₀ := by rw [hs₀]; simp
+  have hs₀B : s₀.sideB = A₀ᶜ := by rw [hs₀]; simp
+  have hsub : (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB) ⊆ {s₀} := by
+    intro s hs
+    obtain ⟨-, hA, hB⟩ := Finset.mem_filter.mp hs
+    have hside : s.sideA = A₀ := by
+      refine Finset.Subset.antisymm ?_ hA
+      intro w hw
+      by_contra hwA
+      have hwB : w ∈ B₀ := by
+        rw [hB₀eq]
+        exact Finset.mem_compl.mpr hwA
+      exact (Finset.disjoint_left.mp s.disjoint_sides) hw (hB hwB)
+    exact Finset.mem_singleton.mpr (eq_of_sideA_eq (by rw [hside, hs₀A]))
+  by_cases hmem : s₀ ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB)
+  · have heq : (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB) = {s₀} :=
+      Finset.Subset.antisymm hsub
+        (fun w hw => by rw [Finset.mem_singleton.mp hw]; exact hmem)
+    rw [heq, Finset.sum_singleton, hs₀A, hs₀B, ← hB₀eq]
+    exact le_max_left _ _
+  · have hempty : (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB) = ∅ := by
+      refine Finset.subset_empty.mp ?_
+      intro s hs
+      have hss : s = s₀ := Finset.mem_singleton.mp (hsub hs)
+      exact absurd (hss ▸ hs) hmem
+    rw [hempty, Finset.sum_empty]
+    exact le_max_right _ _
+
+/-- ★★★★★ **BdD Theorem 1（期刊 p.54）—— 证明完成**：对 `X − (A₀∪B₀)` 的基数作归纳。
+
+* 基例（`X − (A₀∪B₀) = ∅`）：`extends_split_sum_le_of_compl_empty`；
+* 归纳步：任取 `x ∈ X − (A₀∪B₀)`，用 `sum_filter_extends_split` 把和按 `x ∈ s.sideA` 拆成两支，
+  两支分别由归纳假设控制（`A₀∪{x},B₀` 与 `A₀,B₀∪{x}` 的「差集」基数各少 1），
+  再用归纳步核心 `isolationIndex_max_add_extends_le` 合并。 -/
+theorem extendsSplitSumLe_holds (δ : α → α → ℝ) : extendsSplitSumLe δ := by
+  classical
+  intro A₀ B₀ hA₀ hB₀ hdisj
+  suffices H : ∀ n (A₀ B₀ : Finset α), A₀.Nonempty → B₀.Nonempty → Disjoint A₀ B₀ →
+      (Finset.univ \ (A₀ ∪ B₀)).card ≤ n →
+      (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB),
+          isolationIndex δ s.sideA s.sideB) ≤ max (isolationIndex δ A₀ B₀) 0 from
+    H ((Finset.univ \ (A₀ ∪ B₀)).card) A₀ B₀ hA₀ hB₀ hdisj le_rfl
+  intro n
+  induction n with
+  | zero =>
+    intro A₀ B₀ hA₀ hB₀ hdisj hcard
+    have hfull : Finset.univ \ (A₀ ∪ B₀) = ∅ := by
+      rcases Finset.eq_empty_or_nonempty (Finset.univ \ (A₀ ∪ B₀)) with h | h
+      · exact h
+      · obtain ⟨z, hz⟩ := h
+        have hpos : 0 < (Finset.univ \ (A₀ ∪ B₀)).card := Finset.card_pos.mpr ⟨z, hz⟩
+        omega
+    exact extends_split_sum_le_of_compl_empty δ hA₀ hB₀ hdisj hfull
+  | succ n ih =>
+    intro A₀ B₀ hA₀ hB₀ hdisj hcard
+    rcases Nat.lt_or_ge (Finset.univ \ (A₀ ∪ B₀)).card (n + 1) with hlt | hge
+    · exact ih A₀ B₀ hA₀ hB₀ hdisj (by omega)
+    · have hcardS : (Finset.univ \ (A₀ ∪ B₀)).card = n + 1 := le_antisymm hcard hge
+      have hne : Finset.univ \ (A₀ ∪ B₀) ≠ ∅ := by
+        intro h
+        rw [h] at hcardS
+        simp at hcardS
+      obtain ⟨x, hx⟩ := Finset.nonempty_iff_ne_empty.mpr hne
+      have hxA : x ∉ A₀ := fun h =>
+        (Finset.mem_sdiff.mp hx).2 (Finset.mem_union_left _ h)
+      have hxB : x ∉ B₀ := fun h =>
+        (Finset.mem_sdiff.mp hx).2 (Finset.mem_union_right _ h)
+      -- 两个「差集」都是 `(univ \ (A₀∪B₀)).erase x`，基数为 `n`
+      have hset1 : Finset.univ \ ((A₀ ∪ {x}) ∪ B₀) = (Finset.univ \ (A₀ ∪ B₀)).erase x := by
+        ext z
+        simp only [Finset.mem_sdiff, Finset.mem_union, Finset.mem_singleton, Finset.mem_erase,
+          Finset.mem_univ, true_and]
+        tauto
+      have hset2 : Finset.univ \ (A₀ ∪ (B₀ ∪ {x})) = (Finset.univ \ (A₀ ∪ B₀)).erase x := by
+        ext z
+        simp only [Finset.mem_sdiff, Finset.mem_union, Finset.mem_singleton, Finset.mem_erase,
+          Finset.mem_univ, true_and]
+        tauto
+      have hcard' : ((Finset.univ \ (A₀ ∪ B₀)).erase x).card = n := by
+        rw [Finset.card_erase_of_mem hx, hcardS]
+        omega
+      have hcard1 : (Finset.univ \ ((A₀ ∪ {x}) ∪ B₀)).card ≤ n := by
+        rw [hset1, hcard']
+      have hcard2 : (Finset.univ \ (A₀ ∪ (B₀ ∪ {x}))).card ≤ n := by
+        rw [hset2, hcard']
+      have ih1 := ih (A₀ ∪ {x}) B₀ ⟨x, by simp⟩ hB₀
+        (Finset.disjoint_union_left.mpr ⟨hdisj, Finset.disjoint_singleton_left.mpr hxB⟩) hcard1
+      have ih2 := ih A₀ (B₀ ∪ {x}) hA₀ ⟨x, by simp⟩
+        (Finset.disjoint_union_right.mpr ⟨hdisj, Finset.disjoint_singleton_right.mpr hxA⟩) hcard2
+      rw [sum_filter_extends_split δ (fun s => isolationIndex δ s.sideA s.sideB) x]
+      exact le_trans (add_le_add ih1 ih2) (isolationIndex_max_add_extends_le δ hA₀ hB₀ x)
+
+end Split
