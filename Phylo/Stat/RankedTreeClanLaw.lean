@@ -415,4 +415,236 @@ theorem yhkClanLawGap_of_blockInterCount (Hc : ∀ m : ℕ, blockInterCount m) :
         rw [← clanHistories_eq_filter n hn A]
         exact hmain
 
+/-! ## 6. P2 的垫脚石：交错计数 ＋ 组合形态 ＋ 根分裂刻画
+
+`blockInterCount`（交项计数）**本批未证**；本节交掉它外面三层：
+
+1. ★ `card_shuffle`：交错数 `= C(p+q, p)`（直接用现成的 `Finset.powersetCard`）；
+2. ★★ `blockInterCount_iff_combinatorial`：`pnHatExh` 形态 ⟺ 「两侧内部成树 × 交错」形态；
+3. ★★★ `both_blocks_iff_rootSplit`：**关键结构刻画** ——
+   「`A` 与 `Aᶜ` 同时是块」⟺「第 `n−2` 层（**根分裂层**）的两块恰为 `A` 与 `Aᶜ`」。
+   ⇒ 下批要证的计数就是「**根分裂恰为 `A | Aᶜ`**」的合并史条数。 -/
+
+/-- ★ **交错（shuffle）计数**：把长度 `p`、`q` 的两列交错，方案数 `= C(p+q, p)`
+（↔ `Fin (p+q)` 里选 `p` 个位置的子集；用现成的 `Finset.powersetCard`，**不**新造 `Shuffle` 类型）。 -/
+theorem card_shuffle (p q : ℕ) :
+    ((Finset.univ : Finset (Fin (p + q))).powersetCard p).card = (p + q).choose p := by
+  rw [Finset.card_powersetCard, Finset.card_univ, Fintype.card_fin]
+
+/-- ★★ **`blockInterCount` 的组合形态（等价）**：把 `pnHatExh` 形态换成
+「`A` 侧内部成树 × `Aᶜ` 侧内部成树 × 交错」，即
+`H |A| · H (n−|A|) · C(n−2, |A|−1)`（由 ★★★ `H_mul_pnHatExh_eq` 双向翻译）。 -/
+theorem blockInterCount_iff_combinatorial (n : ℕ) :
+    blockInterCount n ↔
+      ∀ A : Finset (Fin n), 2 ≤ A.card → A.card ≤ n - 2 →
+        ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ)
+          = RankedGeneTree.H A.card * RankedGeneTree.H (n - A.card)
+            * (((n - 2).choose (A.card - 1) : ℕ) : ℝ) := by
+  constructor
+  · intro H A h1 h2
+    rw [H A h1 h2, H_mul_pnHatExh_eq h1 h2]
+  · intro H A h1 h2
+    rw [H A h1 h2, ← H_mul_pnHatExh_eq h1 h2]
+
+/-- ★★★ **关键结构刻画**（P2 的垫脚石）：「`A` 与 `Aᶜ` 同时是（非单点）块」⟺
+「第 `n−2` 层（**根分裂层**）的两块恰为 `A` 与 `Aᶜ`」。
+
+正向的论证（**已在此证出**）：设 `A` 是第 `LA` 层的块、`Aᶜ` 是第 `LAc` 层的块，
+取各自的见证 `wa ∈ A`、`wb ∈ Aᶜ`，令 `X`、`Y` 为第 `n−2` 层含它们的块。
+由 ★★ `RankedGeneTree.block_subset_of_le` 得 `A ⊆ X`、`Aᶜ ⊆ Y`；
+`A ∈ blockFamily` 的基数界 `|A| ≤ n−2` 排除 `LA = n−1`（那一层只有 `univ`），故 `LA ≤ n−2`。
+由 `IsMergeHistory` 在步 `n−2` 的 `IsStep` 知第 `n−2` 层的代表映射**不是常值**
+（`x < y` 却映到同值），故 `X ≠ univ`、`Y ≠ univ`。
+★ `X`、`Y` 是**同一个映射的两条纤维** ⇒ 相等或相离；相等时 `A ∪ Aᶜ = univ ⊆ X = univ`（矛盾）
+⇒ `Disjoint X Y`，于是 `A = X`、`Aᶜ = Y`（两边夹逼，用 `Aᶜ = univ ∖ A`）。
+反向：第 `n−2` 层是 `range n` 里的一层 ⇒ 在 `cladesOf` 里。 -/
+theorem both_blocks_iff_rootSplit {n : ℕ} (hn : 2 ≤ n) (ω : RankedGeneTree.RankedTree n)
+    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    (A ∈ blockFamily n ω ∧ Aᶜ ∈ blockFamily n ω) ↔
+      (A ∈ RankedGeneTree.blocksOf n (RankedGeneTree.chainMap n ω.1 (n - 2)) ∧
+        Aᶜ ∈ RankedGeneTree.blocksOf n (RankedGeneTree.chainMap n ω.1 (n - 2))) := by
+  classical
+  constructor
+  · rintro ⟨hA, hAc⟩
+    obtain ⟨LA, hLA, hAb⟩ := by
+      simpa only [RankedGeneTree.cladesOf, Finset.mem_biUnion] using
+        mem_cladesOf_of_mem_blockFamily hA
+    obtain ⟨wa, -, hwa⟩ := by
+      simpa only [RankedGeneTree.blocksOf, Finset.mem_image] using hAb
+    obtain ⟨LAc, hLAc, hAcb⟩ := by
+      simpa only [RankedGeneTree.cladesOf, Finset.mem_biUnion] using
+        mem_cladesOf_of_mem_blockFamily hAc
+    obtain ⟨wb, -, hwb⟩ := by
+      simpa only [RankedGeneTree.blocksOf, Finset.mem_image] using hAcb
+    have hwa' : wa ∈ A := by
+      rw [← hwa]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl⟩
+    have hwb' : wb ∈ Aᶜ := by
+      rw [← hwb]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl⟩
+    rw [Finset.mem_range] at hLA hLAc
+    -- 层号上界：`LA = n−1` ⇒ `A = univ`，与 `|A| ≤ n−2` 冲突
+    have hconst : ∀ z, RankedGeneTree.chainMap n ω.1 (n - 1) z
+        = RankedGeneTree.chainMap n ω.1 (n - 1) wa := fun z => ω.2.2 z wa
+    have hLAle : LA ≤ n - 2 := by
+      rcases Nat.lt_or_ge LA (n - 1) with hlt | hge
+      · omega
+      · exfalso
+        have hLAeq : LA = n - 1 := by omega
+        rw [hLAeq] at hwa
+        have hAuniv : A = Finset.univ := by
+          rw [← hwa]
+          refine Finset.eq_univ_of_forall (fun z => ?_)
+          exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hconst z⟩
+        have hcard : A.card = n := by rw [hAuniv, Finset.card_univ, Fintype.card_fin]
+        omega
+    have hLAcle : LAc ≤ n - 2 := by
+      rcases Nat.lt_or_ge LAc (n - 1) with hlt | hge
+      · omega
+      · exfalso
+        have hLAceq : LAc = n - 1 := by omega
+        rw [hLAceq] at hwb
+        have hconstb : ∀ z, RankedGeneTree.chainMap n ω.1 (n - 1) z
+            = RankedGeneTree.chainMap n ω.1 (n - 1) wb := fun z => ω.2.2 z wb
+        have hAcuniv : Aᶜ = Finset.univ := by
+          rw [← hwb]
+          refine Finset.eq_univ_of_forall (fun z => ?_)
+          exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hconstb z⟩
+        have hcard : Aᶜ.card = n := by rw [hAcuniv, Finset.card_univ, Fintype.card_fin]
+        have hA2 : A.card = n := by
+          have := card_compl_eq n A
+          omega
+        omega
+    have hAX : A ⊆ Finset.univ.filter (fun z =>
+        RankedGeneTree.chainMap n ω.1 (n - 2) z = RankedGeneTree.chainMap n ω.1 (n - 2) wa) := by
+      rw [← hwa]
+      exact RankedGeneTree.block_subset_of_le ω.1 hLAle wa
+    have hAcY : Aᶜ ⊆ Finset.univ.filter (fun z =>
+        RankedGeneTree.chainMap n ω.1 (n - 2) z = RankedGeneTree.chainMap n ω.1 (n - 2) wb) := by
+      rw [← hwb]
+      exact RankedGeneTree.block_subset_of_le ω.1 hLAcle wb
+    -- 第 `n−2` 层的代表映射不是常值
+    have hstep := ω.2.1 ⟨n - 2, by omega⟩
+    obtain ⟨hx, hy, hxy⟩ := hstep
+    have hne : ¬ ∀ z w, RankedGeneTree.chainMap n ω.1 (n - 2) z
+        = RankedGeneTree.chainMap n ω.1 (n - 2) w := by
+      intro hc
+      have hEq : (ω.1 ⟨n - 2, by omega⟩).1 = (ω.1 ⟨n - 2, by omega⟩).2 := by
+        rw [← hx, ← hy]
+        exact hc _ _
+      omega
+    have hXne : Finset.univ.filter (fun z =>
+        RankedGeneTree.chainMap n ω.1 (n - 2) z
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wa) ≠ Finset.univ := by
+      intro hc
+      apply hne
+      intro z w
+      have hz : RankedGeneTree.chainMap n ω.1 (n - 2) z
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wa := by
+        have hmem : z ∈ Finset.univ.filter (fun z =>
+            RankedGeneTree.chainMap n ω.1 (n - 2) z
+              = RankedGeneTree.chainMap n ω.1 (n - 2) wa) := by
+          rw [hc]; exact Finset.mem_univ z
+        simpa using hmem
+      have hw : RankedGeneTree.chainMap n ω.1 (n - 2) w
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wa := by
+        have hmem : w ∈ Finset.univ.filter (fun z =>
+            RankedGeneTree.chainMap n ω.1 (n - 2) z
+              = RankedGeneTree.chainMap n ω.1 (n - 2) wa) := by
+          rw [hc]; exact Finset.mem_univ w
+        simpa using hmem
+      rw [hz, hw]
+    have hYne : Finset.univ.filter (fun z =>
+        RankedGeneTree.chainMap n ω.1 (n - 2) z
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wb) ≠ Finset.univ := by
+      intro hc
+      apply hne
+      intro z w
+      have hz : RankedGeneTree.chainMap n ω.1 (n - 2) z
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wb := by
+        have hmem : z ∈ Finset.univ.filter (fun z =>
+            RankedGeneTree.chainMap n ω.1 (n - 2) z
+              = RankedGeneTree.chainMap n ω.1 (n - 2) wb) := by
+          rw [hc]; exact Finset.mem_univ z
+        simpa using hmem
+      have hw : RankedGeneTree.chainMap n ω.1 (n - 2) w
+          = RankedGeneTree.chainMap n ω.1 (n - 2) wb := by
+        have hmem : w ∈ Finset.univ.filter (fun z =>
+            RankedGeneTree.chainMap n ω.1 (n - 2) z
+              = RankedGeneTree.chainMap n ω.1 (n - 2) wb) := by
+          rw [hc]; exact Finset.mem_univ w
+        simpa using hmem
+      rw [hz, hw]
+    -- 同一映射的两条纤维：相等或相离
+    have hXY : (Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wa)
+        = Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wb)) ∨
+        Disjoint (Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wa))
+          (Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wb)) := by
+      rcases eq_or_ne (RankedGeneTree.chainMap n ω.1 (n - 2) wa)
+          (RankedGeneTree.chainMap n ω.1 (n - 2) wb) with heq | hneq
+      · left
+        ext z
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        rw [heq]
+      · right
+        rw [Finset.disjoint_left]
+        intro z hzX hzY
+        exact hneq ((Finset.mem_filter.mp hzX).2.symm.trans (Finset.mem_filter.mp hzY).2)
+    rcases hXY with heq | hdisj
+    · exfalso
+      apply hYne
+      rw [← heq]
+      refine Finset.eq_univ_of_forall (fun z => ?_)
+      by_cases hzA : z ∈ A
+      · exact hAX hzA
+      · have hzAc : z ∈ Aᶜ := by simpa using hzA
+        have hzY : z ∈ Finset.univ.filter (fun z =>
+            RankedGeneTree.chainMap n ω.1 (n - 2) z
+              = RankedGeneTree.chainMap n ω.1 (n - 2) wb) := hAcY hzAc
+        rwa [← heq] at hzY
+    · -- `Disjoint X Y` ⇒ `A = X`、`Aᶜ = Y`
+      have hXsubA : Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wa) ⊆ A := by
+        intro z hzX
+        by_contra hzA
+        have hzAc : z ∈ Aᶜ := by simpa using hzA
+        exact (Finset.disjoint_left.mp hdisj) hzX (hAcY hzAc)
+      have hYsubAc : Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wb) ⊆ Aᶜ := by
+        intro z hzY
+        by_contra hzAc
+        have hzA : z ∈ A := by simpa using hzAc
+        exact (Finset.disjoint_left.mp hdisj) (hAX hzA) hzY
+      have hXeq : Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wa) = A :=
+        Finset.Subset.antisymm hXsubA hAX
+      have hYeq : Finset.univ.filter (fun z =>
+          RankedGeneTree.chainMap n ω.1 (n - 2) z
+            = RankedGeneTree.chainMap n ω.1 (n - 2) wb) = Aᶜ :=
+        Finset.Subset.antisymm hYsubAc hAcY
+      refine ⟨?_, ?_⟩
+      · rw [← hXeq]
+        exact Finset.mem_image.mpr ⟨wa, Finset.mem_univ _, rfl⟩
+      · rw [← hYeq]
+        exact Finset.mem_image.mpr ⟨wb, Finset.mem_univ _, rfl⟩
+  · rintro ⟨hA, hAc⟩
+    have hA' : A ∈ RankedGeneTree.cladesOf n ω.1 := by
+      rw [RankedGeneTree.cladesOf, Finset.mem_biUnion]
+      exact ⟨n - 2, Finset.mem_range.mpr (by omega), hA⟩
+    have hAc' : Aᶜ ∈ RankedGeneTree.cladesOf n ω.1 := by
+      rw [RankedGeneTree.cladesOf, Finset.mem_biUnion]
+      exact ⟨n - 2, Finset.mem_range.mpr (by omega), hAc⟩
+    refine ⟨mem_blockFamily.mpr ⟨hA', h1, h2⟩, mem_blockFamily.mpr ⟨hAc', ?_, ?_⟩⟩
+    · rw [card_compl_eq n A]; omega
+    · rw [card_compl_eq n A]; omega
+
 end Phylo.Stat.RankedTreeClanLaw
