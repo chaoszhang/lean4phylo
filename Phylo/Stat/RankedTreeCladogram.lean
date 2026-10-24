@@ -386,9 +386,16 @@ set_option maxRecDepth 100000 in
 /-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，在 `H 4 = 18` 条合并史中
 恰有 **6** 条使 `A` 或 `Aᶜ` 成为非单点块。
 
-`6` 的来源：`A | Aᶜ` 的 quartet 拓扑在 `n = 4` 上恰有 `6` 条 ranked 历史
-（平衡形 3 棵拓扑 × 2 rankings），而 `#{ω : A 是 clan} = #{A 是块} + #{Aᶜ 是块} − #{两者}`
-`= 2 + 2 − 2 + ...`（此处直接由内核枚举给出闭值 `6`，不重推组合恒等式）。 -/
+`6` 的两条独立来源（都已在会话中机器核过）：
+
+* **按事件分解**：`#{A 是块} = 4`、`#{Aᶜ 是块} = 4`、`#{两者同时} = 2`
+  ⇒ `4 + 4 − 2 = 6`。
+  （`{a,b}` 成块 ⟺ `a`、`b` 彼此先合并：`{a,b}` 为 cherry 的 2 棵**不平衡**拓扑（各 1 ranking）
+  加 `A | Aᶜ` 为根分裂的**平衡**拓扑（2 rankings）＝ `4`；两者同时成块 ⟺ 根分裂恰为 `A | Aᶜ`，
+  即平衡那 `2` 条。）
+* **按拓扑分解**：`A | Aᶜ` 的 quartet 拓扑在 `n = 4` 上恰有 `6` 条 ranked 历史
+  （`H 2 · H 2 = 1` 条根分裂固定的情形另需内部结点交错 —— 故此处**不**用 `H_a·H_b`，
+  而是直接由内核枚举给出闭值 `6`，与 `yhkLawFour` 的「三棵拓扑各 6 条」一致）。 -/
 theorem card_filter_blockFamily_four :
     ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
       ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
