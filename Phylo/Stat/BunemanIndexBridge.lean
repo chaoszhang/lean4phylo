@@ -4840,7 +4840,15 @@ noncomputable def sumMetric {α : Type*} [Fintype α] [DecidableEq α]
   （`§8.12` 的反例正是 `s = s₀.swap ∉ F`、`s.swap = s₀ ∈ F`）。
 
 ★ **状态**：本 `def` 是**待证形态**；`_holds` 见本节末尾（上界 = 唯一具名缺件 (B)）。
-`_holds` 只在真证成时使用。 -/
+`_holds` 只在真证成时使用。
+
+★★★ **W30 已收口**（`2026-10-24`）：`Split.weakCompatibilityRealization_gap_weights_v2_holds`
+在 `Phylo/Stat/BunemanIndexQuartet.lean:274`（落地 commit `beb6517`）—— **零额外前提**、本 `def` **逐字未改**。
+两个合取项分别由：第一项 `⟸` = `isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible`
+（`SplitWeak:975`）、`⟹` = `Split.weakCompatibilityNonMemberCore`（`SplitWeak:1968`）＋
+`core_holds`（`SplitWeak:2539`，W27-b）；第二项 = `isolationIndex_eq_two_mul_weight`
+（含 `|sideA| = 1` / `|sideB| = 1` 的单点侧）。
+上面「待证形态」一句**保留为留痕**（登记时的状态，不删）。 -/
 def weakCompatibilityRealization_gap_weights_v2 : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
@@ -5737,7 +5745,10 @@ theorem isolationIndex_max_add_extends_le (δ : α → α → ℝ) {A₀ B₀ : 
 因此更强（`α ≤ 0` 时右端为 `0`，正是 `Σ = 0` 所需）。
 ★ **未证**（归纳还差：`filter` 按 `x ∈ s.sideA` 分块求和 + 对 `n` 的强归纳 + 基例）。
 已证的零件：`Extends`、`isolationIndex_le_of_subset`、(★) 的 `max` 形、归纳步
-`isolationIndex_max_add_extends_le`。 -/
+`isolationIndex_max_add_extends_le`。
+★★★ **W30 已收口**（`2026-10-24`）：上面「未证」是**登记中间态**；收口见 `## 8.16` 的 `extendsSplitSumLe_holds`
+（落地 commit `fa2530b`）—— 基例 ＋ 对 `#(X−(A₀∪B₀))` 的基数归纳，
+零件再加拆和恒等式 `sum_filter_extends_split`。★ 该定理对**任意** `δ` 成立（不要求对称、不要求度量）。 -/
 def extendsSplitSumLe (δ : α → α → ℝ) : Prop :=
   ∀ (A₀ B₀ : Finset α), A₀.Nonempty → B₀.Nonempty → Disjoint A₀ B₀ →
     (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB),
