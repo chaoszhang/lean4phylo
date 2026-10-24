@@ -5941,3 +5941,117 @@ theorem extendsSplitSumLe_holds (δ : α → α → ℝ) : extendsSplitSumLe δ 
       exact le_trans (add_le_add ih1 ih2) (isolationIndex_max_add_extends_le δ hA₀ hB₀ x)
 
 end Split
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-! ### BdD Corollary 1（期刊 p.56）：极小四元组处的 d-split 唯一 -/
+
+/-- ★★★★★ **BdD Corollary 1（期刊 p.56 = PDF 10 末）**：
+
+设 `s` 是 `δ` 的 d-split，`a1,a2 ∈ s.sideA`、`b1,b2 ∈ s.sideB`，且
+`iso(s) = pairDeficit a1 a2 b1 b2`（即该四元组使隔离指数**取到极小**）。
+则 `s` 是**唯一**延伸部分 d-split `{a1,a2} | {b1,b2}` 的 d-split：
+任何 d-split `t` 若 `a1,a2 ∈ t.sideA` 且 `b1,b2 ∈ t.sideB`，就有 `t = s`。
+
+**证明**（原文的夹逼）：
+1. `s` 本身在求和里，且各项非负 ⇒ `iso(s) ≤ Σ`（`Finset.single_le_sum`）；
+2. `Theorem 1`（`extendsSplitSumLe_holds`）给 `Σ ≤ max(iso({a1,a2},{b1,b2}), 0)`；
+3. 由「`iso(s) ≤ iso(quartet) ≤ pairDeficit a1 a2 b1 b2 = iso(s)`」得
+   `iso(quartet) = iso(s) > 0` ⇒ `Σ ≤ iso(s)`；
+4. 故 `Σ = iso(s)`；若另有 `t ≠ s` 在求和里，则 `iso(s) + iso(t) ≤ Σ = iso(s)`，
+   而 `iso(t) > 0`，矛盾。
+
+★ 只用到 `## 8.16` 的 `extendsSplitSumLe_holds`（Theorem 1），与泳道 b 的路线 A **零共享**。 -/
+theorem eq_of_isDSplit_of_isolationIndex_eq_pairDeficit (δ : α → α → ℝ) {s : Split α}
+    (hds : IsDSplit δ s.sideA s.sideB) {a1 a2 b1 b2 : α}
+    (ha1 : a1 ∈ s.sideA) (ha2 : a2 ∈ s.sideA) (hb1 : b1 ∈ s.sideB) (hb2 : b2 ∈ s.sideB)
+    (hmin : isolationIndex δ s.sideA s.sideB = pairDeficit δ a1 a2 b1 b2) :
+    ∀ {t : Split α}, IsDSplit δ t.sideA t.sideB →
+      a1 ∈ t.sideA → a2 ∈ t.sideA → b1 ∈ t.sideB → b2 ∈ t.sideB → t = s := by
+  classical
+  have hA₀ : ({a1, a2} : Finset α).Nonempty := ⟨a1, by simp⟩
+  have hB₀ : ({b1, b2} : Finset α).Nonempty := ⟨b1, by simp⟩
+  have hsubA : ({a1, a2} : Finset α) ⊆ s.sideA := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with h | h
+    · rw [h]; exact ha1
+    · rw [Finset.mem_singleton.mp h]; exact ha2
+  have hsubB : ({b1, b2} : Finset α) ⊆ s.sideB := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with h | h
+    · rw [h]; exact hb1
+    · rw [Finset.mem_singleton.mp h]; exact hb2
+  have hdisj : Disjoint ({a1, a2} : Finset α) ({b1, b2} : Finset α) := by
+    rw [Finset.disjoint_left]
+    intro z hz hz'
+    exact Finset.disjoint_left.mp s.disjoint_sides (hsubA hz) (hsubB hz')
+  have hpos : 0 < isolationIndex δ s.sideA s.sideB :=
+    (isolationIndex_pos_iff_isDSplit δ (s.nonempty 0) (s.nonempty 1)).mpr hds
+  have hmono : isolationIndex δ s.sideA s.sideB
+      ≤ isolationIndex δ ({a1, a2} : Finset α) ({b1, b2} : Finset α) :=
+    isolationIndex_le_of_subset hsubA hsubB hA₀ hB₀
+  have hle : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2} : Finset α)
+      ≤ pairDeficit δ a1 a2 b1 b2 :=
+    isolationIndex_le_pairDeficit δ hA₀ hB₀ (by simp) (by simp) (by simp) (by simp)
+  have hle' : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2} : Finset α)
+      ≤ isolationIndex δ s.sideA s.sideB := by
+    rw [hmin]; exact hle
+  have hpd_eq : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2} : Finset α)
+      = isolationIndex δ s.sideA s.sideB := le_antisymm hle' hmono
+  set F := (dSplits δ).filter (fun u => ({a1, a2} : Finset α) ⊆ u.sideA ∧
+    ({b1, b2} : Finset α) ⊆ u.sideB) with hF
+  have hterm_nonneg : ∀ u ∈ F, 0 ≤ isolationIndex δ u.sideA u.sideB := by
+    intro u hu
+    exact le_of_lt ((isolationIndex_pos_iff_isDSplit δ (u.nonempty 0) (u.nonempty 1)).mpr
+      (mem_dSplits.mp (Finset.mem_filter.mp hu).1))
+  have hs_mem : s ∈ F := by
+    rw [hF, Finset.mem_filter]
+    exact ⟨mem_dSplits.mpr hds, hsubA, hsubB⟩
+  have hsum_ge : isolationIndex δ s.sideA s.sideB ≤ ∑ u ∈ F, isolationIndex δ u.sideA u.sideB := by
+    have hsub_sing : ({s} : Finset (Split α)) ⊆ F := by
+      intro z hz
+      rw [Finset.mem_singleton.mp hz]
+      exact hs_mem
+    have h := Finset.sum_le_sum_of_subset_of_nonneg hsub_sing (fun u hu hnu => hterm_nonneg u hu)
+    rwa [Finset.sum_singleton] at h
+  have hsum_le : (∑ u ∈ F, isolationIndex δ u.sideA u.sideB)
+      ≤ isolationIndex δ s.sideA s.sideB := by
+    have h := extendsSplitSumLe_holds δ ({a1, a2} : Finset α) ({b1, b2} : Finset α) hA₀ hB₀ hdisj
+    rw [hpd_eq, max_eq_left (le_of_lt hpos)] at h
+    rw [hF]
+    exact h
+  have hsum_eq : (∑ u ∈ F, isolationIndex δ u.sideA u.sideB)
+      = isolationIndex δ s.sideA s.sideB := le_antisymm hsum_le hsum_ge
+  intro t htds ht1 ht2 ht3 ht4
+  by_contra hne
+  have htsubA : ({a1, a2} : Finset α) ⊆ t.sideA := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with h | h
+    · rw [h]; exact ht1
+    · rw [Finset.mem_singleton.mp h]; exact ht2
+  have htsubB : ({b1, b2} : Finset α) ⊆ t.sideB := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with h | h
+    · rw [h]; exact ht3
+    · rw [Finset.mem_singleton.mp h]; exact ht4
+  have ht_mem : t ∈ F := by
+    rw [hF, Finset.mem_filter]
+    exact ⟨mem_dSplits.mpr htds, htsubA, htsubB⟩
+  have hpair_sub : ({s, t} : Finset (Split α)) ⊆ F := by
+    intro z hz
+    rcases Finset.mem_insert.mp hz with h | h
+    · rw [h]; exact hs_mem
+    · rw [Finset.mem_singleton.mp h]; exact ht_mem
+  have hpair_le : isolationIndex δ s.sideA s.sideB + isolationIndex δ t.sideA t.sideB
+      ≤ ∑ u ∈ F, isolationIndex δ u.sideA u.sideB := by
+    have h := Finset.sum_le_sum_of_subset_of_nonneg hpair_sub
+      (fun u hu hnu => hterm_nonneg u hu)
+    rwa [Finset.sum_insert (by rw [Finset.mem_singleton]; exact fun hh => hne hh.symm), Finset.sum_singleton] at h
+  have hpos_t : 0 < isolationIndex δ t.sideA t.sideB :=
+    (isolationIndex_pos_iff_isDSplit δ (t.nonempty 0) (t.nonempty 1)).mpr htds
+  linarith
+
+end Split
