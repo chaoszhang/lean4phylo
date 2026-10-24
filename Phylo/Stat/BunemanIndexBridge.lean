@@ -5570,3 +5570,178 @@ theorem isolationIndex_add_le_pairDeficit (δ : α → α → ℝ) (a1 a2 b1 b2 
   linarith [e1.1, e1.2, e2.1, e2.2]
 
 end Split
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-! ### 单调性（BdD p.54："α_{A',B'} ≥ α_{A,B}"，即延伸使 α 不增） -/
+
+/-- ★★ `isolationIndex` 对两侧同时取超集**单调不增**：`A₀ ⊆ A`、`B₀ ⊆ B` ⇒
+`isolationIndex δ A B ≤ isolationIndex δ A₀ B₀`（四元组集变大 ⇒ `inf'` 变小）。
+
+★ 要求 `A₀,B₀` 非空（否则左端按本库约定为 `0`，命题不真）。 -/
+theorem isolationIndex_le_of_subset {δ : α → α → ℝ} {A₀ B₀ A B : Finset α}
+    (hA : A₀ ⊆ A) (hB : B₀ ⊆ B) (hA₀ : A₀.Nonempty) (hB₀ : B₀.Nonempty) :
+    isolationIndex δ A B ≤ isolationIndex δ A₀ B₀ := by
+  have hA' : A.Nonempty := hA₀.mono hA
+  have hB' : B.Nonempty := hB₀.mono hB
+  have hqsub : isoQuadruples A₀ B₀ ⊆ isoQuadruples A B := by
+    intro q hq
+    obtain ⟨⟨a, a'⟩, b, b'⟩ := q
+    simp only [isoQuadruples, Finset.mem_product] at hq ⊢
+    exact ⟨⟨hA hq.1.1, hA hq.1.2⟩, hB hq.2.1, hB hq.2.2⟩
+  rw [isolationIndex_eq_inf' δ hA' hB', isolationIndex_eq_inf' δ hA₀ hB₀]
+  obtain ⟨q, hq, hqeq⟩ := Finset.exists_mem_eq_inf' (s := isoQuadruples A₀ B₀)
+    (isoQuadruples_nonempty hA₀ hB₀) (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+  calc (isoQuadruples A B).inf' (isoQuadruples_nonempty hA' hB')
+        (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+      ≤ pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2 := by
+        rw [Finset.inf'_le_iff]
+        exact ⟨q, hqsub hq, le_rfl⟩
+    _ = (isoQuadruples A₀ B₀).inf' (isoQuadruples_nonempty hA₀ hB₀)
+        (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2) := hqeq.symm
+
+/-- ★★ **`Extends` 版的单调性**（两侧都延伸 ⇒ α 不增）。 -/
+theorem isolationIndex_le_of_extends {δ : α → α → ℝ} {A₀ B₀ A B : Finset α}
+    (h : Extends A₀ B₀ A B) (hA₀ : A₀.Nonempty) (hB₀ : B₀.Nonempty) :
+    isolationIndex δ A B ≤ isolationIndex δ A₀ B₀ :=
+  isolationIndex_le_of_subset h.1 h.2 hA₀ hB₀
+
+/-! ### (★) 的 BdD 忠实形态（`α` 恒 ≥ 0 ⇒ 库内 `max iso 0 = 2α_BdD`） -/
+
+/-- ★★★★★ **`(★)` 的 `max` 形**（BdD 的 `α` 恒 ≥ 0 的忠实翻译）：
+`max iso₁ 0 + max iso₂ 0 ≤ max β 0`。
+
+这是 Theorem 1 归纳步真正要用的形态：Theorem 1 的 RHS 是 BdD 的 `α_{A₀,B₀}`（**恒 ≥ 0**），
+而在库内 `α_BdD = ½·max(isolationIndex, 0)`；故 RHS 必须写成 `max … 0`。
+
+证明：(★) 的和形（`isolationIndex_add_le_pairDeficit`）＋「`(a1,a2|b1,b2)` 这个四元组对两侧都可用」
+（给出 `iso_i ≤ max β 0`）。反设不成立 ⇒ 每个 `max iso_i 0` 都 > 0 ⇒ `iso_i > 0` 且 `max β 0 > 0`，
+于是 `max iso₁ 0 + max iso₂ 0 = iso₁ + iso₂ ≤ β ≤ max β 0`，矛盾。 -/
+theorem isolationIndex_max_add_le_pairDeficit_max (δ : α → α → ℝ) (a1 a2 b1 b2 x : α) :
+    max (isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}) 0
+      + max (isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)) 0
+      ≤ max (pairDeficit δ a1 a2 b1 b2) 0 := by
+  have hA1 : ({a1, a2, x} : Finset α).Nonempty := ⟨a1, by simp⟩
+  have hB1 : ({b1, b2} : Finset α).Nonempty := ⟨b1, by simp⟩
+  have hA2 : ({a1, a2} : Finset α).Nonempty := ⟨a1, by simp⟩
+  have hB2 : ({b1, b2, x} : Finset α).Nonempty := ⟨b1, by simp⟩
+  have h1B : isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}
+      ≤ pairDeficit δ a1 a2 b1 b2 :=
+    isolationIndex_le_pairDeficit δ hA1 hB1 (by simp) (by simp) (by simp) (by simp)
+  have h2B : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)
+      ≤ pairDeficit δ a1 a2 b1 b2 :=
+    isolationIndex_le_pairDeficit δ hA2 hB2 (by simp) (by simp) (by simp) (by simp)
+  by_contra hcon
+  rw [not_le] at hcon
+  have hm1 : max (isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}) 0
+      ≤ max (pairDeficit δ a1 a2 b1 b2) 0 :=
+    max_le (le_trans h1B (le_max_left _ _)) (le_max_right _ _)
+  have hm2 : max (isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)) 0
+      ≤ max (pairDeficit δ a1 a2 b1 b2) 0 :=
+    max_le (le_trans h2B (le_max_left _ _)) (le_max_right _ _)
+  have hi1 : 0 < isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2} := by
+    by_contra hc
+    rw [not_lt] at hc
+    have hz : max (isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}) 0 = 0 :=
+      max_eq_right hc
+    rw [hz, zero_add] at hcon
+    linarith
+  have hi2 : 0 < isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α) := by
+    by_contra hc
+    rw [not_lt] at hc
+    have hz : max (isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)) 0 = 0 :=
+      max_eq_right hc
+    rw [hz, add_zero] at hcon
+    linarith
+  rw [max_eq_left (le_of_lt hi1), max_eq_left (le_of_lt hi2)] at hcon
+  have hsum := isolationIndex_add_le_pairDeficit δ a1 a2 b1 b2 x
+  linarith [le_max_left (pairDeficit δ a1 a2 b1 b2) 0]
+
+/-! ### Theorem 1 的归纳步（延伸一步：`A₀ ↦ A₀∪{x}`、`B₀ ↦ B₀∪{x}`） -/
+
+/-- ★★★★★ **Theorem 1 的归纳步核心**：「延伸一个点 `x` 后的两支 `α`（按 `max · 0` 计）之和不增」。
+
+即 `max α(A₀∪{x},B₀) 0 + max α(A₀,B₀∪{x}) 0 ≤ max α(A₀,B₀) 0`
+（`2α_BdD = max iso 0`）。
+
+证明：取 `a1,a2 ∈ A₀`、`b1,b2 ∈ B₀` 使 `iso(A₀,B₀) = pairDeficit a1 a2 b1 b2`（`exists_mem_eq_inf'`）。
+* 若 `iso(A₀,B₀) ≥ 0`：单调性把左边换成 `{a1,a2,x},{b1,b2}` 与 `{a1,a2},{b1,b2,x}` 两档，
+  再用 `(★)` 的 `max` 形（`isolationIndex_max_add_le_pairDeficit_max`）；
+* 若 `iso(A₀,B₀) < 0`：单调性给出两档都 ≤ `iso(A₀,B₀) < 0` ⇒ 两个 `max` 都是 `0`，右边 `≥ 0`。
+
+★ 不需要 `x ∉ A₀∪B₀`，也不需要四点互异。 -/
+theorem isolationIndex_max_add_extends_le (δ : α → α → ℝ) {A₀ B₀ : Finset α}
+    (hA₀ : A₀.Nonempty) (hB₀ : B₀.Nonempty) (x : α) :
+    max (isolationIndex δ (A₀ ∪ {x}) B₀) 0 + max (isolationIndex δ A₀ (B₀ ∪ {x})) 0
+      ≤ max (isolationIndex δ A₀ B₀) 0 := by
+  obtain ⟨q, hq, hqeq⟩ := Finset.exists_mem_eq_inf' (s := isoQuadruples A₀ B₀)
+    (isoQuadruples_nonempty hA₀ hB₀) (fun q => pairDeficit δ q.1.1 q.1.2 q.2.1 q.2.2)
+  obtain ⟨⟨a1, a2⟩, b1, b2⟩ := q
+  obtain ⟨ha1, ha2, hb1, hb2⟩ := mem_isoQuadruples.mp hq
+  have hiso : isolationIndex δ A₀ B₀ = pairDeficit δ a1 a2 b1 b2 := by
+    rw [isolationIndex_eq_inf' δ hA₀ hB₀]
+    exact hqeq
+  by_cases hpos : 0 ≤ isolationIndex δ A₀ B₀
+  · have hsub1 : ({a1, a2, x} : Finset α) ⊆ A₀ ∪ {x} := by
+      intro z hz
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with rfl | rfl | rfl <;> simp [ha1, ha2]
+    have hsub2 : ({b1, b2} : Finset α) ⊆ B₀ := by
+      intro z hz
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with rfl | rfl <;> simp [hb1, hb2]
+    have hsub3 : ({a1, a2} : Finset α) ⊆ A₀ := by
+      intro z hz
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with rfl | rfl <;> simp [ha1, ha2]
+    have hsub4 : ({b1, b2, x} : Finset α) ⊆ B₀ ∪ {x} := by
+      intro z hz
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hz
+      rcases hz with rfl | rfl | rfl <;> simp [hb1, hb2]
+    have hmono1 : max (isolationIndex δ (A₀ ∪ {x}) B₀) 0
+        ≤ max (isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}) 0 :=
+      max_le_max
+        (isolationIndex_le_of_subset hsub1 hsub2 ⟨a1, by simp⟩ ⟨b1, by simp⟩) (le_refl 0)
+    have hmono2 : max (isolationIndex δ A₀ (B₀ ∪ {x})) 0
+        ≤ max (isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)) 0 :=
+      max_le_max
+        (isolationIndex_le_of_subset hsub3 hsub4 ⟨a1, by simp⟩ ⟨b1, by simp⟩) (le_refl 0)
+    have hstar := isolationIndex_max_add_le_pairDeficit_max δ a1 a2 b1 b2 x
+    rw [← hiso] at hstar
+    linarith
+  · have hlt : isolationIndex δ A₀ B₀ < 0 := lt_of_not_ge hpos
+    have hm1 : max (isolationIndex δ (A₀ ∪ {x}) B₀) 0 = 0 := by
+      rw [max_eq_right]
+      exact le_of_lt (lt_of_le_of_lt
+        (isolationIndex_le_of_subset (subset_union_left) (subset_rfl) hA₀ hB₀) hlt)
+    have hm2 : max (isolationIndex δ A₀ (B₀ ∪ {x})) 0 = 0 := by
+      rw [max_eq_right]
+      exact le_of_lt (lt_of_le_of_lt
+        (isolationIndex_le_of_subset (subset_rfl) (subset_union_left) hA₀ hB₀) hlt)
+    rw [hm1, hm2, zero_add]
+    exact le_max_right _ _
+
+/-! ### Theorem 1 的具名陈述（BdD 期刊 p.54；本库 `max` 形） -/
+
+/-- ★★★★ **BdD Theorem 1（期刊 p.54）的库内形态，具名陈述**：
+
+`Σ{α_{A,B} | A,B 是延伸 A₀,B₀ 的 d-split} ≤ α_{A₀,B₀}`，其中 `α_BdD = ½·max(iso,0)`，
+故两边乘 2 后本库形态为
+
+`Σ_{s ∈ dSplits δ, A₀ ⊆ s.sideA, B₀ ⊆ s.sideB} isolationIndex δ s.sideA s.sideB ≤ max (isolationIndex δ A₀ B₀) 0`。
+
+★ 原文前提：`A₀,B₀` 是 **partial d-split**（`α > 0`）；本形态对任意非空不交的 `A₀,B₀` 都取 `max`，
+因此更强（`α ≤ 0` 时右端为 `0`，正是 `Σ = 0` 所需）。
+★ **未证**（归纳还差：`filter` 按 `x ∈ s.sideA` 分块求和 + 对 `n` 的强归纳 + 基例）。
+已证的零件：`Extends`、`isolationIndex_le_of_subset`、(★) 的 `max` 形、归纳步
+`isolationIndex_max_add_extends_le`。 -/
+def extendsSplitSumLe (δ : α → α → ℝ) : Prop :=
+  ∀ (A₀ B₀ : Finset α), A₀.Nonempty → B₀.Nonempty → Disjoint A₀ B₀ →
+    (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB),
+        isolationIndex δ s.sideA s.sideB)
+      ≤ max (isolationIndex δ A₀ B₀) 0
+
+end Split
