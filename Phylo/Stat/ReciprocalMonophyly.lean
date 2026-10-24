@@ -2501,7 +2501,31 @@ attached to its incident edge」。
 从 `3` 叶的 `Y` 形出发，第 `k` 步（`4 ≤ k ≤ n`）在**现有 `k−1` 片叶**里均匀选一片，故
 历史（history）空间大小 `3·4···(n−1) = (n−1)!/2`，每条历史等概率 `2/(n−1)!`。
 下面把这两件在**一般 `n`** 上形式化（这是缺口 ① 的「数据槽」：`MSCTreeLaw n` 的
-`Ω` 与 `prob` 两个槽；`tree` 槽需要把历史送到 `Cladogram (Fin n)`，见 §11.1 末的说明）。 -/
+`Ω` 与 `prob` 两个槽；`tree` 槽需要把历史送到 `Cladogram (Fin n)`，见 §11.1 末的说明）。
+
+★★★ **W30 泳道c 口径更正（2026-10-24，机器核过的证据：`scripts/msc/w30c_history_model_check.py`）**：
+
+**本节的空间编码的是「选哪片叶」，漏了「新叶挂到 split 的哪一侧」这一自由度**
+（ZDS `:1000-1006` 原文是 "a new leaf (**with a random label**) is attached"），
+所以 **`yhkHistorySpace n` 不是 YHK 律的载体**：
+
+* `n ≥ 5` 时它的历史只覆盖标号无根二叉树的一个**真子集**（`n = 5`: 12 条历史 → 12 棵，
+  而真值 `(2n−5)!! = 15` 棵；`n = 6`: 60 棵 vs 105 棵）；
+* 于是其测度不是 YHK 律：`n = 5` 的 clan 概率算成 `1/6`（`a = 2`）、`1/4`（`a = 3`），
+  而闭式给 `clanProb 5 2 = 1/5`、`clanProb 5 3 = 1/5`；`n = 6` 是 `1/10 vs 11/75` 等；
+* ⇒ **不得**把 `yhkHistorySpace n`（连同 `yhkHistoryProb n`）填进 `YHKClanLawGap`（§6）的
+  `Ω / prob / tree` 槽 —— 那会把缺口命题在 `n = 5` 上变成**假**命题。
+
+**本节保留的结论仍然为真**（它们只陈述*那个*空间）：
+`two_mul_card_yhkHistorySpace`、`sum_yhkHistoryProb`（`Σ = 1`）、
+`yhkHistoryLawFour_match`（`n = 4` 的匹配是**巧合**：4 叶时「挂叶边」与「挂内部边」给同一批 `3` 棵树）。
+
+**正解（已在库内，不必新造）**：合并对序列（coalescent history）
+`RankedTree n` / `mergeHistories n`（`Phylo/Stat/RankedGeneTree.lean:165-169`），
+基数 ★★★ `card_mergeHistories_eq_H`（`Phylo/Stat/CoalescentHistoryCount.lean:578`）
+`= n!(n−1)!/2^{n−1}`；每条等概率 `2^{n−1}/(n!(n−1)!)` ⇒ 有根标号拓扑 `T` 的概率
+`= #hist(T)·p = (n−1)!/g · p = 2^{n−1}/(n! g)`，**恰是 §11.1 的 `P_rooted`**（故测度对）。
+同一脚本 (B) 段已在 `n = 3..7` 上把「合并历史的 clan 频率」与 `clanProb` **逐点核成相等**。 -/
 
 /-- ★★ **YHK 无根过程的历史空间**（文献 `:1000-1006`）：第 `k` 步在 `k−1` 片叶里选一片，
 故用 `Fin (n−3) → Fin (k+3)` 编码（`k` 从 `0` 起，第 `k` 步有 `k+3` 片叶）。
