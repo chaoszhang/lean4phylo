@@ -5459,3 +5459,114 @@ theorem weakCompatibilityRealization_gap_weights_v2_of_coeffFaithful
     nlinarith [hA, hα, hb, hwlam, hc, hc2]
 
 end Split
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-! ## 8.16 W30 泳道 a（续）：BdD Theorem 1 的前置件
+
+BdD 1992 期刊 p.54（PDF 8）的定义与陈述（逐字）：
+
+* `α_{A,B} := ½·min_{a,a'∈A, b,b'∈B} (max{ab+a'b', a'b+ab', aa'+bb'} − aa' − bb')`
+  —— ★注意 `max` **含第三项** `aa'+bb'`，故 **BdD 的 α 恒 ≥ 0**；本库 `isolationIndex` 的 `max` 只有
+  两项（可负），两者关系为 `α_BdD = ½·max (isolationIndex, 0)`（当 `α_BdD > 0` 时即
+  `isolationIndex = 2α_BdD`，也就是 `IsDSplit` 的情形 —— 见本文件头部 §0 的 ★D 校正）。
+* 「`A,B` extends `A',B'` if `A' ⊆ A` and `B' ⊆ B`」，且此时 `α_{A',B'} ≥ α_{A,B}`。
+* **THEOREM 1**：`d` 对称、`A₀,B₀` 是 **partial d-split**（`α > 0`）⇒
+  `Σ{α_{A,B} | A,B 是延伸 A₀,B₀ 的 d-split} ≤ α_{A₀,B₀}`。
+
+本小节只落地「延伸」偏序与 **(★)**（p.55）。 -/
+
+/-- `A₀,B₀` 被 `A,B` **延伸**（BdD 期刊 p.54："A, B extends another partial d-split A', B'
+if A' ⊆ A and B' ⊆ B"）。 -/
+def Extends (A₀ B₀ A B : Finset α) : Prop := A₀ ⊆ A ∧ B₀ ⊆ B
+
+omit [Fintype α] [DecidableEq α] in
+theorem extends_refl (A₀ B₀ : Finset α) : Extends A₀ B₀ A₀ B₀ := ⟨subset_rfl, subset_rfl⟩
+
+omit [Fintype α] [DecidableEq α] in
+theorem extends_trans {A₀ B₀ A B A' B' : Finset α}
+    (h1 : Extends A₀ B₀ A B) (h2 : Extends A B A' B') : Extends A₀ B₀ A' B' :=
+  ⟨h1.1.trans h2.1, h1.2.trans h2.2⟩
+
+/-! ### (★) 的实数核（BdD 期刊 p.55，逐字的四情形版） -/
+
+/-- ★★★ **`(★)` 的实数核（反设形式）**。
+
+设 `U1 = d(a1,x)`、`U2 = d(a2,x)`、`W1 = d(x,b1)`、`W2 = d(x,b2)`、
+`Pij = d(ai,bj)`、`S = d(a1,a2)`、`T = d(b1,b2)`。
+四条 `α ≤ 具体 β` 型的界 + 「结论不成立」（`H`）⇒ 两个严格不等式。
+
+证明照原文四情形：`max` 取哪一项 × `max` 取哪一项；两个对角情形直接与 `max` 的上界矛盾，
+两个交叉情形各推出 `P11+U2 > U1+P21` 与 `P12+U2 > U1+P22`。 -/
+theorem star_real_key {A1 A2 U1 U2 W1 W2 P11 P12 P21 P22 S T : ℝ}
+    (h1 : A1 ≤ max (P11 + W2) (P12 + W1) - (U1 + T))
+    (_h1' : A1 ≤ max (P21 + W2) (P22 + W1) - (U2 + T))
+    (h2 : A2 ≤ max (U1 + P21) (P11 + U2) - (S + W1))
+    (h2' : A2 ≤ max (U1 + P22) (P12 + U2) - (S + W2))
+    (H : max (P11 + P22) (P12 + P21) - (S + T) < A1 + A2) :
+    P11 + U2 > U1 + P21 ∧ P12 + U2 > U1 + P22 := by
+  have hmaxP : P11 + P22 ≤ max (P11 + P22) (P12 + P21) := le_max_left _ _
+  have hmaxQ : P12 + P21 ≤ max (P11 + P22) (P12 + P21) := le_max_right _ _
+  rcases le_total (P12 + W1) (P11 + W2) with hA | hA
+  · rw [max_eq_left hA] at h1
+    rcases le_total (P12 + U2) (U1 + P22) with hB | hB
+    · rw [max_eq_left hB] at h2'
+      exfalso
+      linarith
+    · rw [max_eq_right hB] at h2'
+      exact ⟨by linarith, by linarith⟩
+  · rw [max_eq_right hA] at h1
+    rcases le_total (P11 + U2) (U1 + P21) with hB | hB
+    · rw [max_eq_left hB] at h2
+      exfalso
+      linarith
+    · rw [max_eq_right hB] at h2
+      exact ⟨by linarith, by linarith⟩
+
+/-- ★★★★★ **`(★)`（BdD 1992 期刊 p.55，本库口径）**。
+
+`α_{{a1,a2,x},{b1,b2}} + α_{{a1,a2},{b1,b2,x}} ≤ β_{{a1,a2},{b1,b2}}`
+
+其中库内 `isolationIndex = 2α`、`pairDeficit = 2β`（均无 `½`），故上式**两边同乘 2** 后逐字为
+`isolationIndex δ {a1,a2,x} {b1,b2} + isolationIndex δ {a1,a2} {b1,b2,x} ≤ pairDeficit δ a1 a2 b1 b2`。
+
+证明：反设不成立，`star_key` 给出 `a1` 与 `a2` 两个方向各一对严格不等式；再对 `a1 ↔ a2` 对称地
+应用一次（`h1 ↔ h1'`，`h2,h2'` 在该交换下不变）即得反向严格不等式，矛盾。
+
+★ **零假设**：不要求 `δ` 对称、不要求度量、不要求四点互异（与原文一致 —— 只用
+`α ≤ β`（`isolationIndex_le_pairDeficit`）与实数运算）。 -/
+theorem isolationIndex_add_le_pairDeficit (δ : α → α → ℝ) (a1 a2 b1 b2 x : α) :
+    isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}
+      + isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)
+      ≤ pairDeficit δ a1 a2 b1 b2 := by
+  have hA1 : ({a1, a2, x} : Finset α).Nonempty := ⟨a1, by simp⟩
+  have hB1 : ({b1, b2} : Finset α).Nonempty := ⟨b1, by simp⟩
+  have hA2 : ({a1, a2} : Finset α).Nonempty := ⟨a1, by simp⟩
+  have hB2 : ({b1, b2, x} : Finset α).Nonempty := ⟨b1, by simp⟩
+  have h1 : isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}
+      ≤ max (δ a1 b1 + δ x b2) (δ a1 b2 + δ x b1) - (δ a1 x + δ b1 b2) :=
+    isolationIndex_le_pairDeficit δ hA1 hB1 (by simp) (by simp) (by simp) (by simp)
+  have h1' : isolationIndex δ ({a1, a2, x} : Finset α) {b1, b2}
+      ≤ max (δ a2 b1 + δ x b2) (δ a2 b2 + δ x b1) - (δ a2 x + δ b1 b2) :=
+    isolationIndex_le_pairDeficit δ hA1 hB1 (by simp) (by simp) (by simp) (by simp)
+  have h2 : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)
+      ≤ max (δ a1 x + δ a2 b1) (δ a1 b1 + δ a2 x) - (δ a1 a2 + δ x b1) :=
+    isolationIndex_le_pairDeficit δ hA2 hB2 (by simp) (by simp) (by simp) (by simp)
+  have h2' : isolationIndex δ ({a1, a2} : Finset α) ({b1, b2, x} : Finset α)
+      ≤ max (δ a1 x + δ a2 b2) (δ a1 b2 + δ a2 x) - (δ a1 a2 + δ x b2) :=
+    isolationIndex_le_pairDeficit δ hA2 hB2 (by simp) (by simp) (by simp) (by simp)
+  by_contra hcon
+  rw [show pairDeficit δ a1 a2 b1 b2
+      = max (δ a1 b1 + δ a2 b2) (δ a1 b2 + δ a2 b1) - (δ a1 a2 + δ b1 b2) from rfl] at hcon
+  rw [not_le] at hcon
+  have e1 := star_real_key h1 h1' h2 h2' hcon
+  have e2 := star_real_key h1' h1
+    (by simpa [add_comm, max_comm] using h2)
+    (by simpa [add_comm, max_comm] using h2')
+    (by simpa [add_comm, add_left_comm, add_assoc, max_comm, max_left_comm, max_assoc] using hcon)
+  linarith [e1.1, e1.2, e2.1, e2.2]
+
+end Split
