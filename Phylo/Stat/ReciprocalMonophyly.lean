@@ -4365,4 +4365,140 @@ theorem subFamily_sides_card {ω : rootedSplitFamily n} {A : Finset (Fin n)}
   · rw [Split.away_of_mem _ hρ]; exact hnt.2
   · rw [Split.away_of_notMem _ hρ]; exact hnt.1
 
+
+/-! ### 11.21 Lemma 4.1 的**归纳核**（递推 ⇒ 闭式）
+
+ZDS 2011（论文 p.5，`.w30/img/…_p5-05.png` 已逐字读）在 Lemma 4.1 的注记里给出另一条证明：
+「也可对 `n` 归纳，用 YHK 模型的已知性质：**两个极大子树之一的叶子数在 `1..n−1` 上均匀分布**」。
+本节把这一段的**归纳部分**（递推 ⇒ 闭式）做完 —— 它与概率层解耦，只涉及 `ℝ` 上的求和。
+
+递推（记 `E_n(a)` = `n` 叶有根 YHK 树中 size-`a` 的 **proper** clade 数的期望；`1 ≤ a ≤ n−1`）：
+
+```text
+E_n(a) = (2/(n−1))·Σ_{k=1}^{n−1} E_k(a) + 2/(n−1)
+```
+
+* `2/(n−1)` 的来历：给定了根分裂成 `k`、`n−k` 两棵子树，**两个子树各自**是一个 size 为
+  `k`（resp. `n−k`）的 proper clade，故 `k = a` 与 `n−k = a` 各贡献 `1`；`2a = n` 时**仍然是 `2`**
+  （两个子树**都**是 size-`a` 的 proper clade），不是 `1 + [2a ≠ n]`。
+* 边界 `E_k(a) = 0`（`a ≥ k`：`k` 叶树没有 size-`a` 的 proper clade）。
+* 端点核对：`E_n(1) = n`、`E_n(n−1) = 1`。
+
+⚠️ **本条不证递推**：递推 = 「极大子树叶子数均匀」这条**概率公理**在库内的落地，
+等价于 `rootedSplitFamily` 的**根分裂分解**（§11.17 的规格、§11.20 的载体运输）；
+库内目前只有 `Fin 4` 的实例（`yhkLawFour`）。 -/
+
+/-- ★ **Gauss 求和（实数形态）**：`∑_{i<m} i = m(m−1)/2`。 -/
+theorem sum_range_cast_id (m : ℕ) :
+    ∑ i ∈ Finset.range m, (i : ℝ) = (m : ℝ) * ((m : ℝ) - 1) / 2 := by
+  induction m with
+  | zero => simp
+  | succ j ih =>
+      rw [Finset.sum_range_succ, ih]
+      push_cast
+      ring
+
+/-- ★ **区间求和**：`∑_{m ≤ k < n} k = (n(n−1) − m(m−1))/2`（`m ≤ n`）。 -/
+theorem sum_Ico_cast_id {m n : ℕ} (h : m ≤ n) :
+    ∑ k ∈ Finset.Ico m n, (k : ℝ) = ((n : ℝ) * ((n : ℝ) - 1) - (m : ℝ) * ((m : ℝ) - 1)) / 2 := by
+  rw [Finset.sum_Ico_eq_sum_range]
+  have hcast : ∀ k : ℕ, ((m + k : ℕ) : ℝ) = (m : ℝ) + (k : ℝ) := by
+    intro k
+    push_cast
+    ring
+  simp only [hcast]
+  rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_range, nsmul_eq_mul,
+    sum_range_cast_id]
+  have hdn : (((n - m : ℕ)) : ℝ) = (n : ℝ) - (m : ℝ) := Nat.cast_sub h
+  rw [hdn]
+  ring
+
+/-- ★★★ **Lemma 4.1 的归纳核**：满足 YHK **根分裂递推**、且在 `a ≥ k` 处为零的
+`E : ℕ → ℕ → ℝ`，其值必为 `2n/(a(a+1))`。
+
+即 ZDS 2011 p.5 的「对 `n` 归纳」那一段（`E_n(a) = 2n/(a(a+1))`，`1 ≤ a ≤ n−1`），
+**已机器核**；缺的只是递推本身（= YHK 的极大子树均匀性）。 -/
+theorem cladeExpectation_eq_of_rootSplitRecursion
+    (E : ℕ → ℕ → ℝ)
+    (hzero : ∀ k a : ℕ, a ≥ k → E k a = 0)
+    (hstep : ∀ n a : ℕ, 2 ≤ n → 1 ≤ a → a ≤ n - 1 →
+      E n a = 2 / ((n : ℝ) - 1) * (∑ k ∈ Finset.Ico 1 n, E k a) + 2 / ((n : ℝ) - 1)) :
+    ∀ n a : ℕ, 1 ≤ a → a ≤ n - 1 → E n a = 2 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1)) := by
+  intro n
+  induction n using Nat.strong_induction_on with
+  | _ n ih =>
+    intro a h1 ha
+    have hn2 : 2 ≤ n := by omega
+    rw [hstep n a hn2 h1 ha]
+    -- 求和截断到 `k ≥ a + 1`（`k ≤ a` 的项全为 `0`）
+    have hcut : ∑ k ∈ Finset.Ico 1 n, E k a = ∑ k ∈ Finset.Ico (a + 1) n, E k a := by
+      have hcons := Finset.sum_Ico_consecutive (fun k => E k a)
+        (show 1 ≤ a + 1 by omega) (show a + 1 ≤ n by omega)
+      have hz : ∑ k ∈ Finset.Ico 1 (a + 1), E k a = 0 := by
+        refine Finset.sum_eq_zero (fun k hk => ?_)
+        rw [Finset.mem_Ico] at hk
+        exact hzero k a (by omega)
+      rw [hz, zero_add] at hcons
+      exact hcons.symm
+    rw [hcut]
+    -- 归纳假设：`k > a` 时 `E_k(a) = 2k/(a(a+1))`
+    have hterm : ∑ k ∈ Finset.Ico (a + 1) n, E k a
+        = (2 / ((a : ℝ) * ((a : ℝ) + 1))) * ∑ k ∈ Finset.Ico (a + 1) n, (k : ℝ) := by
+      rw [Finset.mul_sum]
+      refine Finset.sum_congr rfl (fun k hk => ?_)
+      rw [Finset.mem_Ico] at hk
+      rw [ih k hk.2 a (by omega) (by omega)]
+      ring
+    rw [hterm, sum_Ico_cast_id (show a + 1 ≤ n by omega)]
+    have hn1 : (0 : ℝ) < (n : ℝ) - 1 := by
+      have : (1 : ℝ) < (n : ℝ) := by exact_mod_cast hn2
+      linarith
+    have ha0 : (0 : ℝ) < (a : ℝ) := by
+      have : 0 < a := by omega
+      exact_mod_cast this
+    have hne1 : ((n : ℝ) - 1) ≠ 0 := ne_of_gt hn1
+    have hne2 : ((a : ℝ) * ((a : ℝ) + 1)) ≠ 0 := by positivity
+    push_cast
+    field_simp
+    ring
+
+
+/-! ### 11.22 Lemma 4.2 的**双重计数**（(EP) 那一步的前半，**不需要 (EP)**）
+
+ZDS 2011 p.6（`.w30/img/…_p6-06.png` 已逐字读）对 Lemma 4.2 的证明是：
+
+```text
+p_n(A) = Σ_{k≥0} P(T has k clades of size a)·k/C(n,a) = E[X_n(a)]·C(n,a)^{-1}
+```
+
+第一个等号 = **双重计数**（把「(A, T) 对」按 A 数、按 T 数）+ **(EP)**（各 `A` 等概率）。
+本节只做其中**不需要 (EP)** 的那一半（纯 `Finset.sum_comm`）：
+
+```text
+∑_{|A|=a} P(A 是 T 的 clade) = ∑_T P(T)·X_T(a)
+```
+
+左端对 `A` 的求和用库内的事件「`(tree ω).IsClade A`」表示，右端的 `X_T(a)` 写成
+「size-`a` 且是 clade 的 `A` 的**个数**」。 -/
+
+/-- ★★ **双重计数恒等式**（Lemma 4.2 证明的第一个等号，**无需** (EP) 的等变性）：
+`∑_{|A|=a} P(A 是 clade) = ∑_ω prob ω · X_ω(a)`。 -/
+theorem sum_cladeEvent_eq_sum_cladeCount {n : ℕ} {Ω : Type} [Fintype Ω]
+    (prob : Ω → ℝ) (tree : Ω → Cladogram.{0, 0} (Fin n)) (a : ℕ) :
+    (∑ A ∈ (Finset.univ : Finset (Finset (Fin n))).filter (fun A => A.card = a),
+        ∑ ω ∈ (Finset.univ : Finset Ω).filter (fun ω => (tree ω).IsClade A), prob ω)
+      = ∑ ω : Ω, prob ω * (((Finset.univ : Finset (Finset (Fin n))).filter
+          (fun A => A.card = a ∧ (tree ω).IsClade A)).card : ℝ) := by
+  classical
+  have hL : ∀ A : Finset (Fin n),
+      (∑ ω ∈ (Finset.univ : Finset Ω).filter (fun ω => (tree ω).IsClade A), prob ω)
+        = ∑ ω : Ω, if (tree ω).IsClade A then prob ω else 0 := by
+    intro A
+    rw [Finset.sum_filter]
+  simp only [hL]
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl (fun ω _ => ?_)
+  rw [← Finset.sum_filter, Finset.filter_filter, Finset.sum_const, nsmul_eq_mul, mul_comm]
+
+
 end Phylo.Stat.ReciprocalMonophyly
