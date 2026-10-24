@@ -53,6 +53,82 @@ theorem H_pos (n : ℕ) : 0 < RankedGeneTree.H n := by
     exact Nat.choose_pos (by omega : 2 ≤ k + 2)
   exact_mod_cast h
 
+/-! ## 2b. 交项计数的两条形态之间的**纯算术桥**
+
+组合计数自然会给出 `H a · H (n−a) · C(n−2, a−1)`（「`A` 与 `Aᶜ` 各自内部成树」×「内部结点
+排序交错」），而闭形式侧是 `H n · pnHatExh n a`。两者**相等**：
+
+```
+H n · pnHatExh n a = H a · H (n−a) · C(n−2, a−1)      （2 ≤ a ≤ n−2）
+```
+
+证法：两边都用 `H_eq_factorial`（`H ℓ = ℓ!(ℓ−1)!/2^{ℓ−1}`）展开，
+`(a+b−1)! = (a+b−1)·(a+b−2)!`、`2^{a+b−1} = 2·2^{a−1}·2^{b−1}`、
+`C(m,k) = m!/(k!(m−k)!)`，两边都化成 `a!·b!·(n−2)!/2^{n−2}`。 -/
+
+/-- `m.choose k` 的阶乘比形式（`k ≤ m`）：`C(m,k) = m!/(k!(m−k)!)`。 -/
+theorem choose_eq_fact_div (m k : ℕ) (h : k ≤ m) :
+    ((m.choose k : ℕ) : ℝ) = (m.factorial : ℝ) / ((k.factorial : ℝ) * ((m - k).factorial : ℝ)) := by
+  have h1 : ((m.choose k : ℕ) : ℝ) * ((k.factorial : ℝ) * ((m - k).factorial : ℝ))
+      = (m.factorial : ℝ) := by
+    have := congrArg (fun x : ℕ => (x : ℝ)) (Nat.choose_mul_factorial_mul_factorial h)
+    push_cast at this
+    linear_combination this
+  have hk : ((k.factorial : ℝ)) ≠ 0 := by
+    have := Nat.factorial_pos k
+    positivity
+  have hmk : ((m - k).factorial : ℝ) ≠ 0 := by
+    have := Nat.factorial_pos (m - k)
+    positivity
+  rw [eq_div_iff (mul_ne_zero hk hmk)]
+  linarith [h1]
+
+/-- ★★★ **算术桥（两变量版）**：`H (a+b) · pnHatExh (a+b) a = H a · H b · C(a+b−2, a−1)`。 -/
+theorem H_mul_pnHatExh_eq' {a b : ℕ} (ha : 2 ≤ a) (hb : 2 ≤ b) :
+    RankedGeneTree.H (a + b) * pnHatExh (a + b) a
+      = RankedGeneTree.H a * RankedGeneTree.H b * (((a + b - 2).choose (a - 1) : ℕ) : ℝ) := by
+  have ha1 : a ≤ a + b := by omega
+  have h2 : a - 1 ≤ a + b - 2 := by omega
+  have hsub : a + b - 2 - (a - 1) = b - 1 := by omega
+  rw [RankedGeneTree.H_eq_factorial (a + b), RankedGeneTree.H_eq_factorial a,
+    RankedGeneTree.H_eq_factorial b, pnHatExh,
+    choose_eq_fact_div (a + b) a ha1, choose_eq_fact_div (a + b - 2) (a - 1) h2, hsub]
+  rw [show a + b - a = b from by omega]
+  rw [show ((a + b : ℕ) : ℝ) - 1 = ((a + b - 1 : ℕ) : ℝ) from by
+    push_cast [Nat.cast_sub (by omega : 1 ≤ a + b)]
+    norm_num]
+  have hfac : ((a + b - 1).factorial : ℝ)
+      = ((a + b - 1 : ℕ) : ℝ) * ((a + b - 2).factorial : ℝ) := by
+    have h : a + b - 1 = (a + b - 2) + 1 := by omega
+    rw [h, Nat.factorial_succ]
+    push_cast
+    ring
+  have hpow : (2 : ℝ) ^ (a + b - 1) = 2 * ((2 : ℝ) ^ (a - 1) * (2 : ℝ) ^ (b - 1)) := by
+    have h : a + b - 1 = (a - 1) + (b - 1) + 1 := by omega
+    rw [h, pow_succ, pow_add]
+    ring
+  have hne : ((a + b - 1 : ℕ) : ℝ) ≠ 0 := by
+    have h : (0 : ℕ) < a + b - 1 := by omega
+    exact_mod_cast (ne_of_gt h)
+  rw [hfac, hpow]
+  field_simp
+
+/-- ★★★ **算术桥**（`n, a` 形态）：`H n · pnHatExh n a = H a · H (n−a) · C(n−2, a−1)`，
+`2 ≤ a ≤ n−2`。
+
+⇒ 只要有人给出**组合计数** `#{ω : A 与 Aᶜ 同时是块} = H a · H (n−a) · C(n−2, a−1)`，
+本定理立刻把它翻成 ★★★ `clanEvent_eq_clanProb_of_blockCount` 所需的
+`hinter : … = H n · pnHatExh n A.card`。 -/
+theorem H_mul_pnHatExh_eq {n a : ℕ} (h1 : 2 ≤ a) (h2 : a ≤ n - 2) :
+    RankedGeneTree.H n * pnHatExh n a
+      = RankedGeneTree.H a * RankedGeneTree.H (n - a) * (((n - 2).choose (a - 1) : ℕ) : ℝ) := by
+  have hb : 2 ≤ n - a := by omega
+  have hsub : a + (n - a) - 2 = n - 2 := by omega
+  have hmain := H_mul_pnHatExh_eq' (a := a) (b := n - a) h1 hb
+  rw [hsub] at hmain
+  rw [show a + (n - a) = n from by omega] at hmain
+  exact hmain
+
 /-- ★★★ **条件装配**（`_of_`）：两件计数闭形式 ⟹ `clanEvent n hn A = clanProb n A.card`。
 
 * `hblk` —— 块计数：`#{ω : B 是块} = H n · pn n (|B|)`（对 `2 ≤ |B| ≤ n−2` 的 `B`）；
@@ -155,5 +231,77 @@ theorem card_blockHistories_inter_four (A : Finset (Fin 4)) (hA : A.card = 2) :
     simp only [Bool.and_eq_true, decide_eq_true_eq]
   rw [hcongr, hclosed, pnHatExh_four_two, RankedGeneTree.H_four]
   norm_num
+
+/-- ★★★ **条件装配（组合形态的 `hinter`）**：交项计数用**自然组合形态**
+`H |A| · H (n−|A|) · C(n−2, |A|−1)` 给出即可（由 ★★★ `H_mul_pnHatExh_eq` 自动翻成闭形式）。
+
+⇒ 下游只需证一条**纯组合**计数，不必碰 `pnHatExh`。 -/
+theorem clanEvent_eq_clanProb_of_blockCount' {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
+    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2)
+    (hblk : ∀ B : Finset (Fin n), 2 ≤ B.card → B.card ≤ n - 2 →
+      ((blockHistories n B).card : ℝ) = RankedGeneTree.H n * pn n B.card)
+    (hinter : ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ)
+      = RankedGeneTree.H A.card * RankedGeneTree.H (n - A.card)
+        * (((n - 2).choose (A.card - 1) : ℕ) : ℝ)) :
+    clanEvent n hn A = clanProb n A.card :=
+  clanEvent_eq_clanProb_of_blockCount hn h3 h1 h2 hblk
+    (by rw [hinter, H_mul_pnHatExh_eq h1 h2])
+
+/-! ## 4. `n = 4`：**整条 M4 链**的内核验证（块计数 ＋ 交项计数 ⇒ 装配）
+
+这一节用 `_of_` 装配的**同一个接口**在 `n = 4` 上重证一遍 `clanEvent = clanProb`
+（与 `RankedTreeClanLawFour.lean` 里直接数 `clanHistories` 的证明**相互独立**）——
+若接口有形状错误，这里会立刻炸。三件数（都 `decide` 内核核过）：
+
+* `#{A 是块} = 4 = H 4 · pn 4 2`（`H 4 · 2/9 = 4`）；
+* `#{A 与 Aᶜ 同时是块} = 2 = H 4 · pnHatExh 4 2`（`18 · 1/9 = 2`）；
+* 包含-排除：`6 = 4 + 4 − 2`（★★★ `card_clanHistories_four`）。 -/
+
+/-- ★ **`pn 4 2 = 2/9`**（与 `H 4 = 18` 相乘给 `4`）。 -/
+theorem pn_four_two : pn 4 2 = 2 / 9 := by
+  norm_num [pn, Nat.choose]
+
+set_option maxRecDepth 100000 in
+/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，18 条合并史中恰有 **4** 条
+使 `A` 是非单点块。 -/
+theorem card_blockFamily_four_block :
+    ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
+      ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => decide (A ∈ blockFamily 4 ω) = true)).card = 4 := by
+  decide
+
+/-- ★★★ **`n = 4` 的块计数 = `H 4 · pn 4 2`**。 -/
+theorem card_blockHistories_four (A : Finset (Fin 4)) (hA : A.card = 2) :
+    ((blockHistories 4 A).card : ℝ) = RankedGeneTree.H 4 * pn 4 2 := by
+  classical
+  have hmem : A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter
+      (fun A => decide (A.card = 2) = true) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    rw [hA]
+    rfl
+  have hclosed := card_blockFamily_four_block A hmem
+  have hcongr : blockHistories 4 A
+      = (Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => decide (A ∈ blockFamily 4 ω) = true) := by
+    unfold blockHistories
+    apply Finset.filter_congr
+    intro ω _
+    simp only [decide_eq_true_eq]
+  rw [hcongr, hclosed, pn_four_two, RankedGeneTree.H_four]
+  norm_num
+
+/-- ★★★ **`n = 4`：经 M4 接口的独立重证**（块计数 ＋ 交项计数 ＋ ★★★
+`clanEvent_eq_clanProb_of_blockCount`）。 -/
+theorem clanEvent_four_eq_clanProb_of_count (A : Finset (Fin 4)) (hA : A.card = 2) :
+    clanEvent 4 (by norm_num) A = clanProb 4 A.card := by
+  have hblk : ∀ B : Finset (Fin 4), 2 ≤ B.card → B.card ≤ 4 - 2 →
+      ((blockHistories 4 B).card : ℝ) = RankedGeneTree.H 4 * pn 4 B.card := by
+    intro B hB1 hB2
+    have hB : B.card = 2 := by omega
+    rw [hB]
+    exact card_blockHistories_four B hB
+  exact clanEvent_eq_clanProb_of_blockCount (n := 4) (by norm_num) (by norm_num)
+    (A := A) (by omega) (by omega) hblk
+    (by rw [hA]; exact card_blockHistories_inter_four A hA)
 
 end Phylo.Stat.RankedTreeClanLaw
