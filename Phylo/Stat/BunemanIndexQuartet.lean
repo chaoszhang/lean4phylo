@@ -21,6 +21,9 @@ import Phylo.Stat.BunemanIndexBridge
 isolationIndex (sumMetric F w) s.sideA s.sideB = 2 * (w s + [s.swap ∈ F]·w s.swap)
 ```
 
+并给出 **`α_s` 在非退化四元组上取到**（`exists_nondegenerate_quartet_attaining`）——
+这正是 BdD Theorem 1 / Corollary 1 的适用前提。
+
 ## 链条（每一步用的都是库内**已有**定理；因子 `2` 已重算）
 
 1. 取 (B) 给的四元组 `(a,a',b,b')`；
@@ -84,21 +87,20 @@ theorem crossWeight_eq_zero_or (F : Finset (Split α)) (w : Split α → ℝ)
     ⟨v, by simpa using hvF, (qPairP_eq_true_iff v a a' b b').mp hvP⟩,
     ⟨z, by simpa using hzF, (qPairX_eq_true_iff z a a' b b').mp hzX⟩⟩
 
-/-- ★★★★★ **W30 泳道 b 主结论**：弱相容 ＋ 正权重 ⇒ 两侧都 `≥ 2` 的成员 `s` 的隔离指数
-恰为 `2·(w s + [s.swap ∈ F]·w s.swap)`（= `_v2` 第二合取项在该情形）。 -/
-theorem isolationIndex_eq_two_mul_weight_of_quartetAvoiding
-    (F : Finset (Split α)) (w : Split α → ℝ)
+/-- ★★★★ **避让四元组的四点亏损恰为 `2λ`**：`pd = 2·(w s + [s.swap ∈ F]·w s.swap)`。
+
+（这就是派工书 §2.2 里 `pd = 2(λ₀ − min{λ₁,λ₂})` 的**精确**形态：`λ₀ = λ_s`、`min = 0`。） -/
+theorem pairDeficit_eq_two_mul_of_quartetAvoiding (F : Finset (Split α)) (w : Split α → ℝ)
     (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
-    {s : Split α} (hs : s ∈ F) (hA : 2 ≤ s.sideA.card) (hB : 2 ≤ s.sideB.card) :
-    isolationIndex (sumMetric F w) s.sideA s.sideB
+    {s : Split α} (hs : s ∈ F) {a a' b b' : α}
+    (ha : a ∈ s.sideA) (ha' : a' ∈ s.sideA) (hb : b ∈ s.sideB) (hb' : b' ∈ s.sideB)
+    (havoid : ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ u.Separates a a' b b') :
+    pairDeficit (sumMetric F w) a a' b b'
       = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
   classical
-  obtain ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', havoid⟩ :=
-    quartetAvoidingND_of_weaklyCompatible F s hs hF hA hB
   have hsepS : s.Separates a a' b b' := Or.inl ⟨ha, ha', hb, hb'⟩
   have hWwit : ∃ u ∈ F, qPairW u a a' b b' = true :=
     ⟨s, hs, (qPairW_eq_true_iff s a a' b b').mpr hsepS⟩
-  -- 分离该四元组的成员只能是 `s` 或 `s.swap`
   have hkey : ∀ u ∈ F, u.Separates a a' b b' → u = s ∨ u = s.swap := by
     intro u huF hsep
     by_contra hc
@@ -155,6 +157,20 @@ theorem isolationIndex_eq_two_mul_weight_of_quartetAvoiding
       · rw [h, sub_zero]; exact max_eq_left (by linarith)
       · rw [h, sub_zero]; exact max_eq_right (by linarith)
     rw [hmax, hcW]
+  exact hpd
+
+/-- ★★★★★ **W30 泳道 b 主结论**：弱相容 ＋ 正权重 ⇒ 两侧都 `≥ 2` 的成员 `s` 的隔离指数
+恰为 `2·(w s + [s.swap ∈ F]·w s.swap)`（= `_v2` 第二合取项在该情形）。 -/
+theorem isolationIndex_eq_two_mul_weight_of_quartetAvoiding
+    (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
+    {s : Split α} (hs : s ∈ F) (hA : 2 ≤ s.sideA.card) (hB : 2 ≤ s.sideB.card) :
+    isolationIndex (sumMetric F w) s.sideA s.sideB
+      = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
+  classical
+  obtain ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', havoid⟩ :=
+    quartetAvoidingND_of_weaklyCompatible F s hs hF hA hB
+  have hpd := pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha ha' hb hb' havoid
   have hle : isolationIndex (sumMetric F w) s.sideA s.sideB
       ≤ 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
     calc isolationIndex (sumMetric F w) s.sideA s.sideB
@@ -166,5 +182,23 @@ theorem isolationIndex_eq_two_mul_weight_of_quartetAvoiding
       ≤ isolationIndex (sumMetric F w) s.sideA s.sideB :=
     isolationIndex_ge_two_mul_weight F w hF hw hs
   linarith
+
+/-- ★★★★★ **非退化极值四元组存在**（BdD Theorem 1 / Corollary 1 的**适用前提**）：
+两侧都 `≥ 2` 的成员 `s`，`α_s` 在某个**非退化**四元组上**取到**。
+
+由 `isolationIndex_eq_two_mul_weight_of_quartetAvoiding` ＋ 避让四元组的 `pd = 2λ` 立得。 -/
+theorem exists_nondegenerate_quartet_attaining (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
+    {s : Split α} (hs : s ∈ F) (hA : 2 ≤ s.sideA.card) (hB : 2 ≤ s.sideB.card) :
+    ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+      a ≠ a' ∧ b ≠ b' ∧
+        isolationIndex (sumMetric F w) s.sideA s.sideB
+          = pairDeficit (sumMetric F w) a a' b b' := by
+  classical
+  obtain ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', havoid⟩ :=
+    quartetAvoidingND_of_weaklyCompatible F s hs hF hA hB
+  refine ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', ?_⟩
+  rw [isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA hB]
+  exact (pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha ha' hb hb' havoid).symm
 
 end Split
