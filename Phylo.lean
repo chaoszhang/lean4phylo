@@ -77,6 +77,7 @@ import Phylo.Stat.BlockSLLNNoL1Extra
 import Phylo.Stat.BlockSLLNTopoClose
 import Phylo.Stat.Bootstrap
 import Phylo.Stat.BunemanIndexBridge
+import Phylo.Stat.BunemanIndexQuartet
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
 import Phylo.Stat.CASTERF84
