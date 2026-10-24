@@ -257,4 +257,34 @@ theorem isolationIndex_eq_two_mul_weight (F : Finset (Split α)) (w : Split α �
           _ = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := hpd
       linarith
     · exact isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA2 hB2
+
+/-! ## W30 泳道 b：`_v2` 第一合取项的装配
+
+`⟸`：成员（及 `swap`）是 d-split —— `Split.isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible`（`SplitWeak:975`）。
+`⟹`：非成员（`s ∉ F`、`s.swap ∉ F`）⇒ `¬IsDSplit` —— **`Split.core_holds`**（`SplitWeak:2539`，
+即 `weakCompatibilityNonMemberCore` 的收口定理：W27-b 的「按 `|X|` 强归纳 ＋ 三个 `u_b` 冲突」路线）。
+
+★ 这里**没有**用 (B)：非成员半边要的是 `λ₀ = 0`（`core`），与 (B) 的 `λ₀ = λ_s` 互为对偶但**不等价**。 -/
+
+/-- ★★★★★★★ **W30 泳道 b 收口**：`weakCompatibilityRealization_gap_weights_v2` **成立**
+（原 `def`（`BunemanIndexBridge:4844`）**逐字未改**）。
+
+* 第一合取项：`⟸` = `SplitWeak:975`；`⟹` = `Split.core_holds`（`:2539`）；
+* 第二合取项：`isolationIndex_eq_two_mul_weight`（本文件，`∀ s ∈ F`，含单点侧）。 -/
+theorem weakCompatibilityRealization_gap_weights_v2_holds :
+    weakCompatibilityRealization_gap_weights_v2 := by
+  intro α instF instD F w hF hw
+  refine ⟨?_, fun s hs => isolationIndex_eq_two_mul_weight F w hF hw hs⟩
+  intro s
+  constructor
+  · intro hD
+    by_contra hcon
+    have hs : s ∉ F := fun hh => hcon ⟨s, hh, Or.inl rfl⟩
+    have hss : s.swap ∉ F := fun hh => hcon ⟨s.swap, hh, Or.inr (by simp)⟩
+    exact core_holds F w hF hw s hs hss hD
+  · rintro ⟨t, htF, h | h⟩
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inl (h ▸ htF))
+    · exact isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible F w hF hw
+        (Or.inr (by rw [show s.swap = t by rw [← h, swap_swap]]; exact htF))
 end Split
