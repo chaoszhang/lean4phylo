@@ -38,6 +38,25 @@ Zhu–Degnan–Steel 2011 Lemma 4.2 的**概率层**（`YHKClanLawGap` ③ 的�
 3. 归纳（`§5`）：对步数 `m` 强归纳得递推
    `C(m+1,a) = C(a,2)·C(m,a−1) + C(m+1−a,2)·C(m,a)`；
 4. 闭形式（`§6`）：该递推的解是 `H (m+1) · pn (m+1) a`（算术）。
+
+## 本批的**唯一缺件**（⬖）
+
+`ArithStep`（`§6`）：纯 `ℝ` 恒等式
+`C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H(m+2)·pn(m+2)a`（`2 ≤ a ≤ m+1`）。
+它只涉及 `H`/`pn`/`Nat.choose` 的**算术**，与载体无关；本批**未在 Lean 内证完**
+（`field_simp`/`ring` 在这条带 `H (…)` 原子的分式恒等式上反复卡住，见报告）。
+**机器已核（Lean 外用精确有理数）**：`2 ≤ a ≤ m+1`、`m ≤ 13` 全部相等（`ALL OK`）；
+且**暴力枚举合并史**（`n ≤ 6`，`|RankedTree 6| = 2700`）逐点核过
+`#{ω : A 是 ω 的块} = H n · pn n |A|`。
+⇒ `cladeCountS_eq_H_mul_pn_of_arith` 是 **(M4) 的 `_of_` 形式**：`ArithStep` 一通即通。
+
+## ★ 派工书两处口径更正（详见报告 `.w30/report_w31_b.md`）
+
+* 「均匀 `RankedTree n` 的根分裂大小均匀」——**按「随机取根的一个孩子」**读才成立
+  （`#{(ω,侧) : 该侧是根的一块、大小 = k} = n!(n−2)!/2^{n−2}` 与 `k` 无关）；
+  按「**指定**一侧（如含叶 `0` 的那侧）」读**不成立**（`n = 4`：`1/6, 1/3, 1/2`）。
+* `#根分裂为 A|B 的 ranked 树 = H_a·H_b` **确实少算了交错**（正确值 `H_a·H_b·C(n−2,a−1)`）。
+  本文件**不走**根分裂路线：走「砍第一步」的删点路线（`s ↦ s.erase y`），绕开交错计数。
 -/
 
 noncomputable section
@@ -47,6 +66,7 @@ open Classical
 namespace Phylo.Stat.CladeCount
 
 open Phylo.Stat.CoalescentHistoryCount
+open Phylo.Stat.ReciprocalMonophyly
 
 variable {N : ℕ}
 
@@ -459,5 +479,219 @@ theorem not_isCladeH_mixed (h0 : f 0 = (x, y)) (hxs : x ∈ s) (hys : y ∈ s)
   · have hL' : L = (L - 1) + 1 := by omega
     rw [hL'] at hb
     exact not_isBlockAt_succ_mixed h0 hxs hys hmix (L - 1) hb
+
+/-! ## §5 递推：按第一步的三分情形求和 -/
+
+/-- ★★ 情形 `x, y ∈ A`：头纤维的计数 = 尾历史（`A.erase y`）的 `cladeCountS`。 -/
+theorem card_headFiber_isCladeH_both {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
+    (hAs : A ⊆ s) (hA2 : 2 ≤ A.card) (p : PairIn N s)
+    (hx : p.1.1 ∈ A) (hy : p.1.2 ∈ A) :
+    ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card
+      = cladeCountS m (s.erase p.1.2) (A.erase p.1.2) := by
+  refine (card_headFiber_filter s p (fun f => IsCladeH s (m + 1) f A)
+    (fun g => IsCladeH (s.erase p.1.2) m g (A.erase p.1.2)) ?_).trans ?_
+  · intro f h0 _hmh
+    exact isCladeH_tail_both (x := p.1.1) (y := p.1.2) h0 p.2.2.2 p.2.2.1 hAs hx hy hA2
+  · rfl
+
+/-- ★★ 情形 `x, y ∉ A`：头纤维的计数 = 尾历史（`A`）的 `cladeCountS`。 -/
+theorem card_headFiber_isCladeH_none {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
+    (hAs : A ⊆ s) (hA2 : 2 ≤ A.card) (p : PairIn N s)
+    (hx : p.1.1 ∉ A) (hy : p.1.2 ∉ A) :
+    ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card
+      = cladeCountS m (s.erase p.1.2) A := by
+  refine (card_headFiber_filter s p (fun f => IsCladeH s (m + 1) f A)
+    (fun g => IsCladeH (s.erase p.1.2) m g A) ?_).trans ?_
+  · intro f h0 _hmh
+    exact isCladeH_tail_none (x := p.1.1) (y := p.1.2) h0 p.2.2.2 p.2.1 p.2.2.1 hAs hx hy hA2
+  · rfl
+
+/-- ★★ 情形混合：头纤维的计数 = `0`。 -/
+theorem card_headFiber_isCladeH_mixed {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
+    (hAs : A ⊆ s) (hA2 : 2 ≤ A.card) (p : PairIn N s)
+    (hmix : (p.1.1 ∈ A ∧ p.1.2 ∉ A) ∨ (p.1.1 ∉ A ∧ p.1.2 ∈ A)) :
+    ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card = 0 := by
+  rw [Finset.card_eq_zero, ← Finset.not_nonempty_iff_eq_empty]
+  rintro ⟨f, hf⟩
+  rw [Finset.mem_filter] at hf
+  obtain ⟨hfhead, hfP⟩ := hf
+  simp only [headFiber, Finset.mem_filter, Finset.mem_univ, true_and] at hfhead
+  exact (not_isCladeH_mixed hfhead.1 p.2.1 p.2.2.1 hAs hA2 hmix) hfP
+
+/-- ★★ 「`x, y ∈ A`」的对子数 = `C(|A|,2)`。 -/
+theorem card_pairs_both (s A : Finset (Fin N)) (hAs : A ⊆ s) :
+    ((Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A)).card
+      = A.card.choose 2 := by
+  rw [← Fintype.card_subtype (fun p : PairIn N s => p.1.1 ∈ A ∧ p.1.2 ∈ A)]
+  exact (Fintype.card_congr
+    ⟨fun q => (⟨(q.1.1.1, q.1.1.2), q.2.1, q.2.2, q.1.2.2.2⟩ : PairIn N A),
+      fun r => ⟨⟨(r.1.1, r.1.2), hAs r.2.1, hAs r.2.2.1, r.2.2.2⟩, r.2.1, r.2.2.1⟩,
+      fun q => by rfl, fun r => by rfl⟩).trans (card_pairIn A)
+
+/-- ★★ 「`x, y ∉ A`」的对子数 = `C(|s \ A|,2)`。 -/
+theorem card_pairs_none (s A : Finset (Fin N)) :
+    ((Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A)).card
+      = (s \ A).card.choose 2 := by
+  rw [← Fintype.card_subtype (fun p : PairIn N s => p.1.1 ∉ A ∧ p.1.2 ∉ A)]
+  exact (Fintype.card_congr
+    ⟨fun q => (⟨(q.1.1.1, q.1.1.2), Finset.mem_sdiff.mpr ⟨q.1.2.1, q.2.1⟩,
+        Finset.mem_sdiff.mpr ⟨q.1.2.2.1, q.2.2⟩, q.1.2.2.2⟩ : PairIn N (s \ A)),
+      fun r => ⟨⟨(r.1.1, r.1.2), (Finset.mem_sdiff.mp r.2.1).1,
+        (Finset.mem_sdiff.mp r.2.2.1).1, r.2.2.2⟩,
+        (Finset.mem_sdiff.mp r.2.1).2, (Finset.mem_sdiff.mp r.2.2.1).2⟩,
+      fun q => by rfl, fun r => by rfl⟩).trans (card_pairIn (s \ A))
+
+/-- ★★★ **按第一步的三分情形拆和**：混合对贡献 `0`。 -/
+theorem sum_headFiber_split {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
+    (hAs : A ⊆ s) (hA2 : 2 ≤ A.card) :
+    (∑ p : PairIn N s,
+        ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card)
+      = (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            cladeCountS m (s.erase p.1.2) (A.erase p.1.2))
+        + (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+            cladeCountS m (s.erase p.1.2) A) := by
+  have hterm : ∀ p : PairIn N s,
+      ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card
+        = (if p.1.1 ∈ A ∧ p.1.2 ∈ A then cladeCountS m (s.erase p.1.2) (A.erase p.1.2) else 0)
+          + (if p.1.1 ∉ A ∧ p.1.2 ∉ A then cladeCountS m (s.erase p.1.2) A else 0) := by
+    intro p
+    by_cases h1 : p.1.1 ∈ A ∧ p.1.2 ∈ A
+    · rw [ite_eq_left h1, ite_eq_right (by tauto : ¬ (p.1.1 ∉ A ∧ p.1.2 ∉ A)), add_zero]
+      exact card_headFiber_isCladeH_both s A hAs hA2 p h1.1 h1.2
+    · by_cases h2 : p.1.1 ∉ A ∧ p.1.2 ∉ A
+      · rw [ite_eq_right h1, ite_eq_left h2, zero_add]
+        exact card_headFiber_isCladeH_none s A hAs hA2 p h2.1 h2.2
+      · rw [ite_eq_right h1, ite_eq_right h2, add_zero]
+        exact card_headFiber_isCladeH_mixed s A hAs hA2 p (by
+          rcases not_and_or.mp h1 with h | h
+          · exact Or.inr ⟨h, by tauto⟩
+          · exact Or.inl ⟨by tauto, h⟩)
+  calc (∑ p : PairIn N s,
+        ((headFiber (m := m) s p).filter (fun f => IsCladeH s (m + 1) f A)).card)
+      = ∑ p : PairIn N s,
+          ((if p.1.1 ∈ A ∧ p.1.2 ∈ A then cladeCountS m (s.erase p.1.2) (A.erase p.1.2) else 0)
+            + (if p.1.1 ∉ A ∧ p.1.2 ∉ A then cladeCountS m (s.erase p.1.2) A else 0)) :=
+        Finset.sum_congr rfl (fun p _ => hterm p)
+    _ = (∑ p : PairIn N s,
+            if p.1.1 ∈ A ∧ p.1.2 ∈ A then cladeCountS m (s.erase p.1.2) (A.erase p.1.2) else 0)
+          + ∑ p : PairIn N s,
+            if p.1.1 ∉ A ∧ p.1.2 ∉ A then cladeCountS m (s.erase p.1.2) A else 0 :=
+        Finset.sum_add_distrib
+    _ = _ := by rw [← Finset.sum_filter, ← Finset.sum_filter]
+
+/-! ## §6 闭形式：递推的解是 `H (m+1) · pn (m+1) a` -/
+
+/-- ★ `pn n 1 = 1`（单点集的 proper clade 概率是 `1`）。 -/
+theorem pn_one (n : ℕ) (hn : 2 ≤ n) : pn n 1 = 1 := by
+  rw [pn_of_range (n := n) (a := 1) le_rfl (by omega)]
+  have hc : ((n.choose 1 : ℕ) : ℝ) = (n : ℝ) := by
+    rw [Nat.choose_one_right]
+  have hn0 : (n : ℝ) ≠ 0 := by exact_mod_cast (by omega : n ≠ 0)
+  rw [hc]
+  field_simp
+  norm_num
+
+/-- ★★ `C(k,2)` 的实数闭形式（`kingmanRate` 的定义式）。 -/
+theorem cast_choose_two_eq (k : ℕ) :
+    ((k.choose 2 : ℕ) : ℝ) = (k : ℝ) * ((k : ℝ) - 1) / 2 := by
+  rw [cast_choose_two, Coalescent.kingmanRate]
+
+/-- ★★ **递推的算术核**（本批**未证**的纯 ℝ 恒等式，见报告 ⬖）：
+C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H (m+2)·pn (m+2) a（2 ≤ a ≤ m）。 -/
+def ArithStep : Prop :=
+  ∀ m a : ℕ, 2 ≤ a → a ≤ m + 1 →
+    ((a.choose 2 : ℕ) : ℝ) * (RankedGeneTree.H (m + 1) * pn (m + 1) (a - 1))
+      + (((m + 2) - a).choose 2 : ℕ) * (RankedGeneTree.H (m + 1) * pn (m + 1) a)
+      = RankedGeneTree.H (m + 2) * pn (m + 2) a
+
+/-- ★★★ **递推（ℕ 值）**：cladeCountS (m+1) s A 按第一步的三分情形拆成两个和。 -/
+theorem cladeCountS_succ_rec {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
+    (hAs : A ⊆ s) (hA2 : 2 ≤ A.card) :
+    cladeCountS (m + 1) s A
+      = (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            cladeCountS m (s.erase p.1.2) (A.erase p.1.2))
+        + (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+            cladeCountS m (s.erase p.1.2) A) := by
+  rw [cladeCountS_succ_eq_sum, sum_headFiber_split s A hAs hA2]
+
+/-- ★★★ **(M4)，条件形式（_of_）**：算术核 ⟹ #{A 是 clade} = H (m+1)·pn(m+1)|A|。
+
+归纳自变量是**步数** m（|s| = m+1）；每步把 s 删成 s.erase y（|s.erase y| = m），
+正是 IsMH 的「相对任意有限集」载体，不需要重标号。 -/
+theorem cladeCountS_eq_H_mul_pn_of_arith (harith : ArithStep) (m : ℕ) :
+    ∀ (N : ℕ) (s : Finset (Fin N)) (A : Finset (Fin N)), s.card = m + 1 →
+      A ⊆ s → 1 ≤ A.card → A.card ≤ m →
+      (cladeCountS m s A : ℝ) = RankedGeneTree.H (m + 1) * pn (m + 1) A.card := by
+  induction m using Nat.strong_induction_on with
+  | _ m ih =>
+    intro N s A hs hAs hA1 hAm
+    by_cases hm0 : m = 0
+    · omega
+    · obtain ⟨k, rfl⟩ : ∃ k, m = k + 1 := ⟨m - 1, by omega⟩
+      rcases eq_or_lt_of_le hA1 with hA1' | hA2
+      · obtain ⟨w, rfl⟩ := Finset.card_eq_one.mp hA1'.symm
+        have hw : w ∈ s := hAs (Finset.mem_singleton_self w)
+        rw [cladeCountS_singleton (k + 1) s hw hs, Finset.card_singleton, cast_Hnat,
+          pn_one (k + 1 + 1) (by omega), mul_one]
+      · rw [cladeCountS_succ_rec s A hAs hA2, Nat.cast_add, Nat.cast_sum, Nat.cast_sum]
+        have hG1 : (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+              (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+              (cladeCountS k (s.erase p.1.2) (A.erase p.1.2) : ℝ))
+            = ((A.card.choose 2 : ℕ) : ℝ)
+              * (RankedGeneTree.H (k + 1) * pn (k + 1) (A.card - 1)) := by
+          have hc : ∀ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+              (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+              (cladeCountS k (s.erase p.1.2) (A.erase p.1.2) : ℝ)
+                = RankedGeneTree.H (k + 1) * pn (k + 1) (A.card - 1) := by
+            intro p hp
+            rw [Finset.mem_filter] at hp
+            obtain ⟨-, hpx, hpy⟩ := hp
+            rw [ih k (by omega) N (s.erase p.1.2) (A.erase p.1.2) ?_ ?_ ?_ ?_,
+              Finset.card_erase_of_mem hpy]
+            · rw [Finset.card_erase_of_mem p.2.2.1]; omega
+            · intro z hz
+              rw [Finset.mem_erase] at hz ⊢
+              exact ⟨hz.1, hAs hz.2⟩
+            · rw [Finset.card_erase_of_mem hpy]; omega
+            · rw [Finset.card_erase_of_mem hpy]; omega
+          rw [Finset.sum_congr rfl hc, Finset.sum_const, nsmul_eq_mul,
+            card_pairs_both s A hAs]
+        have hG2 : (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+              (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+              (cladeCountS k (s.erase p.1.2) A : ℝ))
+            = (((k + 2) - A.card).choose 2 : ℕ)
+              * (RankedGeneTree.H (k + 1) * pn (k + 1) A.card) := by
+          by_cases hle : A.card ≤ k
+          · have hc : ∀ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+                (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+                (cladeCountS k (s.erase p.1.2) A : ℝ)
+                  = RankedGeneTree.H (k + 1) * pn (k + 1) A.card := by
+              intro p hp
+              rw [Finset.mem_filter] at hp
+              obtain ⟨-, hpx, hpy⟩ := hp
+              refine ih k (by omega) N (s.erase p.1.2) A ?_ ?_ ?_ ?_
+              · rw [Finset.card_erase_of_mem p.2.2.1]; omega
+              · intro z hz
+                rw [Finset.mem_erase]
+                exact ⟨fun h => hpy (h ▸ hz), hAs hz⟩
+              · omega
+              · omega
+            rw [Finset.sum_congr rfl hc, Finset.sum_const, nsmul_eq_mul, card_pairs_none,
+              Finset.card_sdiff, Finset.inter_eq_left.mpr hAs, hs]
+          · have hcard : A.card = k + 1 := by omega
+            have hzero : (s \ A).card = 1 := by
+              rw [Finset.card_sdiff, Finset.inter_eq_left.mpr hAs]
+              omega
+            have hempty : ((Finset.univ : Finset (PairIn N s)).filter
+                (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A)) = ∅ := by
+              rw [← Finset.card_eq_zero, card_pairs_none, hzero]
+              decide
+            have hone : k + 2 - A.card = 1 := by
+              rw [hcard]
+              omega
+            rw [hempty, Finset.sum_empty, hone, hcard]
+            norm_num
+        rw [hG1, hG2]
+        exact harith k A.card hA2 hAm
 
 end Phylo.Stat.CladeCount
