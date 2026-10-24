@@ -4564,6 +4564,155 @@ theorem card_subFamilyClosure {ω : rootedSplitFamily n} (A : Finset (Fin n)) :
     Finset.card_image_of_injective _ (fun a b h => by
       simpa [Split.swap_swap] using congrArg Split.swap h)]
   omega
+/-! ### 11.24 (EP) 的载体实现：叶置换 `π` 的作用、**权重不变**、事件等变
+
+ZDS 2011 的 **(EP)**（exchangeability，`:230-232`）是 Lemma 4.2 里「`p_n(A)` 只依赖 `a = |A|`」
+的唯一依据；§6 的缺口清单把它的库内形态列为缺件 ④（「leaf 重标号对 `Cladogram` 的作用 ＋
+律的等变性」）。本节在载体 `rootedSplitFamily n` 上把它做出来：
+
+* ★★ `splitPermCongr` / ★★★ `rootedSplitFamilyCongr`：`π` 作用在真叶上（`ρ = Sum.inr ()` 不动），
+  `fam ↦ fam.image (Split.congr (π ⊕ id))` —— 四条载体条件逐条保持；
+* ★★★ `rootedSplitWeight_congr`：作用**保持权重**（`g` 只用基数，故置换不变）；
+* ★★★ `realLeaves_splitPermCongr_sideA`：真叶集沿作用搬运；
+* ★★★ `isClanMinusRoot_rootedSplitTree_congr`：**clade 事件等变**。
+
+⇒ (EP) 的载体层自此**不缺**：`p_n(A) = p_n(π '' A)` 只需把求和沿 `rootedSplitFamilyCongr π`
+重指标（`Finset.sum_bij`）＋本节四条。 -/
+
+/-- ★★ **`π` 在 `Split (Fin n ⊕ Unit)` 上的作用**（`ρ = Sum.inr ()` 固定不动）。 -/
+noncomputable def splitPermCongr (π : Equiv.Perm (Fin n)) :
+    Split (Fin n ⊕ Unit) ≃ Split (Fin n ⊕ Unit) :=
+  Split.congr (Equiv.sumCongr π (Equiv.refl Unit))
+
+/-- ★★★ **叶重标号对载体的作用**（`ρ = Sum.inr ()` 固定）：`fam ↦ fam.image (π 作用)`。 -/
+noncomputable def rootedSplitFamilyCongr (π : Equiv.Perm (Fin n)) (ω : rootedSplitFamily n) :
+    rootedSplitFamily n where
+  val := ω.val.image (splitPermCongr π)
+  property := by
+    classical
+    refine ⟨?_, ?_, ?_, ?_⟩
+    · intro s hs t ht
+      obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+      obtain ⟨t', ht', rfl⟩ := Finset.mem_image.mp ht
+      exact compatible_congrFun (Equiv.sumCongr π (Equiv.refl Unit)) (ω.2.1 s' hs' t' ht')
+    · intro s hs
+      obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+      have hinj : Function.Injective
+          (Equiv.sumCongr π (Equiv.refl Unit) : (Fin n ⊕ Unit) → (Fin n ⊕ Unit)) :=
+        (Equiv.sumCongr π (Equiv.refl Unit)).injective
+      have h1 : ((splitPermCongr π s').sideA).card = s'.sideA.card := by
+        simp only [splitPermCongr]
+        rw [Split.congr_sideA, Finset.card_image_of_injective _ hinj]
+      have h2 : ((splitPermCongr π s').sideB).card = s'.sideB.card := by
+        simp only [splitPermCongr]
+        rw [Split.congr_sideB, Finset.card_image_of_injective _ hinj]
+      rw [h1, h2]
+      exact ω.2.2.1 s' hs'
+    · intro s hs
+      obtain ⟨s', hs', rfl⟩ := Finset.mem_image.mp hs
+      exact Finset.mem_image.mpr
+        ⟨s'.swap, ω.2.2.2.1 s' hs', (Split.congr_swap _ s').symm⟩
+    · rw [Finset.card_image_of_injective _ (splitPermCongr π).injective, ω.2.2.2.2]
+
+/-- ★★ 取值式：`rootedSplitFamilyCongr` 的底层族。 -/
+theorem rootedSplitFamilyCongr_val (π : Equiv.Perm (Fin n)) (ω : rootedSplitFamily n) :
+    (rootedSplitFamilyCongr π ω).val = ω.val.image (splitPermCongr π) := rfl
+
+/-- ★★ **`ρ` 是否在 `sideA` 里**沿作用不变（`π` 固定 `ρ`）。 -/
+theorem inr_mem_splitPermCongr_sideA {n : ℕ} (π : Equiv.Perm (Fin n))
+    (s : Split (Fin n ⊕ Unit)) :
+    Sum.inr () ∈ (splitPermCongr π s).sideA ↔ Sum.inr () ∈ s.sideA := by
+  simp only [splitPermCongr]
+  rw [Split.congr_sideA, Finset.mem_image]
+  constructor
+  · rintro ⟨y, hy, hEy⟩
+    have hy' : y = Sum.inr () := by
+      have h := congrArg (Equiv.sumCongr π (Equiv.refl Unit)).symm hEy
+      simpa using h
+    rwa [hy'] at hy
+  · intro h
+    exact ⟨Sum.inr (), h, by simp⟩
+
+/-- ★★★ **(EP) 的权重层**：叶置换**不改变** `rootedSplitWeight`。 -/
+theorem rootedSplitWeight_congr (π : Equiv.Perm (Fin n)) (ω : rootedSplitFamily n) :
+    rootedSplitWeight (rootedSplitFamilyCongr π ω) = rootedSplitWeight ω := by
+  classical
+  have hq : (ω.val.filter (fun s => Sum.inr () ∉ (splitPermCongr π s).sideA))
+      = ω.val.filter (fun s => Sum.inr () ∉ s.sideA) :=
+    Finset.filter_congr (fun a _ => not_congr (inr_mem_splitPermCongr_sideA π a))
+  have hP : ∏ s ∈ (rootedSplitFamilyCongr π ω).val.filter (fun s => Sum.inr () ∉ s.sideA),
+        (s.sideA.card - 1)
+      = ∏ s ∈ ω.val.filter (fun s => Sum.inr () ∉ s.sideA), (s.sideA.card - 1) := by
+    rw [rootedSplitFamilyCongr_val, Finset.filter_image, hq]
+    rw [Finset.prod_image (g := splitPermCongr π)]
+    · refine Finset.prod_congr rfl (fun s _ => ?_)
+      simp only [splitPermCongr]
+      rw [Split.congr_sideA,
+        Finset.card_image_of_injective _ (Equiv.sumCongr π (Equiv.refl Unit)).injective]
+    · intro a _ b _ h
+      exact (splitPermCongr π).injective h
+  unfold rootedSplitWeight
+  rw [hP]
+
+/-- ★★★ **真叶集沿叶置换搬运**：`realLeaves ((π 作用后的 split).sideA) = π '' realLeaves s.sideA`。 -/
+theorem realLeaves_splitPermCongr_sideA {n : ℕ} (π : Equiv.Perm (Fin n))
+    (s : Split (Fin n ⊕ Unit)) :
+    realLeaves (splitPermCongr π s).sideA = (realLeaves s.sideA).image π := by
+  simp only [splitPermCongr]
+  ext x
+  rw [mem_realLeaves, Finset.mem_image]
+  constructor
+  · intro hx
+    rw [Split.congr_sideA, Finset.mem_image] at hx
+    obtain ⟨y, hy, hxy⟩ := hx
+    rcases y with a | u
+    · refine ⟨a, ?_, ?_⟩
+      · rwa [mem_realLeaves]
+      · simpa using hxy
+    · cases u
+      exact absurd hxy (by simp)
+  · rintro ⟨a, ha, rfl⟩
+    rw [Split.congr_sideA, Finset.mem_image]
+    exact ⟨Sum.inl a, by rwa [mem_realLeaves] at ha, by simp⟩
+
+/-- ★★★ **(EP) 的事件层**：`A` 是 `tree ω` 的 clan ⟺ `π '' A` 是 `tree (π·ω)` 的 clan。
+
+（两边都是 §11.7 的 `rootedSplitTree`；用 ★★★ `isClanMinusRoot_rootedSplitTree`
+把事件化成「族里有该 split」，再沿 ★★★ `realLeaves_splitPermCongr_sideA` 搬运。） -/
+theorem isClanMinusRoot_rootedSplitTree_congr {n : ℕ} (hn : 2 ≤ n) (π : Equiv.Perm (Fin n))
+    (ω : rootedSplitFamily n) {A : Finset (Fin n)} (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) :
+    IsClanMinusRoot (rootedSplitTree hn (rootedSplitFamilyCongr π ω)) (A.image π) ↔
+      IsClanMinusRoot (rootedSplitTree hn ω) A := by
+  classical
+  have hA' : (A.image π).Nonempty := hA.image π
+  have hAc' : ((A.image π))ᶜ.Nonempty := by
+    obtain ⟨x, hx⟩ := hAc
+    rw [Finset.mem_compl] at hx
+    refine ⟨π x, ?_⟩
+    rw [Finset.mem_compl, Finset.mem_image]
+    rintro ⟨a, ha, hax⟩
+    exact hx (by rw [← π.injective hax]; exact ha)
+  rw [isClanMinusRoot_rootedSplitTree hn (rootedSplitFamilyCongr π ω) hA' hAc',
+    isClanMinusRoot_rootedSplitTree hn ω hA hAc]
+  have hcard : (A.image π).card = A.card := Finset.card_image_of_injective _ π.injective
+  rw [hcard]
+  constructor
+  · rintro (⟨s, hs, hside⟩ | h1 | h1)
+    · rw [rootedSplitFamilyCongr_val, Finset.mem_image] at hs
+      obtain ⟨s', hs', rfl⟩ := hs
+      refine Or.inl ⟨s', hs', ?_⟩
+      exact (Finset.image_inj π.injective).mp (by
+        rw [← realLeaves_splitPermCongr_sideA π s', hside])
+    · exact Or.inr (Or.inl h1)
+    · exact Or.inr (Or.inr h1)
+  · rintro (⟨s, hs, hside⟩ | h1 | h1)
+    · refine Or.inl ⟨splitPermCongr π s, ?_, ?_⟩
+      · rw [rootedSplitFamilyCongr_val]
+        exact Finset.mem_image.mpr ⟨s, hs, rfl⟩
+      · rw [realLeaves_splitPermCongr_sideA, hside]
+    · exact Or.inr (Or.inl h1)
+    · exact Or.inr (Or.inr h1)
+
 /-! ## 13. 缺口 N3（`TwoClanLawGap`）的**三事件分解**（ZDS2011 Theorem 6.3(ii)）—— **条件形式**
 
 **本块是纯 EOF 追加**：从 `## 13` 到文件末尾（`end Phylo.Stat.ReciprocalMonophyly` 之前）全部是
