@@ -4501,4 +4501,67 @@ theorem sum_cladeEvent_eq_sum_cladeCount {n : ℕ} {Ω : Type} [Fintype Ω]
   rw [← Finset.sum_filter, Finset.filter_filter, Finset.sum_const, nsmul_eq_mul, mul_comm]
 
 
+/-! ### 11.23 §11.20 的 `subFamily` **不是 `swap`-封闭的**（载体条件的缺口）
+
+§11.17 的规格把「限制出的子族」当成 `rootedSplitSet A` 的元素，而载体的第三条要求
+`∀ s ∈ fam, s.swap ∈ fam`。本节证明：**现成的 `subFamily`（§11.20）永远不满足这条**
+（只要它非空）——
+
+根因：`restrictToFinset` 把 split 的 **away 侧**（必不含 `ρ = Sum.inr ()`）当作 `sideA`，
+于是子族的**每个**成员的 `sideA` 都不含 `ρ`；而 `t.swap.sideA = t.sideB` 必含 `ρ`。
+
+⇒ 要拿到载体，必须把「一个方向」补成「两个方向」：★ `subFamilyClosure`
+（并上它的换向像）。此时载体只剩**一条**计数：`#(subFamily ω A) = |A| − 2`
+（= 子树 `A` 的 proper clade 数），见 `card_subFamilyClosure`。 -/
+
+/-- ★★ `subFamily` 的每个成员的 `sideA` 都**不含** `ρ = Sum.inr ()`。 -/
+theorem notMem_inr_sideA_of_mem_subFamily {ω : rootedSplitFamily n} {A : Finset (Fin n)}
+    {t : Split (A ⊕ Unit)} (ht : t ∈ subFamily ω A) : Sum.inr () ∉ t.sideA := by
+  obtain ⟨s, hs, hp, hteq⟩ := (mem_subFamily (ω := ω) (A := A)).mp ht
+  rw [← hteq, restrictToFinset_sideA_pull]
+  intro hmem
+  exact Split.not_mem_away (Sum.inr ()) s ((mem_pullSet_iff' A _ _).mp hmem)
+
+/-- ★★★ **`subFamily` 不是 `swap`-封闭的**（非空时）：`t ∈ subFamily ⇒ t.swap ∉ subFamily`。
+
+⇒ §11.20 的 `subFamily` **不能**直接充当 `rootedSplitSet A` 的元素；需要 `subFamilyClosure`。 -/
+theorem not_swap_mem_subFamily {ω : rootedSplitFamily n} {A : Finset (Fin n)}
+    {t : Split (A ⊕ Unit)} (ht : t ∈ subFamily ω A) : t.swap ∉ subFamily ω A := by
+  intro hsw
+  have h1 : Sum.inr () ∈ t.swap.sideA := by
+    rw [Split.swap_sideA, Split.sideB_eq_compl, Finset.mem_compl]
+    exact notMem_inr_sideA_of_mem_subFamily ht
+  exact notMem_inr_sideA_of_mem_subFamily hsw h1
+
+/-- ★★ **修正版子族**：把 `subFamily` 与它的换向像并起来，使载体的 `swap`-封闭条件成立。 -/
+noncomputable def subFamilyClosure (ω : rootedSplitFamily n) (A : Finset (Fin n)) :
+    Finset (Split (A ⊕ Unit)) :=
+  subFamily ω A ∪ (subFamily ω A).image Split.swap
+
+/-- ★★★ **`subFamilyClosure` 是 `swap`-封闭的**（载体的第三条由此满足）。 -/
+theorem swap_mem_subFamilyClosure {ω : rootedSplitFamily n} {A : Finset (Fin n)}
+    {t : Split (A ⊕ Unit)} (ht : t ∈ subFamilyClosure ω A) :
+    t.swap ∈ subFamilyClosure ω A := by
+  rcases Finset.mem_union.mp ht with h | h
+  · exact Finset.mem_union.mpr
+      (Or.inr (Finset.mem_image.mpr ⟨t, h, rfl⟩))
+  · obtain ⟨u, hu, rfl⟩ := Finset.mem_image.mp h
+    exact Finset.mem_union.mpr (Or.inl (by simpa [Split.swap_swap] using hu))
+
+/-- ★★ **修正版子族的基数**：`#(subFamilyClosure) = 2·#(subFamily)`。
+
+⇒ 要把 `subFamilyClosure ω A` 认成 `rootedSplitSet A` 的元素，**只差一条计数**：
+`#(subFamily ω A) = |A| − 2`（= 子树 `A` 的 proper clade 数）。 -/
+theorem card_subFamilyClosure {ω : rootedSplitFamily n} (A : Finset (Fin n)) :
+    (subFamilyClosure ω A).card = 2 * (subFamily ω A).card := by
+  classical
+  have hdisj : Disjoint (subFamily ω A) ((subFamily ω A).image Split.swap) := by
+    rw [Finset.disjoint_left]
+    intro t ht hti
+    obtain ⟨u, hu, rfl⟩ := Finset.mem_image.mp hti
+    exact not_swap_mem_subFamily hu ht
+  rw [subFamilyClosure, Finset.card_union_of_disjoint hdisj,
+    Finset.card_image_of_injective _ (fun a b h => by
+      simpa [Split.swap_swap] using congrArg Split.swap h)]
+  omega
 end Phylo.Stat.ReciprocalMonophyly
