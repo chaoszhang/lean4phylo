@@ -2563,3 +2563,477 @@ theorem weaklyCompatible_splits (T : Cladogram X) : Split.WeaklyCompatible T.spl
   Split.weaklyCompatible_of_pairwiseCompatible fun s hs t ht => pairwiseCompatible T s hs t ht
 
 end Cladogram
+
+/-! ## 9. W30 泳道 b：弱相容族中的「避让四元组」（自造路线 A）
+
+本节证 **(B)**（派工书 §2.1）：**弱相容族里，对每个成员 `s`，存在一个非退化四元组，
+使族里除 `s`、`s.swap` 外没有成员 W-分离（`Separates`）它。**
+
+与 `Phylo/Stat/BunemanIndexBridge.lean` 的 `QuartetAvoiding`（`:4910`）的**唯一**差别：
+本节的 `QuartetAvoidingND` 要求 `a ≠ a'`、`b ≠ b'`。退化版（`a = a' ∧ b = b'`）是**假的**
+（W29 反例：`Fin 6`、`F = {{0,1,2,5},{0,2,3,4},{0,3,4,5},{0,1,2,3,4},{0,1,2,4,5}}`、
+`s = {0,1,2,3,4}`），故 `≠` 不能省。
+
+**证明路线（自造，非文献）**：对 `Fintype.card α` 强归纳。
+* 基例 `card = 4`：两侧各 2 点 ⇒ 唯一的非退化四元组只被 `s`、`s.swap` 分离；
+* 归纳步：取「大侧」`(≥ 3)` 里的点 `x`，把 `F` 限制到 `X ∖ {x}`。**关键组合引理**
+  （`exists_not_mem_and_swap_not_mem`）：存在 `x ∈ s.sideA`（`3 ≤ |sideA|`），使
+  `u_x := (sideA ∖ {x}) | …` 与 `u_x.swap` **都**不在 `F` —— 否则三个这样的成员在
+  `{b, x, y, z}` 上实现三种配对，与弱相容矛盾。
+
+★ 命名纪律：本节新增 `def`/`lemma` 名字**均不含** `gap`/`Gap`。 -/
+
+namespace Split
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-- ★★★ **(B) 的非退化形态**：存在 `a ≠ a' ∈ s.sideA`、`b ≠ b' ∈ s.sideB`，使 `F` 中除
+`s`、`s.swap` 外的**任何**成员都不 W-分离它。 -/
+def QuartetAvoidingND (F : Finset (Split α)) (s : Split α) : Prop :=
+  ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
+    a ≠ a' ∧ b ≠ b' ∧ ∀ u ∈ F, u ≠ s → u ≠ s.swap → ¬ u.Separates a a' b b'
+
+/-- `QuartetAvoidingND` 在 `s ↦ s.swap` 下不变（两侧互换不改变四点分离关系）。 -/
+theorem quartetAvoidingND_swap (F : Finset (Split α)) (s : Split α) :
+    QuartetAvoidingND F s ↔ QuartetAvoidingND F s.swap := by
+  constructor
+  · rintro ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', h⟩
+    refine ⟨b, by rwa [Split.swap_sideA], b', by rwa [Split.swap_sideA],
+      a, by rwa [Split.swap_sideB], a', by rwa [Split.swap_sideB], hne', hne, ?_⟩
+    intro u huF h1 h2 hsep
+    exact h u huF (fun hc => h2 (hc.trans (swap_swap s).symm)) h1
+      ((separates_comm_sides u b b' a a').mp hsep)
+  · rintro ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', h⟩
+    refine ⟨b, by rwa [Split.swap_sideB] at hb, b', by rwa [Split.swap_sideB] at hb',
+      a, by rwa [Split.swap_sideA] at ha, a', by rwa [Split.swap_sideA] at ha', hne', hne, ?_⟩
+    intro u huF h1 h2 hsep
+    exact h u huF h2 (fun hc => h1 (hc.trans (swap_swap s)))
+      ((separates_comm_sides u b b' a a').mp hsep)
+
+/-- `tr` 对 `swap` 取补。 -/
+lemma tr_swap (b : α) (u : Split α) : tr b u.swap = (tr b u)ᶜ := by
+  ext x
+  simp only [mem_tr, mem_compl_tr, Split.swap_sideA]
+
+/-- `Nondeg` 对 `swap` 不变。 -/
+lemma nondeg_swap {b : α} {u : Split α} (h : Nondeg b u) : Nondeg b u.swap := by
+  refine ⟨?_, ?_⟩
+  · rw [tr_swap]; exact h.2
+  · have hcc : ((tr b u)ᶜ)ᶜ = tr b u := by ext x; simp
+    rw [tr_swap, hcc]; exact h.1
+
+/-- `rst` 与 `swap` 交换。 -/
+lemma rst_swap_eq (b : α) (u : Split α) (h : Nondeg b u) :
+    rst b u.swap (nondeg_swap h) = (rst b u h).swap := by
+  refine eq_of_sideA_eq ?_
+  rw [rst_sideA, tr_swap, Split.swap_sideA, rst_sideB]
+
+/-- 分离关系的**向下转移**（`separates_rst` 的逆方向）：`α` 上的分离 ⇒ 限制上的分离。 -/
+lemma separates_of_separates_rst (b : α) {u : Split α} (h : Nondeg b u)
+    {x y z w : Del b} (hsep : u.Separates (x : α) (y : α) (z : α) (w : α)) :
+    (rst b u h).Separates x y z w := by
+  rcases hsep with ⟨h1, h2, h3, h4⟩ | ⟨h1, h2, h3, h4⟩
+  · exact Or.inl ⟨(mem_rst_sideA b h).mpr h1, (mem_rst_sideA b h).mpr h2,
+      (mem_rst_sideB b h).mpr h3, (mem_rst_sideB b h).mpr h4⟩
+  · exact Or.inr ⟨(mem_rst_sideB b h).mpr h1, (mem_rst_sideB b h).mpr h2,
+      (mem_rst_sideA b h).mpr h3, (mem_rst_sideA b h).mpr h4⟩
+
+/-- `rst b u` 的 `sideA` 就是 `tr b u`（限制后的两侧非空的包装）。 -/
+lemma rst_sideA_tr (b : α) (u : Split α) (h : Nondeg b u) : (rst b u h).sideA = tr b u :=
+  rst_sideA b u h
+
+/-- **迹相同（`x ∈ s.sideA`）** ⇒ `u.sideA = s.sideA \ {x}`（`u = s` 除外）。 -/
+lemma sideA_sdiff_of_rst_eq_of_mem_sideA {x : α} {u s : Split α}
+    (hu : Nondeg x u) (hs : Nondeg x s) (hxA : x ∈ s.sideA) (hus : u ≠ s)
+    (h : (rst x u hu).sideA = (rst x s hs).sideA) :
+    u.sideA = s.sideA \ {x} := by
+  have hxnA : x ∉ s.swap.sideA := by
+    rw [Split.swap_sideA]
+    exact fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hxA hc
+  have hswap : (rst x u.swap (nondeg_swap hu)).sideA
+      = (rst x s.swap (nondeg_swap hs)).sideA := by
+    rw [rst_swap_eq, rst_swap_eq, Split.swap_sideA]
+    have hc := congrArg (fun (t : Finset (Del x)) => tᶜ) h
+    simpa [Split.sideB_eq_compl] using hc
+  have hmain := sides_eq_of_rst_sideA (u := u.swap) (t := s.swap) (b := x)
+    (nondeg_swap hu) (nondeg_swap hs) hxnA (fun hc => hus (swap_injective hc)) hswap
+  obtain ⟨h1, -⟩ := hmain
+  rw [Split.swap_sideA, Split.swap_sideA] at h1
+  have key : (s.sideB ∪ {x})ᶜ = s.sideA \ {x} := by
+    rw [Split.sideB_eq_compl]
+    ext y
+    simp only [Finset.mem_compl, Finset.mem_union, Finset.mem_singleton, Finset.mem_sdiff]
+    tauto
+  have h4 : u.sideA = (s.sideB ∪ {x})ᶜ := by
+    rw [Split.sideB_eq_compl] at h1
+    rw [← h1]
+    ext y
+    simp
+  rw [h4, key]
+
+/-- **迹相同（`x ∈ s.sideA`、换侧）** ⇒ `u.sideA = s.sideB ∪ {x}`（`u = s.swap` 除外）。 -/
+lemma sideA_union_of_rst_swap_eq_of_mem_sideA {x : α} {u s : Split α}
+    (hu : Nondeg x u) (hs : Nondeg x s) (hxA : x ∈ s.sideA) (hus : u ≠ s.swap)
+    (h : (rst x u hu).sideA = (rst x s hs).sideB) :
+    u.sideA = s.sideB ∪ {x} := by
+  have hxnA : x ∉ s.swap.sideA := by
+    rw [Split.swap_sideA]
+    exact fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hxA hc
+  have h' : (rst x u hu).sideA = (rst x s.swap (nondeg_swap hs)).sideA := by
+    rw [rst_swap_eq, Split.swap_sideA]
+    exact h
+  have hmain := sides_eq_of_rst_sideA (u := u) (t := s.swap) (b := x)
+    hu (nondeg_swap hs) hxnA hus h'
+  obtain ⟨h1, -⟩ := hmain
+  rwa [Split.swap_sideA] at h1
+
+/-- **迹相同（`x ∈ s.sideB`）** ⇒ `u.sideA = s.sideA ∪ {x}`（`u = s` 除外）。 -/
+lemma sideA_union_of_rst_eq_of_mem_sideB {x : α} {u s : Split α}
+    (hu : Nondeg x u) (hs : Nondeg x s) (hxB : x ∈ s.sideB) (hus : u ≠ s)
+    (h : (rst x u hu).sideA = (rst x s hs).sideA) :
+    u.sideA = s.sideA ∪ {x} := by
+  have hxnA : x ∉ s.sideA :=
+    fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hc hxB
+  exact (sides_eq_of_rst_sideA (u := u) (t := s) (b := x) hu hs hxnA hus h).1
+
+/-- **迹相同（`x ∈ s.sideB`、换侧）** ⇒ `u.sideA = s.sideB \ {x}`（`u = s.swap` 除外）。 -/
+lemma sideA_sdiff_of_rst_swap_eq_of_mem_sideB {x : α} {u s : Split α}
+    (hu : Nondeg x u) (hs : Nondeg x s) (hxB : x ∈ s.sideB) (hus : u ≠ s.swap)
+    (h : (rst x u hu).sideA = (rst x s hs).sideB) :
+    u.sideA = s.sideB \ {x} := by
+  exact (sides_eq_of_rst_sideB (u := u) (t := s) (b := x) hu hs hxB hus h).1
+
+/-- 非退化成员的限制属于限制族。 -/
+lemma mem_rF_of_mem {x : α} {F : Finset (Split α)} {u : Split α} (huF : u ∈ F)
+    (hu : Nondeg x u) : rst x u hu ∈ rF x F := by
+  have hmem : u ∈ Fnd x F := (mem_Fnd x F).mpr ⟨huF, hu⟩
+  refine Finset.mem_image.mpr ⟨⟨u, hmem⟩, Finset.mem_attach _ _, ?_⟩
+  show rst x u hu = rst x u ((mem_Fnd x F).mp hmem).2
+  rfl
+
+/-- ★★★ **归纳步的「提升」**：若限制族 `rF x F` 在 `s' = rst x s` 处有避让四元组，
+且 `F` 中除 `s`、`s.swap` 外没有成员的迹等于 `s'` / `s'.swap`，则 `F` 在 `s` 处也有
+（同一个）避让四元组。 -/
+lemma quartetAvoidingND_lift {F : Finset (Split α)} {s : Split α} {x : α}
+    (hnds : Nondeg x s)
+    (hbad1 : ∀ (u : Split α) (hu : Nondeg x u), u ∈ F → u ≠ s →
+      (rst x u hu).sideA = (rst x s hnds).sideA → False)
+    (hbad2 : ∀ (u : Split α) (hu : Nondeg x u), u ∈ F → u ≠ s.swap →
+      (rst x u hu).sideA = (rst x s hnds).sideB → False)
+    (hQ : QuartetAvoidingND (rF x F) (rst x s hnds)) :
+    QuartetAvoidingND F s := by
+  obtain ⟨a, ha, a', ha', b, hb, b', hb', hne, hne', h⟩ := hQ
+  refine ⟨(a : α), (mem_rst_sideA x hnds).mp ha, (a' : α), (mem_rst_sideA x hnds).mp ha',
+    (b : α), (mem_rst_sideB x hnds).mp hb, (b' : α), (mem_rst_sideB x hnds).mp hb',
+    (fun hc => hne (Subtype.ext hc)), (fun hc => hne' (Subtype.ext hc)), ?_⟩
+  intro u huF hu1 hu2 hsep
+  by_cases hu : Nondeg x u
+  · have hsep' : (rst x u hu).Separates a a' b b' := separates_of_separates_rst x hu hsep
+    have hmem : rst x u hu ∈ rF x F := mem_rF_of_mem huF hu
+    have hne1 : rst x u hu ≠ rst x s hnds := by
+      intro heq
+      exact hbad1 u hu huF hu1 (by rw [heq])
+    have hne2 : rst x u hu ≠ (rst x s hnds).swap := by
+      intro heq
+      exact hbad2 u hu huF hu2 (by rw [heq, Split.swap_sideA])
+    exact h (rst x u hu) hmem hne1 hne2 hsep'
+  · have hdeg : tr x u = ∅ ∨ (tr x u)ᶜ = ∅ := by
+      by_cases h1 : (tr x u).Nonempty
+      · by_cases h2 : ((tr x u)ᶜ).Nonempty
+        · exact absurd ⟨h1, h2⟩ hu
+        · exact Or.inr (Finset.not_nonempty_iff_eq_empty.mp h2)
+      · exact Or.inl (Finset.not_nonempty_iff_eq_empty.mp h1)
+    rcases hsep with ⟨h1a, h1a', h1b, h1b'⟩ | ⟨h2a, h2a', h2b, h2b'⟩
+    · rcases hdeg with h0 | h0
+      · have hna : (a : α) ∉ u.sideA := by
+          rw [← mem_tr x (u := u) (x := a), h0]; simp
+        exact hna h1a
+      · have hmb : (b : α) ∈ u.sideA := by
+          rw [← mem_tr x (u := u) (x := b)]
+          by_contra hc
+          have hmem : b ∈ (tr x u)ᶜ := by simpa using hc
+          rw [h0] at hmem
+          simp at hmem
+        exact (Finset.disjoint_left.mp u.disjoint_sides) hmb h1b
+    · rcases hdeg with h0 | h0
+      · have hnb : (b : α) ∉ u.sideA := by
+          rw [← mem_tr x (u := u) (x := b), h0]; simp
+        exact hnb h2b
+      · have hma : (a : α) ∈ u.sideA := by
+          rw [← mem_tr x (u := u) (x := a)]
+          by_contra hc
+          have hmem : a ∈ (tr x u)ᶜ := by simpa using hc
+          rw [h0] at hmem
+          simp at hmem
+        exact (Finset.disjoint_left.mp u.disjoint_sides) hma h2a
+
+/-- 基例：`|sideA| = |sideB| = 2`（即 `card α = 4`）时，唯一（两类）四点组只被
+`s`、`s.swap` 分离。 -/
+lemma base_four {F : Finset (Split α)} {s : Split α}
+    (hA2 : s.sideA.card = 2) (hB2 : s.sideB.card = 2) :
+    QuartetAvoidingND F s := by
+  obtain ⟨a, a', hne, hAeq⟩ := Finset.card_eq_two.mp hA2
+  obtain ⟨b, b', hne', hBeq⟩ := Finset.card_eq_two.mp hB2
+  refine ⟨a, ?_, a', ?_, b, ?_, b', ?_, hne, hne', ?_⟩
+  · rw [hAeq]; simp
+  · rw [hAeq]; simp
+  · rw [hBeq]; simp
+  · rw [hBeq]; simp
+  · intro u huF hu1 hu2 hsep
+    rcases hsep with ⟨ha, ha', hb, hb'⟩ | ⟨ha, ha', hb, hb'⟩
+    · have hsub : s.sideA ⊆ u.sideA := by
+        rw [hAeq]
+        intro y hy
+        rcases Finset.mem_insert.mp hy with rfl | h2
+        · exact ha
+        · rw [Finset.mem_singleton] at h2
+          rw [h2]; exact ha'
+      have hsub2 : u.sideA ⊆ s.sideA := by
+        intro y hy
+        have hyB : y ∉ u.sideB := fun hc => (Finset.disjoint_left.mp u.disjoint_sides) hy hc
+        have hyX : y ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ y
+        rcases Finset.mem_union.mp hyX with h | h
+        · exact h
+        · rw [hBeq] at h
+          rcases Finset.mem_insert.mp h with rfl | h2
+          · exact absurd hb hyB
+          · rw [Finset.mem_singleton] at h2
+            exact absurd (h2 ▸ hb') hyB
+      exact hu1 (eq_of_sideA_eq (Finset.Subset.antisymm hsub2 hsub))
+    · have hsub : s.sideB ⊆ u.sideA := by
+        rw [hBeq]
+        intro y hy
+        rcases Finset.mem_insert.mp hy with rfl | h2
+        · exact hb
+        · rw [Finset.mem_singleton] at h2
+          rw [h2]; exact hb'
+      have hsub2 : u.sideA ⊆ s.sideB := by
+        intro y hy
+        have hyB : y ∉ u.sideB := fun hc => (Finset.disjoint_left.mp u.disjoint_sides) hy hc
+        have hyX : y ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ y
+        rcases Finset.mem_union.mp hyX with h | h
+        · rw [hAeq] at h
+          rcases Finset.mem_insert.mp h with rfl | h2
+          · exact absurd ha hyB
+          · rw [Finset.mem_singleton] at h2
+            exact absurd (h2 ▸ ha') hyB
+        · exact h
+      have hus : u = s.swap := by
+        refine eq_of_sideA_eq ?_
+        rw [Split.swap_sideA]
+        exact Finset.Subset.antisymm hsub2 hsub
+      exact hu2 hus
+
+/-- 辅助：`U.sideA` 形如 `T \ {p}` 或 `Tᶜ ∪ {p}` 时，`U` 在 `{b, p, q, r}` 上诱导 2|2
+（`q, r ∈ T`、`b ∉ T`、`q, r ≠ p`）。 -/
+lemma separates_of_sideA_sdiff_or_compl {T : Finset α} {p q r b : α} {U : Split α}
+    (hqT : q ∈ T) (hrT : r ∈ T) (hbT : b ∉ T) (hqp : q ≠ p) (hrp : r ≠ p)
+    (hU : U.sideA = T \ {p} ∨ U.sideA = Tᶜ ∪ {p}) :
+    U.Separates b p q r := by
+  rcases hU with hU | hU
+  · have hqA : q ∈ U.sideA := by
+      rw [hU]; exact Finset.mem_sdiff.mpr ⟨hqT, by simpa using hqp⟩
+    have hrA : r ∈ U.sideA := by
+      rw [hU]; exact Finset.mem_sdiff.mpr ⟨hrT, by simpa using hrp⟩
+    have hbB : b ∈ U.sideB := by
+      rw [mem_sideB_iff_not_mem_sideA, hU]
+      exact fun hc => hbT (Finset.mem_sdiff.mp hc).1
+    have hpB : p ∈ U.sideB := by
+      rw [mem_sideB_iff_not_mem_sideA, hU]
+      exact fun hc => (Finset.mem_sdiff.mp hc).2 (Finset.mem_singleton_self p)
+    exact Or.inr ⟨hbB, hpB, hqA, hrA⟩
+  · have hbA : b ∈ U.sideA := by
+      rw [hU]; exact Finset.mem_union_left _ (by simpa using hbT)
+    have hpA : p ∈ U.sideA := by
+      rw [hU]; exact Finset.mem_union_right _ (Finset.mem_singleton_self p)
+    have hqB : q ∈ U.sideB := by
+      rw [mem_sideB_iff_not_mem_sideA, hU]
+      intro hc
+      rcases Finset.mem_union.mp hc with h | h
+      · exact (Finset.mem_compl.mp h) hqT
+      · rw [Finset.mem_singleton] at h
+        exact hqp h
+    have hrB : r ∈ U.sideB := by
+      rw [mem_sideB_iff_not_mem_sideA, hU]
+      intro hc
+      rcases Finset.mem_union.mp hc with h | h
+      · exact (Finset.mem_compl.mp h) hrT
+      · rw [Finset.mem_singleton] at h
+        exact hrp h
+    exact Or.inl ⟨hbA, hpA, hqB, hrB⟩
+
+/-- ★★★ **组合引理**（`3 ≤ |sideA|`）：存在 `x ∈ s.sideA`，使**没有任何**成员的 `sideA`
+等于 `s.sideA \ {x}` 或 `s.sideB ∪ {x}`。否则三个这样的成员在 `{b, x, y, z}` 上实现三种配对，
+与弱相容矛盾。 -/
+lemma exists_avoiding_of_sideA {F : Finset (Split α)} {s : Split α}
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hA3 : 3 ≤ s.sideA.card)
+    (hBn : s.sideB.Nonempty) :
+    ∃ x ∈ s.sideA, (∀ U : Split α, U.sideA = s.sideA \ {x} → U ∉ F) ∧
+      (∀ U : Split α, U.sideA = s.sideB ∪ {x} → U ∉ F) := by
+  classical
+  by_contra hcon
+  have key : ∀ x ∈ s.sideA, ∃ U ∈ F, U.sideA = s.sideA \ {x} ∨ U.sideA = s.sideB ∪ {x} := by
+    intro x hx
+    by_contra hc
+    apply hcon
+    refine ⟨x, hx, ?_, ?_⟩
+    · intro U hU
+      exact fun hmem => hc ⟨U, hmem, Or.inl hU⟩
+    · intro U hU
+      exact fun hmem => hc ⟨U, hmem, Or.inr hU⟩
+  obtain ⟨t, htA, ht3⟩ := Finset.exists_subset_card_eq (n := 3) hA3
+  obtain ⟨x, y, z, hxy, hxz, hyz, ht⟩ := Finset.card_eq_three.mp ht3
+  have hx : x ∈ s.sideA := htA (by rw [ht]; simp)
+  have hy : y ∈ s.sideA := htA (by rw [ht]; simp)
+  have hz : z ∈ s.sideA := htA (by rw [ht]; simp)
+  obtain ⟨Ux, hUxF, hUx⟩ := key x hx
+  obtain ⟨Uy, hUyF, hUy⟩ := key y hy
+  obtain ⟨Uz, hUzF, hUz⟩ := key z hz
+  obtain ⟨b, hb⟩ := hBn
+  have hbA : b ∉ s.sideA := fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hc hb
+  have hsepX : Ux.Separates b x y z :=
+    separates_of_sideA_sdiff_or_compl hy hz hbA hxy.symm hxz.symm (by simpa [Split.sideB_eq_compl] using hUx)
+  have hsepY : Uy.Separates b y x z :=
+    separates_of_sideA_sdiff_or_compl hx hz hbA hxy hyz.symm (by simpa [Split.sideB_eq_compl] using hUy)
+  have hsepZ : Uz.Separates b z x y :=
+    separates_of_sideA_sdiff_or_compl hx hy hbA hxz hyz (by simpa [Split.sideB_eq_compl] using hUz)
+  exact hF ⟨b, x, y, z,
+    ⟨Ux, by simpa using hUxF, hsepX⟩,
+    ⟨Uy, by simpa using hUyF, hsepY⟩,
+    ⟨Uz, by simpa using hUzF, hsepZ⟩⟩
+
+/-- ★★★ **组合引理**（`3 ≤ |sideB|`，由 `exists_avoiding_of_sideA` 应用于 `s.swap` 得到）。 -/
+lemma exists_avoiding_of_sideB {F : Finset (Split α)} {s : Split α}
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hB3 : 3 ≤ s.sideB.card)
+    (hAn : s.sideA.Nonempty) :
+    ∃ x ∈ s.sideB, (∀ U : Split α, U.sideA = s.sideA ∪ {x} → U ∉ F) ∧
+      (∀ U : Split α, U.sideA = s.sideB \ {x} → U ∉ F) := by
+  have h := exists_avoiding_of_sideA (F := F) (s := s.swap) hF (by simpa using hB3)
+    (by simpa using hAn)
+  obtain ⟨x, hx, h1, h2⟩ := h
+  refine ⟨x, by simpa using hx, ?_, ?_⟩
+  · intro U hU
+    exact h2 U (by rw [hU, Split.swap_sideB])
+  · intro U hU
+    exact h1 U (by rw [hU, Split.swap_sideA])
+
+/-- `x ∈ s.sideA` 且 `2 ≤ |sideA|`、`sideB` 非空 ⇒ `Nondeg x s`。 -/
+lemma nondeg_of_mem_sideA {s : Split α} {x : α} (hx : x ∈ s.sideA)
+    (h2 : 2 ≤ s.sideA.card) (hB : s.sideB.Nonempty) : Nondeg x s := by
+  constructor
+  · obtain ⟨a1, ha1, a2, ha2, hne⟩ := Finset.one_lt_card.mp (by omega : 1 < s.sideA.card)
+    rcases eq_or_ne a1 x with h | h
+    · refine ⟨⟨a2, ?_⟩, (mem_tr x).mpr ha2⟩
+      intro hc
+      exact hne (h.trans hc.symm)
+    · exact ⟨⟨a1, h⟩, (mem_tr x).mpr ha1⟩
+  · obtain ⟨b, hb⟩ := hB
+    have hbx : b ≠ x := fun hc =>
+      (Finset.disjoint_left.mp s.disjoint_sides) (hc ▸ hx) hb
+    exact ⟨⟨b, hbx⟩, (mem_compl_tr x).mpr hb⟩
+
+/-- `card (tr x s) ≥ 2` 的两种情形的公共包装（`x ∈ sideA`）。 -/
+private lemma two_le_card_tr_of_mem_sideA {s : Split α} {x : α} (hx : x ∈ s.sideA)
+    (h2 : 3 ≤ s.sideA.card) : 2 ≤ (tr x s).card := by
+  have herase : 1 < (s.sideA.erase x).card := by
+    rw [Finset.card_erase_of_mem hx]; omega
+  obtain ⟨u, hu, v, hv, huv⟩ := Finset.one_lt_card.mp herase
+  have hu' := Finset.mem_erase.mp hu
+  have hv' := Finset.mem_erase.mp hv
+  have := Finset.one_lt_card.mpr
+    ⟨⟨u, hu'.1⟩, (mem_tr x).mpr hu'.2, ⟨v, hv'.1⟩, (mem_tr x).mpr hv'.2,
+      fun hc => huv (Subtype.ext_iff.mp hc)⟩
+  omega
+
+/-- `card ((tr x s)ᶜ) ≥ 2` 的公共包装（`2 ≤ |sideB|`）。 -/
+private lemma two_le_card_compl_tr_of_two_le {s : Split α} {x : α}
+    (hxA : x ∈ s.sideA) (h2 : 2 ≤ s.sideB.card) : 2 ≤ ((tr x s)ᶜ).card := by
+  obtain ⟨u, hu, v, hv, huv⟩ := Finset.one_lt_card.mp (by omega : 1 < s.sideB.card)
+  have hux : u ≠ x := fun hc => (Finset.disjoint_left.mp s.disjoint_sides) (hc ▸ hxA) hu
+  have hvx : v ≠ x := fun hc => (Finset.disjoint_left.mp s.disjoint_sides) (hc ▸ hxA) hv
+  have := Finset.one_lt_card.mpr
+    ⟨⟨u, hux⟩, (mem_compl_tr x).mpr hu, ⟨v, hvx⟩, (mem_compl_tr x).mpr hv,
+      fun hc => huv (Subtype.ext_iff.mp hc)⟩
+  omega
+
+/-- `card (tr x s) ≥ 2`（`x ∉ sideA`，故 `tr x s` 就是 `sideA`）。 -/
+private lemma two_le_card_tr_of_not_mem_sideA {s : Split α} {x : α} (hxB : x ∈ s.sideB)
+    (h2 : 2 ≤ s.sideA.card) : 2 ≤ (tr x s).card := by
+  obtain ⟨u, hu, v, hv, huv⟩ := Finset.one_lt_card.mp (by omega : 1 < s.sideA.card)
+  have hux : u ≠ x := fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hu (hc ▸ hxB)
+  have hvx : v ≠ x := fun hc => (Finset.disjoint_left.mp s.disjoint_sides) hv (hc ▸ hxB)
+  have := Finset.one_lt_card.mpr
+    ⟨⟨u, hux⟩, (mem_tr x).mpr hu, ⟨v, hvx⟩, (mem_tr x).mpr hv,
+      fun hc => huv (Subtype.ext_iff.mp hc)⟩
+  omega
+
+/-- `card ((tr x s)ᶜ) ≥ 2`（`x ∈ sideB`）。 -/
+private lemma two_le_card_compl_tr_of_mem_sideB {s : Split α} {x : α} (hxB : x ∈ s.sideB)
+    (h2 : 3 ≤ s.sideB.card) : 2 ≤ ((tr x s)ᶜ).card := by
+  have herase : 1 < (s.sideB.erase x).card := by
+    rw [Finset.card_erase_of_mem hxB]; omega
+  obtain ⟨u, hu, v, hv, huv⟩ := Finset.one_lt_card.mp herase
+  have hu' := Finset.mem_erase.mp hu
+  have hv' := Finset.mem_erase.mp hv
+  have := Finset.one_lt_card.mpr
+    ⟨⟨u, hu'.1⟩, (mem_compl_tr x).mpr hu'.2, ⟨v, hv'.1⟩, (mem_compl_tr x).mpr hv'.2,
+      fun hc => huv (Subtype.ext_iff.mp hc)⟩
+  omega
+
+/-- ★★★★★ **主引理（对 `Fintype.card α` 强归纳）**。 -/
+private theorem quartetAvoidAux (n : ℕ) :
+    ∀ {β : Type*} [Fintype β] [DecidableEq β], Fintype.card β = n →
+      ∀ (F : Finset (Split β)) (s : Split β), s ∈ F →
+        WeaklyCompatible (↑F : Set (Split β)) → 2 ≤ s.sideA.card → 2 ≤ s.sideB.card →
+          QuartetAvoidingND F s := by
+  induction n using Nat.strong_induction_on with
+  | h n ih =>
+    intro β instF instD hcard F s hs hF hA hB
+    classical
+    have hsum : s.sideA.card + s.sideB.card = Fintype.card β := by
+      rw [← Finset.card_union_of_disjoint s.disjoint_sides, s.union_sides, Finset.card_univ]
+    rcases Nat.lt_or_ge (Fintype.card β) 5 with hsmall | hbig
+    · exact base_four (by omega) (by omega)
+    · have h3 : 3 ≤ s.sideA.card ∨ 3 ≤ s.sideB.card := by omega
+      rcases h3 with hA3 | hB3
+      · obtain ⟨x, hx, hnot1, hnot2⟩ :=
+          exists_avoiding_of_sideA (F := F) (s := s) hF hA3 (s.nonempty 1)
+        have hnds : Nondeg x s := nondeg_of_mem_sideA hx hA (s.nonempty 1)
+        have hlt : Fintype.card (Del x) < n := by
+          rw [← hcard]
+          exact Fintype.card_subtype_lt (p := fun z => z ≠ x) (x := x) (by simp)
+        have hA' : 2 ≤ (rst x s hnds).sideA.card := by
+          rw [rst_sideA]; exact two_le_card_tr_of_mem_sideA hx hA3
+        have hB' : 2 ≤ (rst x s hnds).sideB.card := by
+          rw [rst_sideB]; exact two_le_card_compl_tr_of_two_le hx hB
+        have ihQ := ih (Fintype.card (Del x)) hlt (β := Del x) rfl (rF x F) (rst x s hnds)
+          (mem_rF_of_mem hs hnds) (weaklyCompatible_rF x F hF) hA' hB'
+        refine quartetAvoidingND_lift hnds ?_ ?_ ihQ
+        · intro u hu huF hu1 heq
+          exact hnot1 u (sideA_sdiff_of_rst_eq_of_mem_sideA hu hnds hx hu1 heq) huF
+        · intro u hu huF hu2 heq
+          exact hnot2 u (sideA_union_of_rst_swap_eq_of_mem_sideA hu hnds hx hu2 heq) huF
+      · obtain ⟨x, hx, hnot1, hnot2⟩ :=
+          exists_avoiding_of_sideB (F := F) (s := s) hF hB3 (s.nonempty 0)
+        have hnds : Nondeg x s := nondeg_of_mem_sideB hx hB
+        have hlt : Fintype.card (Del x) < n := by
+          rw [← hcard]
+          exact Fintype.card_subtype_lt (p := fun z => z ≠ x) (x := x) (by simp)
+        have hA' : 2 ≤ (rst x s hnds).sideA.card := by
+          rw [rst_sideA]; exact two_le_card_tr_of_not_mem_sideA hx hA
+        have hB' : 2 ≤ (rst x s hnds).sideB.card := by
+          rw [rst_sideB]; exact two_le_card_compl_tr_of_mem_sideB hx hB3
+        have ihQ := ih (Fintype.card (Del x)) hlt (β := Del x) rfl (rF x F) (rst x s hnds)
+          (mem_rF_of_mem hs hnds) (weaklyCompatible_rF x F hF) hA' hB'
+        refine quartetAvoidingND_lift hnds ?_ ?_ ihQ
+        · intro u hu huF hu1 heq
+          exact hnot1 u (sideA_union_of_rst_eq_of_mem_sideB hu hnds hx hu1 heq) huF
+        · intro u hu huF hu2 heq
+          exact hnot2 u (sideA_sdiff_of_rst_swap_eq_of_mem_sideB hu hnds hx hu2 heq) huF
+
+/-- ★★★★★★★★★ **W30 泳道 b 主定理：(B) 成立**（见文件头 §9 的陈述）。 -/
+theorem quartetAvoidingND_of_weaklyCompatible (F : Finset (Split α)) (s : Split α)
+    (hs : s ∈ F) (hF : WeaklyCompatible (↑F : Set (Split α)))
+    (hA : 2 ≤ s.sideA.card) (hB : 2 ≤ s.sideB.card) : QuartetAvoidingND F s :=
+  quartetAvoidAux (Fintype.card α) rfl F s hs hF hA hB
+end Split
