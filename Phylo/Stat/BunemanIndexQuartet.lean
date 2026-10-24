@@ -201,4 +201,60 @@ theorem exists_nondegenerate_quartet_attaining (F : Finset (Split α)) (w : Spli
   rw [isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA hB]
   exact (pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha ha' hb hb' havoid).symm
 
+/-- ★★★★★★★ **W30 泳道 b 收官：`_v2` 第二合取项的等式对 `F` 的每个成员成立**。 -/
+theorem isolationIndex_eq_two_mul_weight (F : Finset (Split α)) (w : Split α → ℝ)
+    (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
+    {s : Split α} (hs : s ∈ F) :
+    isolationIndex (sumMetric F w) s.sideA s.sideB
+      = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
+  classical
+  have hge : 2 * (w s + (if s.swap ∈ F then w s.swap else 0))
+      ≤ isolationIndex (sumMetric F w) s.sideA s.sideB :=
+    isolationIndex_ge_two_mul_weight F w hF hw hs
+  rcases Nat.lt_or_ge s.sideA.card 2 with hA2 | hA2
+  · have hA1 : s.sideA.card = 1 := le_antisymm (by omega) (s.nonempty 0).card_pos
+    obtain ⟨a, hAeq⟩ := Finset.card_eq_one.mp hA1
+    rcases Nat.lt_or_ge s.sideB.card 2 with hB2 | hB2
+    · -- 两侧都单点
+      have hB1 : s.sideB.card = 1 := le_antisymm (by omega) (s.nonempty 1).card_pos
+      obtain ⟨b, hBeq⟩ := Finset.card_eq_one.mp hB1
+      obtain ⟨a', ha', b', hb', havoid⟩ := both_singleton_avoiding hAeq hBeq
+      have hpd := pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha' ha' hb' hb' havoid
+      have hle : isolationIndex (sumMetric F w) s.sideA s.sideB
+          ≤ 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
+        calc isolationIndex (sumMetric F w) s.sideA s.sideB
+            ≤ pairDeficit (sumMetric F w) a' a' b' b' :=
+              isolationIndex_le_pairDeficit (sumMetric F w) (s.nonempty 0) (s.nonempty 1)
+                ha' ha' hb' hb'
+          _ = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := hpd
+      linarith
+    · -- `sideA` 单点、`sideB` ≥ 2
+      have hBpos : 2 ≤ s.sideB.card := hB2
+      obtain ⟨a', ha', b', hb', b'', hb'', hne, havoid⟩ :=
+        singleSideAvoiding_of_sideA_singleton F s hF ⟨a, hAeq⟩ hBpos
+      have hpd := pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha' ha' hb' hb'' havoid
+      have hle : isolationIndex (sumMetric F w) s.sideA s.sideB
+          ≤ 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
+        calc isolationIndex (sumMetric F w) s.sideA s.sideB
+            ≤ pairDeficit (sumMetric F w) a' a' b' b'' :=
+              isolationIndex_le_pairDeficit (sumMetric F w) (s.nonempty 0) (s.nonempty 1)
+                ha' ha' hb' hb''
+          _ = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := hpd
+      linarith
+  · rcases Nat.lt_or_ge s.sideB.card 2 with hB2 | hB2
+    · -- `sideB` 单点、`sideA` ≥ 2
+      have hB1 : s.sideB.card = 1 := le_antisymm (by omega) (s.nonempty 1).card_pos
+      obtain ⟨b, hBeq⟩ := Finset.card_eq_one.mp hB1
+      obtain ⟨b', hb', a', ha', a'', ha'', hne, havoid⟩ :=
+        singleSideAvoidingB_of_sideB_singleton F s hF ⟨b, hBeq⟩ hA2
+      have hpd := pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha' ha'' hb' hb' havoid
+      have hle : isolationIndex (sumMetric F w) s.sideA s.sideB
+          ≤ 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := by
+        calc isolationIndex (sumMetric F w) s.sideA s.sideB
+            ≤ pairDeficit (sumMetric F w) a' a'' b' b' :=
+              isolationIndex_le_pairDeficit (sumMetric F w) (s.nonempty 0) (s.nonempty 1)
+                ha' ha'' hb' hb'
+          _ = 2 * (w s + (if s.swap ∈ F then w s.swap else 0)) := hpd
+      linarith
+    · exact isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA2 hB2
 end Split
