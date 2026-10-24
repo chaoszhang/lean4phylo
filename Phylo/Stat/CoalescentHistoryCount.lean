@@ -620,4 +620,54 @@ theorem card_mergeHistories_ge_H (n : ℕ) (hn : 1 ≤ n) :
 `sd2012_eq4_uniform_rates_gap`、`ranked4_probability_gap`）**不在本次任务范围内**，
 本文件**没有**触碰、也**没有**声称。 -/
 
+
+
+/-! ### §6 合并历史空间上的**均匀律**（= `YHKClanLawGap` 的 `Ω / prob` 槽）
+
+★★★ W30 泳道c。本节把 `RankedTree n` 上的均匀测度写成一条**可用的概率律**：
+
+```text
+Ω := RankedTree n,   prob := 1 / H n,   Σ_ω prob ω = 1
+```
+
+归一化是**免费**的：`|RankedTree n| = H n`（★★★ `card_mergeHistories_eq_H`），故
+`Σ_ω (1/H n) = |Ω|·(1/H n) = 1`。
+
+**为什么这是 `YHKClanLawGap`（`Phylo/Stat/ReciprocalMonophyly.lean:924`）的正确 `Ω`**：
+每条合并历史取概率 `2^{n−1}/(n!(n−1)!)`，而有根标号拓扑 `T` 恰对应
+`#hist(T) = (n−1)!/g(T)` 条历史 ⇒ `P_rooted(T) = 2^{n−1}/(n!·g(T))`，
+**恰是** `§11.1` 的 `yhkRootWeight`（`ReciprocalMonophyly.lean:2442`）。
+`scripts/msc/w30c_history_model_check.py` 的 (B) 段在 `n = 3..7` 上把该模型的
+clan 频率与 `clanProb` **逐点核成相等**（`总判定：ALL OK`）。
+
+★ 对照：`§11.3` 的 `yhkHistorySpace n`（`(k : Fin (n−3)) → Fin (k+3)`，选叶模型）
+**不是** YHK 律的载体（`n ≥ 5` 只覆盖标号树的一个真子集：`n = 5` 是 12/15），
+见 `ReciprocalMonophyly.lean` §11.3 的口径更正与同一脚本的 (A) 段。
+
+⚠️ **仍欠**：`tree : RankedTree n → Cladogram (Fin n)` 槽 —— 按合并历史读出 clade 族
+（每步并出的块；`blocksOf` / `chainMap` 已在库），再走 `Cladogram.ofCompatibleSplits`。
+本批未做，见 `.w30/report_c.md` 的「下一批入口」。 -/
+
+/-- ★★★ **合并历史空间上的均匀律归一化**：`Σ_{ω : RankedTree n} 1/H n = 1`（`n ≥ 2`）。
+
+这就是 `YHKClanLawGap` 的「`Ω / prob` 两槽 ＋ 归一化」；剩下的只有 `tree` 槽与 ③ 的计数。 -/
+theorem sum_rankedTree_uniform (n : ℕ) (hn : 2 ≤ n) :
+    ∑ _ω : RankedGeneTree.RankedTree n, (1 / RankedGeneTree.H n) = 1 := by
+  classical
+  have hHpos : (0 : ℝ) < RankedGeneTree.H n := by
+    rw [← cast_Hnat n]
+    have h : 0 < Hnat n := by
+      rw [Hnat_eq_prod]
+      refine Finset.prod_pos (fun k _ => ?_)
+      exact Nat.choose_pos (by omega : 2 ≤ k + 2)
+    exact_mod_cast h
+  have hcard : ((Fintype.card (RankedGeneTree.RankedTree n) : ℕ) : ℝ) = RankedGeneTree.H n := by
+    have h1 : Fintype.card (RankedGeneTree.RankedTree n)
+        = (RankedGeneTree.mergeHistories n).card := by
+      rw [RankedGeneTree.mergeHistories]
+      exact Fintype.card_subtype _
+    rw [h1]
+    exact card_mergeHistories_eq_H n (by omega)
+  rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, hcard, mul_one_div,
+    div_self (ne_of_gt hHpos)]
 end Phylo.Stat.CoalescentHistoryCount
