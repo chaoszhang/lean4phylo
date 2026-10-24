@@ -237,6 +237,12 @@ noncomputable def rankedTreeCladogram (n : ℕ) (hn : 2 ≤ n)
     subst h2
     exact rankedTreeCladogramTwo
 
+/-- ★★ **派工书建议的名字（函数形态）**：`RankedTree n → Cladogram (Fin n)`。
+（`tree` 槽在 `YHKClanLawGap` 里正是以 `Ω → Cladogram (Fin n)` 的形态出现。） -/
+noncomputable abbrev rankedTreeToCladogram (n : ℕ) (hn : 2 ≤ n) :
+    RankedGeneTree.RankedTree n → Cladogram.{0, 0} (Fin n) :=
+  fun ω => rankedTreeCladogram n hn ω
+
 /-- `3 ≤ n` 时总计版本就是 `rankedTreeCladogramOfThree`。 -/
 theorem rankedTreeCladogram_eq_of_three {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
     (ω : RankedGeneTree.RankedTree n) :
