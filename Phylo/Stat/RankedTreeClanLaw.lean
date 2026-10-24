@@ -5,11 +5,14 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.RankedTreeCladogram
 import Phylo.Stat.ReciprocalMonophyly
+import Phylo.Stat.CladeCount
 
 /-!
-# `Phylo.Stat.RankedTreeClanLaw` —— `Ω = RankedTree n` 上的 clan 律：**条件装配**（`_of_`）
+# `Phylo.Stat.RankedTreeClanLaw` —— `Ω = RankedTree n` 上的 clan 律
 
-★★★ M3 `tree` 槽（`RankedTreeCladogram.lean`）已把 `YHKClanLawGap` 的左端写成**具名事件**
+## 0. 本文件干什么
+
+★★★ M3 `tree` 槽（`RankedTreeCladogram.lean`）把 `YHKClanLawGap` 的左端写成**具名事件**
 
 ```
 clanEvent n hn A = ∑_{ω : A 是 clan 的合并史} 1 / H n
@@ -22,19 +25,19 @@ clanEvent n hn A = ∑_{ω : A 是 clan 的合并史} 1 / H n
 #{A 是 clan} = #{A 是块} + #{Aᶜ 是块} − #{A 与 Aᶜ 同时是块}
 ```
 
-本文件把最后一步接上：只要两件**计数闭形式**成立，
+其中**块计数**由泳道 b 的 ★★★ `CladeCount.cladeCount_univ` **无条件**给出（本文件
+§2 把它从 `cladeCount` 的货币翻到 `blockHistories` 的货币），**交项计数**是唯一的具名缺件
+`blockInterCount`。于是本文件的最强结论是 ★★★ `yhkClanLawGap_of_blockInterCount`：
 
-* **块计数**：`#{ω : A 是块} = H n · pn n (|A|)`（`|A| = a`）；
-* **交项计数**：`#{ω : A 与 Aᶜ 同时是块} = H n · pnHatExh n a`
-  （★ 注意是 **`pnHatExh`**（Lemma 4.3 的穷尽式 `2/((n−1)·C(n,a))`），**不是** `pnHat`
-  —— 后者是 Lemma 4.4 的一般式，`b = n − a` 时**不**等于 Lemma 4.3，见
-  `ReciprocalMonophyly.lean` §3 与 `pnHat_eq_pn_mul`（要求 `a + b < n`））；
+```
+blockInterCount  ⟹  YHKClanLawGap
+```
 
-则 ★★★ `clanEvent n hn A = clanProb n A.card`（用库内 ★★★ `clanProb_eq_inclusionExclusion`，
-`ReciprocalMonophyly.lean:404`，**不重证代数**）。
+## 1. 纪律
 
-⚠️ 命名：本文件给的是**条件形式**（后缀 `_of_`），**不是** `_holds` —— 块计数由泳道 b 的
-`ArithStep` 收口后，最后一行装配才叫 `_holds`。
+* `_of_` 命名（**不是** `_holds`）；缺件登记为 `def … : Prop`（`blockInterCount`），不用 `axiom`/`sorry`；
+* 名字里**没有** `gap`/`Gap`（`blockInterCount` / `yhkClanLawGap_of_blockInterCount` 除外 ——
+  后者是**缺口名的装配引理**，按派工书「`_of_`」规矩命名，台账不会记成收口）。
 -/
 
 namespace Phylo.Stat.RankedTreeClanLaw
@@ -42,8 +45,10 @@ namespace Phylo.Stat.RankedTreeClanLaw
 open Phylo.Stat.RankedTreeCladogram
 open Phylo.Stat.ReciprocalMonophyly
 open Phylo.Stat.CoalescentHistoryCount
+open Phylo.Stat.CladeCount
+open Classical
 
-/-- ★★ **`H n > 0`**（`n ≥ 2`）：`H n = Hnat n`（★★ `cast_Hnat`），而
+/-- ★★ **`H n > 0`**：`H n = Hnat n`（★★ `cast_Hnat`），而
 `Hnat n = ∏_{k=2}^{n} C(k,2)`（★★ `Hnat_eq_prod`）逐项正。 -/
 theorem H_pos (n : ℕ) : 0 < RankedGeneTree.H n := by
   rw [← cast_Hnat n]
@@ -129,17 +134,83 @@ theorem H_mul_pnHatExh_eq {n a : ℕ} (h1 : 2 ≤ a) (h2 : a ≤ n - 2) :
   rw [show a + (n - a) = n from by omega] at hmain
   exact hmain
 
-/-- ★★★ **条件装配**（`_of_`）：两件计数闭形式 ⟹ `clanEvent n hn A = clanProb n A.card`。
+/-! ## 2c. 块计数：从泳道 b 的 `cladeCount` 货币翻到 `blockHistories` 货币
 
-* `hblk` —— 块计数：`#{ω : B 是块} = H n · pn n (|B|)`（对 `2 ≤ |B| ≤ n−2` 的 `B`）；
-* `hinter` —— 交项计数：`#{ω : A 与 Aᶜ 同时是块} = H n · pnHatExh n (|A|)`。
+泳道 b 的 ★★★ `cladeCount_univ`（`CladeCount.lean`）**无条件**给出
+`(cladeCount univ A : ℝ) = H n * pn n |A|`，其中 `cladeCount` 数的是
+「`s`-相对合并史里 `A` 是 clade」的条数（`IsCladeH`）。本小节把它接到我们的
+`blockHistories`（`RankedTree` 上的「`A` 是非单点块」）—— 两个 `Finset` 用
+`Finset.card_bij`（双射：`ω ↦ ω.1`）对齐，谓词用 ★ `mem_blockFamily_iff_isCladeH` 翻译。 -/
+
+/-- ★★ **块 ↔ `IsCladeH` 的翻译**（非平凡基数）：`A` 是 `ω` 的非单点块 ⟺
+`A` 是 `ω` 的合并史（`s = univ`、`L ≤ n−1`）在某层的块。 -/
+theorem mem_blockFamily_iff_isCladeH {n : ℕ} (ω : RankedGeneTree.RankedTree n)
+    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    A ∈ blockFamily n ω ↔ IsCladeH (Finset.univ : Finset (Fin n)) (n - 1) ω.1 A := by
+  rw [mem_blockFamily, isCladeH_iff]
+  constructor
+  · rintro ⟨hc, -, -⟩
+    rw [RankedGeneTree.cladesOf, Finset.mem_biUnion] at hc
+    obtain ⟨L, hL, hAb⟩ := hc
+    rw [Finset.mem_range] at hL
+    rw [RankedGeneTree.blocksOf, Finset.mem_image] at hAb
+    obtain ⟨w, -, hw⟩ := hAb
+    refine ⟨L, by omega, w, ?_, ?_⟩
+    · rw [← hw]
+      exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl⟩
+    · rw [← hw]
+      rfl
+  · rintro ⟨L, hL, w, -, hw⟩
+    refine ⟨?_, h1, h2⟩
+    rw [RankedGeneTree.cladesOf, Finset.mem_biUnion]
+    refine ⟨L, Finset.mem_range.mpr (by omega), ?_⟩
+    rw [RankedGeneTree.blocksOf, Finset.mem_image]
+    exact ⟨w, Finset.mem_univ _, by rw [hw]; rfl⟩
+
+/-- ★★★ **块计数的货币兑换**：`#{ω : A ∈ blockFamily n ω} = cladeCountS (n−1) univ A`。 -/
+theorem card_blockHistories_eq_cladeCountS (n : ℕ) {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    (blockHistories n A).card
+      = cladeCountS (n - 1) (Finset.univ : Finset (Fin n)) A := by
+  unfold blockHistories CladeCount.cladeCountS
+  refine Finset.card_bij (fun ω (_ : ω ∈ (Finset.univ : Finset (RankedGeneTree.RankedTree n)).filter
+    (fun ω => A ∈ blockFamily n ω)) => ω.1) ?_ ?_ ?_
+  · intro ω hω
+    obtain ⟨-, hpred⟩ := Finset.mem_filter.mp hω
+    exact Finset.mem_filter.mpr
+      ⟨Finset.mem_filter.mpr ⟨Finset.mem_univ _, (isMH_univ_iff n ω.1).mpr ω.2⟩,
+        (mem_blockFamily_iff_isCladeH ω h1 h2).mp hpred⟩
+  · intro ω₁ _ ω₂ _ heq
+    exact Subtype.ext heq
+  · intro f hf
+    obtain ⟨hf1, hf2⟩ := Finset.mem_filter.mp hf
+    refine ⟨⟨f, (isMH_univ_iff n f).mp (Finset.mem_filter.mp hf1).2⟩, ?_, rfl⟩
+    exact Finset.mem_filter.mpr
+      ⟨Finset.mem_univ _, (mem_blockFamily_iff_isCladeH _ h1 h2).mpr hf2⟩
+
+/-- ★★★ **块计数（无条件）**：`#{ω : A 是非单点块} = H n · pn n |A|`（`2 ≤ |A| ≤ n−2`）。
+
+由泳道 b 的 ★★★ `cladeCount_univ`（那里 `ArithStep` 已收口）＋ 上面的货币兑换。 -/
+theorem card_blockHistories_univ (n : ℕ) {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    ((blockHistories n A).card : ℝ) = RankedGeneTree.H n * pn n A.card := by
+  rw [card_blockHistories_eq_cladeCountS n h1 h2]
+  have h := cladeCountS_eq_H_mul_pn (n - 1) n (Finset.univ : Finset (Fin n)) A
+    (by rw [Finset.card_univ, Fintype.card_fin,
+      Nat.sub_one_add_one_eq_of_pos (by omega : 0 < n)])
+    (Finset.subset_univ _) (by omega) (by omega)
+  rw [Nat.sub_one_add_one_eq_of_pos (by omega : 0 < n)] at h
+  exact h
+
+/-! ## 3. 条件装配（`_of_`） -/
+
+/-- ★★★ **条件装配**（`_of_`）：块计数（本文件 §2c，**无条件**）＋ 交项计数
+（`hinter`）⟹ `clanEvent n hn A = clanProb n A.card`。
 
 ★ 证明只做三件**计数层**的事（基数包含-排除、`∑ 1/H = card/H`、代入），
 代数恒等式 `pn(a) + pn(n−a) − pnHatExh(a) = clanProb n a` 直接引用库内定理。 -/
 theorem clanEvent_eq_clanProb_of_blockCount {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
     {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2)
-    (hblk : ∀ B : Finset (Fin n), 2 ≤ B.card → B.card ≤ n - 2 →
-      ((blockHistories n B).card : ℝ) = RankedGeneTree.H n * pn n B.card)
     (hinter : ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ) =
       RankedGeneTree.H n * pnHatExh n A.card) :
     clanEvent n hn A = clanProb n A.card := by
@@ -147,9 +218,10 @@ theorem clanEvent_eq_clanProb_of_blockCount {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤
   have hcompl : Aᶜ.card = n - A.card := card_compl_eq n A
   have h1c : 2 ≤ Aᶜ.card := by rw [hcompl]; omega
   have h2c : Aᶜ.card ≤ n - 2 := by rw [hcompl]; omega
-  have hb : ((blockHistories n A).card : ℝ) = RankedGeneTree.H n * pn n A.card := hblk A h1 h2
+  have hb : ((blockHistories n A).card : ℝ) = RankedGeneTree.H n * pn n A.card :=
+    card_blockHistories_univ n h1 h2
   have hbc : ((blockHistories n Aᶜ).card : ℝ) = RankedGeneTree.H n * pn n (n - A.card) := by
-    have h := hblk Aᶜ h1c h2c
+    have h := card_blockHistories_univ n h1c h2c
     rwa [hcompl] at h
   -- 基数层的包含-排除（ℝ 上，加法形式；避免 `Nat` 减法的侧条件）
   have hci : ((clanHistories n hn A).card : ℝ)
@@ -184,13 +256,30 @@ theorem clanEvent_eq_clanProb_of_blockCount {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤
     field_simp
   exact hX
 
-/-! ## 3. 交项计数：`n = 4` 的**内核核过**实例
+/-- ★★★ **条件装配（组合形态的 `hinter`）**：交项计数用**自然组合形态**
+`H |A| · H (n−|A|) · C(n−2, |A|−1)` 给出即可（由 ★★★ `H_mul_pnHatExh_eq` 自动翻成闭形式）。 -/
+theorem clanEvent_eq_clanProb_of_blockCount' {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
+    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2)
+    (hinter : ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ)
+      = RankedGeneTree.H A.card * RankedGeneTree.H (n - A.card)
+        * (((n - 2).choose (A.card - 1) : ℕ) : ℝ)) :
+    clanEvent n hn A = clanProb n A.card :=
+  clanEvent_eq_clanProb_of_blockCount hn h3 h1 h2
+    (by rw [hinter, H_mul_pnHatExh_eq h1 h2])
 
-任务（一般 `n`）是 `#{ω : A 与 Aᶜ 同时是块} = H n · pnHatExh n |A|`
-（⟺ 根分裂恰为 `A | Aᶜ` ⟺ 最后一次合并把 `A` 与 `Aᶜ` 并起来）。
-一般 `n` 的组合计数**本批未完成**（见报告 §卡点）；这里落 `n = 4` 的实例，
-它正是 `H_2·H_2·C(2,1) = 2` 与 `H 4 · pnHatExh 4 2 = 18 · (1/9) = 2` 的**数值锚点**，
-同时也是「必须用 `pnHatExh` 而不是 `pnHat`」的机器证据（后者给 `2/45`，乘 `H 4` 是 `4/5`）。 -/
+/-! ## 4. `n = 4`：**整条 M4 链**的内核验证（块计数 ＋ 交项计数 ⇒ 装配）
+
+这一节用 `_of_` 装配的**同一个接口**在 `n = 4` 上重证一遍 `clanEvent = clanProb`
+（与 `RankedTreeClanLawFour.lean` 里直接数 `clanHistories` 的证明**相互独立**）——
+若接口有形状错误，这里会立刻炸。三件数（都 `decide` 内核核过）：
+
+* `#{A 是块} = 4 = H 4 · pn 4 2`（`H 4 · 2/9 = 4`）；
+* `#{A 与 Aᶜ 同时是块} = 2 = H 4 · pnHatExh 4 2`（`18 · 1/9 = 2`）；
+* 包含-排除：`6 = 4 + 4 − 2`（★★★ `card_clanHistories_four`）。 -/
+
+/-- ★ **`pn 4 2 = 2/9`**（与 `H 4 = 18` 相乘给 `4`）。 -/
+theorem pn_four_two : pn 4 2 = 2 / 9 := by
+  norm_num [pn, Nat.choose]
 
 /-- ★ **`pnHatExh 4 2 = 1/9`**（Lemma 4.3 的穷尽式；对比 `pnHat 4 2 2 = 2/45`，后者**不对**）。 -/
 theorem pnHatExh_four_two : pnHatExh 4 2 = 1 / 9 := by
@@ -202,8 +291,17 @@ theorem H_four_mul_pnHat_four_two : RankedGeneTree.H 4 * pnHat 4 2 2 = 4 / 5 := 
   norm_num
 
 set_option maxRecDepth 100000 in
-/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，``H 4 = 18`` 条合并史中恰有
-**2** 条使 `A` 与 `Aᶜ` **同时**是非单点块（＝根分裂恰为 `A | Aᶜ` 的那两条 balanced ranking）。 -/
+/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，18 条合并史中恰有 **4** 条
+使 `A` 是非单点块。 -/
+theorem card_blockFamily_four_block :
+    ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
+      ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => decide (A ∈ blockFamily 4 ω) = true)).card = 4 := by
+  decide
+
+set_option maxRecDepth 100000 in
+/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，18 条合并史中恰有 **2** 条
+使 `A` 与 `Aᶜ` **同时**是非单点块（＝根分裂恰为 `A | Aᶜ`）。 -/
 theorem card_inter_blockFamily_four :
     ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
       ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
@@ -211,7 +309,27 @@ theorem card_inter_blockFamily_four :
         = 2 := by
   decide
 
-/-- ★★★ **`n = 4` 的交项计数 = `H 4 · pnHatExh 4 2`**（一般 `n` 的 `n = 4` 实例）。 -/
+/-- ★★★ **`n = 4` 的块计数 = `H 4 · pn 4 2`**（内核核过；一般 `n` 由 §2c 无条件给出）。 -/
+theorem card_blockHistories_four (A : Finset (Fin 4)) (hA : A.card = 2) :
+    ((blockHistories 4 A).card : ℝ) = RankedGeneTree.H 4 * pn 4 2 := by
+  classical
+  have hmem : A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter
+      (fun A => decide (A.card = 2) = true) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    rw [hA]
+    rfl
+  have hclosed := card_blockFamily_four_block A hmem
+  have hcongr : blockHistories 4 A
+      = (Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => decide (A ∈ blockFamily 4 ω) = true) := by
+    unfold blockHistories
+    apply Finset.filter_congr
+    intro ω _
+    simp only [decide_eq_true_eq]
+  rw [hcongr, hclosed, pn_four_two, RankedGeneTree.H_four]
+  norm_num
+
+/-- ★★★ **`n = 4` 的交项计数 = `H 4 · pnHatExh 4 2`**（内核核过）。 -/
 theorem card_blockHistories_inter_four (A : Finset (Fin 4)) (hA : A.card = 2) :
     ((blockHistories 4 A ∩ blockHistories 4 Aᶜ).card : ℝ)
       = RankedGeneTree.H 4 * pnHatExh 4 2 := by
@@ -232,76 +350,69 @@ theorem card_blockHistories_inter_four (A : Finset (Fin 4)) (hA : A.card = 2) :
   rw [hcongr, hclosed, pnHatExh_four_two, RankedGeneTree.H_four]
   norm_num
 
-/-- ★★★ **条件装配（组合形态的 `hinter`）**：交项计数用**自然组合形态**
-`H |A| · H (n−|A|) · C(n−2, |A|−1)` 给出即可（由 ★★★ `H_mul_pnHatExh_eq` 自动翻成闭形式）。
-
-⇒ 下游只需证一条**纯组合**计数，不必碰 `pnHatExh`。 -/
-theorem clanEvent_eq_clanProb_of_blockCount' {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
-    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2)
-    (hblk : ∀ B : Finset (Fin n), 2 ≤ B.card → B.card ≤ n - 2 →
-      ((blockHistories n B).card : ℝ) = RankedGeneTree.H n * pn n B.card)
-    (hinter : ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ)
-      = RankedGeneTree.H A.card * RankedGeneTree.H (n - A.card)
-        * (((n - 2).choose (A.card - 1) : ℕ) : ℝ)) :
-    clanEvent n hn A = clanProb n A.card :=
-  clanEvent_eq_clanProb_of_blockCount hn h3 h1 h2 hblk
-    (by rw [hinter, H_mul_pnHatExh_eq h1 h2])
-
-/-! ## 4. `n = 4`：**整条 M4 链**的内核验证（块计数 ＋ 交项计数 ⇒ 装配）
-
-这一节用 `_of_` 装配的**同一个接口**在 `n = 4` 上重证一遍 `clanEvent = clanProb`
-（与 `RankedTreeClanLawFour.lean` 里直接数 `clanHistories` 的证明**相互独立**）——
-若接口有形状错误，这里会立刻炸。三件数（都 `decide` 内核核过）：
-
-* `#{A 是块} = 4 = H 4 · pn 4 2`（`H 4 · 2/9 = 4`）；
-* `#{A 与 Aᶜ 同时是块} = 2 = H 4 · pnHatExh 4 2`（`18 · 1/9 = 2`）；
-* 包含-排除：`6 = 4 + 4 − 2`（★★★ `card_clanHistories_four`）。 -/
-
-/-- ★ **`pn 4 2 = 2/9`**（与 `H 4 = 18` 相乘给 `4`）。 -/
-theorem pn_four_two : pn 4 2 = 2 / 9 := by
-  norm_num [pn, Nat.choose]
-
-set_option maxRecDepth 100000 in
-/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，18 条合并史中恰有 **4** 条
-使 `A` 是非单点块。 -/
-theorem card_blockFamily_four_block :
-    ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
-      ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
-        (fun ω => decide (A ∈ blockFamily 4 ω) = true)).card = 4 := by
-  decide
-
-/-- ★★★ **`n = 4` 的块计数 = `H 4 · pn 4 2`**。 -/
-theorem card_blockHistories_four (A : Finset (Fin 4)) (hA : A.card = 2) :
-    ((blockHistories 4 A).card : ℝ) = RankedGeneTree.H 4 * pn 4 2 := by
-  classical
-  have hmem : A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter
-      (fun A => decide (A.card = 2) = true) := by
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    rw [hA]
-    rfl
-  have hclosed := card_blockFamily_four_block A hmem
-  have hcongr : blockHistories 4 A
-      = (Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
-        (fun ω => decide (A ∈ blockFamily 4 ω) = true) := by
-    unfold blockHistories
-    apply Finset.filter_congr
-    intro ω _
-    simp only [decide_eq_true_eq]
-  rw [hcongr, hclosed, pn_four_two, RankedGeneTree.H_four]
-  norm_num
-
 /-- ★★★ **`n = 4`：经 M4 接口的独立重证**（块计数 ＋ 交项计数 ＋ ★★★
 `clanEvent_eq_clanProb_of_blockCount`）。 -/
 theorem clanEvent_four_eq_clanProb_of_count (A : Finset (Fin 4)) (hA : A.card = 2) :
     clanEvent 4 (by norm_num) A = clanProb 4 A.card := by
-  have hblk : ∀ B : Finset (Fin 4), 2 ≤ B.card → B.card ≤ 4 - 2 →
-      ((blockHistories 4 B).card : ℝ) = RankedGeneTree.H 4 * pn 4 B.card := by
-    intro B hB1 hB2
-    have hB : B.card = 2 := by omega
-    rw [hB]
-    exact card_blockHistories_four B hB
   exact clanEvent_eq_clanProb_of_blockCount (n := 4) (by norm_num) (by norm_num)
-    (A := A) (by omega) (by omega) hblk
-    (by rw [hA]; exact card_blockHistories_inter_four A hA)
+    (A := A) (by omega) (by omega)
+    (by
+      have h := card_blockHistories_inter_four A hA
+      rw [hA]
+      exact h)
+
+/-! ## 5. ★★★ 包装到缺口形状：`blockInterCount ⟹ YHKClanLawGap` -/
+
+/-- **唯一的具名缺件**（交项计数）：`A` 与 `Aᶜ` **同时**是非单点块的历史条数
+`= H n · pnHatExh n |A|`（`2 ≤ |A| ≤ n−2`）。
+
+★ 这正是「根分裂恰为 `A | Aᶜ`」的计数；等价组合形态是
+`H |A| · H (n−|A|) · C(n−2, |A|−1)`（由 ★★★ `H_mul_pnHatExh_eq` 与前者等同）。
+★ 名字**不带** `gap`/`Gap`；它是 `def … : Prop`，不是 `axiom`、不是 `sorry`。 -/
+def blockInterCount (n : ℕ) : Prop :=
+  ∀ A : Finset (Fin n), 2 ≤ A.card → A.card ≤ n - 2 →
+    ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ) = RankedGeneTree.H n * pnHatExh n A.card
+
+/-- `clanHistories` 与「裸 `Finset.filter`」的一致性（供把 `clanEvent` 的结论搬进
+`YHKClanLawGap` 的裸求和式）。 -/
+theorem clanHistories_eq_filter (n : ℕ) (hn : 2 ≤ n) (A : Finset (Fin n)) :
+    clanHistories n hn A
+      = Finset.univ.filter (fun ω => (rankedTreeCladogram n hn ω).IsClade A) := by
+  unfold clanHistories
+  apply Finset.filter_congr
+  intro ω _
+  rfl
+
+/-- ★★★ **`blockInterCount ⟹ YHKClanLawGap`**（**`_of_`**，不叫 `_holds`）。
+
+三档：
+* `|A| = 1`、`|A| = n−1`：★★★ `yhkClanLawGap_trivial_card_slice`（必然事件，**任意**律）；
+* `2 ≤ |A| ≤ n−2`：★★★ `clanEvent_eq_clanProb_of_blockCount`（块计数**无条件**，交项吃 `Hc`）。
+
+`Ω := RankedTree n`、`prob ≡ 1/H n`、`tree := rankedTreeCladogram n hn`；
+归一化用 ★★★ `sum_rankedTree_uniform`。★ `n = 2` 时中间档为空（`2 ≤ |A| ≤ 0` 无解），
+故 `rankedTreeCladogram` 的 `n ≥ 3`/`n = 2` 分档在这里自动落地。 -/
+theorem yhkClanLawGap_of_blockInterCount (Hc : ∀ m : ℕ, blockInterCount m) : YHKClanLawGap := by
+  intro n hn
+  have hsum : (∑ _ω : RankedGeneTree.RankedTree n, (1 / RankedGeneTree.H n)) = 1 :=
+    sum_rankedTree_uniform n hn
+  refine ⟨RankedGeneTree.RankedTree n, inferInstance, fun _ => 1 / RankedGeneTree.H n,
+    fun _ => ?_, hsum, fun ω => rankedTreeCladogram n hn ω, ?_⟩
+  · have hH := H_pos n
+    positivity
+  · intro A hA hlt
+    have hpos : 1 ≤ A.card := Finset.card_pos.mpr hA
+    by_cases hcard1 : A.card = 1
+    · exact yhkClanLawGap_trivial_card_slice hn (fun _ => 1 / RankedGeneTree.H n) hsum
+        (fun ω => rankedTreeCladogram n hn ω) hA (Or.inl hcard1)
+    · by_cases hcardn : A.card = n - 1
+      · exact yhkClanLawGap_trivial_card_slice hn (fun _ => 1 / RankedGeneTree.H n) hsum
+          (fun ω => rankedTreeCladogram n hn ω) hA (Or.inr hcardn)
+      · have h1 : 2 ≤ A.card := by omega
+        have h2 : A.card ≤ n - 2 := by omega
+        have h3 : 3 ≤ n := by omega
+        have hmain := clanEvent_eq_clanProb_of_blockCount hn h3 h1 h2 (Hc n A h1 h2)
+        rw [← clanHistories_eq_filter n hn A]
+        exact hmain
 
 end Phylo.Stat.RankedTreeClanLaw
