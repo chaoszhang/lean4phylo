@@ -49,6 +49,8 @@ import Mathlib.Combinatorics.SimpleGraph.Star
 | `blockFamily` / `baseSplits` / `splitFamily`（合并史 ↦ split 族） | ★ 本文件 |
 | `rankedTreeCladogramOfThree`（`3 ≤ n`）、`rankedTreeCladogram`（`2 ≤ n`） | ★★ 本文件 |
 | `isClade_rankedTreeCladogramOfThree_iff`（**关键刻画**） | ★★★ 本文件 |
+| `clanHistories` / `clanEvent`（`Ω = RankedTree n`、`prob = 1/H n` 的事件集／概率） | ★★ 本文件 |
+| `n = 4` 端到端：每个二元子集**恰在 6/18 条历史**里成 clan ⇒ 概率 `1/3` | ★★★ 本文件 |
 
 ★ **`Cladogram (Fin 1)` 是空类型**（单顶点树的度是 `0`，不满足「度 1 ⟺ 叶」），
 故 `n = 1` 那一档**不存在**（§5.2 有论证）；本文件因此把 `tree` 槽实现在 `2 ≤ n` 上。
@@ -291,5 +293,177 @@ theorem isClade_rankedTreeCladogramOfThree_iff {n : ℕ} (hn : 3 ≤ n)
       exact ⟨(splitOf {x} (Finset.singleton_nonempty x) (hcompl x)).swap,
         (hchar _).mpr (Or.inr (Or.inr ⟨x, by rw [Split.swap_sideA]; simp⟩)),
         by rw [Split.swap_sideA]; simp⟩
+
+/-! ## 7. `clanHistories` / `clanEvent`：`Ω = RankedTree n`、`prob = 1 / H n` 的事件与概率 -/
+
+/-- 「`A` 是随机树的 clan」的**事件集**（`Ω = RankedTree n`）。
+
+★ 写成 `noncomputable def` 而不是在定理里内联 `Finset.filter`：谓词含 `IsClade`
+（不可判定），内联会让**陈述本身**需要 `DecidablePred`；收进 `def` 后所有下游陈述都不必
+再拖一个 `classical`。 -/
+noncomputable def clanHistories (n : ℕ) (hn : 2 ≤ n) (A : Finset (Fin n)) :
+    Finset (RankedGeneTree.RankedTree n) := by
+  classical
+  exact Finset.univ.filter (fun ω => (rankedTreeCladogram n hn ω).IsClade A)
+
+/-- 均匀律 `prob ≡ 1/H n` 下「`A` 是 clan」的概率 —— 即 `YHKClanLawGap` 的**左端**
+（`Ω`、`prob`、`tree` 三槽都取本文件的具体实现）。 -/
+noncomputable def clanEvent (n : ℕ) (hn : 2 ≤ n) (A : Finset (Fin n)) : ℝ :=
+  ∑ _ω ∈ clanHistories n hn A, (1 / RankedGeneTree.H n)
+
+/-- ★★★ **事件集的成员判定**（**M4 的接口**）：`ω` 使 `A` 成 clan ⟺ `A` 或 `Aᶜ` 是 `ω` 的
+非单点块，或 `A` 平凡。
+
+有了它，`clanEvent` 的求和就落成**块计数**：「`A` 是块」的事件 ＋「`Aᶜ` 是块」的事件
+（平凡时直接是全集）。 -/
+theorem mem_clanHistories_iff {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n) (A : Finset (Fin n))
+    (ω : RankedGeneTree.RankedTree n) :
+    ω ∈ clanHistories n hn A ↔
+      A ∈ blockFamily n ω ∨ Aᶜ ∈ blockFamily n ω ∨
+        (∃ x : Fin n, A = {x}) ∨ (∃ x : Fin n, A = {x}ᶜ) := by
+  classical
+  unfold clanHistories
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+  rw [rankedTreeCladogram_eq_of_three (n := n) hn h3]
+  exact isClade_rankedTreeCladogramOfThree_iff h3 ω A
+
+/-- ★★ **事件集在非平凡基数上的形状**：`A` 成 clan 的历史集
+= 「`A` 是非单点块」∪「`Aᶜ` 是非单点块」（`2 ≤ |A| ≤ n−2` 时无平凡支）。 -/
+theorem mem_clanHistories_iff_of_card {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
+    {A : Finset (Fin n)} (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2)
+    (ω : RankedGeneTree.RankedTree n) :
+    ω ∈ clanHistories n hn A ↔ A ∈ blockFamily n ω ∨ Aᶜ ∈ blockFamily n ω := by
+  rw [mem_clanHistories_iff hn h3 A ω]
+  constructor
+  · rintro (h | h | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · exact Or.inl h
+    · exact Or.inr h
+    · exfalso; rw [hx, Finset.card_singleton] at h1; omega
+    · exfalso; rw [hx, card_compl_eq n {x}, Finset.card_singleton] at h2; omega
+  · rintro (h | h)
+    · exact Or.inl h
+    · exact Or.inr (Or.inl h)
+
+/-! ## 8. `n = 4` 端到端（对齐 `yhkLawFour`：18 条历史／三棵 quartet 拓扑各 6 条） -/
+
+/-- ★ 平凡基数（单点集 / 单点集的补）上的 clan（`n ≥ 3`）。 -/
+theorem isClade_of_trivial {n : ℕ} (hn : 3 ≤ n) (ω : RankedGeneTree.RankedTree n)
+    {A : Finset (Fin n)} (h : (∃ x : Fin n, A = {x}) ∨ (∃ x : Fin n, A = {x}ᶜ)) :
+    (rankedTreeCladogramOfThree hn ω).IsClade A := by
+  rw [isClade_rankedTreeCladogramOfThree_iff hn ω A]
+  rcases h with ⟨x, hx⟩ | ⟨x, hx⟩
+  · exact Or.inr (Or.inr (Or.inl ⟨x, hx⟩))
+  · exact Or.inr (Or.inr (Or.inr ⟨x, hx⟩))
+
+/-- `n = 4`、基数 `2` 时的刻画（两个平凡支被 `card = 2` 排除）。 -/
+theorem isClade_four_iff (ω : RankedGeneTree.RankedTree 4) (A : Finset (Fin 4))
+    (hA : A.card = 2) :
+    (rankedTreeCladogram 4 (by norm_num) ω).IsClade A ↔
+      A ∈ blockFamily 4 ω ∨ Aᶜ ∈ blockFamily 4 ω := by
+  rw [rankedTreeCladogram_eq_of_three (n := 4) (by norm_num) (by norm_num)]
+  rw [isClade_rankedTreeCladogramOfThree_iff (n := 4) (by norm_num) (ω := ω)]
+  constructor
+  · rintro (h | h | ⟨x, hx⟩ | ⟨x, hx⟩)
+    · exact Or.inl h
+    · exact Or.inr h
+    · exfalso
+      rw [hx, Finset.card_singleton] at hA
+      omega
+    · exfalso
+      rw [hx, card_compl_eq 4 {x}, Finset.card_singleton] at hA
+      omega
+  · rintro (h | h)
+    · exact Or.inl h
+    · exact Or.inr (Or.inl h)
+
+set_option maxRecDepth 100000 in
+/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，在 `H 4 = 18` 条合并史中
+恰有 **6** 条使 `A` 或 `Aᶜ` 成为非单点块。
+
+`6` 的来源：`A | Aᶜ` 的 quartet 拓扑在 `n = 4` 上恰有 `6` 条 ranked 历史
+（平衡形 3 棵拓扑 × 2 rankings），而 `#{ω : A 是 clan} = #{A 是块} + #{Aᶜ 是块} − #{两者}`
+`= 2 + 2 − 2 + ...`（此处直接由内核枚举给出闭值 `6`，不重推组合恒等式）。 -/
+theorem card_filter_blockFamily_four :
+    ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
+      ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => (decide (A ∈ blockFamily 4 ω) || decide (Aᶜ ∈ blockFamily 4 ω)) = true)).card
+        = 6 := by
+  decide
+
+/-- ★★★ **`n = 4`：每个二元子集恰在 `6 / 18` 条历史里成 clan**。 -/
+theorem card_clanHistories_four (A : Finset (Fin 4)) (hA : A.card = 2) :
+    (clanHistories 4 (by norm_num) A).card = 6 := by
+  classical
+  have hmem : A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter
+      (fun A => decide (A.card = 2) = true) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    rw [hA]
+    rfl
+  have hclosed := card_filter_blockFamily_four A hmem
+  have hcongr : clanHistories 4 (by norm_num) A
+      = (Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => (decide (A ∈ blockFamily 4 ω) || decide (Aᶜ ∈ blockFamily 4 ω)) = true) := by
+    unfold clanHistories
+    apply Finset.filter_congr
+    intro ω _
+    rw [isClade_four_iff ω A hA]
+    simp only [Bool.or_eq_true, decide_eq_true_eq]
+  rw [hcongr]
+  exact hclosed
+
+/-- ★★ **`n = 4`、基数 `1` 或 `3`：clan 事件集是全集**（`A` 平凡 ⇒ 必然事件）。 -/
+theorem clanHistories_four_trivial (A : Finset (Fin 4)) (h : A.card = 1 ∨ A.card = 3) :
+    clanHistories 4 (by norm_num) A = Finset.univ := by
+  classical
+  have htriv : (∃ x : Fin 4, A = {x}) ∨ (∃ x : Fin 4, A = {x}ᶜ) := by
+    rcases h with h1 | h3
+    · obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp h1
+      exact Or.inl ⟨x, rfl⟩
+    · have hc : (Aᶜ).card = 1 := by
+        rw [card_compl_eq 4 A]
+        omega
+      obtain ⟨x, hx⟩ := Finset.card_eq_one.mp hc
+      refine Or.inr ⟨x, ?_⟩
+      rw [← hx, compl_compl]
+  have hcl : ∀ ω : RankedGeneTree.RankedTree 4,
+      (rankedTreeCladogram 4 (by norm_num) ω).IsClade A := by
+    intro ω
+    rw [rankedTreeCladogram_eq_of_three (n := 4) (by norm_num) (by norm_num)]
+    exact isClade_of_trivial (n := 4) (by norm_num) ω htriv
+  unfold clanHistories
+  exact Finset.filter_true_of_mem (fun ω _ => hcl ω)
+
+/-- ★★ **`n = 4`、基数 `2`：clan 事件概率 `= 1/3`**（`6/18`）。 -/
+theorem clanEvent_four_two (A : Finset (Fin 4)) (hA : A.card = 2) :
+    clanEvent 4 (by norm_num) A = 1 / 3 := by
+  unfold clanEvent
+  rw [Finset.sum_const, card_clanHistories_four A hA, nsmul_eq_mul, RankedGeneTree.H_four]
+  norm_num
+
+/-- ★★ **`n = 4`、基数 `1` 或 `3`：clan 事件概率 `= 1`**（用 `sum_rankedTree_uniform`）。 -/
+theorem clanEvent_four_trivial (A : Finset (Fin 4)) (h : A.card = 1 ∨ A.card = 3) :
+    clanEvent 4 (by norm_num) A = 1 := by
+  unfold clanEvent
+  rw [clanHistories_four_trivial A h]
+  exact CoalescentHistoryCount.sum_rankedTree_uniform 4 (by norm_num)
+
+/-- ★★★ **`n = 4` 端到端**（`YHKClanLawGap` 的 `∃` 从句在 `n = 4` 上的**真实载体版**）：
+`Ω := RankedTree 4`（`H 4 = 18` 条合并史）、`prob := 1/H 4`、`tree := rankedTreeCladogram 4`，
+则非空真子集 `A` 的 clan 事件概率 `= clanProb 4 |A|`：
+
+* `|A| = 1, 3` ⇒ `1`（必然事件，`clanEvent_four_trivial`）；
+* `|A| = 2` ⇒ `1/3`（`clanEvent_four_two`，即 **6 / 18**）。
+
+右端的 `if` 就是 `clanProb 4 A.card` 的取值：`clanProb 4 1 = clanProb 4 3 = 1`、
+`clanProb 4 2 = 1/3`（`Phylo/Stat/ReciprocalMonophyly.lean` 的 `clanProb_one` /
+`clanProb_pred` / `clanProb_four_two`；本文件不 import 那个模块以免循环）。 -/
+theorem rankedTreeClanEvent_four (A : Finset (Fin 4)) (hA : A.Nonempty) (hlt : A.card < 4) :
+    clanEvent 4 (by norm_num) A = if A.card = 2 then 1 / 3 else 1 := by
+  have hpos : 1 ≤ A.card := Finset.card_pos.mpr hA
+  by_cases h2 : A.card = 2
+  · rw [ite_eq_left h2]
+    exact clanEvent_four_two A h2
+  · rw [ite_eq_right h2]
+    exact clanEvent_four_trivial A (by omega)
 
 end Phylo.Stat.RankedTreeCladogram
