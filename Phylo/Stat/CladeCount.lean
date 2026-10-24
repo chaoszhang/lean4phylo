@@ -39,16 +39,20 @@ Zhu–Degnan–Steel 2011 Lemma 4.2 的**概率层**（`YHKClanLawGap` ③ 的�
    `C(m+1,a) = C(a,2)·C(m,a−1) + C(m+1−a,2)·C(m,a)`；
 4. 闭形式（`§6`）：该递推的解是 `H (m+1) · pn (m+1) a`（算术）。
 
-## 本批的**唯一缺件**（⬖）
+## `§6` 的算术核：**已证**（`arithStep_holds : ArithStep`）
 
-`ArithStep`（`§6`）：纯 `ℝ` 恒等式
-`C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H(m+2)·pn(m+2)a`（`2 ≤ a ≤ m+1`）。
-它只涉及 `H`/`pn`/`Nat.choose` 的**算术**，与载体无关；本批**未在 Lean 内证完**
-（`field_simp`/`ring` 在这条带 `H (…)` 原子的分式恒等式上反复卡住，见报告）。
-**机器已核（Lean 外用精确有理数）**：`2 ≤ a ≤ m+1`、`m ≤ 13` 全部相等（`ALL OK`）；
-且**暴力枚举合并史**（`n ≤ 6`，`|RankedTree 6| = 2700`）逐点核过
-`#{ω : A 是 ω 的块} = H n · pn n |A|`。
-⇒ `cladeCountS_eq_H_mul_pn_of_arith` 是 **(M4) 的 `_of_` 形式**：`ArithStep` 一通即通。
+`ArithStep` 是纯 `ℝ` 恒等式
+`C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H(m+2)·pn(m+2)a`（`2 ≤ a ≤ m+1`），
+与载体无关。证法（见 `arithStep_holds` 的 docstring）：
+1. ★ **`H` 的比值**：`H(m+2) = H(m+1)·(m+1)(m+2)/2`（`H_ratio`）——
+   ★ **这里最容易写错**：`H(n+1) = H(n)·n(n+1)/2`，**不是** `2(n+1)`；
+2. 三处 `pn` 用 `pn_of_range` 展开；
+3. 两个 `C(m+1,·)⁻¹` 用 `choose_inv_pred`（`C(m+1,a−1)⁻¹ = (m+2)/(a·C(m+2,a))`，Pascal 产物）
+   与 `choose_inv_self`（`C(m+1,a)⁻¹ = (m+2)/((m+2−a)·C(m+2,a))`，`Nat.choose_mul_succ_eq` 产物）整体换掉
+   ⇒ 目标里**不再有 `choose` 原子**，只剩 `a, m` 与 `H(m+1)`；
+4. 两边同乘 `a(a+1)·C(m+2,a)` 后用 `field_simp` ＋ `ring` 收（边界 `a = m+1` 单独算：两端都 `= H(m+1)`）。
+
+⇒ `cladeCountS_eq_H_mul_pn`（**无条件**）与 `cladeCount_univ`（`Finset.univ` 形态）都无假设地成立。
 
 ## ★ 派工书两处口径更正（详见报告 `.w30/report_w31_b.md`）
 
@@ -596,13 +600,144 @@ theorem cast_choose_two_eq (k : ℕ) :
     ((k.choose 2 : ℕ) : ℝ) = (k : ℝ) * ((k : ℝ) - 1) / 2 := by
   rw [cast_choose_two, Coalescent.kingmanRate]
 
-/-- ★★ **递推的算术核**（本批**未证**的纯 ℝ 恒等式，见报告 ⬖）：
-C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H (m+2)·pn (m+2) a（2 ≤ a ≤ m）。 -/
+/-- ★★ **递推的算术核**：
+`C(a,2)·H(m+1)pn(m+1)(a−1) + C(m+2−a,2)·H(m+1)pn(m+1)a = H (m+2)·pn (m+2) a`（`2 ≤ a ≤ m+1`）。 -/
 def ArithStep : Prop :=
   ∀ m a : ℕ, 2 ≤ a → a ≤ m + 1 →
     ((a.choose 2 : ℕ) : ℝ) * (RankedGeneTree.H (m + 1) * pn (m + 1) (a - 1))
       + (((m + 2) - a).choose 2 : ℕ) * (RankedGeneTree.H (m + 1) * pn (m + 1) a)
       = RankedGeneTree.H (m + 2) * pn (m + 2) a
+
+/-- ★ **`H` 的比值**（★ 最容易写错的一条）：`H(m+2) = H(m+1)·(m+1)(m+2)/2`。
+
+（由 `H (ℓ+1) = H ℓ · (ℓ+1)ℓ/2`（`H_succ_eq` ＋ `kingmanRate` 的定义）取 `ℓ = m+1`；
+`n=3→4` 实测 `18/3 = 6 = 3·4/2` ✓。**不是** `2(m+2)`。） -/
+theorem H_ratio (m : ℕ) :
+    RankedGeneTree.H (m + 2)
+      = RankedGeneTree.H (m + 1) * (((m + 1 : ℕ) : ℝ) * ((m + 2 : ℕ) : ℝ) / 2) := by
+  rw [show m + 2 = (m + 1) + 1 from rfl, RankedGeneTree.H_succ_eq (m + 1) (by omega),
+    Coalescent.kingmanRate]
+  push_cast
+  ring
+
+/-- ★★ **`C(m+1,a−1)⁻¹ = (m+2)/(a·C(m+2,a))`**（Pascal ＋ `choose_mul_succ_eq`）。 -/
+theorem choose_inv_pred (m a : ℕ) (ha2 : 2 ≤ a) (ham : a ≤ m) :
+    ((((m + 1).choose (a - 1) : ℕ) : ℝ))⁻¹
+      = ((m + 2 : ℕ) : ℝ) / ((a : ℝ) * (((m + 2).choose a : ℕ) : ℝ)) := by
+  have huse : a ≤ m := ham
+  have hlt : a - 1 < m + 2 := by omega
+  -- Pascal：`C(m+2,a) = C(m+1,a-1) + C(m+1,a)`
+  have hpascal : (((m + 2).choose a : ℕ) : ℝ)
+      = (((m + 1).choose (a - 1) : ℕ) : ℝ) + (((m + 1).choose a : ℕ) : ℝ) := by
+    have h := Nat.choose_succ_succ (m + 1) (a - 1)
+    rw [show (a - 1).succ = a from by omega,
+      show (m + 1).succ = m + 2 from by omega] at h
+    exact_mod_cast h
+  -- `C(m+1,a)·(m+2) = C(m+2,a)·(m+2-a)`
+  have hB : (((m + 1).choose a : ℕ) : ℝ) * ((m + 2 : ℕ) : ℝ)
+      = (((m + 2).choose a : ℕ) : ℝ) * (((m + 2) - a : ℕ) : ℝ) := by
+    exact_mod_cast Nat.choose_mul_succ_eq (m + 1) a
+  have hcast : ((m + 2 : ℕ) : ℝ) - ((a : ℕ) : ℝ) = (((m + 2) - a : ℕ) : ℝ) := by
+    rw [Nat.cast_sub (by omega)]
+  have hA' : (((m + 1).choose (a - 1) : ℕ) : ℝ)
+      = (a : ℝ) * (((m + 2).choose a : ℕ) : ℝ) / ((m + 2 : ℕ) : ℝ) := by
+    have hm2 : ((0 : ℝ)) < ((m + 2 : ℕ) : ℝ) := by positivity
+    have h1 : (((m + 1).choose (a - 1) : ℕ) : ℝ) * ((m + 2 : ℕ) : ℝ)
+        = (a : ℝ) * (((m + 2).choose a : ℕ) : ℝ) := by
+      nlinarith [hpascal, hB, hcast]
+    rw [eq_div_iff (ne_of_gt hm2)]
+    linarith [h1]
+  rw [hA', inv_div]
+
+/-- ★★ **`C(m+1,a)⁻¹ = (m+2)/((m+2−a)·C(m+2,a))`**。 -/
+theorem choose_inv_self (m a : ℕ) :
+    ((((m + 1).choose a : ℕ) : ℝ))⁻¹
+      = ((m + 2 : ℕ) : ℝ)
+        / ((((m + 2) - a : ℕ) : ℝ) * (((m + 2).choose a : ℕ) : ℝ)) := by
+  have hB : (((m + 1).choose a : ℕ) : ℝ) * ((m + 2 : ℕ) : ℝ)
+      = (((m + 2).choose a : ℕ) : ℝ) * (((m + 2) - a : ℕ) : ℝ) := by
+    exact_mod_cast Nat.choose_mul_succ_eq (m + 1) a
+  have hB'' : (((m + 1).choose a : ℕ) : ℝ)
+      = (((m + 2) - a : ℕ) : ℝ) * (((m + 2).choose a : ℕ) : ℝ) / ((m + 2 : ℕ) : ℝ) := by
+    have hm2 : ((0 : ℝ)) < ((m + 2 : ℕ) : ℝ) := by positivity
+    rw [eq_div_iff (ne_of_gt hm2)]
+    linarith [hB]
+  rw [hB'', inv_div]
+
+/-- ★★★ **`ArithStep` 成立**（递推的算术核）。
+
+路线（★ `H` 的比值是关键，见 `H_ratio`）：
+1. 三处 `pn` 用 `pn_of_range` 展开、`H(m+2)` 用 `H_ratio`；
+2. 两个 `C(m+1,·)⁻¹` 用 `choose_inv_pred` / `choose_inv_self` 换成 `(m+2)/(a·C)`、`(m+2)/((m+2−a)·C)`；
+3. 此时目标里**不再有 `choose` 原子**（只剩 `a, m` 与 `H(m+1)`），`field_simp` ＋ `ring` 收。
+（边界 `a = m+1` 单独算：第二项 `C(1,2) = 0`、`pn(m+1)(m+1) = 0`，两端都等于 `H(m+1)`。） -/
+theorem arithStep_holds : ArithStep := by
+  intro m a ha2 ham
+  rcases eq_or_lt_of_le ham with heq | hlt
+  · -- 边界：`a = m+1`
+    subst heq
+    have hpna : pn (m + 1) (m + 1) = 0 := pn_eq_zero_of_not_range (Or.inr le_rfl)
+    have e1 : m + 2 - (m + 1) = 1 := by omega
+    have e2 : m + 1 - 1 = m := by omega
+    rw [e1, e2, hpna]
+    simp only [mul_zero, add_zero]
+    rw [cast_choose_two_eq (m + 1), H_ratio m,
+      pn_of_range (n := m + 1) (a := m) (by omega) (by omega),
+      pn_of_range (n := m + 2) (a := m + 1) (by omega) (by omega)]
+    rw [show (((m + 1).choose m : ℕ) : ℝ) = ((m + 1 : ℕ) : ℝ) from by
+        rw [Nat.choose_succ_self_right],
+      show (((m + 2).choose (m + 1) : ℕ) : ℝ) = ((m + 2 : ℕ) : ℝ) from by
+        rw [Nat.choose_succ_self_right]]
+    push_cast
+    have hm0 : ((m : ℝ)) ≠ 0 := by
+      have h : 0 < m := by omega
+      exact_mod_cast h.ne'
+    have hm1' : ((m : ℝ)) + 1 ≠ 0 := by positivity
+    have hm2' : ((m : ℝ)) + 2 ≠ 0 := by positivity
+    field_simp
+    ring
+  · -- 主情形：`2 ≤ a ≤ m`
+    have ham' : a ≤ m := by omega
+    have ha1 : 1 ≤ a := by omega
+    have hPpos : (0 : ℝ) < (a : ℝ) * ((a : ℝ) + 1) * (((m + 2).choose a : ℕ) : ℝ) := by
+      have ha : (0 : ℝ) < (a : ℝ) := by
+        have h : 0 < a := by omega
+        exact_mod_cast h
+      have hC : (0 : ℝ) < (((m + 2).choose a : ℕ) : ℝ) := by
+        have h : 0 < (m + 2).choose a := Nat.choose_pos (by omega)
+        exact_mod_cast h
+      positivity
+    refine (mul_left_cancel₀ (ne_of_gt hPpos)) ?_
+    rw [pn_of_range (n := m + 1) (a := a - 1) (by omega) (by omega),
+      pn_of_range (n := m + 1) (a := a) ha1 (by omega),
+      pn_of_range (n := m + 2) (a := a) ha1 (by omega),
+      choose_inv_pred m a ha2 ham', choose_inv_self m a, H_ratio m]
+    have hsub_a : (((a - 1 : ℕ)) : ℝ) = (a : ℝ) - 1 := by
+      rw [Nat.cast_sub ha1]
+      norm_num
+    rw [hsub_a, cast_choose_two_eq a, cast_choose_two_eq ((m + 2) - a)]
+    have ha0 : (a : ℝ) ≠ 0 := by
+      have h : 0 < a := by omega
+      exact_mod_cast h.ne'
+    have ham1 : (a : ℝ) - 1 ≠ 0 := by
+      have h : (1 : ℝ) < (a : ℝ) := by exact_mod_cast (by omega : 1 < a)
+      linarith
+    have ha1' : (a : ℝ) + 1 ≠ 0 := by positivity
+    have hb0 : (((m + 2) - a : ℕ) : ℝ) ≠ 0 := by
+      have h : 0 < (m + 2) - a := by omega
+      exact_mod_cast h.ne'
+    have hCpos : (((m + 2).choose a : ℕ) : ℝ) ≠ 0 := by
+      have h : 0 < (m + 2).choose a := Nat.choose_pos (by omega)
+      exact_mod_cast h.ne'
+    have hm2 : (((m + 2 : ℕ)) : ℝ) ≠ 0 := by positivity
+    field_simp
+    have hasimp : ((a : ℝ) - 1 + 1) = (a : ℝ) := by ring
+    rw [hasimp]
+    field_simp
+    have hcast2 : (((m + 2) - a : ℕ) : ℝ) = ((m + 2 : ℕ) : ℝ) - (a : ℝ) := by
+      rw [Nat.cast_sub (by omega)]
+    rw [hcast2]
+    ring
 
 /-- ★★★ **递推（ℕ 值）**：cladeCountS (m+1) s A 按第一步的三分情形拆成两个和。 -/
 theorem cladeCountS_succ_rec {m : ℕ} (s : Finset (Fin N)) (A : Finset (Fin N))
@@ -693,5 +828,27 @@ theorem cladeCountS_eq_H_mul_pn_of_arith (harith : ArithStep) (m : ℕ) :
             norm_num
         rw [hG1, hG2]
         exact harith k A.card hA2 hAm
+
+/-- ★★★ **(M4)，无条件版**（`arithStep_holds` 消掉了算术核）：
+`#{A 是这条合并史的 clade} = H (m+1) · pn (m+1) |A|`（`|s| = m+1`、`A ⊆ s`、`1 ≤ |A| ≤ m`）。 -/
+theorem cladeCountS_eq_H_mul_pn (m : ℕ) :
+    ∀ (N : ℕ) (s : Finset (Fin N)) (A : Finset (Fin N)), s.card = m + 1 →
+      A ⊆ s → 1 ≤ A.card → A.card ≤ m →
+      (cladeCountS m s A : ℝ) = RankedGeneTree.H (m + 1) * pn (m + 1) A.card :=
+  cladeCountS_eq_H_mul_pn_of_arith arithStep_holds m
+
+/-- ★★★ **(M4)，`Finset.univ` 形态**：均匀 `RankedTree n` 上
+`#{ω : A 是 ω 的 clade} = H n · pn n |A|`（`1 ≤ |A| ≤ n−1`）。
+
+（`cladeCount (univ : Finset (Fin n)) A` 就是 `mergeHistories n` 里使 `A` 为块的条数。） -/
+theorem cladeCount_univ (n : ℕ) (A : Finset (Fin n)) (h1 : 1 ≤ A.card) (h2 : A.card ≤ n - 1) :
+    (cladeCount (Finset.univ : Finset (Fin n)) A : ℝ) = RankedGeneTree.H n * pn n A.card := by
+  obtain ⟨k, rfl⟩ : ∃ k, n = k + 1 := ⟨n - 1, by omega⟩
+  have hcard : (Finset.univ : Finset (Fin (k + 1))).card - 1 = k := by
+    rw [Finset.card_univ, Fintype.card_fin]
+    omega
+  rw [cladeCount_eq_cladeCountS, hcard]
+  exact cladeCountS_eq_H_mul_pn k (k + 1) (Finset.univ : Finset (Fin (k + 1))) A
+    (by simp) (Finset.subset_univ _) h1 (by omega)
 
 end Phylo.Stat.CladeCount
