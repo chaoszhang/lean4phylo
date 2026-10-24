@@ -4932,4 +4932,107 @@ theorem twoClanLawGap_two_slice :
     fun A B _ hA hB hc =>
       clanPairEvent_two (fun _ => 1) (by simp) (fun _ => twoLeafCladogram) A B hA hB hc⟩
 
+/-! ### 13.5 条件收口：`twoClanLawGap_of_threeEvents`
+
+`H` 的**逐条读法**（每一行都是「文献闭式 = 概率」的**一条**，缺一不可）：
+
+1. `n ≥ 3`、`Ω`/`prob`/`U` —— **有根**载体上的 YHK 型律（`U ω` 是 `T`，补了根叶 `m`；
+   `prob` 非负且 `Σ = 1`）；
+2. **事件 (a)**（`a + b < n`）：`P(A、B 都是 T 的 clade) = rn n a b`
+   —— 文献 `r_n(a,b)`，Theorem 4.5 **Case 5**（`A ∩ B = ∅`、`A ∪ B ⊊ X`）；
+3. **事件 (b)**（`a + b < n`）：
+   `P(A、X−B 是 T 的 clade，但 B 不是) = Rn n a (n−b) − pnHatExh n b · pn (n−b) a`
+   —— 文献 `R_n(a, n−b) − p̂_n(b,n−b)·p_{n−b}(a)`；第一项是 Theorem 4.5 **Case 2**
+   （`A ⊊ X−B`），第二项是**乘法公式**「`A`、`X−B`、`B` 三者都是 clade」的概率
+   （`p̂_n(b,n−b)` ＝ Lemma 4.3 的极大 clade 概率 × `p_{n−b}(a)` ＝ 在 `n−b` 叶的剩余子树上
+   `A` 是 proper clade 的概率）—— 注意 `pn (n−b) a` 的**第一个参数是 `n−b`**，
+   不是 `n`（这是这一条最容易写错的地方）；
+4. **事件 (c)**（`a + b < n`）：`P(B、X−A 是 T 的 clade，但 A 不是)`
+   `= Rn n b (n−a) − pnHatExh n a · pn (n−a) b` —— 文献 `R_n(b, n−a) − p̂_n(a,n−a)·p_{n−a}(b)`，
+   第一项是 Theorem 4.5 **Case 3**（`B ⊊ X−A`）；
+5. **穷尽支**（`a + b = n`，即 `B = Aᶜ`）：`P(A 是 T−ρ 的 clan) = qnExhaustive a b`
+   —— 文献 Theorem 6.3**(i)**（＝ Lemma 6.2 的 `q_{a+b}(A)`，md `:1079-1103`）。
+   ⚠️ 这一支**不是**三事件之一：`a + b = n` 时 `A`、`B` 是划分，故「`A`、`B` 同为 clan」
+   ＝「`A` 是 clan」；它需要 Lemma 6.2 的概率层（即 `YHKClanLawGap` 的器材），
+   故**留作假设**而**不**在本节伪造。
+
+**结论**：`TwoClanLawGap`（`:977` 的 `def`，逐字未改）。`n = 2` 由 ★★ `twoClanLawGap_two_slice`
+补（`rootedToCladogram` 要求 `3 ≤ |X|`，故 `n = 2` 不能走 `H`）；`n = 3`、`n = 4` 的整条实例在
+§8.7 已有，但本节**不依赖**它们（`n ≥ 3` 全走 `H`）。
+
+⚠️ **这不是 `TwoClanLawGap` 的证明**：`H` 仍是**真缺口**（一般 `n` 的有根 YHK 律 ＋
+Theorem 4.5 的 Case 2/3/5 概率层 ＋ 穷尽支的 Lemma 6.2 概率层）。本节把缺口**归约**为
+`H` 的五条，并**无条件**交付了「三事件 ⇒ 两 clan」的集合层与概率层。命名带 `_of_`，
+台账**不应**把 `TwoClanLawGap` 记成收口。 -/
+theorem twoClanLawGap_of_threeEvents
+    (H : ∀ n : ℕ, 3 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
+      (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
+      (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit)),
+      (∀ A B : Finset (Fin n), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < n →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl)), prob ω) = rn n A.card B.card)
+      ∧ (∀ A B : Finset (Fin n), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < n →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (Bᶜ.image Sum.inl) ∧
+              ¬ (U ω).IsClade (B.image Sum.inl)), prob ω)
+          = Rn n A.card (n - B.card) - pnHatExh n B.card * pn (n - B.card) A.card)
+      ∧ (∀ A B : Finset (Fin n), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < n →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl) ∧
+              ¬ (U ω).IsClade (A.image Sum.inl)), prob ω)
+          = Rn n B.card (n - A.card) - pnHatExh n A.card * pn (n - A.card) B.card)
+      ∧ (∀ A B : Finset (Fin n), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card = n →
+        (∑ ω ∈ Finset.univ.filter (fun ω => IsClanMinusRoot (U ω) A), prob ω)
+          = qnExhaustive A.card B.card)) :
+    TwoClanLawGap := by
+  intro n hn
+  rcases Nat.lt_or_ge n 3 with h2 | h3
+  · have hn2 : n = 2 := by omega
+    subst hn2
+    exact twoClanLawGap_two_slice
+  · obtain ⟨Ω, hF, prob, hprob, hsum, U, hPa, hPb, hPc, hPe⟩ := H n h3
+    have h3' : 3 ≤ Fintype.card (Fin n) := by simpa using h3
+    refine ⟨Ω, hF, prob, hprob, hsum, fun ω => rootedToCladogram (U ω) h3', ?_⟩
+    intro A B hd hA hB hle
+    have hAc : Aᶜ.Nonempty := by
+      apply Finset.card_pos.mp
+      rw [Finset.card_compl, Fintype.card_fin]
+      have := Finset.card_pos.mpr hB
+      omega
+    have hBc : Bᶜ.Nonempty := by
+      apply Finset.card_pos.mp
+      rw [Finset.card_compl, Fintype.card_fin]
+      have := Finset.card_pos.mpr hA
+      omega
+    rw [clanPairEvent_rootedToCladogram h3' prob U hA hAc hB hBc]
+    by_cases hlt : A.card + B.card < n
+    · -- 三事件支（`a + b < n`）
+      rw [ite_eq_right (by omega : ¬ A.card + B.card = n)]
+      rw [clanPairEvent_eq_threeEvents prob U hA hB hd hlt]
+      rw [hPa A B hd hA hB hlt, hPb A B hd hA hB hlt, hPc A B hd hA hB hlt]
+      unfold qn
+      ring
+    · -- 穷尽支（`a + b = n`）：`B = Aᶜ`，两 clan 事件 ＝ 单个 clan 事件
+      have heq : A.card + B.card = n := by omega
+      rw [ite_eq_left heq]
+      have hBc_eq : B = Aᶜ := card_add_eq_iff_eq_compl hd (by simpa using heq)
+      have hfclan : (Finset.univ : Finset Ω).filter
+          (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B)
+          = (Finset.univ : Finset Ω).filter (fun ω => IsClanMinusRoot (U ω) A) := by
+        refine Finset.filter_congr (fun ω _ => ?_)
+        rw [hBc_eq]
+        constructor
+        · intro h
+          exact h.1
+        · intro h
+          exact ⟨h, (isClanMinusRoot_compl (U ω) A).mp h⟩
+      rw [hfclan, hPe A B hd hA hB heq]
+
 end Phylo.Stat.ReciprocalMonophyly
