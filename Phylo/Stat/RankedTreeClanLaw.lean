@@ -108,4 +108,52 @@ theorem clanEvent_eq_clanProb_of_blockCount {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤
     field_simp
   exact hX
 
+/-! ## 3. 交项计数：`n = 4` 的**内核核过**实例
+
+任务（一般 `n`）是 `#{ω : A 与 Aᶜ 同时是块} = H n · pnHatExh n |A|`
+（⟺ 根分裂恰为 `A | Aᶜ` ⟺ 最后一次合并把 `A` 与 `Aᶜ` 并起来）。
+一般 `n` 的组合计数**本批未完成**（见报告 §卡点）；这里落 `n = 4` 的实例，
+它正是 `H_2·H_2·C(2,1) = 2` 与 `H 4 · pnHatExh 4 2 = 18 · (1/9) = 2` 的**数值锚点**，
+同时也是「必须用 `pnHatExh` 而不是 `pnHat`」的机器证据（后者给 `2/45`，乘 `H 4` 是 `4/5`）。 -/
+
+/-- ★ **`pnHatExh 4 2 = 1/9`**（Lemma 4.3 的穷尽式；对比 `pnHat 4 2 2 = 2/45`，后者**不对**）。 -/
+theorem pnHatExh_four_two : pnHatExh 4 2 = 1 / 9 := by
+  norm_num [pnHatExh, Nat.choose]
+
+/-- ★★ **`n = 4` 的交项：`pnHat 4 2 2 = 2/45`，乘 `H 4` 给 `4/5 ≠ 2`**（★D 的机器留痕）。 -/
+theorem H_four_mul_pnHat_four_two : RankedGeneTree.H 4 * pnHat 4 2 2 = 4 / 5 := by
+  rw [RankedGeneTree.H_four, pnHat]
+  norm_num
+
+set_option maxRecDepth 100000 in
+/-- ★★★ **闭式计数（内核规约）**：`Fin 4` 的每个二元子集 `A`，``H 4 = 18`` 条合并史中恰有
+**2** 条使 `A` 与 `Aᶜ` **同时**是非单点块（＝根分裂恰为 `A | Aᶜ` 的那两条 balanced ranking）。 -/
+theorem card_inter_blockFamily_four :
+    ∀ A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter (fun A => decide (A.card = 2) = true),
+      ((Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => (decide (A ∈ blockFamily 4 ω) && decide (Aᶜ ∈ blockFamily 4 ω)) = true)).card
+        = 2 := by
+  decide
+
+/-- ★★★ **`n = 4` 的交项计数 = `H 4 · pnHatExh 4 2`**（一般 `n` 的 `n = 4` 实例）。 -/
+theorem card_blockHistories_inter_four (A : Finset (Fin 4)) (hA : A.card = 2) :
+    ((blockHistories 4 A ∩ blockHistories 4 Aᶜ).card : ℝ)
+      = RankedGeneTree.H 4 * pnHatExh 4 2 := by
+  classical
+  have hmem : A ∈ (Finset.univ : Finset (Finset (Fin 4))).filter
+      (fun A => decide (A.card = 2) = true) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    rw [hA]
+    rfl
+  have hclosed := card_inter_blockFamily_four A hmem
+  have hcongr : blockHistories 4 A ∩ blockHistories 4 Aᶜ
+      = (Finset.univ : Finset (RankedGeneTree.RankedTree 4)).filter
+        (fun ω => (decide (A ∈ blockFamily 4 ω) && decide (Aᶜ ∈ blockFamily 4 ω)) = true) := by
+    rw [inter_blockHistories_eq]
+    apply Finset.filter_congr
+    intro ω _
+    simp only [Bool.and_eq_true, decide_eq_true_eq]
+  rw [hcongr, hclosed, pnHatExh_four_two, RankedGeneTree.H_four]
+  norm_num
+
 end Phylo.Stat.RankedTreeClanLaw
