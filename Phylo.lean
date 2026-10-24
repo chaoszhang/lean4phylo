@@ -138,6 +138,7 @@ import Phylo.Stat.QuartetDecides
 import Phylo.Stat.QuartetMeanEquidistributed
 import Phylo.Stat.RankedGeneTree
 import Phylo.Stat.RankedTreeCladogram
+import Phylo.Stat.RankedTreeClanLaw
 import Phylo.Stat.RankedTreeClanLawFour
 import Phylo.Stat.ReciprocalMonophyly
 import Phylo.Stat.RootJumpMass

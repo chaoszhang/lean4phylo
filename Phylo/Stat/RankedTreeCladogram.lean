@@ -350,6 +350,42 @@ theorem mem_clanHistories_iff_of_card {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n)
     · exact Or.inl h
     · exact Or.inr (Or.inl h)
 
+/-- 「`A` 是 `ω` 的**非单点块**」的历史集（谓词可判定，故是普通 `def`，可 `decide`）。 -/
+def blockHistories (n : ℕ) (A : Finset (Fin n)) : Finset (RankedGeneTree.RankedTree n) :=
+  Finset.univ.filter (fun ω => A ∈ blockFamily n ω)
+
+theorem mem_blockHistories {n : ℕ} {A : Finset (Fin n)} {ω : RankedGeneTree.RankedTree n} :
+    ω ∈ blockHistories n A ↔ A ∈ blockFamily n ω := by
+  simp [blockHistories]
+
+/-- ★★★ **计数层的包含-排除**（`2 ≤ |A| ≤ n−2`）：
+
+`#{ω : A 是 clan} = #{ω : A 是块} + #{ω : Aᶜ 是块} − #{ω : A 与 Aᶜ 都是块}`。
+
+这是 ★★★ `mem_clanHistories_iff_of_card` 的集合版 ＋ `Finset.card_union_add_card_inter`：
+后者把「三个基数」的关系一次给出，故这里**不需要**任何 `Nat` 减法的侧条件。 -/
+theorem card_clanHistories_eq {n : ℕ} (hn : 2 ≤ n) (h3 : 3 ≤ n) {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    (clanHistories n hn A).card =
+      (blockHistories n A).card + (blockHistories n Aᶜ).card
+        - (blockHistories n A ∩ blockHistories n Aᶜ).card := by
+  classical
+  have hset : clanHistories n hn A = blockHistories n A ∪ blockHistories n Aᶜ := by
+    ext ω
+    rw [mem_clanHistories_iff_of_card hn h3 h1 h2 ω]
+    simp only [mem_blockHistories, Finset.mem_union]
+  rw [hset]
+  have hci := Finset.card_union_add_card_inter (blockHistories n A) (blockHistories n Aᶜ)
+  omega
+
+/-- ★★ **交项的历史集就是两个块集之交**（供下游把「交项计数」写成 `card`）。 -/
+theorem inter_blockHistories_eq (n : ℕ) (A : Finset (Fin n)) :
+    blockHistories n A ∩ blockHistories n Aᶜ
+      = Finset.univ.filter
+          (fun ω : RankedGeneTree.RankedTree n => A ∈ blockFamily n ω ∧ Aᶜ ∈ blockFamily n ω) := by
+  ext ω
+  simp only [Finset.mem_inter, mem_blockHistories, Finset.mem_filter, Finset.mem_univ, true_and]
+
 /-! ## 8. `n = 4` 端到端（对齐 `yhkLawFour`：18 条历史／三棵 quartet 拓扑各 6 条） -/
 
 /-- ★ 平凡基数（单点集 / 单点集的补）上的 clan（`n ≥ 3`）。 -/
