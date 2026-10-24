@@ -5745,3 +5745,71 @@ def extendsSplitSumLe (δ : α → α → ℝ) : Prop :=
       ≤ max (isolationIndex δ A₀ B₀) 0
 
 end Split
+namespace Split
+
+universe u
+
+variable {α : Type*} [Fintype α] [DecidableEq α]
+
+/-! ### Theorem 1 归纳的「拆和」那一步（纯 `Finset` 分块求和） -/
+
+/-- ★★★★ **Theorem 1 归纳的拆和恒等式**（纯 `Finset`，不含 α 的任何估计）：
+
+对 `x ∈ X`，把「延伸 `A₀,B₀` 的 d-split 之和」按 `x ∈ s.sideA` 与否拆成两支：
+一支 = 延伸 `A₀∪{x}, B₀`，另一支 = 延伸 `A₀, B₀∪{x}`。
+
+```
+Σ_{A₀ ⊆ A, B₀ ⊆ B} f = Σ_{A₀∪{x} ⊆ A, B₀ ⊆ B} f + Σ_{A₀ ⊆ A, B₀∪{x} ⊆ B} f
+```
+
+★ **零假设**（不需要 `x ∉ A₀∪B₀`、不需要非空、不需要度量）：两支互补靠 `sideA ⊔ sideB = univ`
+与两侧不交；`x ∈ A₀` 时第一支等于原和、第二支为空和。
+
+证明：`Finset.sum_filter_add_sum_filter_not` 把左端按 `x ∈ s.sideA` 拆开，再逐支用 `Finset.ext` 对
+`filter` 的谓词做等价变形（`A₀ ∪ {x} ⊆ A ↔ A₀ ⊆ A ∧ x ∈ A`；`x ∉ s.sideA ⇒ x ∈ s.sideB` 用
+`union_sides` + `disjoint_sides`）。 -/
+theorem sum_filter_extends_split (δ : α → α → ℝ) (f : Split α → ℝ) {A₀ B₀ : Finset α}
+    (x : α) :
+    (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB), f s)
+      = (∑ s ∈ (dSplits δ).filter (fun s => A₀ ∪ {x} ⊆ s.sideA ∧ B₀ ⊆ s.sideB), f s)
+        + (∑ s ∈ (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ∪ {x} ⊆ s.sideB), f s) := by
+  classical
+  set T := (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ⊆ s.sideB) with hT
+  have h1 : T.filter (fun s => x ∈ s.sideA)
+      = (dSplits δ).filter (fun s => A₀ ∪ {x} ⊆ s.sideA ∧ B₀ ⊆ s.sideB) := by
+    ext s
+    simp only [hT, Finset.mem_filter]
+    constructor
+    · rintro ⟨⟨hds, hA, hB⟩, hx⟩
+      refine ⟨hds, ?_, hB⟩
+      intro z hz
+      rcases Finset.mem_union.mp hz with h | h
+      · exact hA h
+      · rw [Finset.mem_singleton.mp h]; exact hx
+    · rintro ⟨hds, hA, hB⟩
+      exact ⟨⟨hds, fun z hz => hA (Finset.mem_union_left _ hz), hB⟩,
+        hA (Finset.mem_union_right _ (Finset.mem_singleton_self x))⟩
+  have h2 : T.filter (fun s => x ∉ s.sideA)
+      = (dSplits δ).filter (fun s => A₀ ⊆ s.sideA ∧ B₀ ∪ {x} ⊆ s.sideB) := by
+    ext s
+    simp only [hT, Finset.mem_filter]
+    constructor
+    · rintro ⟨⟨hds, hA, hB⟩, hx⟩
+      have hxside : x ∈ s.sideB := by
+        have h : x ∈ s.sideA ∪ s.sideB := by rw [s.union_sides]; exact Finset.mem_univ x
+        rcases Finset.mem_union.mp h with h' | h'
+        · exact absurd h' hx
+        · exact h'
+      refine ⟨hds, hA, ?_⟩
+      intro z hz
+      rcases Finset.mem_union.mp hz with h | h
+      · exact hB h
+      · rw [Finset.mem_singleton.mp h]; exact hxside
+    · rintro ⟨hds, hA, hB⟩
+      refine ⟨⟨hds, hA, fun z hz => hB (Finset.mem_union_left _ hz)⟩, ?_⟩
+      intro hxside
+      exact (Finset.disjoint_left.mp s.disjoint_sides) hxside
+        (hB (Finset.mem_union_right _ (Finset.mem_singleton_self x)))
+  rw [← Finset.sum_filter_add_sum_filter_not (s := T) (p := fun s => x ∈ s.sideA) (f := f), h1, h2]
+
+end Split
