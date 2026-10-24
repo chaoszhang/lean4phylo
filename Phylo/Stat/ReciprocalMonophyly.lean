@@ -4564,4 +4564,372 @@ theorem card_subFamilyClosure {ω : rootedSplitFamily n} (A : Finset (Fin n)) :
     Finset.card_image_of_injective _ (fun a b h => by
       simpa [Split.swap_swap] using congrArg Split.swap h)]
   omega
+/-! ## 13. 缺口 N3（`TwoClanLawGap`）的**三事件分解**（ZDS2011 Theorem 6.3(ii)）—— **条件形式**
+
+**本块是纯 EOF 追加**：从 `## 13` 到文件末尾（`end Phylo.Stat.ReciprocalMonophyly` 之前）全部是
+新增内容；`:977` 的 `def TwoClanLawGap` **一字未改**，本节其余任何位置也**未动**。
+（落地时的冲突只可能在**文件尾**。）
+
+### 13.0 文献（原页逐字；md 的数学层按项目约定不可信，以下按 PNG 复核）
+
+`.w30/img/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311_p12-12.png`（公式）与
+`…_p13-13.png`（三事件）：**PDF 页 = 论文页**。md 层 `:1105-1110`（公式）、`:1112-1135`（Proof）
+与图像**一致**（这一页的 md 没有坏；坏的是 p.11 的 Lemma 6.2 那半页，本节不用它）。
+
+> (ii) If `a + b < n` then:
+>
+> `q_n(a, b) = r_n(a, b) + R_n(a, n − b) + R_n(b, n − a) − p̂_n(b, n − b)·p_{n−b}(a) − p̂_n(a, n − a)·p_{n−a}(b)`,
+>
+> where the first three quantities are as given in Theorem 4.5 (Cases 2, 3 and 5), while the last
+> two terms are given by Lemmas 4.2 and 4.3.
+>
+> Proof: Part (i) follows from Lemma 6.2, noting that `n = a + b`. For part (ii), Lemma 6.1 implies
+> that `A` and `B` are clans of `T − ρ` precisely if one of the following three events occur:
+> **(a)** `A` and `B` are clades of `T`; **(b)** `A` and `X − B` are clades of `T`, but `B` is not a
+> clade of `T`; **(c)** `B` and `X − A` are clades of `T`, but `A` is not a clade of `T`.
+>
+> (Note that `X − A` and `X − B` cannot both be clades of `T`, by the compatibility condition (1)
+> since `(X − A) ∩ (X − B) ≠ ∅` by the assumption that `a + b < n`, and since `X − A` neither
+> contains nor is contained in `X − B`.) Moreover, the three events (a), (b), (c) are mutually
+> exclusive, by virtue of the assumption that `A`, `B` are disjoint and their union is a strict
+> subset of `X`. The probability of Event (a) is `r_n(a, b)`, while the probability of Event (b) is
+> `R_n(a, n − b) − p̂_n(b, n − b)·p_{n−b}(a)` … Similarly,
+> `R_n(b, n − a) − p̂_n(a, n − a)·p_{n−a}(b)` is the probability of Event (c).
+
+### 13.0.1 ★D 更正（派工书 / 派单）
+
+* **第三项**：派工书与派单写的是 `R_n(n − b, a)` —— **错**。原页与 md `:1107` 都是
+  **`R_n(b, n − a)`**（＝ Theorem 4.5 **Case 3**，即 `B ⊊ X − A`）。
+  库里 `qn`（`:273`）本来就是对的，故本节**没有**动机器里的 `qn`；
+  按错误写法做会在算术上对不上（`R_n` 的两个参数不同义：`R_n(n−b,a)` 是 Case 2）。
+* **页码**：派工书说「Theorem 6.3 在论文 p.11–12」。准确边界：**陈述与 Proof 首句在 p.12**，
+  **三事件 (a)(b)(c) 与三个概率在 p.13**。引文按此记。
+* **「`X−A`、`X−B` 不能同时是 clade」的依据**是 **compatibility condition (1)**（md `:1124`），
+  不是 (ii)。本节的落地是 ★★★ `not_both_compl_isClade`（**纯 split 层**，不碰概率），见 §13.2。
+
+### 13.1 本节交付了什么
+
+| 层 | 定理 | 内容 | 依赖 |
+| --- | --- | --- | --- |
+| 集合层 | ★★ `mem_image_inl_iff` / ★★ `notMem_image_inl_inr` | `Sum.inl x ∈ A.image Sum.inl ↔ x ∈ A`；根叶 `m = Sum.inr ()` 不在真 taxon 像里 | — |
+| 集合层 | ★★★ `not_both_compl_isClade` | `a + b < n` ⇒ `X−A`、`X−B` **不能同时**是有根 clade（直接用 `Split.Compatible`：四个象限全非空） | `pairwiseCompatible` |
+| 集合层 | ★★★ `clanPair_iff_threeEvents` | **逐树**：`A,B 同为 T−ρ 的 clan ↔ (a) ∨ (b) ∨ (c)`（Lemma 6.1 ＋ 上一行） | `isClanMinusRoot_iff`（＝Lemma 6.1） |
+| 集合层 | ★★ `card_add_eq_iff_eq_compl` | `Disjoint A B` ＋ `a + b = n` ⇒ `B = Aᶜ`（`a+b=n` 支的入口） | — |
+| 概率层 | ★★★ `clanPairEvent_rootedToCladogram` | 去根载体上的**成对**事件求和恒等（§11.5 单个 clan 版的成对推广） | `isClade_rootedToCladogram_iff_of_nonempty` |
+| 概率层 | ★★★ `clanPairEvent_eq_threeEvents` | **无条件**：`P(A,B 同为 clan) = P(a) + P(b) + P(c)`，三个滤子**互斥**（加法公式） | 上一行 ＋ `Finset.sum_union` |
+| 收口 | ★★★ `twoClanLawGap_of_threeEvents` | **条件形式**（命名 `_of_`）：三个事件的概率取文献闭式 ＋ 穷尽支 ⇒ `TwoClanLawGap` | 全部上述 |
+| 边角 | ★★ `clanPairEvent_two` / ★★ `twoClanLawGap_two_slice` | `n = 2` 整条（`twoLeafCladogram`；两支里只有 `a+b=2` 支可达） | — |
+
+★ 其中 **集合层的四条与 `clanPairEvent_two` 是「无条件真定理」**：即使 §13.5 的条件 `H` 永远
+不被兑现，它们也可直接复用（老师 W30 派单明确要求「先把集合层写死」）。
+
+### 13.2 集合层：`X−A` 与 `X−B` 不能同时是 clade（ZDS 的 Note，`:1124-1127`）
+
+文献的论证用「相容性条件 (1)」。本库的 `Split.Compatible` 正是「四个象限至少一个为空」，
+于是把它**逐点**化：设 `s` 见证 `X−A`、`t` 见证 `X−B`（都是 `U` 的 split），则
+
+* `s.sideA ∩ t.sideA ∋ Sum.inl c`（`c ∉ A ∪ B`，由 `a + b < n` 给出）；
+* `s.sideA ∩ t.sideB ∋ Sum.inl b`（`b ∈ B`，`B ∩ A = ∅`）；
+* `s.sideB ∩ t.sideA ∋ Sum.inl a`（`a ∈ A`）；
+* `s.sideB ∩ t.sideB ∋ m = Sum.inr ()`（根叶两侧都不在 `sideA`）。
+
+四个全非空 ⇒ 与 `Split.Compatible` 矛盾。**注意这里必须用「根叶 `m` 在两边」这一支**：
+它正是「有根 clade」与「无根 clan」的差别所在（`IsClanMinusRoot` 会允许 `Aᶜ`、`Bᶜ` 同时成立，
+但那是 **split 侧** 的互补，不是**根侧** clade）。 -/
+
+/-- ★★ **`Sum.inl` 像的成员刻画**：`Sum.inl x ∈ A.image Sum.inl ↔ x ∈ A`（去根桥的基本换算）。 -/
+theorem mem_image_inl_iff {X : Type} [DecidableEq X] (A : Finset X) (x : X) :
+    (Sum.inl x : X ⊕ Unit) ∈ A.image Sum.inl ↔ x ∈ A := by
+  rw [Finset.mem_image]
+  constructor
+  · rintro ⟨y, hy, hxy⟩
+    rw [Sum.inl.injEq] at hxy
+    subst hxy
+    exact hy
+  · intro hx
+    exact ⟨x, hx, rfl⟩
+
+/-- ★★ **根叶 `m = Sum.inr ()` 不在任何真 taxon 集的 `Sum.inl` 像里**。 -/
+theorem notMem_image_inl_inr {X : Type} [DecidableEq X] (A : Finset X) :
+    (Sum.inr () : X ⊕ Unit) ∉ A.image Sum.inl := by
+  rw [Finset.mem_image]
+  rintro ⟨y, -, hy⟩
+  cases hy
+
+/-- ★★★ **`X − A` 与 `X − B` 不能同时是 rooted clade**（ZDS2011 `:1124-1127` 的集合层，
+**无条件**，不涉及任何概率）。
+
+`U : Cladogram (X ⊕ Unit)` 是「有根树 `T` 加一片根叶 `m = Sum.inr ()`」；本定理说：
+若 `A`、`B` 非空、互斥且 `a + b < |X|`，则 `Aᶜ.image Sum.inl` 与 `Bᶜ.image Sum.inl`
+**不可能同为** `U` 的 clade。
+
+证明即原文那句注的**四个象限**论证（原文称「相容性条件 (1)」）：
+两个见证 split `s`、`t` 必相容，但四个象限分别含 `Sum.inl c`（`c ∉ A ∪ B`）、
+`Sum.inl b`（`b ∈ B`）、`Sum.inl a`（`a ∈ A`）、`m`，全部非空 ⇒ 矛盾。
+★ **第四个象限靠根叶 `m`** —— 这是有根 clade 与无根 clan 的差别所在。 -/
+theorem not_both_compl_isClade {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) {A B : Finset X}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hd : Disjoint A B)
+    (hcard : A.card + B.card < Fintype.card X) :
+    ¬ (U.IsClade (Aᶜ.image Sum.inl) ∧ U.IsClade (Bᶜ.image Sum.inl)) := by
+  classical
+  rintro ⟨⟨s, hs, hsA⟩, ⟨t, ht, htA⟩⟩
+  obtain ⟨a0, ha0⟩ := hA
+  obtain ⟨b0, hb0⟩ := hB
+  have hne : A ∪ B ≠ Finset.univ := by
+    intro hun
+    have h1 : (A ∪ B).card = Fintype.card X := by rw [hun, Finset.card_univ]
+    rw [Finset.card_union_of_disjoint hd] at h1
+    omega
+  obtain ⟨c0, hc0⟩ : ∃ x : X, x ∉ A ∪ B := by
+    by_contra hcon
+    push Not at hcon
+    exact hne (Finset.eq_univ_iff_forall.mpr hcon)
+  rw [Finset.mem_union, not_or] at hc0
+  have hcomp : Split.Compatible s t := pairwiseCompatible U s hs t ht
+  have h1 : ¬ Disjoint s.sideA t.sideA := by
+    intro hdis
+    have hm : (Sum.inl c0 : X ⊕ Unit) ∈ s.sideA ∩ t.sideA := by
+      rw [Finset.mem_inter, hsA, htA, mem_image_inl_iff, mem_image_inl_iff]
+      exact ⟨Finset.mem_compl.mpr hc0.1, Finset.mem_compl.mpr hc0.2⟩
+    exact Finset.disjoint_left.mp hdis (Finset.mem_inter.mp hm).1 (Finset.mem_inter.mp hm).2
+  have h2 : ¬ Disjoint s.sideA t.sideB := by
+    intro hdis
+    have hb0' : (Sum.inl b0 : X ⊕ Unit) ∈ s.sideA := by
+      rw [hsA, mem_image_inl_iff]
+      exact Finset.mem_compl.mpr (fun hb => Finset.disjoint_left.mp hd hb hb0)
+    have hb0'' : (Sum.inl b0 : X ⊕ Unit) ∈ t.sideB := by
+      refine Split.mem_sideB_of_not_mem_sideA t ?_
+      rw [htA, mem_image_inl_iff, Finset.mem_compl]
+      exact fun h => h hb0
+    exact Finset.disjoint_left.mp hdis hb0' hb0''
+  have h3 : ¬ Disjoint s.sideB t.sideA := by
+    intro hdis
+    have ha0' : (Sum.inl a0 : X ⊕ Unit) ∈ t.sideA := by
+      rw [htA, mem_image_inl_iff]
+      exact Finset.mem_compl.mpr (fun ha => Finset.disjoint_left.mp hd ha0 ha)
+    have ha0'' : (Sum.inl a0 : X ⊕ Unit) ∈ s.sideB := by
+      refine Split.mem_sideB_of_not_mem_sideA s ?_
+      rw [hsA, mem_image_inl_iff, Finset.mem_compl]
+      exact fun h => h ha0
+    exact Finset.disjoint_left.mp hdis ha0'' ha0'
+  have h4 : ¬ Disjoint s.sideB t.sideB := by
+    intro hdis
+    have hm : (Sum.inr () : X ⊕ Unit) ∈ s.sideB ∩ t.sideB := by
+      refine Finset.mem_inter.mpr ⟨?_, ?_⟩
+      · exact Split.mem_sideB_of_not_mem_sideA s (by rw [hsA]; exact notMem_image_inl_inr (Aᶜ))
+      · exact Split.mem_sideB_of_not_mem_sideA t (by rw [htA]; exact notMem_image_inl_inr (Bᶜ))
+    exact Finset.disjoint_left.mp hdis (Finset.mem_inter.mp hm).1 (Finset.mem_inter.mp hm).2
+  rcases hcomp with h | h | h | h
+  · exact h1 h
+  · exact h2 h
+  · exact h3 h
+  · exact h4 h
+
+/-- ★★★ **三事件分解的集合层**（ZDS2011 p.13，Proof 的 (a)(b)(c)，**逐树**、**无条件**）：
+
+`A`、`B` 同为 `T − ρ` 的 clan **⟺** 下列三事件之一发生（`T` 是 `U` 对应的有根树）：
+
+* **(a)** `A` 与 `B` 都是 `T` 的 clade；
+* **(b)** `A` 与 `X − B` 是 `T` 的 clade，但 `B` **不是** `T` 的 clade；
+* **(c)** `B` 与 `X − A` 是 `T` 的 clade，但 `A` **不是** `T` 的 clade。
+
+**只用 Lemma 6.1**（★★★ `isClanMinusRoot_iff`：`A` 是 clan ⟺ `A` 或 `Aᶜ` 是 clade）
+**＋ 上一行的相容性事实**（排除「`X−A`、`X−B` 同时为 clade」的第四支）。
+★ 三个事件**互斥**是**定义级**的：`(b)` 带 `¬clade B`、`(c)` 带 `¬clade A`，
+故下面把求和拆开时**不需要**额外证明互斥（滤子两两不交由 `¬` 直接给出）。
+★ 文献的 "(a) A and B are clades" 与 `(b)`/`(c)` 里的 "but … is not a clade" 与本节逐字对应。 -/
+theorem clanPair_iff_threeEvents {X : Type} [Fintype X] [DecidableEq X]
+    (U : Cladogram (X ⊕ Unit)) {A B : Finset X}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hd : Disjoint A B)
+    (hcard : A.card + B.card < Fintype.card X) :
+    (IsClanMinusRoot U A ∧ IsClanMinusRoot U B) ↔
+      (U.IsClade (A.image Sum.inl) ∧ U.IsClade (B.image Sum.inl)) ∨
+      (U.IsClade (A.image Sum.inl) ∧ U.IsClade (Bᶜ.image Sum.inl) ∧
+        ¬ U.IsClade (B.image Sum.inl)) ∨
+      (U.IsClade (Aᶜ.image Sum.inl) ∧ U.IsClade (B.image Sum.inl) ∧
+        ¬ U.IsClade (A.image Sum.inl)) := by
+  constructor
+  · intro h
+    rw [isClanMinusRoot_iff U A, isClanMinusRoot_iff U B] at h
+    obtain ⟨h1, h2⟩ := h
+    rcases h1 with h1 | h1 <;> rcases h2 with h2 | h2
+    · exact Or.inl ⟨h1, h2⟩
+    · by_cases hb : U.IsClade (B.image Sum.inl)
+      · exact Or.inl ⟨h1, hb⟩
+      · exact Or.inr (Or.inl ⟨h1, h2, hb⟩)
+    · by_cases ha : U.IsClade (A.image Sum.inl)
+      · exact Or.inl ⟨ha, h2⟩
+      · exact Or.inr (Or.inr ⟨h1, h2, ha⟩)
+    · exact absurd ⟨h1, h2⟩ (not_both_compl_isClade U hA hB hd hcard)
+  · rintro (⟨h1, h2⟩ | ⟨h1, h2, -⟩ | ⟨h1, h2, -⟩)
+    · exact ⟨(isClanMinusRoot_iff U A).mpr (Or.inl h1),
+        (isClanMinusRoot_iff U B).mpr (Or.inl h2)⟩
+    · exact ⟨(isClanMinusRoot_iff U A).mpr (Or.inl h1),
+        (isClanMinusRoot_iff U B).mpr (Or.inr h2)⟩
+    · exact ⟨(isClanMinusRoot_iff U A).mpr (Or.inr h1),
+        (isClanMinusRoot_iff U B).mpr (Or.inl h2)⟩
+
+/-- ★★ **穷尽支的入口**：`Disjoint A B` ＋ `A.card + B.card = |X|` ⇒ `B = Aᶜ`。
+（`a + b = n` 时 `A`、`B` 是 `X` 的划分，故两族事件是**同一件事**。） -/
+theorem card_add_eq_iff_eq_compl {X : Type} [Fintype X] [DecidableEq X] {A B : Finset X}
+    (hd : Disjoint A B) (h : A.card + B.card = Fintype.card X) : B = Aᶜ := by
+  have hcard : (A ∪ B).card = Fintype.card X := by
+    rw [Finset.card_union_of_disjoint hd, h]
+  have hun : A ∪ B = Finset.univ := Finset.eq_univ_of_card _ hcard
+  ext x
+  rw [Finset.mem_compl]
+  constructor
+  · intro hx hxA
+    exact Finset.disjoint_left.mp hd hxA hx
+  · intro hx
+    have hmem : x ∈ A ∪ B := by rw [hun]; exact Finset.mem_univ x
+    rcases Finset.mem_union.mp hmem with h' | h'
+    · exact absurd h' hx
+    · exact h'
+
+/-- ★★ **单点集恒是 clade**（任意树、任意 `|X| ≥ 2`）—— `n = 2` 边角用。 -/
+theorem isClade_of_card_one {X : Type} [Fintype X] [DecidableEq X] [Nontrivial X]
+    (T : Cladogram X) {A : Finset X} (h : A.card = 1) : T.IsClade A := by
+  obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp h
+  exact Cladogram.exists_isSplitOf_singleton T x
+
+/-! ### 13.3 概率层：把三事件的**求和**接起来（无条件） -/
+
+/-- ★★★ **去根映射下的「成对 clade」事件求和恒等**（**无条件**）：
+
+`∑_{ω : A、B 都是 rootedToCladogram (U ω) 的 clade} prob ω = ∑_{ω : IsClanMinusRoot (U ω) A ∧ …B} prob ω`。
+
+即 ★★★ `isClade_rootedToCladogram_iff_of_nonempty`（§10.3）的**成对**推广
+（§11.5 的 ★★★ `clanEvent_rootedToCladogram` 是**单个** clan 版）。
+⚠️ `A`、`B` 的**非空**与**真**（`Aᶜ`、`Bᶜ` 非空）前提不能省：端点 `A = ∅` / `A = X` 处
+`IsClade` 与 `IsClanMinusRoot` **不等价**（§10.4 的 ★★★ `not_isClade_iff_isClanMinusRoot_empty`）。
+缺口的合法域 `A.Nonempty`、`B.Nonempty`、`A.card + B.card ≤ n` 恰好排除端点 ⇒ 下游可使用。 -/
+theorem clanPairEvent_rootedToCladogram {n : ℕ} {Ω : Type} [Fintype Ω]
+    (h3 : 3 ≤ Fintype.card (Fin n)) (prob : Ω → ℝ)
+    (U : Ω → Cladogram (Fin n ⊕ Unit)) {A B : Finset (Fin n)}
+    (hA : A.Nonempty) (hAc : Aᶜ.Nonempty) (hB : B.Nonempty) (hBc : Bᶜ.Nonempty) :
+    (∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => (rootedToCladogram (U ω) h3).IsClade A ∧
+          (rootedToCladogram (U ω) h3).IsClade B), prob ω)
+      = ∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B), prob ω := by
+  have h : (Finset.univ : Finset Ω).filter
+      (fun ω => (rootedToCladogram (U ω) h3).IsClade A ∧
+        (rootedToCladogram (U ω) h3).IsClade B)
+      = (Finset.univ : Finset Ω).filter
+        (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B) := by
+    refine Finset.filter_congr (fun ω _ => ?_)
+    rw [isClade_rootedToCladogram_iff_of_nonempty (U ω) h3 hA hAc,
+      isClade_rootedToCladogram_iff_of_nonempty (U ω) h3 hB hBc]
+  rw [h]
+
+/-- ★★★ **三事件的概率分解**（**无条件**；任意 `prob`，甚至不要求非负）：
+
+`P(A、B 同为 T−ρ 的 clan) = P(事件 a) + P(事件 b) + P(事件 c)`，其中三个滤子是
+★★★ `clanPair_iff_threeEvents` 的三支**原样**（这就是文献 `:1128-1135` 的
+"The result now follows by adding the probabilities of these three mutually exclusive events"）。
+
+**互斥性从哪来**：`(b)` 的滤子带 `¬ clade B`、`(c)` 的带 `¬ clade A`，故
+`fA ∩ fB = ∅` 由 `clade B` vs `¬clade B`，`fB ∩ fC = ∅` 同理由 `clade B` vs `¬clade B`
+直接得到 —— **不需要**文献另起一句证明的「互斥」。
+（原文说互斥靠 `A`、`B` 不交且并未穷尽 `X`；在本节里那一句被 `clanPair_iff_threeEvents`
+的**定义级** `¬` 吸收，逻辑上更强。） -/
+theorem clanPairEvent_eq_threeEvents {n : ℕ} {Ω : Type} [Fintype Ω] (prob : Ω → ℝ)
+    (U : Ω → Cladogram (Fin n ⊕ Unit)) {A B : Finset (Fin n)}
+    (hA : A.Nonempty) (hB : B.Nonempty) (hd : Disjoint A B)
+    (hlt : A.card + B.card < n) :
+    (∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B), prob ω)
+      = (∑ ω ∈ (Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl)), prob ω)
+        + (∑ ω ∈ (Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (Bᶜ.image Sum.inl) ∧
+              ¬ (U ω).IsClade (B.image Sum.inl)), prob ω)
+        + (∑ ω ∈ (Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl) ∧
+              ¬ (U ω).IsClade (A.image Sum.inl)), prob ω) := by
+  classical
+  have hcard : A.card + B.card < Fintype.card (Fin n) := by simpa using hlt
+  let fA : Finset Ω := Finset.univ.filter
+    (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl))
+  let fB : Finset Ω := Finset.univ.filter
+    (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (Bᶜ.image Sum.inl) ∧
+      ¬ (U ω).IsClade (B.image Sum.inl))
+  let fC : Finset Ω := Finset.univ.filter
+    (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl) ∧
+      ¬ (U ω).IsClade (A.image Sum.inl))
+  change (∑ ω ∈ (Finset.univ : Finset Ω).filter
+      (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B), prob ω)
+      = (∑ ω ∈ fA, prob ω) + (∑ ω ∈ fB, prob ω) + (∑ ω ∈ fC, prob ω)
+  have hclan : (Finset.univ : Finset Ω).filter
+      (fun ω => IsClanMinusRoot (U ω) A ∧ IsClanMinusRoot (U ω) B) = fA ∪ (fB ∪ fC) := by
+    ext ω
+    dsimp only [fA, fB, fC]
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union]
+    rw [clanPair_iff_threeEvents (U ω) hA hB hd hcard]
+  have hd1 : Disjoint fA (fB ∪ fC) := by
+    refine Finset.disjoint_left.mpr ?_
+    intro ω h1 h2
+    dsimp only [fA, fB, fC] at h1 h2
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union] at h1 h2
+    tauto
+  have hd2 : Disjoint fB fC := by
+    refine Finset.disjoint_left.mpr ?_
+    intro ω h1 h2
+    dsimp only [fB, fC] at h1 h2
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and] at h1 h2
+    tauto
+  rw [hclan, Finset.sum_union hd1, Finset.sum_union hd2]
+  ring
+
+/-! ### 13.4 `n = 2` 的边角（**无条件**）
+
+`rootedToCladogram`（§10.3）要求 `3 ≤ |X|`，故 `n = 2` 不能由 §13.5 的 `H` 覆盖
+（`H` 自带 `3 ≤ n`）。本节补上：`n = 2` 时 `A`、`B` 非空不交且 `a + b ≤ 2` ⇒ `a = b = 1`、
+`A ∪ B = X`，而**单点集在任意 2 叶树上都是 clade**（`Cladogram.exists_isSplitOf_singleton`）
+⇒ 左端是必然事件（`= Σ prob = 1`），右端 `qnExhaustive 1 1 = 1`。
+★ 注意 `n = 2` 时 `a + b = 2 = n` **恒成立**（`a, b ≥ 1`），`qn 2 1 1` 那一支**不可达**。 -/
+
+/-- ★★ **`n = 2` 的两 clan 事件**（任意概率空间、任意树族；`a + b = 2` 恒成立）。 -/
+theorem clanPairEvent_two {Ω : Type} [Fintype Ω] (prob : Ω → ℝ)
+    (hsum : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 2))
+    (A B : Finset (Fin 2)) (hA : A.Nonempty) (hB : B.Nonempty)
+    (hc : A.card + B.card ≤ 2) :
+    (∑ ω ∈ Finset.univ.filter (fun ω => (tree ω).IsClade A ∧ (tree ω).IsClade B), prob ω)
+      = if A.card + B.card = 2 then qnExhaustive A.card B.card else qn 2 A.card B.card := by
+  have ha1 : 1 ≤ A.card := Finset.card_pos.mpr hA
+  have hb1 : 1 ≤ B.card := Finset.card_pos.mpr hB
+  have hsum2 : A.card + B.card = 2 := by omega
+  rw [ite_eq_left hsum2]
+  have hAcard : A.card = 1 := by omega
+  have hBcard : B.card = 1 := by omega
+  have hfilter : Finset.univ.filter (fun ω => (tree ω).IsClade A ∧ (tree ω).IsClade B)
+      = Finset.univ := by
+    refine Finset.filter_true_of_mem ?_
+    intro ω _
+    exact ⟨isClade_of_card_one (tree ω) hAcard, isClade_of_card_one (tree ω) hBcard⟩
+  rw [hfilter, hsum, hAcard, hBcard, qnExhaustive_one_left (by norm_num : 1 ≤ 1)]
+
+/-- ★★★ **缺口 `TwoClanLawGap` 在 `n = 2` 上的整条**（无条件）。
+
+见证：`Ω = PUnit`、`prob ≡ 1`、`tree ≡ twoLeafCladogram`（§11.6 的现成 2 叶树）。
+（`n = 2` 的等式本身是平凡的：见 ★★ `clanPairEvent_two`。） -/
+theorem twoClanLawGap_two_slice :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 2)),
+      ∀ A B : Finset (Fin 2), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card ≤ 2 →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (tree ω).IsClade A ∧ (tree ω).IsClade B), prob ω)
+          = if A.card + B.card = 2 then qnExhaustive A.card B.card
+            else qn 2 A.card B.card :=
+  ⟨PUnit, inferInstance, fun _ => 1, fun _ => by norm_num, by simp,
+    fun _ => twoLeafCladogram,
+    fun A B _ hA hB hc =>
+      clanPairEvent_two (fun _ => 1) (by simp) (fun _ => twoLeafCladogram) A B hA hB hc⟩
+
 end Phylo.Stat.ReciprocalMonophyly
