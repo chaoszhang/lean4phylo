@@ -565,4 +565,256 @@ theorem term_audit_six_two_two :
   · unfold pnHatExh pn
     norm_num [Nat.choose, Nat.factorial]
 
+
+/-! ## 9. ★ W33：载体**实例化**与穷尽支（`clanExhaustiveCount` 落地）
+
+### 9.0 为什么必须有这一节（★D 记录）
+
+§5 的 4 条计数 `def` 都是对**任意** `U : Ω → Cladogram (Fin N ⊕ Unit)` 陈述的；
+对一般 `U` 它们**为假**：取 `U` 恒为「根叶 ＋ 4 叶星形」（`N = 4`）、`|A| = 2`，
+则左端 `#{ω : A 是边的一侧} = 0`，右端 `qnExhaustive 2 2 · |Ω| = |Ω|/3 ≠ 0`。
+而库内 `Cladogram (X ⊕ Unit)` **全是消费者、生产者 0 个** ⇒ 先补生产者
+（★★★ `Cladogram.attachRoot`，`Phylo/CladogramBuild.lean` §9），本节把它**实例化**成
+`RankedTree n` 上的具体载体，并交付 ★★★ `isClanMinusRoot_rootedCarrier_iff`
+（把载体的 `IsClanMinusRoot` 与 `rankedTreeCladogram` 的 `IsClade` 对齐 —— 这是 ZDS Lemma 6.1
+在两条载体之间的**合流**），随后 `clanExhaustiveCount` 由已收口的 `YHKClanLawGap` 直接兑换。
+
+### 9.1 载体：`cladesOf` 的镶嵌族挂上根叶
+
+★ **为什么用 `cladesOf`（有根 clade 族）而不是 `rankedTreeCladogram` 的 split 族**：
+`attachRoot` 把根叶 `Sum.inr ()` 放在**每条** split 的 `sideB`，只有**镶嵌族**才保相容性；
+`cladesOf n ω.1` 恰是镶嵌族（★★ `laminarFamily_cladesOf`），而 `rankedTreeCladogram` 的
+split 族**含两个朝向**、不镶嵌（反例 `Fin 3` 上 `{1,2}` 与 `{1,3}`）⇒ 推上去不相容。
+这一条是 W33 C 步实测出来的**更正**，见 `Phylo/CladogramBuild.lean` §9 的模块注记。 -/
+
+/-- `cladesOf` 的成员**非空**（块是 `univ.filter`，含代表元本身）。 -/
+theorem nonempty_of_mem_cladesOf {m : ℕ} {f : Fin (m - 1) → Fin m × Fin m}
+    {C : Finset (Fin m)} (h : C ∈ RankedGeneTree.cladesOf m f) : C.Nonempty := by
+  rw [RankedGeneTree.cladesOf, Finset.mem_biUnion] at h
+  obtain ⟨L, -, hL⟩ := h
+  rw [RankedGeneTree.blocksOf, Finset.mem_image] at hL
+  obtain ⟨w, -, hw⟩ := hL
+  rw [← hw]
+  exact ⟨w, Finset.mem_filter.mpr ⟨Finset.mem_univ w, rfl⟩⟩
+
+/-- 单点集是 `cladesOf` 的成员（第 `0` 层的块 = 单点集）。 -/
+theorem singleton_mem_cladesOf {m : ℕ} (f : Fin (m - 1) → Fin m × Fin m) (x : Fin m) :
+    ({x} : Finset (Fin m)) ∈ RankedGeneTree.cladesOf m f := by
+  have hx : (0 : ℕ) ∈ Finset.range m := Finset.mem_range.mpr (Fin.pos x)
+  refine Finset.mem_biUnion.mpr ⟨0, hx, ?_⟩
+  refine Finset.mem_image.mpr ⟨x, Finset.mem_univ x, ?_⟩
+  have h0 : RankedGeneTree.chainMap m f 0 = id := rfl
+  ext z
+  rw [h0]
+  rw [Finset.mem_filter, Finset.mem_singleton]
+  exact ⟨fun h => h.2, fun h => ⟨Finset.mem_univ _, h⟩⟩
+
+/-- `A.card = m − 1` ⟹ `A` 是某个单点集的补。 -/
+theorem exists_compl_singleton_of_card {m : ℕ} {A : Finset (Fin m)} (hm : 0 < m)
+    (h : A.card = m - 1) : ∃ x, A = ({x} : Finset (Fin m))ᶜ := by
+  have hne : A ≠ Finset.univ := by
+    intro hU
+    rw [hU, Finset.card_univ, Fintype.card_fin] at h
+    omega
+  have hx : ∃ x : Fin m, x ∉ A := by
+    by_contra hcon
+    exact hne (Finset.eq_univ_of_forall fun x => by
+      by_contra hxa
+      exact hcon ⟨x, hxa⟩)
+  obtain ⟨x, hx⟩ := hx
+  refine ⟨x, ?_⟩
+  have hsub : A ⊆ ({x} : Finset (Fin m))ᶜ := by
+    intro z hz
+    rw [Finset.mem_compl, Finset.mem_singleton]
+    exact fun hzx => hx (hzx ▸ hz)
+  have hcard : (({x} : Finset (Fin m))ᶜ).card ≤ A.card := by
+    rw [Finset.card_compl, Fintype.card_fin, Finset.card_singleton, h]
+  exact Finset.eq_of_subset_of_card_le hsub hcard
+
+/-- ★★ **`cladesOf` 成员的三分**（`A.card < m` 时）：
+
+`C ∈ cladesOf` ∧ `|C| < m` ⟹ `|C| = 1`（平凡）或 `C ∈ blockFamily`（非单点真块）
+或 `|C| = m − 1`（根分裂的一侧）。
+
+★ 这是「有根 clade 族」与 `blockFamily`（`[2, m−2]` 档）之间**唯一的**记账差异：
+`attachRoot` 的 `IsClade` 认 `cladesOf`，而 `rankedTreeCladogram` 的 `IsClade`
+（经 ★★★ `mem_clanHistories_iff`）认 `blockFamily` ＋ 平凡支 —— 两条账在
+`|C| = m − 1` 上由「单点集的补恒是 clan」（`isClade_compl`）对齐。 -/
+theorem card_eq_one_or_mem_blockFamily_or_card_pred {m : ℕ}
+    {ω : RankedGeneTree.RankedTree m} {C : Finset (Fin m)}
+    (hC : C ∈ RankedGeneTree.cladesOf m ω.1) (hlt : C.card < m) :
+    C.card = 1 ∨ C ∈ blockFamily m ω ∨ C.card = m - 1 := by
+  have hne : 1 ≤ C.card := Finset.card_pos.mpr (nonempty_of_mem_cladesOf hC)
+  by_cases h1 : C.card = 1
+  · exact Or.inl h1
+  by_cases h3 : C.card ≤ m - 2
+  · refine Or.inr (Or.inl (mem_blockFamily.mpr ⟨hC, ?_, h3⟩))
+    omega
+  · exact Or.inr (Or.inr (by omega))
+
+/-- ★★ **载体**（`RankedTree m → Cladogram (Fin m ⊕ Unit)`）：`ω` 的有根 clade 族挂上根叶。
+这是 §5 那 4 条计数 `def` 的 `U` 槽的**具体**填法。 -/
+noncomputable def rootedCarrier (m : ℕ) (h3 : 3 ≤ m)
+    (ω : RankedGeneTree.RankedTree m) : Cladogram.{0, 0} (Fin m ⊕ Unit) :=
+  Cladogram.attachRoot (RankedGeneTree.cladesOf m ω.1)
+    (RankedGeneTree.laminarFamily_cladesOf ω.1)
+    (by rw [Fintype.card_sum, Fintype.card_unit, Fintype.card_fin]; omega)
+
+/-- ★★ **载体的 `IsClade` 完全刻画**（★ `attachRoot_isClade` 的实例；三支 = clade / 单点 / 全集）。 -/
+theorem rootedCarrier_isClade {m : ℕ} (h3 : 3 ≤ m) (ω : RankedGeneTree.RankedTree m)
+    (A : Finset (Fin m)) :
+    (rootedCarrier m h3 ω).IsClade (A.image (Sum.inl : Fin m → Fin m ⊕ Unit)) ↔
+      A ∈ RankedGeneTree.cladesOf m ω.1 ∨ A.card = 1 ∨ A = Finset.univ :=
+  Cladogram.attachRoot_isClade (L := RankedGeneTree.cladesOf m ω.1)
+    (RankedGeneTree.laminarFamily_cladesOf ω.1)
+    (fun _ h => nonempty_of_mem_cladesOf h)
+    (by rw [Fintype.card_sum, Fintype.card_unit, Fintype.card_fin]; omega) A
+
+/-- ★★★ **载体对齐**（W33 的核心一步）：在合法基数域上
+
+  「`A` 是 `rootedCarrier m ω` 的**去根 clan**」**⟺**「`A` 是 `rankedTreeCladogram m ω` 的 **clan**」。
+
+左端 = `IsClanMinusRoot`（`IsClade (A.image inl) ∨ IsClade (Aᶜ.image inl)`，★★ `isClanMinusRoot_iff`），
+右端 = ★★★ `mem_clanHistories_iff` 的四支（`blockFamily` 两侧 ＋ 两种平凡支）。
+
+★ 三支的对应关系（这就是「记账」的全部内容）：
+`|A| = 1` ↦ 平凡支 `A = {x}`；`|A| = m−1` ↦ 平凡支 `A = {x}ᶜ`；`2 ≤ |A| ≤ m−2` ↦ `blockFamily`。 -/
+theorem isClanMinusRoot_rootedCarrier_iff {m : ℕ} (hm : 2 ≤ m) (h3 : 3 ≤ m)
+    (ω : RankedGeneTree.RankedTree m) {A : Finset (Fin m)}
+    (hA : A.Nonempty) (hlt : A.card < m) :
+    IsClanMinusRoot (rootedCarrier m h3 ω) A ↔ (rankedTreeCladogram m hm ω).IsClade A := by
+  have hpos : 1 ≤ A.card := Finset.card_pos.mpr hA
+  have hcompl : Aᶜ.card = m - A.card := card_compl_eq m A
+  have hcompl_pos : 1 ≤ Aᶜ.card := by rw [hcompl]; omega
+  have hcompl_lt : Aᶜ.card < m := by rw [hcompl]; omega
+  rw [isClanMinusRoot_iff, rootedCarrier_isClade h3 ω A, rootedCarrier_isClade h3 ω Aᶜ]
+  have hR : (rankedTreeCladogram m hm ω).IsClade A ↔
+      A ∈ blockFamily m ω ∨ Aᶜ ∈ blockFamily m ω ∨
+        (∃ x : Fin m, A = {x}) ∨ (∃ x : Fin m, A = {x}ᶜ) := by
+    have h := mem_clanHistories_iff (n := m) hm h3 A ω
+    rw [clanHistories_eq_filter] at h
+    simpa using h
+  rw [hR]
+  -- 把「`C ∈ cladesOf`」按基数三分（对 `A` 与 `Aᶜ` 各一次）
+  have hsplit : ∀ C : Finset (Fin m), C ∈ RankedGeneTree.cladesOf m ω.1 → C.card < m →
+      (C.card = 1 ∨ C ∈ blockFamily m ω ∨ C.card = m - 1) :=
+    fun C hC hlt => card_eq_one_or_mem_blockFamily_or_card_pred hC hlt
+  constructor
+  · rintro (hLeft | hRight)
+    · rcases hLeft with hAc | hA1 | hAu
+      · -- `A ∈ cladesOf`
+        rcases (hsplit A hAc hlt) with h1 | h2 | h3'
+        · obtain ⟨x, hx⟩ := Finset.card_eq_one.mp h1
+          subst hx
+          exact Or.inr (Or.inr (Or.inl ⟨x, rfl⟩))
+        · exact Or.inl h2
+        · obtain ⟨x, hx⟩ := exists_compl_singleton_of_card (by omega : 0 < m) h3'
+          exact Or.inr (Or.inr (Or.inr ⟨x, hx⟩))
+      · -- `A.card = 1`
+        obtain ⟨x, hx⟩ := Finset.card_eq_one.mp hA1
+        subst hx
+        exact Or.inr (Or.inr (Or.inl ⟨x, rfl⟩))
+      · -- `A = univ` 与 `A.card < m` 矛盾
+        exfalso
+        rw [hAu, Finset.card_univ, Fintype.card_fin] at hlt
+        omega
+    · rcases hRight with hAcc | hAc1 | hAcu
+      · -- `Aᶜ ∈ cladesOf`
+        rcases (hsplit Aᶜ hAcc hcompl_lt) with h1 | h2 | h3'
+        · obtain ⟨x, hx⟩ := Finset.card_eq_one.mp h1
+          refine Or.inr (Or.inr (Or.inr ⟨x, ?_⟩))
+          rw [← hx, compl_compl]
+        · exact Or.inr (Or.inl h2)
+        · obtain ⟨x, hx⟩ := exists_compl_singleton_of_card (by omega : 0 < m) h3'
+          refine Or.inr (Or.inr (Or.inl ⟨x, ?_⟩))
+          simpa using congrArg (fun S : Finset (Fin m) => Sᶜ) hx
+      · -- `Aᶜ.card = 1`
+        obtain ⟨x, hx⟩ := Finset.card_eq_one.mp hAc1
+        refine Or.inr (Or.inr (Or.inr ⟨x, ?_⟩))
+        rw [← hx, compl_compl]
+      · -- `Aᶜ = univ` 与 `Aᶜ.card < m` 矛盾
+        exfalso
+        rw [hAcu, Finset.card_univ, Fintype.card_fin] at hcompl_lt
+        omega
+  · rintro (hAb | hAbc | hS1 | hS2)
+    · exact Or.inl (Or.inl (mem_cladesOf_of_mem_blockFamily hAb))
+    · exact Or.inr (Or.inl (mem_cladesOf_of_mem_blockFamily hAbc))
+    · obtain ⟨x, hx⟩ := hS1
+      subst hx
+      exact Or.inl (Or.inr (Or.inl (by simp)))
+    · obtain ⟨x, hx⟩ := hS2
+      refine Or.inr (Or.inr (Or.inl ?_))
+      rw [hx]
+      simp
+
+/-- ★★ **`Fintype.card (RankedTree m) = H m`**（`H` 就是合并史的条数）。 -/
+theorem card_rankedTree_eq_H (m : ℕ) (hm : 2 ≤ m) :
+    ((Fintype.card (RankedGeneTree.RankedTree m) : ℕ) : ℝ) = RankedGeneTree.H m := by
+  have h1 : Fintype.card (RankedGeneTree.RankedTree m)
+      = (RankedGeneTree.mergeHistories m).card := by
+    rw [RankedGeneTree.mergeHistories]
+    exact Fintype.card_subtype _
+  rw [h1]
+  exact Phylo.Stat.CoalescentHistoryCount.card_mergeHistories_eq_H m (by omega)
+
+/-- ★★★ **`A` 成 clan 的概率 = `clanProb m |A|`**（点态版，`|A| < m`、`A` 非空）。
+
+★ 这是 ★★★ `yhkClanLawGap_holds` 的**逐点**形态（那里只给了 `∃ Ω, prob, tree`）：
+本定理把见证**定死**成 `Ω = RankedTree m`、`prob ≡ 1/H m`、`tree = rankedTreeCladogram m hm`，
+故可直接喂给 §5 的计数槽。三档与 `yhkClanLawGap_of_blockInterCount` 完全一致
+（`|A| = 1` / `|A| = m−1` 走平凡切片，其余走块计数）。 -/
+theorem clanEvent_eq_clanProb {m : ℕ} (hm : 2 ≤ m) {A : Finset (Fin m)}
+    (hA : A.Nonempty) (hlt : A.card < m) :
+    clanEvent m hm A = clanProb m A.card := by
+  have hsum : (∑ _ω : RankedGeneTree.RankedTree m, (1 / RankedGeneTree.H m)) = 1 :=
+    Phylo.Stat.CoalescentHistoryCount.sum_rankedTree_uniform m hm
+  have hpos : 1 ≤ A.card := Finset.card_pos.mpr hA
+  by_cases hcard1 : A.card = 1
+  · unfold clanEvent
+    rw [clanHistories_eq_filter]
+    exact yhkClanLawGap_trivial_card_slice hm (fun _ => 1 / RankedGeneTree.H m) hsum
+      (fun ω => rankedTreeCladogram m hm ω) hA (Or.inl hcard1)
+  · by_cases hcardn : A.card = m - 1
+    · unfold clanEvent
+      rw [clanHistories_eq_filter]
+      exact yhkClanLawGap_trivial_card_slice hm (fun _ => 1 / RankedGeneTree.H m) hsum
+        (fun ω => rankedTreeCladogram m hm ω) hA (Or.inr hcardn)
+    · have h1 : 2 ≤ A.card := by omega
+      have h2 : A.card ≤ m - 2 := by omega
+      have h3 : 3 ≤ m := by omega
+      unfold clanEvent
+      rw [clanHistories_eq_filter]
+      exact clanEvent_eq_clanProb_of_blockCount hm h3 h1 h2 (blockInterCount_holds m A h1 h2)
+
+/-- ★★★ **穷尽支的计数化落地**（`a + b = m`）：`#{ω : A 是去根 clan} = qnExhaustive a b · |Ω|`。
+
+三条兑换各就各位：
+1. 滤子对齐：★★★ `isClanMinusRoot_rootedCarrier_iff`（载体 ↔ `rankedTreeCladogram`）；
+2. 概率对齐：★★★ `clanEvent_eq_clanProb`（YHK 律，点态版）；
+3. 闭形式对齐：★★★ `qnExhaustive_eq_clanProb`（Theorem 6.3(i) ⟸ Lemma 6.2，`a + b = m`）。 -/
+theorem clanExhaustiveCount_rootedCarrier {m : ℕ} (hm : 2 ≤ m) (h3 : 3 ≤ m) :
+    clanExhaustiveCount m (RankedGeneTree.RankedTree m) (fun ω => rootedCarrier m h3 ω) := by
+  intro A B hd hA hB heq
+  have hbpos : 0 < B.card := Finset.card_pos.mpr hB
+  have hlt : A.card < m := by omega
+  have hfilter : (Finset.univ.filter (fun ω => IsClanMinusRoot (rootedCarrier m h3 ω) A))
+      = clanHistories m hm A := by
+    rw [clanHistories_eq_filter]
+    refine Finset.filter_congr (fun ω _ => ?_)
+    exact isClanMinusRoot_rootedCarrier_iff hm h3 ω hA hlt
+  have hE : clanEvent m hm A
+      = ((clanHistories m hm A).card : ℝ) * (1 / RankedGeneTree.H m) := by
+    unfold clanEvent
+    rw [Finset.sum_const, nsmul_eq_mul]
+  have hclan := clanEvent_eq_clanProb hm hA hlt
+  rw [hE] at hclan
+  have hcard := card_rankedTree_eq_H m hm
+  have hqa := qnExhaustive_eq_clanProb (a := A.card) (b := B.card)
+    (Finset.card_pos.mpr hA) (Finset.card_pos.mpr hB)
+  rw [heq] at hqa
+  rw [hfilter, hqa, hcard]
+  have hH : RankedGeneTree.H m ≠ 0 := ne_of_gt (H_pos m)
+  rw [← hclan]
+  field_simp
+
 end Phylo.Stat.ClanPairLaw
