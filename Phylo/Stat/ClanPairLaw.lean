@@ -45,6 +45,12 @@ p.12 的 Theorem 6.3(ii) 公式 ＋ p.13 的 Proof 三事件 (a)(b)(c) 与
 * `clanPairCount`（①，Case 5）· `clanPairComplCount`（②③ 首项，Case 2/3）·
   `tripleClanCount`（④⑤，乘法定理）· `clanExhaustiveCount`（穷尽支，仅供装配）。
 
+★★ **记账（协调侧 WB `10-26 23:5x` 批 A）**：这 **4** 条 `def … : Prop` **不另立台账行** ——
+它们是 `TwoClanLawGap`（`Phylo/Stat/ReciprocalMonophyly.lean:977`）**这一条**欠账的**内部拆解**，
+登记成 4 行会让七桶的「真开放」从「对文献欠几条」漂成「库内有多少未证 `Prop`」（`真开放 1 → 5`），
+README 与历次周报的对比会立刻断裂。想要后一个指标时应**另开一个指标**，不要塞进七桶。
+因此 `scripts/gap_ledger.py` 的**注释**里也记了同一句话（只加注释，判据与桶位一字未改）。
+
 **(C) 装配（`_of_`，**无条件**真证）**：`threeEventProbs_of_counts` ——
 四条计数等式 ⇒ `H` 的**整个 `∃` 载荷**（`prob`、非负、`Σ = 1`、四条概率等式）。
 `prob` 取均匀律 `1 / |Ω|`。
@@ -306,7 +312,7 @@ theorem card_event_c_eq_sub (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
 它们与 `H` 里的概率等式**逐条等价**（见 §6 的装配）。 -/
 
 /-- **① 的计数化**（Thm 4.5 **Case 5**）：`A`、`B` 同为 clade 的条数
-`= rn n a b · |Ω|`（`A ∩ B = ∅`、`A ∪ B ⊊ X`）。 -/
+`= rn n a b · |Ω|`（`A ∩ B = ∅`、`A ∪ B ⊊ X`）。★ **属 `TwoClanLawGap` 行内**，不另立台账行（见模块头 §1 的记账）。 -/
 def clanPairCount (N : ℕ) (Ω : Type*) [Fintype Ω]
     (U : Ω → Cladogram.{0, 0} (Fin N ⊕ Unit)) : Prop :=
   ∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty → A.card + B.card < N →
@@ -319,7 +325,7 @@ def clanPairCount (N : ℕ) (Ω : Type*) [Fintype Ω]
 `A` 与 `Bᶜ` 同为 clade 的条数 `= Rn n a (n−b) · |Ω|`。
 
 ★ `Case 3` 是 `(A, B) := (B, A)` 的实例：`Aᶜ` 与 `B` 同为 clade
-`= Rn n b (n−a)`。 -/
+`= Rn n b (n−a)`。★ **属 `TwoClanLawGap` 行内**，不另立台账行（见模块头 §1 的记账）。 -/
 def clanPairComplCount (N : ℕ) (Ω : Type*) [Fintype Ω]
     (U : Ω → Cladogram.{0, 0} (Fin N ⊕ Unit)) : Prop :=
   ∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty → A.card + B.card < N →
@@ -332,7 +338,7 @@ def clanPairComplCount (N : ℕ) (Ω : Type*) [Fintype Ω]
 `= p̂_n(b, n−b) · p_{n−b}(a) · |Ω|`。
 
 ★ 这正是文献 p.13 的 "`p̂_n(b, n−b)p_{n−b}(a)` is the probability that `A`, `X − B`
-and `B` are clades" —— 它是 ②③ 的**减项**。 -/
+and `B` are clades" —— 它是 ②③ 的**减项**。★ **属 `TwoClanLawGap` 行内**，不另立台账行（见模块头 §1 的记账）。 -/
 def tripleClanCount (N : ℕ) (Ω : Type*) [Fintype Ω]
     (U : Ω → Cladogram.{0, 0} (Fin N ⊕ Unit)) : Prop :=
   ∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty → A.card + B.card < N →
@@ -342,7 +348,7 @@ def tripleClanCount (N : ℕ) (Ω : Type*) [Fintype Ω]
       = (pnHatExh N B.card * pn (N - B.card) A.card) * (Fintype.card Ω : ℝ)
 
 /-- **穷尽支的计数化**（`a + b = n`，Theorem 6.3(i) ＝ Lemma 6.2 的概率层；
-**不**在本文件证明，只为装配 `H` 的第四组）。 -/
+**不**在本文件证明，只为装配 `H` 的第四组）。★ **属 `TwoClanLawGap` 行内**，不另立台账行（见模块头 §1 的记账）。 -/
 def clanExhaustiveCount (N : ℕ) (Ω : Type*) [Fintype Ω]
     (U : Ω → Cladogram.{0, 0} (Fin N ⊕ Unit)) : Prop :=
   ∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty → A.card + B.card = N →
