@@ -21,5 +21,37 @@ jobs:
       - name: Get mathlib cache
         run: lake exe cache get
 
+      # `set -o pipefail` 是必须的：否则 `lake build | tee` 的退出码取的是 `tee` 的，
+      # 构建失败会被吞掉（GitHub Actions 的 bash 默认**不**开 pipefail）。
       - name: Build
-        run: lake build
+        run: |
+          set -o pipefail
+          lake build 2>&1 | tee /tmp/build.log
+
+      # ★ sorry 门禁：`lake build` 对 `sorry` **只警告不失败**。本库纪律是零 sorry，
+      #   但在此之前**没有任何机器保证**它持续为零（外部审计 §三·问题 5 第 1 条）。
+      - name: Sorry 门禁（零 sorry）
+        run: |
+          if grep -q "declaration uses 'sorry'" /tmp/build.log; then
+            echo "✗ 出现 sorry —— 本库纪律是零 sorry："
+            grep -n "declaration uses 'sorry'" /tmp/build.log
+            exit 1
+          fi
+          echo "✓ 零 sorry"
+
+      # ★ 缺口台账闭合：`gap_ledger.py` 在「七桶加总 ≠ 解析条数」时返回 1，
+      #   `list_gaps.sh` 用 `|| exit 1` 继承该退出码。
+      - name: 缺口台账闭合（七桶加总 = 解析条数）
+        run: bash scripts/list_gaps.sh
+
+      # ★ 空转自证：6 条 VACUOUS 缺口必须有可复跑的定理依据，缺一条即非零退出。
+      - name: 空转自证（check_vacuous.sh）
+        run: bash scripts/check_vacuous.sh
+
+      # ★ 已证伪源码标记：「有反例定理 ⇒ docstring 首行必须点名它」（W35-7a 新增）。
+      - name: 已证伪源码标记（check_refuted.sh）
+        run: bash scripts/check_refuted.sh
+
+      # ★ import 同步：`Phylo/` 下的每个 .lean 都必须在根模块 `Phylo.lean` 里有 import。
+      - name: import 同步（check_file_imports.sh）
+        run: bash scripts/check_file_imports.sh
