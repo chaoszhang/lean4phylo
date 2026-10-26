@@ -135,7 +135,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 * **§3**（`def` 层）：论文各定理闭形式的**忠实转写**（11 个 `def`）；
 * **§4**：这些闭形式之间的**算术恒等式**（真证，无 `sorry`）＋ 论文三个数值锚点；
 * **§5**：Prop 6.5 的**树层**内容（与库内 `Cladogram.IsClade` 接合）；
-* **§6**：**显式缺口**（概率层，3 个 `def … : Prop`，未被证、也未被引用）；
+* **§6**：**显式缺口**（概率层，3 个 `def … : Prop`，未被证、也未被引用）；（★ W32 已收口：其中 `YHKClanLawGap` 已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成；`TwoClanLawGap` / `TripleClanLawGap` 仍未证）
 * **§8**：一般 `n` 的**律容器** `MSCTreeLaw n`（有限概率空间 ＋ 树映射 ＋ 概率公理）
   ＋ **`n = 4` 的 YHK 律实例**（三棵 quartet 树等权 `1/3`，★★★ `yhkLawFour`）
   ＋ 缺口 `YHKClanLawGap` 在 **`n = 4` 的整条**（★★★ `yhkClanLawGap_four_slice`）。
@@ -146,7 +146,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 |---|---|
 | 闭形式的**数值正确性** | ✅ 脚本 `n ≤ 6` 全穷举复核（§3） |
 | 闭形式之间的**算术恒等式** | ✅ 已证 4 条：`clanProb_eq_inclusionExclusion`（Lemma 6.2 ⟸ Lemma 6.1 的包含-排除）、`pnHat_eq_pn_mul`（Lemma 4.4 ⟸ 4.2 ⊗ 4.3，论文第 398–444 行的证明）、`qnExhaustive_eq_clanProb`（Theorem 6.3(i) ⟸ Lemma 6.2）、`clanProb_eq_unfolded`；另有 `choose_mul_pn`（Lemma 4.1 **右端**的算术核对）、`qnExhaustive_two_two`、`qn_six_two_two`、`qTriple_two_two_two`、`qConvex_two_two_two` 等锚点 |
-| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条 ＋ §8 的 **`n = 4` 整条**） |
+| **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条 ＋ §8 的 **`n = 4` 整条**）（★ W32 已收口：`yhkClanLawGap_holds`） |
 | **`qn` 是「两个 clan」的概率**（Theorem 6.3 的概率层） | ❌ **一般 `n` 未证** —— 缺口 `TwoClanLawGap`（§6）；§8.7 已把 **`n = 3`（对任意律）** 与 **`n = 4` 整条** 落地（★★★ `twoClanLawGap_three_slice`、★★★ `twoClanLawGap_four_slice`） |
 | **`q` 是「三个 clan」的概率**（Theorem 6.4 的概率层） | ❌ **未证** —— 缺口 `TripleClanLawGap`（§6） |
 | **Theorem 5.1**（一般 `k` 个 clade，含指定 `Tk`） | ❌ **未落地**（连闭形式都依赖 `Iv(Ai)` 这套 `Tk` 上的指示变量；本库无「内部顶点 + 后代叶集」的层面对象） |
@@ -171,7 +171,7 @@ namespace Phylo.Stat.ReciprocalMonophyly
 /-- **Lemma 4.2**（`references/md/ZhuDegnanSteel2011_*.md` 第 **294–317** 行）：
 `pn(a) = (2n / (a(a+1))) · C(n,a)^{-1}`（`1 ≤ a ≤ n − 1`），否则 `0`。
 即「给定 `a` 元子集 `A` 是 `n` 叶 YHK 树的 **proper clade** 的概率」—— ⚠️ **概率层的意义未证**
-（缺口 `YHKClanLawGap`）；本 `def` 只是那个有理函数。 -/
+（缺口 `YHKClanLawGap`）；本 `def` 只是那个有理函数。　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成；上面「概率层的意义未证」描述的是当时的状态，保留作留痕。 -/
 noncomputable def pn (n a : ℕ) : ℝ :=
   if a = 0 ∨ n ≤ a then 0
   else 2 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1)) * ((n.choose a : ℝ))⁻¹
@@ -363,7 +363,7 @@ theorem pn_pos {n a : ℕ} (h1 : 1 ≤ a) (h2 : a < n) : 0 < pn n a := by
 /-- ★★ **Lemma 4.1 的右端（算术核对）**：`C(n,a) · pn(a) = 2n/(a(a+1))`（`1 ≤ a < n`）。
 
 ⚠️ **这不等价于证明 Lemma 4.1**：Lemma 4.1 是关于**随机树**的 `E[Xn(a)]`，
-本式只是把 `C(n,a)·pn(a)` 算出来等于论文右端 —— 概率层是缺口 `YHKClanLawGap`。 -/
+本式只是把 `C(n,a)·pn(a)` 算出来等于论文右端 —— 概率层是缺口 `YHKClanLawGap`。　（★ W32：全局已被 `yhkClanLawGap_holds` 收口；本节的局部限定仍然成立） -/
 theorem choose_mul_pn {n a : ℕ} (h1 : 1 ≤ a) (h2 : a < n) :
     ((n.choose a : ℕ) : ℝ) * pn n a = 2 * (n : ℝ) / ((a : ℝ) * ((a : ℝ) + 1)) := by
   rw [pn_of_range h1 h2]
@@ -722,7 +722,7 @@ theorem twoClan_exhaustive_singleton_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} 
 
 ⚠️ **边界（不得夸大）**：`n ≥ 4` 且 `2 ≤ a ≤ n − 2` 时 `clanProb n a` 取**非 `0/1`** 的值
 （★ `clanProb_four_two`：`clanProb 4 2 = 1/3`），而单点/补集论证只覆盖 `a ∈ {1, n − 1}`
-⇒ 本节**不是** `YHKClanLawGap` 的证明；一般 `n` 仍需具名器材 `MSCTreeLaw n`（判决见该 `def` 的 docstring）。 -/
+⇒ 本节**不是** `YHKClanLawGap` 的证明；一般 `n` 仍需具名器材 `MSCTreeLaw n`（判决见该 `def` 的 docstring）。　（★ W32：全局已被 `yhkClanLawGap_holds` 收口；本节的局部限定仍然成立） -/
 
 /-- ★★ **`clanProb n (n − 1) = 1`**（`n ≥ 2`）：`X \ {x}` 在**任何**树上都是 clan。
 由 Theorem 6.3(i)（★★★ `qnExhaustive_eq_clanProb`）＋ ★★ `qnExhaustive_one_right` 立得 —— 纯算术。 -/
@@ -745,7 +745,7 @@ theorem clanProb_four_two : clanProb 4 2 = 1 / 3 := by
 （`= ∑ prob = 1`），右端是 `clanProb n 1 = 1` 或 `clanProb n (n − 1) = 1`。
 **不需要** YHK 律，连 `prob ≥ 0` 也不需要（故这一侧比缺口更强）。
 
-⚠️ 这**不是** `YHKClanLawGap` 的证明：缺口对 `A` 的**所有**基数都要求等式成立。 -/
+⚠️ 这**不是** `YHKClanLawGap` 的证明：缺口对 `A` 的**所有**基数都要求等式成立。　（★ W32：全局已被 `yhkClanLawGap_holds` 收口；本节的局部限定仍然成立） -/
 theorem yhkClanLawGap_trivial_card_slice {n : ℕ} (hn : 2 ≤ n) {Ω : Type} [Fintype Ω]
     (prob : Ω → ℝ) (hsum : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin n))
     {A : Finset (Fin n)} (hne : A.Nonempty) (hcard : A.card = 1 ∨ A.card = n - 1) :
@@ -879,7 +879,7 @@ theorem isClade_ofCompatible_pair {α : Type} [Fintype α] [DecidableEq α] [Non
 /-! ## 6. 显式缺口（**未证**，也不被任何已证定理使用）
 
 以下三条 `def … : Prop` 是本文件**没有**做到的部分的可引用形式。
-它们的**措辞**就是「还需要什么」；文件内**不**主张它们成立。 -/
+它们的**措辞**就是「还需要什么」；文件内**不**主张它们成立。　★ **W32（2026-10-26）已收口**：三条中 `YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成，`TwoClanLawGap` / `TripleClanLawGap` 仍未证；上面「未证 / 也不被任何已证定理使用」描述的是当时的状态，保留作留痕。 -/
 
 /-- **缺口 G1（一般 `n` 的 YHK 拓扑律 + clan 事件概率 = Lemma 6.2）**。
 
@@ -920,7 +920,7 @@ theorem isClade_ofCompatible_pair {α : Type} [Fintype α] [DecidableEq α] [Non
   **`Finset.ext` ＋ `∃!`**（★★★ `existsUnique_qPair`：`Fin 4` 的每个二元子集**恰在 1 棵**
   quartet 树里成 clan，★★★ `isClade_qTree_iff`）把滤子结构性化成单点集，故**不需要**
   「可计算谓词」这件器材。容器 `MSCTreeLaw n`（§8，一般 `n`）＋ `n = 4` 的律实例
-  ★★★ `yhkLawFour` 同时交付；一般 `n` 仍缺 §8.4 的两件具名器材。 -/
+  ★★★ `yhkLawFour` 同时交付；一般 `n` 仍缺 §8.4 的两件具名器材。　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成，本 `def` 一字未改；上面「可证成否 ✗ / 一般 `n` 仍缺具名器材」描述的是当时的状态，保留作留痕。 -/
 def YHKClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)
@@ -1196,7 +1196,7 @@ split 给出两个互补的二元子集）。故 `n = 4` 的 YHK/Kingman 律是*
   ① **一般 `n` 的 YHK 权重函数**（`n` 叶无根拓扑上的 `2^{n−1}/(n!·∏…)` 型权；库内最近的是
   `MSCKingman.root_topology_class_prob`（仅 `Fin 4`）与 `MSCProof.mscFreqFin4`，都**不是**一般 `n`）；
   ② **有根 → 无根桥**（`Cladogram` 无 root；`Fin 4` 时由「3 棵等权」一步跨过，一般 `n` 不行）。
-* 已落地的是缺口的**整条 `n = 4`**（★★★ `yhkClanLawGap_four_slice`）与 `n = 3`（§5.2）。 -/
+* 已落地的是缺口的**整条 `n = 4`**（★★★ `yhkClanLawGap_four_slice`）与 `n = 3`（§5.2）。　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成；本节「没有证 `YHKClanLawGap`」的局部限定仍然成立（§8 只交付 `n = 3 / 4` 与容器 `MSCTreeLaw`），保留作留痕。 -/
 
 /-- **`n` 叶无根拓扑上的一个概率律**（器材）：有限概率空间 ＋ 树映射 ＋ 概率公理。
 
@@ -1469,7 +1469,7 @@ theorem yhkLawFour_clanEvent_two (A : Finset (Fin 4)) (hA : A.card = 2) :
 * `A.card = 1` 或 `3`：★★★ `yhkClanLawGap_trivial_card_slice`（任意律）；
 * `A.card = 2`：★★★ `qTree_clanEvent_two`（`= 1/3 = clanProb 4 2`，非退化值）。
 
-⚠️ **边界**：这不是 `YHKClanLawGap` 的证明（那条是 `∀ n`，一般 `n` 仍缺 §8.4 的两件器材）。 -/
+⚠️ **边界**：这不是 `YHKClanLawGap` 的证明（那条是 `∀ n`，一般 `n` 仍缺 §8.4 的两件器材）。　（★ W32：全局已被 `yhkClanLawGap_holds` 收口；本节的局部限定仍然成立） -/
 theorem yhkClanLawGap_four_slice :
     ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
       (_ : ∑ ω, prob ω = 1) (tree : Ω → Cladogram.{0, 0} (Fin 4)),
@@ -1984,7 +1984,7 @@ theorem isClanMinusRoot_compl {X : Type} [Fintype X] [DecidableEq X]
    ＋ Theorem 6.3(ii) 的三事件分解（`:1112-1145`）。
 
 ⇒ 本节把「**形状侧的数学内容**」做完（Lemma 6.1），但**未**做完「形状侧的**载体**」：缺 `rootedToCladogram`。
-故缺口剩下的是 **① 载体映射 ＋ ② 概率层**（有根 YHK 律 ＋ `M1`/`M2`），**不是**「纯粹概率层」—— 首版这句也是 overclaim，一并更正。 -/
+故缺口剩下的是 **① 载体映射 ＋ ② 概率层**（有根 YHK 律 ＋ `M1`/`M2`），**不是**「纯粹概率层」—— 首版这句也是 overclaim，一并更正。　★ **W32（2026-10-26）已收口**：上面「两条缺口仍未收口」中的 `YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成（`TwoClanLawGap` 仍未收口）；其收口走的是 `RankedTree n` 上的块计数路线，不依赖本节列的四件器材。以上陈述描述的是当时的状态，保留作留痕。 -/
 
 /-! ### 9.3 ★ 接手路线（W27 收档时由泳道 d 给出，**代价从小到大**；不是承诺，是验证过的路线）
 
@@ -2627,7 +2627,7 @@ theorem yhkHistoryLawFour_prob_sum :
 的闭形式自动满足它**（即闭形式与「树是二叉、共 `2n−3` 条边」这一事实相容）。
 
 ⚠️ 这仍是**闭形式之间的算术**（§4 的体例），**不是**概率层 —— `YHKClanLawGap` 本身未证；
-本定理**不**以任何「存在一个律」为前提（无条件）。
+本定理**不**以任何「存在一个律」为前提（无条件）。　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成；上面「`YHKClanLawGap` 本身未证」描述的是当时的状态，保留作留痕。
 
 推导：逐项用 ★★ `clanProb_eq_unfolded`（`C(n,a)^{-1}` 约掉）得三项分解
 `2n/(a(a+1)) + 2n/((n−a)((n−a)+1)) − 2/(n−1)`，其中
@@ -2761,7 +2761,7 @@ theorem sum_mul_clanProb {n : ℕ} (hn : 2 ≤ n) :
 `pn(a)` 与 `p̂n(a, n−a)` 的**概率**意义，即对有根 YHK 权（§11.1）求和。
 ⚠️ 另有一件**小缺口**：`n = 2`。`rootedToCladogram` 要求 `3 ≤ |X|`，而 `Cladogram (Fin 2)`
 在库内**没有现成件**（`Cladogram.ofCompatibleSplits` 同样要求 `3 ≤ |X|`）——
-这是 `_holds` 之外仅剩的边角（`n = 2` 的等式本身是平凡的：`A.card = 1` 且 `clanProb 2 1 = 1`）。 -/
+这是 `_holds` 之外仅剩的边角（`n = 2` 的等式本身是平凡的：`A.card = 1` 且 `clanProb 2 1 = 1`）。　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）经 `blockInterCount` 无条件证成；上面「剩下要证的因此只有一件」描述的是当时的状态，保留作留痕。 -/
 
 /-- ★★★ **去根映射下的 clan 事件求和恒等**（**无条件**）：对任意有限概率空间、任意有根树族
 `U : Ω → Cladogram (Fin n ⊕ Unit)`、任意非空**真**子集 `A`（`A.Nonempty` ＋ `Aᶜ.Nonempty`），
@@ -2773,7 +2773,7 @@ theorem sum_mul_clanProb {n : ℕ} (hn : 2 ≤ n) :
 
 ⚠️ 它**不是** `YHKClanLawGap` 的证明：右端的具体值（`= clanProb n |A|`）仍需要有根 YHK 律上的
 `pn(a) + pn(n−a) − p̂n(a, n−a)` 计算。前提 `hAc` 不是可以省的：`A = univ` 时 `IsClade` 为假而
-`IsClanMinusRoot` 为真（§10.4 的 ★★★ `isClanMinusRoot_univ`）；缺口的 `A.card < n` 恰好排除它。 -/
+`IsClanMinusRoot` 为真（§10.4 的 ★★★ `isClanMinusRoot_univ`）；缺口的 `A.card < n` 恰好排除它。　（★ W32：全局已被 `yhkClanLawGap_holds` 收口；本节的局部限定仍然成立） -/
 theorem clanEvent_rootedToCladogram {n : ℕ} {Ω : Type} [Fintype Ω]
     (h3 : 3 ≤ Fintype.card (Fin n))
     (prob : Ω → ℝ) (U : Ω → Cladogram (Fin n ⊕ Unit)) {A : Finset (Fin n)}
@@ -2798,7 +2798,7 @@ theorem clanEvent_rootedToCladogram {n : ℕ} {Ω : Type} [Fintype Ω]
 （有根载体）并算出 `IsClanMinusRoot` 的概率，而缺口的 `∃` 只要求无根 `Cladogram (Fin n)`；
 两者的差别由 ★★★ `clanEvent_rootedToCladogram` ＋ §10 的载体桥精确支付。
 （口径参考 `scripts/gap_ledger.py`：本条的命名后缀 `_of_rootedClanEvent` 不在收口后缀表内，
-故台账**不会**把 `YHKClanLawGap` 记成已收口 ✓ —— 它仍应是 `[真开放]`。） -/
+故台账**不会**把 `YHKClanLawGap` 记成已收口 ✓ —— 它仍应是 `[真开放]`。）　★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成，台账已记「已收口」；上面「台账不会记成已收口 / 仍应是 `[真开放]`」描述的是当时的状态，保留作留痕。 -/
 theorem yhkClanLawGap_slice_of_rootedClanEvent
     (H : ∀ n : ℕ, 3 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
       (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)

@@ -33,11 +33,15 @@ clanEvent n hn A = ∑_{ω : A 是 clan 的合并史} 1 / H n
 blockInterCount  ⟹  YHKClanLawGap
 ```
 
+★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由本文件末尾的 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成（`blockInterCount` 由 ★★★ `blockInterCount_holds`（`:1153`）收口）；上面「唯一的具名缺件」「本文件的最强结论是 `_of_`」描述的是当时的状态，保留作留痕。
+
 ## 1. 纪律
 
 * `_of_` 命名（**不是** `_holds`）；缺件登记为 `def … : Prop`（`blockInterCount`），不用 `axiom`/`sorry`；
 * 名字里**没有** `gap`/`Gap`（`blockInterCount` / `yhkClanLawGap_of_blockInterCount` 除外 ——
   后者是**缺口名的装配引理**，按派工书「`_of_`」规矩命名，台账不会记成收口）。
+
+★ **W32（2026-10-26）已收口**：本文件末尾另有 ★★★ `yhkClanLawGap_holds`，`YHKClanLawGap` 已收口、台账已记「已收口」；上面「不是 `_holds` / 台账不会记成收口」描述的是当时的状态，保留作留痕。
 -/
 
 namespace Phylo.Stat.RankedTreeClanLaw
@@ -368,7 +372,9 @@ theorem clanEvent_four_eq_clanProb_of_count (A : Finset (Fin 4)) (hA : A.card = 
 
 ★ 这正是「根分裂恰为 `A | Aᶜ`」的计数；等价组合形态是
 `H |A| · H (n−|A|) · C(n−2, |A|−1)`（由 ★★★ `H_mul_pnHatExh_eq` 与前者等同）。
-★ 名字**不带** `gap`/`Gap`；它是 `def … : Prop`，不是 `axiom`、不是 `sorry`。 -/
+★ 名字**不带** `gap`/`Gap`；它是 `def … : Prop`，不是 `axiom`、不是 `sorry`。
+
+★ **W32（2026-10-26）已收口**：本 `def` 已由 ★★★ `blockInterCount_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1153`）无条件证成，不再是缺件；上面「唯一的具名缺件」描述的是当时的状态，保留作留痕。 -/
 def blockInterCount (n : ℕ) : Prop :=
   ∀ A : Finset (Fin n), 2 ≤ A.card → A.card ≤ n - 2 →
     ((blockHistories n A ∩ blockHistories n Aᶜ).card : ℝ) = RankedGeneTree.H n * pnHatExh n A.card

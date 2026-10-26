@@ -650,7 +650,9 @@ clan 频率与 `clanProb` **逐点核成相等**（`总判定：ALL OK`）。
 
 /-- ★★★ **合并历史空间上的均匀律归一化**：`Σ_{ω : RankedTree n} 1/H n = 1`（`n ≥ 2`）。
 
-这就是 `YHKClanLawGap` 的「`Ω / prob` 两槽 ＋ 归一化」；剩下的只有 `tree` 槽与 ③ 的计数。 -/
+这就是 `YHKClanLawGap` 的「`Ω / prob` 两槽 ＋ 归一化」；剩下的只有 `tree` 槽与 ③ 的计数。
+
+★ **W32（2026-10-26）已收口**：`YHKClanLawGap` 现已由 ★★★ `yhkClanLawGap_holds`（`Phylo/Stat/RankedTreeClanLaw.lean:1166`）无条件证成；上面「剩下的只有 `tree` 槽与 ③ 的计数」描述的是当时的状态，保留作留痕。 -/
 theorem sum_rankedTree_uniform (n : ℕ) (hn : 2 ≤ n) :
     ∑ _ω : RankedGeneTree.RankedTree n, (1 / RankedGeneTree.H n) = 1 := by
   classical
