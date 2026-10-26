@@ -181,6 +181,125 @@ theorem sum_pair_R_eq_sub (prob : Ω → ℝ) (U : Ω → Cladogram.{0, 0} (Fin 
   rw [hunion, Finset.sum_union hdj]
   ring
 
+/-- ★★ **② 的计数形态**（`ℕ`，加法）：`#(A、X−B 同为 clade) = #事件(b) + #(三者同为 clade)`。 -/
+theorem card_pair_R_eq_add (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    ((Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (Bᶜ.image Sum.inl))).card
+      = ((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (Bᶜ.image Sum.inl) ∧ ¬ (U ω).IsClade (B.image Sum.inl))).card
+        + ((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (Bᶜ.image Sum.inl)
+              ∧ (U ω).IsClade (B.image Sum.inl))).card := by
+  classical
+  rw [filter_pair_R_eq_union (Ω := Ω) U A B,
+    Finset.card_union_of_disjoint (disjoint_event_b_triple (Ω := Ω) U A B)]
+
+/-- ★★ **② 的计数形态**（`ℝ`）：`#事件(b) = #(A、X−B 同为 clade) − #(三者同为 clade)`。 -/
+theorem card_event_b_eq_sub (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (Bᶜ.image Sum.inl) ∧ ¬ (U ω).IsClade (B.image Sum.inl))).card : ℝ)
+      = (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (Bᶜ.image Sum.inl))).card : ℝ)
+        - (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧ (U ω).IsClade (Bᶜ.image Sum.inl)
+              ∧ (U ω).IsClade (B.image Sum.inl))).card : ℝ) := by
+  have h := card_pair_R_eq_add (Ω := Ω) U A B
+  rw [h]
+  push_cast
+  ring
+
+/-! ### 4b. 对称版：事件 (c)（`A ↔ B` 一次即可，第三组等式用它） -/
+
+/-- ★★ **事件 (c) ＝（`X−A`、`B` 同为 clade）减去（`A`、`X−A`、`B` 同为 clade）**。 -/
+theorem filter_pair_L_eq_sdiff (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    (Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+          (U ω).IsClade (B.image Sum.inl) ∧ ¬ (U ω).IsClade (A.image Sum.inl))
+      = (Finset.univ : Finset Ω).filter
+          (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl))
+        \ (Finset.univ : Finset Ω).filter
+          (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)
+            ∧ (U ω).IsClade (A.image Sum.inl)) := by
+  classical
+  ext ω
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_sdiff]
+  tauto
+
+/-- ★★ **（`X−A`、`B` 同为 clade）＝ 事件 (c) ∪（三者同为 clade）**。 -/
+theorem filter_pair_L_eq_union (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    (Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl))
+      = (Finset.univ : Finset Ω).filter
+          (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+            (U ω).IsClade (B.image Sum.inl) ∧ ¬ (U ω).IsClade (A.image Sum.inl))
+        ∪ (Finset.univ : Finset Ω).filter
+          (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)
+            ∧ (U ω).IsClade (A.image Sum.inl)) := by
+  classical
+  ext ω
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_union]
+  tauto
+
+/-- ★★ **两支互斥**（事件 (c) 与「三者同为 clade」）。 -/
+theorem disjoint_event_c_triple (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    Disjoint
+      ((Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+          (U ω).IsClade (B.image Sum.inl) ∧ ¬ (U ω).IsClade (A.image Sum.inl)))
+      ((Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)
+          ∧ (U ω).IsClade (A.image Sum.inl))) := by
+  classical
+  rw [Finset.disjoint_left]
+  intro ω hω hω'
+  simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hω hω'
+  exact hω.2.2 hω'.2.2
+
+/-- ★★★ **③ 的概率恒等式**（无条件）：
+
+`P(事件 c) = P(X−A、B 同为 clade) − P(A、X−A、B 同为 clade)`。
+代入 Case 3 与 ⑤ 即得文献 ③。 -/
+theorem sum_pair_L_eq_sub (prob : Ω → ℝ) (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    (∑ ω ∈ (Finset.univ : Finset Ω).filter
+        (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+          (U ω).IsClade (B.image Sum.inl) ∧ ¬ (U ω).IsClade (A.image Sum.inl)), prob ω)
+      = (∑ ω ∈ (Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)),
+            prob ω)
+        - (∑ ω ∈ (Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)
+              ∧ (U ω).IsClade (A.image Sum.inl)), prob ω) := by
+  classical
+  have hunion := filter_pair_L_eq_union (Ω := Ω) U A B
+  have hdj := disjoint_event_c_triple (Ω := Ω) U A B
+  rw [hunion, Finset.sum_union hdj]
+  ring
+
+/-- ★★ **③ 的计数形态**（`ℝ`）：`#事件(c) = #(X−A、B) − #(三者同为 clade)`。 -/
+theorem card_event_c_eq_sub (U : Ω → Cladogram.{0, 0} (Fin n ⊕ Unit))
+    (A B : Finset (Fin n)) :
+    (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl) ∧ ¬ (U ω).IsClade (A.image Sum.inl))).card : ℝ)
+      = (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl))).card : ℝ)
+        - (((Finset.univ : Finset Ω).filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧ (U ω).IsClade (B.image Sum.inl)
+              ∧ (U ω).IsClade (A.image Sum.inl))).card : ℝ) := by
+  classical
+  rw [filter_pair_L_eq_union (Ω := Ω) U A B,
+    Finset.card_union_of_disjoint (disjoint_event_c_triple (Ω := Ω) U A B)]
+  push_cast
+  ring
+
 /-! ## 5. 三条计数化陈述（具名缺件，`def … : Prop`）
 
 ★ 三条都是**计数**等式：`#事件条数 = 文献闭式 × |Ω|`。由 ★★★ `sum_uniform_eq_iff`，
