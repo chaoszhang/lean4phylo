@@ -46,7 +46,7 @@
 | 算法 | 主定理 | 文件 |
 |---|---|---|
 | **ASTRAL** | 真树得分唯一最大（`astralScore_le` / `_eq_iff` / `astral_maximizer_agrees`）+ **统计一致性** | `Phylo/Stat/ASTRAL.lean`、`Phylo/Stat/Stability.lean` |
-| **CASTER** | `casterScore_eq`（归约到 ASTRAL）⟹ **统计一致性** | `Phylo/Stat/CASTER.lean` |
+| **CASTER** | **定理 1（三模型，端到端）**：`lm1_caster_statisticallyConsistent` / `jc69_caster_statisticallyConsistent` / `f84_caster_statisticallyConsistent`（后者三条核恒等式已不再作为假设）⟹ **逐 quartet 统计一致性**；升到树层用 `iso_of_quartets_true`。⚠️ CASTER **不是**「归约到 ASTRAL」（那是多标记 ASTRAL，见 `MultiLocusASTRAL.lean`），残差假设逐条显式：`hdeep` / `hpos` / `hf_int` / `hf_pos` / `hint`（正文条件 (2)）/ `hconv`（大数定律） | `Phylo/Stat/CASTERTheorem1.lean`、`Phylo/Stat/CASTERInstances.lean`（jc69 见 `CASTERGeneTree.lean`，f84 见 `CASTERF84PropA.lean`） |
 | **parsimony**（ISM） | `Pattern.fitchCost_eq`（48 情形枚举）⟹ **统计一致性** | `Phylo/Stat/Parsimony.lean` |
 | **SVDQuartets** | 秩判据 `svdquartets_selects_true` + 分离性 ⟹ **无条件正确性** `svdquartets_concrete` | `Phylo/Stat/SVDQuartets.lean` |
 | **NJst** | 第一步正确（`njst_cherry`） | `Phylo/Stat/NJst.lean` |
