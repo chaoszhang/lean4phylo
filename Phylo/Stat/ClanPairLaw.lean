@@ -446,6 +446,68 @@ theorem pnEvent_eq_pn (m : ℕ) {A : Finset (Fin m)} (h1 : 2 ≤ A.card) (h2 : A
   rw [card_blockHistories_univ m h1 h2, div_eq_iff (ne_of_gt (H_pos m))]
   ring
 
+/-! ### 7b. 载体在边界切片上的行为（如实登记）
+
+`pn m a` 只在 `2 ≤ a ≤ m−2` 上等于「非单点块」的条数比。两个**边界**切片：
+
+* `a = 1`：`{x}` 恒是 clan（`isClade_of_trivial`），概率 `= 1 = pn m 1` —— **成立**；
+* `a = m−1`：`A` 在**无根**模型上**永不**是非单点块（块基数 `≤ m−2`），条数 `= 0`，
+  而 `pn m (m−1) = 2/(m(m−1)) ≠ 0` —— **不成立**（那是有根树的 outgroup 结构，
+  本库的无根 `Cladogram` 没有对应物）。 -/
+
+/-- ★★ **`pn m 1 = 1`**（Lemma 4.2 在 `a = 1` 的取值；`{x}` 恒是 clan）。 -/
+theorem pn_one {m : ℕ} (hm : 2 ≤ m) : pn m 1 = 1 := by
+  unfold pn
+  rw [ite_eq_right (by omega : ¬ (1 = 0 ∨ m ≤ 1)), Nat.choose_one_right]
+  have hm0 : (m : ℝ) ≠ 0 := by
+    have : (0 : ℕ) < m := by omega
+    exact_mod_cast this.ne'
+  push_cast
+  field_simp
+  norm_num
+
+/-- ★★ **单点集的 clan 事件集是全集**（`m ≥ 3`）：`{x}` 恒是 clan。 -/
+theorem clanHistories_singleton {m : ℕ} (hm : 2 ≤ m) (h3 : 3 ≤ m) (x : Fin m) :
+    clanHistories m hm {x} = Finset.univ := by
+  classical
+  ext ω
+  simp only [clanHistories, Finset.mem_filter, Finset.mem_univ, true_and, iff_true]
+  rw [rankedTreeCladogram_eq_of_three (n := m) hm h3]
+  exact isClade_of_trivial h3 ω (Or.inl ⟨x, rfl⟩)
+
+/-- ★★ **`a = 1` 切片的事件概率 `= 1`**（均匀律）。 -/
+theorem clanEvent_singleton {m : ℕ} (hm : 2 ≤ m) (h3 : 3 ≤ m) (x : Fin m) :
+    clanEvent m hm {x} = 1 := by
+  unfold clanEvent
+  rw [clanHistories_singleton hm h3 x]
+  exact CoalescentHistoryCount.sum_rankedTree_uniform m hm
+
+/-- ★★ **`p_{n−b}(a)` 载体在 `a = 1` 的切片**：`clanEvent m {x} = pn m 1`。
+⇒ ④⑤ 的「子树条件概率」在 `|A| = 1` 上**已经落地**（与 `|A| ≥ 2` 的
+★★★ `pnEvent_eq_pn` 合起来覆盖 `1 ≤ |A| ≤ m−2`）。 -/
+theorem clanEvent_singleton_eq_pn {m : ℕ} (hm : 2 ≤ m) (h3 : 3 ≤ m) (x : Fin m) :
+    clanEvent m hm {x} = pn m 1 := by
+  rw [clanEvent_singleton hm h3 x, pn_one (by omega)]
+
+/-- ⚠ **边界切片 `|A| = m−1`**：`A` 在无根 ranked 模型上**永不**是非单点块，
+故 `#{ω : A ∈ blockFamily} = 0`（而 `pn m (m−1) = 2/(m(m−1)) ≠ 0`）。
+⇒ 本库的**无根**载体不覆盖 `p_{n−b}(a)` 的 `a = n−b−1` 切片（那里需要**有根** clade
+／outgroup 结构）。★ 这不是文献公式的问题（渲染页 p.12–13 逐字核过），是**载体**的缺口。 -/
+theorem card_blockHistories_eq_zero_of_card_compl_one {m : ℕ} {A : Finset (Fin m)}
+    (h : Aᶜ.card = 1) : (blockHistories m A).card = 0 := by
+  classical
+  have h0 : ∀ ω, ω ∉ blockHistories m A := by
+    intro ω hω
+    rw [mem_blockHistories] at hω
+    have h2 := card_le_of_mem_blockFamily hω
+    have h2' := two_le_card_of_mem_blockFamily hω
+    rw [card_compl_eq m A] at h
+    omega
+  have hempty : blockHistories m A = ∅ := by
+    ext ω
+    simp [h0 ω]
+  rw [hempty, Finset.card_empty]
+
 /-- ★★ **`pnHatExh` 的组合形态**：`p̂_n(b, n−b) = H b · H (n−b) · C(n−2, b−1) / H n`
 （`2 ≤ b ≤ n−2`）。右端分子就是「**根分裂恰为 `B | Bᶜ`** 的条数」的组合式
 （两侧内部成树 × 交错），即 N2 的 `blockInterCount` 那条线的货币。 -/
