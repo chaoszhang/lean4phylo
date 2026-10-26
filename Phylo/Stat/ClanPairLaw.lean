@@ -534,4 +534,29 @@ theorem tripleCount_combinatorial {N : ℕ} {Ω : Type*} [Fintype Ω]
   rw [pnHatExh_eq_combinatorial h1 h2, hDN]
   field_simp
 
+/-! ## 8. `n = 6, a = b = 2` 的五项数值审计（内核核过）
+
+把 Theorem 6.3(ii) 的五个项各自取值核一遍（复核**符号与量级**，也复核 ④⑤ 的系数）：
+
+* `rn 6 2 2 = 17/675`（①，Case 5）；
+* `Rn 6 2 4 = 2/225`（②③ 首项，Case 2/3）；
+* `p̂_6(2, 4) · p_4(2) = (2/75) · (2/9) = 4/675`（④⑤）；
+* 合计 `17/675 + 2·(2/225) − 2·(4/675) = 7/225 = qn 6 2 2`（库内 ★ `qn_six_two_two`）。
+
+★ **独立交叉验证**（★D 的机器留痕）：论文 p.13 另给 `q(2,2,2) = 1/75`、
+`q′(2,2,2) = 1/15`，且 `q′ = 3·qn(2,2) − 2q`；库内 `qTriple_two_two_two` 与
+`qConvex_two_two_two` 已把这两个数核过 ⇒ 五项系数与论文自洽，**无 ★D 更正**。 -/
+
+/-- ★★ **五项数值审计**（`n = 6, a = b = 2`）。 -/
+theorem term_audit_six_two_two :
+    rn 6 2 2 = 17 / 675 ∧ Rn 6 2 4 = 2 / 225
+      ∧ pnHatExh 6 2 * pn 4 2 = 4 / 675 := by
+  refine ⟨?_, ?_, ?_⟩
+  · unfold rn Gn
+    norm_num [Nat.choose, Nat.factorial]
+  · unfold Rn
+    norm_num [Nat.choose, Nat.factorial]
+  · unfold pnHatExh pn
+    norm_num [Nat.choose, Nat.factorial]
+
 end Phylo.Stat.ClanPairLaw
