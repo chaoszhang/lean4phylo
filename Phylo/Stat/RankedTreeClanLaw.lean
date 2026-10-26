@@ -818,4 +818,346 @@ theorem blockInterCount_of_mhFinsetPCard
   push_cast
   rw [cast_Hnat, cast_Hnat, ← H_mul_pnHatExh_eq h1 h2]
 
+theorem card_headFiber_isBlockAt_both {k : ℕ} (hk : 1 ≤ k) (s A : Finset (Fin N)) (_hAs : A ⊆ s)
+    (p : PairIn N s) (hx : p.1.1 ∈ A) (hy : p.1.2 ∈ A) :
+    ((headFiber (m := k) s p).filter (fun f => IsBlockAt s (k + 1) f k A)).card
+      = ((mhFinset N k (s.erase p.1.2)).filter
+          (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card := by
+  refine card_headFiber_filter (m := k) s p (fun f => IsBlockAt s (k + 1) f k A)
+    (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2)) ?_
+  intro f h0 _
+  have h := isBlockAt_succ_both (s := s) (m := k) (f := f) (x := p.1.1) (y := p.1.2)
+    (A := A) h0 p.2.2.2 p.2.2.1 hx hy (L := k - 1)
+  rwa [Nat.sub_one_add_one_eq_of_pos hk] at h
+
+theorem card_headFiber_isBlockAt_none {k : ℕ} (hk : 1 ≤ k) (s A : Finset (Fin N)) (_hAs : A ⊆ s)
+    (p : PairIn N s) (hx : p.1.1 ∉ A) (hy : p.1.2 ∉ A) :
+    ((headFiber (m := k) s p).filter (fun f => IsBlockAt s (k + 1) f k A)).card
+      = ((mhFinset N k (s.erase p.1.2)).filter
+          (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card := by
+  refine card_headFiber_filter (m := k) s p (fun f => IsBlockAt s (k + 1) f k A)
+    (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A) ?_
+  intro f h0 _
+  have h := isBlockAt_succ_none (s := s) (m := k) (f := f) (x := p.1.1) (y := p.1.2)
+    (A := A) h0 p.2.2.2 p.2.1 p.2.2.1 hx hy (L := k - 1)
+  rwa [Nat.sub_one_add_one_eq_of_pos hk] at h
+
+theorem sum_headFiber_split_blockAt {k : ℕ} (hk : 1 ≤ k) (s A : Finset (Fin N)) (hAs : A ⊆ s) :
+    (∑ p : PairIn N s,
+        ((headFiber (m := k) s p).filter (fun f => IsBlockAt s (k + 1) f k A)).card)
+      = (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card)
+        + (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card) := by
+  have hterm : ∀ p : PairIn N s,
+      ((headFiber (m := k) s p).filter (fun f => IsBlockAt s (k + 1) f k A)).card
+        = (if p.1.1 ∈ A ∧ p.1.2 ∈ A then
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card
+          else 0)
+          + (if p.1.1 ∉ A ∧ p.1.2 ∉ A then
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card
+          else 0) := by
+    intro p
+    by_cases h1 : p.1.1 ∈ A ∧ p.1.2 ∈ A
+    · rw [ite_eq_left h1, ite_eq_right (by tauto : ¬ (p.1.1 ∉ A ∧ p.1.2 ∉ A)), add_zero]
+      exact card_headFiber_isBlockAt_both hk s A hAs p h1.1 h1.2
+    · by_cases h2 : p.1.1 ∉ A ∧ p.1.2 ∉ A
+      · rw [ite_eq_right h1, ite_eq_left h2, zero_add]
+        exact card_headFiber_isBlockAt_none hk s A hAs p h2.1 h2.2
+      · rw [ite_eq_right h1, ite_eq_right h2, add_zero]
+        rw [Finset.card_eq_zero, ← Finset.not_nonempty_iff_eq_empty]
+        rintro ⟨f, hf⟩
+        rw [Finset.mem_filter] at hf
+        obtain ⟨hfhead, hfP⟩ := hf
+        simp only [headFiber, Finset.mem_filter, Finset.mem_univ, true_and] at hfhead
+        have hmix : (p.1.1 ∈ A ∧ p.1.2 ∉ A) ∨ (p.1.1 ∉ A ∧ p.1.2 ∈ A) := by
+          rcases not_and_or.mp h1 with h | h
+          · exact Or.inr ⟨h, by tauto⟩
+          · exact Or.inl ⟨by tauto, h⟩
+        have h := not_isBlockAt_succ_mixed (s := s) (m := k) (f := f) (x := p.1.1) (y := p.1.2)
+          (A := A) hfhead.1 p.2.1 p.2.2.1 hmix (L := k - 1)
+        rw [Nat.sub_one_add_one_eq_of_pos hk] at h
+        exact h hfP
+  calc (∑ p : PairIn N s,
+        ((headFiber (m := k) s p).filter (fun f => IsBlockAt s (k + 1) f k A)).card)
+      = ∑ p : PairIn N s,
+          ((if p.1.1 ∈ A ∧ p.1.2 ∈ A then
+              ((mhFinset N k (s.erase p.1.2)).filter
+                (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card
+            else 0)
+            + (if p.1.1 ∉ A ∧ p.1.2 ∉ A then
+              ((mhFinset N k (s.erase p.1.2)).filter
+                (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card
+            else 0)) := Finset.sum_congr rfl (fun p _ => hterm p)
+    _ = (∑ p : PairIn N s,
+            if p.1.1 ∈ A ∧ p.1.2 ∈ A then
+              ((mhFinset N k (s.erase p.1.2)).filter
+                (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card
+            else 0)
+          + ∑ p : PairIn N s,
+            if p.1.1 ∉ A ∧ p.1.2 ∉ A then
+              ((mhFinset N k (s.erase p.1.2)).filter
+                (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card
+            else 0 := Finset.sum_add_distrib
+    _ = _ := by rw [← Finset.sum_filter, ← Finset.sum_filter]
+
+theorem sdiff_card {A s : Finset (Fin N)} (h : A ⊆ s) : (s \ A).card = s.card - A.card := by
+  rw [Finset.card_sdiff, Finset.inter_eq_left.mpr h]
+
+theorem Hnat_pred_mul {a : ℕ} (ha : 2 ≤ a) : Hnat a = a.choose 2 * Hnat (a - 1) := by
+  have h := Hnat_succ (a - 1) (by omega : 1 ≤ a - 1)
+  rw [Nat.sub_one_add_one_eq_of_pos (by omega : 0 < a)] at h
+  rw [h, Nat.mul_comm]
+
+theorem mhFinsetAt_card (M : ℕ) :
+    ∀ (N : ℕ) (s A : Finset (Fin N)), s.card = M + 1 → A ⊆ s → 1 ≤ A.card → A.card ≤ M →
+      ((mhFinset N M s).filter (fun f => IsBlockAt s M f (M - 1) A)).card
+        = Hnat A.card * Hnat ((s \ A).card) * ((M - 1).choose (A.card - 1)) := by
+  induction M using Nat.strong_induction_on with
+  | _ M ih =>
+    intro N s A hs hAs hA1 hAM
+    rcases Nat.lt_or_ge M 2 with hlt | hge
+    · -- M = 1
+      have hM1 : M = 1 := by omega
+      subst hM1
+      have hAcard : A.card = 1 := by omega
+      obtain ⟨w, hw⟩ := Finset.card_eq_one.mp hAcard
+      subst hw
+      have hws : w ∈ s := hAs (Finset.mem_singleton_self w)
+      have hpred : ∀ f : Fin 1 → Fin N × Fin N,
+          IsBlockAt s 1 f (1 - 1) ({w} : Finset (Fin N)) := by
+        intro f
+        refine ⟨w, Finset.mem_singleton_self w, ?_⟩
+        rw [show (1 - 1 : ℕ) = 0 from rfl, gchain_zero]
+        ext z
+        simp only [blockOf, Finset.mem_filter, id_eq, Finset.mem_singleton]
+        exact ⟨fun h => ⟨h ▸ hws, h⟩, fun h => h.2⟩
+      rw [Finset.filter_true_of_mem (fun f _ => hpred f), card_mhFinset 1 N s hs]
+      have hb : (s \ ({w} : Finset (Fin N))).card = 1 := by
+        rw [sdiff_card hAs, Finset.card_singleton]
+        omega
+      rw [hb, Finset.card_singleton]
+      norm_num [Hnat]
+    · obtain ⟨k, rfl⟩ : ∃ k, M = k + 1 := ⟨M - 1, by omega⟩
+      have hk : 1 ≤ k := by omega
+      have hsk : s.card = k + 2 := by omega
+      simp only [Nat.add_sub_cancel]
+      have hdecomp : (mhFinset N (k + 1) s).filter (fun f => IsBlockAt s (k + 1) f k A)
+          = (Finset.univ : Finset (PairIn N s)).biUnion
+              (fun p => (headFiber (m := k) s p).filter
+                (fun f => IsBlockAt s (k + 1) f k A)) := by
+        rw [mhFinset_succ_eq_biUnion (m := k) s, Finset.filter_biUnion]
+      have hdisj : Set.PairwiseDisjoint (↑(Finset.univ : Finset (PairIn N s)))
+          (fun p => (headFiber (m := k) s p).filter
+            (fun f => IsBlockAt s (k + 1) f k A)) := by
+        intro p _ q _ hpq
+        exact Finset.disjoint_of_subset_left (Finset.filter_subset _ _)
+          (Finset.disjoint_of_subset_right (Finset.filter_subset _ _) (headFiber_disjoint hpq))
+      rw [hdecomp, Finset.card_biUnion hdisj]
+      rw [sum_headFiber_split_blockAt hk s A hAs]
+      have hbdef : (s \ A).card = k + 2 - A.card := by
+        rw [sdiff_card hAs, hsk]
+      have hAside : 2 ≤ A.card →
+          (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+            (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card)
+          = Hnat A.card * Hnat ((s \ A).card) * ((k - 1).choose (A.card - 2)) := by
+        intro ha2
+        have hc : ∀ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+            (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card
+            = Hnat (A.card - 1) * Hnat ((s \ A).card) * ((k - 1).choose (A.card - 2)) := by
+          intro p hp
+          rw [Finset.mem_filter] at hp
+          obtain ⟨-, hpx, hpy⟩ := hp
+          have hb' : ((s.erase p.1.2) \ (A.erase p.1.2)).card = (s \ A).card := by
+            rw [sdiff_card (by
+                  intro z hz
+                  rw [Finset.mem_erase] at hz ⊢
+                  exact ⟨hz.1, hAs hz.2⟩),
+              sdiff_card hAs, Finset.card_erase_of_mem hpy, Finset.card_erase_of_mem p.2.2.1]
+            omega
+          rw [ih k (by omega) N (s.erase p.1.2) (A.erase p.1.2)
+              (by rw [Finset.card_erase_of_mem p.2.2.1]; omega)
+              (by intro z hz; rw [Finset.mem_erase] at hz ⊢; exact ⟨hz.1, hAs hz.2⟩)
+              (by rw [Finset.card_erase_of_mem hpy]; omega)
+              (by rw [Finset.card_erase_of_mem hpy]; omega),
+            hb', Finset.card_erase_of_mem hpy,
+            show A.card - 1 - 1 = A.card - 2 from by omega]
+        rw [Finset.sum_congr rfl hc, Finset.sum_const, nsmul_eq_mul,
+          card_pairs_both s A hAs, Hnat_pred_mul ha2]
+        simp only [Nat.cast_id]
+        ring
+      have hAsideOne : A.card = 1 →
+          (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+            (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) (A.erase p.1.2))).card) = 0 := by
+        intro ha1
+        have hempty : (Finset.univ : Finset (PairIn N s)).filter
+            (fun p => p.1.1 ∈ A ∧ p.1.2 ∈ A) = ∅ := by
+          rw [← Finset.card_eq_zero, card_pairs_both s A hAs, ha1]
+          simp
+        rw [hempty, Finset.sum_empty]
+      have hBside : (∑ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+            (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+            ((mhFinset N k (s.erase p.1.2)).filter
+              (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card)
+          = Hnat A.card * Hnat ((s \ A).card) * ((k - 1).choose (A.card - 1)) := by
+        by_cases hb2 : 2 ≤ (s \ A).card
+        · have hc : ∀ p ∈ (Finset.univ : Finset (PairIn N s)).filter
+              (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A),
+              ((mhFinset N k (s.erase p.1.2)).filter
+                (fun g => IsBlockAt (s.erase p.1.2) k g (k - 1) A)).card
+              = Hnat A.card * Hnat ((s \ A).card - 1) * ((k - 1).choose (A.card - 1)) := by
+            intro p hp
+            rw [Finset.mem_filter] at hp
+            obtain ⟨-, hpx, hpy⟩ := hp
+            have hsub : A ⊆ s.erase p.1.2 := by
+              intro z hz
+              rw [Finset.mem_erase]
+              exact ⟨fun h => hpy (h ▸ hz), hAs hz⟩
+            have ham : A.card ≤ k := by rw [hbdef] at hb2; omega
+            have hb' : ((s.erase p.1.2) \ A).card = (s \ A).card - 1 := by
+              rw [sdiff_card hsub, Finset.card_erase_of_mem p.2.2.1, hbdef]
+              omega
+            rw [ih k (by omega) N (s.erase p.1.2) A
+              (by rw [Finset.card_erase_of_mem p.2.2.1]; omega) hsub hA1 ham, hb']
+          rw [Finset.sum_congr rfl hc, Finset.sum_const, nsmul_eq_mul,
+            card_pairs_none s A, Hnat_pred_mul hb2]
+          simp only [Nat.cast_id]
+          ring
+        · have hb1 : (s \ A).card = 1 := by rw [hbdef]; omega
+          have hka : A.card = k + 1 := by rw [hbdef] at hb1; omega
+          have hempty : (Finset.univ : Finset (PairIn N s)).filter
+              (fun p => p.1.1 ∉ A ∧ p.1.2 ∉ A) = ∅ := by
+            rw [← Finset.card_eq_zero, card_pairs_none s A, hb1]
+            simp
+          rw [hempty, Finset.sum_empty, hka]
+          have hck : (k - 1).choose (k + 1 - 1) = 0 := by
+            rw [show k + 1 - 1 = k from by omega, Nat.choose_eq_zero_of_lt (by omega)]
+          rw [hck, Nat.mul_zero]
+      rcases eq_or_lt_of_le hA1 with ha1 | ha2
+      · rw [hAsideOne ha1.symm, hBside, ← ha1]
+        simp
+      · have hpascal : (k).choose (A.card - 1)
+            = (k - 1).choose (A.card - 2) + (k - 1).choose (A.card - 1) := by
+          have h := Nat.choose_succ_succ (k - 1) (A.card - 2)
+          rw [show (k - 1).succ = k from by omega,
+            show (A.card - 2).succ = A.card - 1 from by omega] at h
+          exact h
+        rw [hAside ha2, hBside, ← Nat.mul_add, hpascal]
+
+set_option maxHeartbeats 2000000 in
+/-- 最后一步的「二值性」：第 
+-2 层的表示映射只取两个值（末步的两个代表）。 -/
+theorem dich_last {n : ℕ} (hn : 2 ≤ n) {f : Fin (n - 1) → Fin n × Fin n}
+    (h : n - 2 < n - 1) (hf : IsMH (Finset.univ : Finset (Fin n)) (n - 1) f) :
+    ∃ c : Fin n, (∀ w : Fin n, gchain (n - 1) f (n - 2) w = (f ⟨n - 2, h⟩).2
+        ∨ gchain (n - 1) f (n - 2) w = c) ∧ (f ⟨n - 2, h⟩).2 ≠ c := by
+  classical
+  have hstep : RankedGeneTree.IsStep (gchain (n - 1) f (n - 2)) (f ⟨n - 2, h⟩).1 (f ⟨n - 2, h⟩).2 :=
+    hf.2.1 ⟨n - 2, h⟩
+  obtain ⟨hrx, hry, hxylt⟩ := hstep
+  have hlast : gchain (n - 1) f (n - 1)
+      = RankedGeneTree.stepMap (gchain (n - 1) f (n - 2)) (f ⟨n - 2, h⟩).1 (f ⟨n - 2, h⟩).2 := by
+    have hh := gchain_succ f (n - 2)
+    rw [show n - 2 + 1 = n - 1 from by omega] at hh
+    rw [hh, dite_eq_left h]
+  have hconst : ∀ w : Fin n, gchain (n - 1) f (n - 1) w = gchain (n - 1) f (n - 1) ⟨0, by omega⟩ :=
+    fun w => hf.2.2 w (Finset.mem_univ w) ⟨0, by omega⟩ (Finset.mem_univ _)
+  refine ⟨RankedGeneTree.stepMap (gchain (n - 1) f (n - 2)) (f ⟨n - 2, h⟩).1 (f ⟨n - 2, h⟩).2 ⟨0, by omega⟩, ?_, ?_⟩
+  · intro w
+    have hw := hconst w
+    simp only [hlast, RankedGeneTree.stepMap] at hw
+    by_cases hc : gchain (n - 1) f (n - 2) w = (f ⟨n - 2, h⟩).2
+    · exact Or.inl hc
+    · simp only [hc, ↓reduceIte] at hw
+      exact Or.inr hw
+  · have hx : (f ⟨n - 2, h⟩).1
+        = RankedGeneTree.stepMap (gchain (n - 1) f (n - 2)) (f ⟨n - 2, h⟩).1 (f ⟨n - 2, h⟩).2 ⟨0, by omega⟩ := by
+      have h0 := hconst (f ⟨n - 2, h⟩).1
+      simp only [hlast, RankedGeneTree.stepMap, hrx] at h0
+      rw [ite_eq_right (by omega : ¬ ((f ⟨n - 2, h⟩).1 = (f ⟨n - 2, h⟩).2))] at h0
+      exact h0
+    intro hcon
+    have hxy : (f ⟨n - 2, h⟩).1 = (f ⟨n - 2, h⟩).2 := hx.trans hcon.symm
+    omega
+
+
+theorem splitEq_of_isBlockAt {n : ℕ} (hn : 2 ≤ n) {f : Fin (n - 1) → Fin n × Fin n}
+    (h : n - 2 < n - 1) (hf : IsMH (Finset.univ : Finset (Fin n)) (n - 1) f) {A : Finset (Fin n)}
+    (hA : IsBlockAt (Finset.univ : Finset (Fin n)) (n - 1) f ((n - 1) - 1) A) :
+    LastSplit (Finset.univ : Finset (Fin n)) A (n - 1) f := by
+  classical
+  have hlev : (n - 1) - 1 = n - 2 := by omega
+  rw [hlev] at hA
+  obtain ⟨a, haA, hAeq⟩ := hA
+  obtain ⟨c, hdich, hyc⟩ := dich_last hn h hf
+  have hAmem : ∀ z : Fin n,
+      (z ∈ A ↔ gchain (n - 1) f (n - 2) z = gchain (n - 1) f (n - 2) a) := by
+    intro z
+    rw [hAeq, blockOf, Finset.mem_filter]
+    exact ⟨fun hh => hh.2, fun hh => ⟨Finset.mem_univ z, hh⟩⟩
+  unfold LastSplit SplitEq
+  rw [hlev]
+  intro w _ w' _
+  rw [hAmem w, hAmem w']
+  rcases hdich w with hw | hw <;> rcases hdich w' with hw' | hw' <;> rcases hdich a with ha | ha
+  all_goals (rw [hw, hw', ha]; simp [hyc, Ne.symm hyc])
+
+theorem mhFinsetP_eq_filter_isBlockAt (n : ℕ) {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    mhFinsetP n (n - 1) (Finset.univ : Finset (Fin n)) A
+      = (mhFinset n (n - 1) (Finset.univ : Finset (Fin n))).filter
+          (fun f => IsBlockAt (Finset.univ : Finset (Fin n)) (n - 1) f ((n - 1) - 1) A) := by
+  classical
+  have hn : 2 ≤ n := by omega
+  have h : n - 2 < n - 1 := by omega
+  have hlev : (n - 1) - 1 = n - 2 := by omega
+  have key : ∀ f : Fin (n - 1) → Fin n × Fin n,
+      IsMHP (Finset.univ : Finset (Fin n)) A (n - 1) f ↔
+        (IsMH (Finset.univ : Finset (Fin n)) (n - 1) f ∧
+          IsBlockAt (Finset.univ : Finset (Fin n)) (n - 1) f ((n - 1) - 1) A) := by
+    intro f
+    unfold IsMHP
+    constructor
+    · rintro ⟨hmh, hls⟩
+      obtain ⟨a, haA⟩ := Finset.card_pos.mp (by omega : 0 < A.card)
+      refine ⟨hmh, a, haA, ?_⟩
+      unfold LastSplit SplitEq at hls
+      rw [hlev] at hls
+      ext z
+      rw [blockOf, Finset.mem_filter]
+      exact ⟨fun hz => ⟨Finset.mem_univ z,
+          (hls z (Finset.mem_univ z) a (Finset.mem_univ a)).mpr ⟨fun _ => haA, fun _ => hz⟩⟩,
+        fun hz => ((hls z (Finset.mem_univ z) a (Finset.mem_univ a)).mp hz.2).mpr haA⟩
+    · rintro ⟨hmh, hba⟩
+      exact ⟨hmh, splitEq_of_isBlockAt hn h hmh hba⟩
+  unfold mhFinsetP mhFinset
+  rw [Finset.filter_filter]
+  exact Finset.filter_congr (fun f _ => key f)
+
+theorem blockInterCount_holds (n : ℕ) : blockInterCount n := by
+  intro A h1 h2
+  have hb : ((Finset.univ : Finset (Fin n)) \ A).card = n - A.card := by
+    rw [sdiff_card (Finset.subset_univ A), Finset.card_univ, Fintype.card_fin]
+  have hlev : (n - 1) - 1 = n - 2 := by omega
+  rw [inter_card_eq_mhFinsetP n h1 h2, mhFinsetP_eq_filter_isBlockAt n h1 h2,
+    mhFinsetAt_card (n - 1) n (Finset.univ : Finset (Fin n)) A
+      (by simp only [Finset.card_univ, Fintype.card_fin]; omega)
+      (Finset.subset_univ A) (by omega) (by omega),
+    hb, hlev]
+  push_cast
+  rw [cast_Hnat, cast_Hnat, ← H_mul_pnHatExh_eq h1 h2]
+
+theorem yhkClanLawGap_holds : YHKClanLawGap :=
+  yhkClanLawGap_of_blockInterCount blockInterCount_holds
+
 end Phylo.Stat.RankedTreeClanLaw
