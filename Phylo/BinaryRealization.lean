@@ -318,9 +318,24 @@ theorem exists_binary_realizingPhylogram (δ : Dissimilarity X) (h2 : 2 ≤ Fint
    同一处已判定「对**所有**有限类型量化是假命题」，须补 `Fintype.card ≠ 1`
 ④ 理由：`|X| = 1` 时 `Phylogram X` 为空（★★★ `bme_pauplin_identity_gap_binary_literal_form_false_of_card_eq_one`）；
    `|X| = 0` 时唯一实现树是单顶点树（度 `0`），`IsBinary` 假 ⇒ 字面形态不可证、
-   加 `2 ≤ |X|` 是**唯一**忠实修正（且 `2 ≤ |X|` 强于库内用的 `|X| ≠ 1`，覆盖 `|X| = 0`）。 -/
+   加 `2 ≤ |X|` 是**唯一**忠实修正（且 `2 ≤ |X|` 强于库内用的 `|X| ≠ 1`，覆盖 `|X| = 0`）。
+
+**★ W32：删去 `PositiveDefinite` 前提（定理加强）**（四要素）：
+① 旧形态：`… (hfp : δ.FourPoint) (_hpos : δ.PositiveDefinite) : ∃ T, bme_pauplin_identity_gap_binary δ T`；
+② 新形态：`… (hfp : δ.FourPoint) : ∃ T, bme_pauplin_identity_gap_binary δ T`
+   —— **前提 `_hpos` 被删**，名字与其余签名（含 `h2`、`hfp`）逐字不变；
+③ 文献依据/库内先例：`Phylo/AttesonRadius.lean:857`（「证明连 `PositiveDefinite` 都不需要
+   （只用 `FourPoint` 与 `4 ≤ |X|`）」）、`Phylo/Buneman.lean:93-96`（**不需要** `PositiveDefinite`
+   的无条件收口）、`Phylo/DissimilarityPerturb.lean:332`（`h : δ.PositiveDefinite`「保留只为签名兼容」）；
+   且 PD **在收缩下不保持**：`Phylo/BunemanShrinkPD.lean:12-18` 的阴性结论 ＋ ★★★
+   `not_positiveDefinite_shrinkDissimilarity`（同文件 `:92`，机器反例 `starWitness`，
+   `δ'(inl 3, inr()) = 0` 而两点不等）⇒ 它本不该出现在 Buneman 递推中途；
+④ 理由：本定理证明体（`:341-342`）只调 `exists_binary_realizingPhylogram`，
+   **从未引用** `_hpos`；`PositiveDefinite` 与 `FourPoint` **互不蕴含**（`Dissimilarity` 允许
+   `δ(x,y) = 0` 而 `x ≠ y`，零边权树度量即例）⇒ 删前提是**严格加强**。
+   **不违反 ★C**：★C 禁的是**加**前提或**削弱**结论，删前提只加强定理。 -/
 theorem bme_pauplin_identity_gap_binary_holds (δ : Dissimilarity X) (h2 : 2 ≤ Fintype.card X)
-    (hfp : δ.FourPoint) (_hpos : δ.PositiveDefinite) :
+    (hfp : δ.FourPoint) :
     ∃ T : Phylogram.{u, u} X, bme_pauplin_identity_gap_binary δ T := by
   obtain ⟨T, hbin, hreal⟩ := exists_binary_realizingPhylogram δ h2 hfp
   exact ⟨T, bme_pauplin_identity_gap_binary_of_isBinary δ T hbin hreal⟩
