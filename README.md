@@ -53,9 +53,14 @@
 | **MSC 公理化** | `MSCFreq`（真树 + 选择 + 频率 + `majorizes`）、`MSCSampling`（`emp` 依赖真实律，含 `mscSampling_nonempty`） | `Phylo/Stat/MSC.lean` |
 | **一致性引擎** | 理想一致性 → gap 引理 → 稳定性（扰动 < δ/(2N+1)） | `Phylo/Stat/Stability.lean` |
 
-> **诚实的边界**：ASTRAL / CASTER / parsimony 的「逐 quartet 一致」已证完，
-> 升到「同构」需一条共享引理 `QuartetDecidesTree`（`Phylo/Stat/QuartetDecides.lean`）。
-> 该定理是 Colonius–Schultze (1981) / Steel (1992) 的**经典结果**，属**形式化工程量**而非数学未解。
+> **诚实的边界**：ASTRAL / CASTER / parsimony 的「逐 quartet 一致」已证完；
+> 由「逐 quartet 一致」升到「**树同构**」的那一步也已**无条件收口** ——
+> 共享引理 `QuartetDecidesTree` 是**定理**（`Phylo/Stat/QuartetDecides.lean:330`；
+> Colonius–Schultze (1981) / Steel (1992) 的经典结果，2026-10-08 由 `def` 变定理），
+> 故 `astral_iso`（同文件 `:348`）与 `multiLocus_iso`（`:357`）**不再带 `hQD` 缺口假设**，
+> 属无条件结果（它们只吃定理自身的语义前提：二元 cladogram ＋ 最优性）。
+> 仍受限的是**概率层**：`MSCFreq.majorizes`（MSC 核心不等式）与 `MSCSampling.converges`
+> 是结构字段（公理化），此处不隐瞒。
 > NJ / NJst 卡在 `MaxZCherryCore`（NJ 樱桃引理，同为经典定理的形式化缺口）。
 
 ## 结构
