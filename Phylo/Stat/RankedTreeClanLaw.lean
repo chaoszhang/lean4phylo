@@ -127,7 +127,7 @@ theorem H_mul_pnHatExh_eq' {a b : ℕ} (ha : 2 ≤ a) (hb : 2 ≤ b) :
 
 ⇒ 只要有人给出**组合计数** `#{ω : A 与 Aᶜ 同时是块} = H a · H (n−a) · C(n−2, a−1)`，
 本定理立刻把它翻成 ★★★ `clanEvent_eq_clanProb_of_blockCount` 所需的
-`hinter : … = H n · pnHatExh n A.card`。 -/
+`hinter : … = H n · pnHatExh n A.card`。　★ **`b = 1` 端点**（边界切片 `a = n−1` 用）见文件末尾的 ★★★ `H_mul_pnHatExh_eq_one`：`H n · pnHatExh n (n−1) = H (n−1)`。 -/
 theorem H_mul_pnHatExh_eq {n a : ℕ} (h1 : 2 ≤ a) (h2 : a ≤ n - 2) :
     RankedGeneTree.H n * pnHatExh n a
       = RankedGeneTree.H a * RankedGeneTree.H (n - a) * (((n - 2).choose (a - 1) : ℕ) : ℝ) := by
@@ -1165,5 +1165,43 @@ theorem blockInterCount_holds (n : ℕ) : blockInterCount n := by
 
 theorem yhkClanLawGap_holds : YHKClanLawGap :=
   yhkClanLawGap_of_blockInterCount blockInterCount_holds
+
+/-! ## `b = 1` 端点：边界切片 `a = n−1` 的算术桥
+
+`H_mul_pnHatExh_eq'`（§24，`2 ≤ a` 且 `2 ≤ b`）与 `H_mul_pnHatExh_eq`（§25，`2 ≤ a ≤ n−2`）
+的**共同前提是「两侧都 ≥ 2」**，因此 `b = 1`（等价地 `a = n−1`）这一端点取不到。
+本节补上该端点，供 `TwoClanLawGap` 的 `a + b = n − 1` 切片使用。
+
+★ 为什么这就够了（**不需要**另建「有根 clade 载体」）：
+边界上「`|A| = m−1` 的 `A` 是块」的概率在**无根**载体上退化成 `1`（★★ `clanEvent_four_trivial` 即 `n = 4`、`|A| = 3` 的实例），
+而 `pn m (m−1) = 2/(m(m−1))` 与之**不等** ⇒ `pnEvent_eq_pn` 的 `2 ≤ a ≤ m−2` 不是保守写法。
+但 `pn m (m−1)` 与**根分裂**形态 `pnHatExh m (m−1)` **同值**，而后者恰是「根分裂有一侧是单点」的计数：
+`#{ω : ω 的根分裂 = A ｜ {x}} = H (m−1)`（单点侧 `H 1 = 1`、交错数 `C(m−2, m−2) = 1`），
+故概率 `= H(m−1)/H(m) = 2/(m(m−1))` —— 本定理就是这最后一步的 Lean 形态。 -/
+
+/-- ★★★ **算术桥（`b = 1` 端点）**：`H n · p̂n(n, n−1) = H (n−1)`（`n ≥ 2`）。
+
+用途：`a + b = n − 1` 切片里 `p_{n−b}(a)` 的 `a = (n−b) − 1` 端点（见本节头的说明）。
+证明只用 `H_succ_eq`（`H n = H (n−1) · C(n,2)`）与 `n.choose (n−1) = n`，
+**不引入任何新载体、不改动任何既有陈述**。 -/
+theorem H_mul_pnHatExh_eq_one (n : ℕ) (hn : 2 ≤ n) :
+    RankedGeneTree.H n * pnHatExh n (n - 1) = RankedGeneTree.H (n - 1) := by
+  have hsub : n - 1 + 1 = n := Nat.sub_one_add_one_eq_of_pos (by omega : 0 < n)
+  have hH : RankedGeneTree.H n
+      = RankedGeneTree.H (n - 1) * Coalescent.kingmanRate (n - 1 + 1) := by
+    conv_lhs => rw [← hsub]
+    rw [RankedGeneTree.H_succ_eq (n - 1) (by omega)]
+  rw [hH, hsub]
+  have hkr : Coalescent.kingmanRate n = (n : ℝ) * ((n : ℝ) - 1) / 2 := rfl
+  rw [hkr]
+  have hc : ((n.choose (n - 1) : ℕ) : ℝ) = (n : ℝ) := by
+    rw [Nat.choose_symm (by omega : 1 ≤ n), Nat.choose_one_right]
+  unfold pnHatExh
+  rw [hc]
+  have hn0 : (n : ℝ) ≠ 0 := by exact_mod_cast (by omega : n ≠ 0)
+  have hn1 : (n : ℝ) - 1 ≠ 0 := by
+    have h : (1 : ℝ) < (n : ℝ) := by exact_mod_cast (by omega : 1 < n)
+    linarith
+  field_simp
 
 end Phylo.Stat.RankedTreeClanLaw
