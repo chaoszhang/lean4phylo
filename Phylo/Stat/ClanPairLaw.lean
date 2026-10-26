@@ -3404,3 +3404,58 @@ theorem clanPairCount_rootedCarrier {m : ℕ} (h3 : 3 ≤ m) :
   rw [hpc, show m - 1 + 1 = m from by omega, card_rankedTree_eq_H m hm]
   ring
 
+/-! ## §16 B 轨装配：四条计数 ⇒ `H` 的整个 `∃` 载荷 ⇒ `TwoClanLawGap`
+
+这一步不引入任何新数学内容：★★★ `threeEventProbs_of_counts`（§6，无条件）把四条计数
+换成 `H` 的整个 `∃` 载荷；四个计数实例分别是 §8（穷尽支）、§10.5（②）、§12.5（③）、§15.4（①）。
+`n = 2` 的分档由 ★★★ `twoClanLawGap_of_threeEvents` 内部走 ★★ `twoClanLawGap_two_slice`。 -/
+
+/-- ★★★ **`H` 的 `∃` 载荷（`Ω := RankedTree N`、`U := rootedCarrier N h3`）**：
+四条计数实例 ⇒ 五条概率等式，`prob ≡ 1/H N`。 -/
+theorem threeEventProbs_rootedCarrier (N : ℕ) (h3 : 3 ≤ N) :
+    ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ) (_ : ∀ ω, 0 ≤ prob ω)
+      (_ : ∑ ω, prob ω = 1)
+      (U : Ω → Cladogram.{0, 0} (Fin N ⊕ Unit)),
+      (∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < N →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl)), prob ω) = rn N A.card B.card)
+      ∧ (∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < N →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (A.image Sum.inl) ∧
+              (U ω).IsClade (Bᶜ.image Sum.inl) ∧
+              ¬ (U ω).IsClade (B.image Sum.inl)), prob ω)
+          = Rn N A.card (N - B.card) - pnHatExh N B.card * pn (N - B.card) A.card)
+      ∧ (∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card < N →
+        (∑ ω ∈ Finset.univ.filter
+            (fun ω => (U ω).IsClade (Aᶜ.image Sum.inl) ∧
+              (U ω).IsClade (B.image Sum.inl) ∧
+              ¬ (U ω).IsClade (A.image Sum.inl)), prob ω)
+          = Rn N B.card (N - A.card) - pnHatExh N A.card * pn (N - A.card) B.card)
+      ∧ (∀ A B : Finset (Fin N), Disjoint A B → A.Nonempty → B.Nonempty →
+        A.card + B.card = N →
+        (∑ ω ∈ Finset.univ.filter (fun ω => IsClanMinusRoot (U ω) A), prob ω)
+          = qnExhaustive A.card B.card) := by
+  have hD : (Fintype.card (RankedGeneTree.RankedTree N) : ℝ) ≠ 0 := by
+    rw [card_rankedTree_eq_H N (by omega)]
+    exact ne_of_gt (H_pos N)
+  obtain ⟨prob, hprob, hsum, hbody⟩ :=
+    threeEventProbs_of_counts N (fun ω => rootedCarrier N h3 ω) hD
+      (clanPairCount_rootedCarrier h3) (clanPairComplCount_rootedCarrier h3)
+      (tripleClanCount_rootedCarrier h3) (clanExhaustiveCount_rootedCarrier (by omega) h3)
+  obtain ⟨h1, h2, h3', h4⟩ := hbody
+  exact ⟨RankedGeneTree.RankedTree N, inferInstance, prob, hprob, hsum,
+    (fun ω => rootedCarrier N h3 ω), h1, h2, h3', h4⟩
+
+/-- ★★★ **`TwoClanLawGap` 收口**（ZDS2011 Theorem 6.3(ii) 的概率层，一般 `n`）。
+
+`TwoClanLawGap` 的 `def` **一字未改**；这里只填上它的 `∃` 载荷：
+`Ω := RankedTree n`、`prob ≡ 1/H n`、`tree := rootedCarrier n h3`（补根叶的 YHK 载体），
+三条事件 (a)(b)(c) 与穷尽支分别由 ①／②③／③／穷尽支四条计数给出。 -/
+theorem twoClanLawGap_holds : TwoClanLawGap :=
+  twoClanLawGap_of_threeEvents threeEventProbs_rootedCarrier
+
+end Phylo.Stat.ClanPairLaw

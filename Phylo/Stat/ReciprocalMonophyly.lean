@@ -147,7 +147,7 @@ neutral evolutionary models*（arXiv:1101.1311）中**能落地**的部分：
 | 闭形式的**数值正确性** | ✅ 脚本 `n ≤ 6` 全穷举复核（§3） |
 | 闭形式之间的**算术恒等式** | ✅ 已证 4 条：`clanProb_eq_inclusionExclusion`（Lemma 6.2 ⟸ Lemma 6.1 的包含-排除）、`pnHat_eq_pn_mul`（Lemma 4.4 ⟸ 4.2 ⊗ 4.3，论文第 398–444 行的证明）、`qnExhaustive_eq_clanProb`（Theorem 6.3(i) ⟸ Lemma 6.2）、`clanProb_eq_unfolded`；另有 `choose_mul_pn`（Lemma 4.1 **右端**的算术核对）、`qnExhaustive_two_two`、`qn_six_two_two`、`qTriple_two_two_two`、`qConvex_two_two_two` 等锚点 |
 | **`pn` 是 YHK 律下的 clade 概率**（Lemma 4.1 / 4.2 的**概率层**） | ❌ **未证** —— 缺口 `YHKClanLawGap`（§6）；§5.2 已交付两块**无条件**切片（任意 `n` 的 `A.card ∈ {1, n−1}` ＋ `n = 3` 整条 ＋ §8 的 **`n = 4` 整条**）（★ W32 已收口：`yhkClanLawGap_holds`） |
-| **`qn` 是「两个 clan」的概率**（Theorem 6.3 的概率层） | ❌ **一般 `n` 未证** —— 缺口 `TwoClanLawGap`（§6）；§8.7 已把 **`n = 3`（对任意律）** 与 **`n = 4` 整条** 落地（★★★ `twoClanLawGap_three_slice`、★★★ `twoClanLawGap_four_slice`） |
+| **`qn` 是「两个 clan」的概率**（Theorem 6.3 的概率层） | ✅ **一般 `n` 已收口**（★ W34，2026-10-27：★★★ `twoClanLawGap_holds`，`Phylo/Stat/ClanPairLaw.lean`）；此前登记为缺口 `TwoClanLawGap`（§6），当时只落了 **`n = 3`（对任意律）** 与 **`n = 4` 整条**（★★★ `twoClanLawGap_three_slice`、★★★ `twoClanLawGap_four_slice`） |
 | **`q` 是「三个 clan」的概率**（Theorem 6.4 的概率层） | ❌ **未证** —— 缺口 `TripleClanLawGap`（§6） |
 | **Theorem 5.1**（一般 `k` 个 clade，含指定 `Tk`） | ❌ **未落地**（连闭形式都依赖 `Iv(Ai)` 这套 `Tk` 上的指示变量；本库无「内部顶点 + 后代叶集」的层面对象） |
 | **Theorem 4.5 一般形** | ⚠️ **部分**：情形 2 / 5 的 `Rn` / `rn` / `Gn` 已转录并复核；**情形 1 / 3 / 4 / 6 的分情形组合**未写成单一 `def` |
@@ -973,7 +973,15 @@ def YHKClanLawGap : Prop :=
   `qn_four_one_two`、★★ `qn_four_two_one`（外加既有 `qnExhaustive_one_left/right`、`qnExhaustive_two_two`）。
   容器侧 ★★★ `yhkLawFour_twoClanEvent`。
   ★ **未被绕开的部分**：`a + b < n` 在**一般 `n`** 上仍要 Theorem 6.3(ii) 的三事件分解
-  （`rn` ＋ 两个 `Rn` ＋ 两个 `p̂n·p`）的**概率层**，即仍需 §8.4 的两件具名器材。 -/
+  （`rn` ＋ 两个 `Rn` ＋ 两个 `p̂n·p`）的**概率层**，即仍需 §8.4 的两件具名器材。
+
+* **★ W34 收口（2026-10-27）：本 `def` 已被无条件证成** ✓ —— 本行**一字未改**。
+  ★★★ `twoClanLawGap_holds : TwoClanLawGap`（`Phylo/Stat/ClanPairLaw.lean`）。
+  上面「❌ 一般 `n` 未证」与「未被绕开的部分」描述的是**当时**的状态，保留作留痕；
+  实际路线是：`Phylo/Stat/ClanPairLaw.lean` 把四条**计数**等式（①／②③／④⑤／穷尽支）
+  各在载体 `rootedCarrier` 上无条件落地，再由 ★★★ `threeEventProbs_of_counts`
+  换成 `H` 的整个 `∃` 载荷，最后 ★★★ `twoClanLawGap_of_threeEvents` 装配
+  （`n = 2` 走 ★★ `twoClanLawGap_two_slice`）。 -/
 def TwoClanLawGap : Prop :=
   ∀ n : ℕ, 2 ≤ n → ∃ (Ω : Type) (_ : Fintype Ω) (prob : Ω → ℝ)
     (_ : ∀ ω, 0 ≤ prob ω) (_ : ∑ ω, prob ω = 1)

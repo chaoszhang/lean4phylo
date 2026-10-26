@@ -93,7 +93,7 @@ Phylo/
 | 顶层声明 | **6,378**（剥注释后机械统计 `theorem`/`lemma`/`def`/`abbrev`/`structure`/`class`/`instance`/`inductive`） |
 | `sorry` / `axiom` / `opaque` | **0 / 0 / 0**（未形式化处落成显式 `def … : Prop` 缺口登记） |
 | `lake build` | **通过（3988 jobs）** |
-| 缺口台账（七桶 · `scripts/list_gaps.sh`） | 真开放 **1** · 已收口 43 · 条件收口 2 · 已证伪 21 · 追溯 1 · 判定收档 2 · 长期开放 1 ＝ **71** |
+| 缺口台账（七桶 · `scripts/list_gaps.sh`） | 真开放 **0** · 已收口 44 · 条件收口 2 · 已证伪 21 · 追溯 1 · 判定收档 2 · 长期开放 1 ＝ **71** |
 
 复跑方式：`lake build`（job 数）、`bash scripts/list_gaps.sh B`（七桶）、`bash scripts/check_vacuous.sh`（空转自证）。
 
