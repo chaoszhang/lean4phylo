@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.SupertreeLimits
+import Phylo.InternalEdge
 
 /-!
 # `Phylo.CladogramBuild` —— 「造具体 `Cladogram`」的器材（**W21 任务 A / C1**）
@@ -369,3 +370,355 @@ theorem catTree5_nontrivialSplits_card : catTree5.nontrivialSplits.card = 4 := b
   decide
 
 end Cat5
+
+/-! ## 9. 根叶附着载体 `attachRoot`：`α` 上的**镶嵌族** ↦ `Cladogram (α ⊕ Unit)`
+
+★ **W33 新增**。库内 `Cladogram (X ⊕ Unit)` 处处是**消费者**（`IsClanMinusRoot`、
+`rootedToCladogram`、`isClade_rootedToCladogram_iff_of_nonempty` 等 20 余处），
+而**生产者一个也没有** —— 于是 `Phylo/Stat/ClanPairLaw.lean` 的 4 条计数陈述
+（都对**任意** `U : Ω → Cladogram (Fin N ⊕ Unit)` 陈述）**无法实例化**。
+本节补上生产者，并用「`IsClade` 的完全刻画」证明它是**可用的**载体。
+
+* §9.1 `Split.pushInl`：把 `α` 侧的集合 `C` 推成 `α ⊕ Unit` 上的一条 split
+  （`C.image Sum.inl` 作 `sideA`，补集 ＋ 根叶 `Sum.inr ()` 作 `sideB`）；
+* §9.2 `attachFamily`：由 `L` 中「真、非单点」成员推成的 split 族；
+* §9.3 `attachRoot`：`ofCompatibleSplits` 造树 ＋ `isSplitOf_attachRoot`；
+* §9.4 `attachRoot_isClade`：`IsClade (A.image inl) ↔ A ∈ L ∨ |A| = 1 ∨ A = univ`。
+
+★ **为什么必须要求镶嵌族**（而不只是「两两相容」）：根叶 `m = Sum.inr ()` 必须落在
+**每一条**推上去的 split 的**同一侧**（`sideB`）。若 `C₁, C₂` 只是相容而**互为交叉**
+（例 `α = Fin 3`、`C₁ = {1,2}`、`C₂ = {1,3}`：`C₁ ∩ C₂ = {1}`、互不包含），则
+`C₁ | C₁ᶜ∪{m}` 与 `C₂ | C₂ᶜ∪{m}` 的四个交**全非空**（`m` 同时落在两个 `sideB` 里）
+⇒ 推上去**不再相容**。镶嵌族的成员两两嵌套或相离，这两情形都保住相容性
+（嵌套 ⟹ 一侧包含；相离 ⟹ 两侧不交）。 -/
+
+namespace Split
+
+variable {α : Type u} [Fintype α] [DecidableEq α]
+
+/-- **把 `α` 侧集合 `C` 推成 `α ⊕ Unit` 上的 split**：
+`C.image Sum.inl` 作 `sideA`，`Cᶜ.image Sum.inl ∪ {根叶}` 作 `sideB`。
+（`C` 非空且非全集，故两侧都非空。） -/
+noncomputable def pushInl (C : Finset α) (hC : C.Nonempty) (_hCc : Cᶜ.Nonempty) :
+    Split (α ⊕ Unit) :=
+  Phylo.splitOf (C.image (Sum.inl : α → α ⊕ Unit)) (hC.image Sum.inl) ⟨Sum.inr (), by simp⟩
+
+theorem pushInl_sideA (C : Finset α) (hC : C.Nonempty) (_hCc : Cᶜ.Nonempty) :
+    (pushInl C hC _hCc).sideA = C.image (Sum.inl : α → α ⊕ Unit) :=
+  Phylo.splitOf_sideA _ _ _
+
+/-- 推上去的集合的补：`(C.image inl)ᶜ = Cᶜ.image inl ∪ {根叶}`。 -/
+theorem compl_image_inl (C : Finset α) :
+    (C.image (Sum.inl : α → α ⊕ Unit))ᶜ = Cᶜ.image Sum.inl ∪ {Sum.inr ()} := by
+  ext x
+  cases x with
+  | inl y =>
+      simp only [Finset.mem_compl, Finset.mem_union, Finset.mem_image, Finset.mem_singleton,
+        Sum.inl.injEq]
+      constructor
+      · intro hy
+        exact Or.inl ⟨y, fun hc => hy ⟨y, hc, rfl⟩, rfl⟩
+      · rintro (⟨z, hz, hzy⟩ | h)
+        · rintro ⟨w, hw, hwy⟩
+          subst hzy
+          subst hwy
+          exact hz hw
+        · exact absurd h (by simp)
+  | inr u =>
+      cases u
+      simp
+
+/-- `pushInl` 的 `sideB`：`α` 侧的补（推上去）＋ 根叶。 -/
+theorem pushInl_sideB (C : Finset α) (hC : C.Nonempty) (_hCc : Cᶜ.Nonempty) :
+    (pushInl C hC _hCc).sideB = Cᶜ.image (Sum.inl : α → α ⊕ Unit) ∪ {Sum.inr ()} := by
+  rw [Split.sideB_eq_compl, pushInl_sideA, compl_image_inl]
+
+end Split
+
+namespace Cladogram
+
+variable {α : Type u} [DecidableEq α]
+
+/-- `C ⊆ D` ⟹ `C.image Sum.inl ⊆ D.image Sum.inl`（`Sum.inl` 单射的集合形态）。 -/
+theorem image_inl_subset {C D : Finset α} (h : C ⊆ D) :
+    C.image (Sum.inl : α → α ⊕ Unit) ⊆ D.image Sum.inl := by
+  intro x hx
+  obtain ⟨c, hc, rfl⟩ := Finset.mem_image.mp hx
+  exact Finset.mem_image.mpr ⟨c, h hc, rfl⟩
+
+/-- `C`、`D` 不交 ⟹ 推上去后仍不交。 -/
+theorem disjoint_image_inl {C D : Finset α} (h : Disjoint C D) :
+    Disjoint (C.image (Sum.inl : α → α ⊕ Unit)) (D.image Sum.inl) := by
+  rw [Finset.disjoint_left] at h ⊢
+  intro x hx hy
+  obtain ⟨c, hc, rfl⟩ := Finset.mem_image.mp hx
+  obtain ⟨d, hd, hdc⟩ := Finset.mem_image.mp hy
+  rw [Sum.inl.injEq] at hdc
+  subst hdc
+  exact h hc hd
+
+variable [Fintype α]
+
+/-- ★ **附着族**：`L` 中「真（`≠ univ`）、非单点（基数 `≥ 2`）」的成员推成的 split 族。
+
+三个条件都是**必需的**：`C` 非空 ↔ `sideA` 非空；`C.card ≥ 2` ↔ `sideA` 非平凡；
+`C ≠ univ` ↔ `sideB` 含根叶之外还有东西（即 `sideB` 非平凡）。 -/
+noncomputable def attachFamily (L : Finset (Finset α)) : Finset (Split (α ⊕ Unit)) := by
+  classical
+  exact Finset.univ.filter (fun s : Split (α ⊕ Unit) =>
+    ∃ C ∈ L, C ≠ Finset.univ ∧ 2 ≤ C.card ∧ s.sideA = C.image (Sum.inl : α → α ⊕ Unit))
+
+/-- `attachFamily` 的成员判定（下游只用这一条）。 -/
+theorem mem_attachFamily {L : Finset (Finset α)} {s : Split (α ⊕ Unit)} :
+    s ∈ attachFamily L ↔
+      ∃ C ∈ L, C ≠ Finset.univ ∧ 2 ≤ C.card ∧
+        s.sideA = C.image (Sum.inl : α → α ⊕ Unit) := by
+  classical
+  simp [attachFamily]
+
+/-- ★★ **附着族两两相容**（镶嵌性在这里被用掉：嵌套 ⟹ 一侧包含；相离 ⟹ 两侧不交）。 -/
+theorem attachFamily_compatible {L : Finset (Finset α)} (hlam : LaminarFamily L) :
+    ∀ s ∈ attachFamily L, ∀ t ∈ attachFamily L, Split.Compatible s t := by
+  intro s hs t ht
+  obtain ⟨C, hCL, -, -, hCs⟩ := mem_attachFamily.mp hs
+  obtain ⟨D, hDL, -, -, hDt⟩ := mem_attachFamily.mp ht
+  rcases hlam C hCL D hDL with h | h | h
+  · refine Split.compatible_of_subset_left ?_
+    rw [hCs, hDt]
+    exact image_inl_subset h
+  · refine Split.compatible_of_subset_right ?_
+    rw [hCs, hDt]
+    exact image_inl_subset h
+  · refine Split.compatible_of_disjoint ?_
+    rw [hCs, hDt]
+    exact disjoint_image_inl h
+
+/-- ★★ **附着族非平凡**：`sideA` 基数 `= C.card ≥ 2`；`sideB` 基数 `= |α| + 1 − C.card ≥ 2`
+（由 `C ≠ univ` 得 `C.card < |α|`）。 -/
+theorem attachFamily_nontrivial {L : Finset (Finset α)} :
+    ∀ s ∈ attachFamily L, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card := by
+  intro s hs
+  obtain ⟨C, -, hCne, hC2, hCs⟩ := mem_attachFamily.mp hs
+  have hcard : s.sideA.card = C.card := by
+    rw [hCs, Finset.card_image_of_injective _ Sum.inl_injective]
+  have hlt : C.card < Fintype.card α := by
+    rw [← Finset.card_univ]
+    exact Finset.card_lt_card
+      (Finset.ssubset_iff_subset_ne.mpr ⟨Finset.subset_univ C, hCne⟩)
+  refine ⟨by omega, ?_⟩
+  rw [Split.sideB_eq_compl, Finset.card_compl, Fintype.card_sum, Fintype.card_unit, hcard]
+  omega
+
+/-- **附着族 ＋ 换向**（`ofCompatibleSplits` 的 `hswap` 要求）。 -/
+noncomputable def attachSplitFamily (L : Finset (Finset α)) : Finset (Split (α ⊕ Unit)) :=
+  attachFamily L ∪ (attachFamily L).image (fun s => s.swap)
+
+/-- ★★ 换向闭包两两相容（与 `RankedTreeCladogram.splitFamily_compatible` 同构）。 -/
+theorem attachSplitFamily_compatible {L : Finset (Finset α)} (hlam : LaminarFamily L) :
+    ∀ s ∈ attachSplitFamily L, ∀ t ∈ attachSplitFamily L, Split.Compatible s t :=
+  compatible_swapClosure (attachFamily_compatible hlam)
+
+/-- ★★ 换向闭包非平凡。 -/
+theorem attachSplitFamily_nontrivial {L : Finset (Finset α)} :
+    ∀ s ∈ attachSplitFamily L, 2 ≤ s.sideA.card ∧ 2 ≤ s.sideB.card :=
+  nontrivial_swapClosure (attachFamily_nontrivial (L := L))
+
+/-- ★★ 换向闭包对 `swap` 封闭。 -/
+theorem attachSplitFamily_swap_closed (L : Finset (Finset α)) :
+    ∀ s ∈ attachSplitFamily L, s.swap ∈ attachSplitFamily L :=
+  swapClosure_swap_closed (attachFamily L)
+
+/-- ★★★ **根叶附着载体**：由 `α` 上的镶嵌族 `L` 造 `Cladogram (α ⊕ Unit)`。
+
+split 族取 `attachSplitFamily L`（＝ ★ `attachFamily L` 连同换向），三条前提由
+★★ `attachSplitFamily_compatible`、★★ `attachSplitFamily_nontrivial`、
+★★ `attachSplitFamily_swap_closed` 自动补齐 —— 与 §8 的 `catTree5`、
+`RankedTreeCladogram.rankedTreeCladogramOfThree` 是**同一套**构造。 -/
+noncomputable def attachRoot (L : Finset (Finset α)) (hlam : LaminarFamily L)
+    (h3 : 3 ≤ Fintype.card (α ⊕ Unit)) : Cladogram.{u, u} (α ⊕ Unit) :=
+  ofCompatibleSplits (attachSplitFamily L) (Sum.inr ()) (attachSplitFamily_compatible hlam)
+    (attachSplitFamily_nontrivial) (attachSplitFamily_swap_closed L) h3
+
+/-- ★★ **`attachRoot` 的 split 系统被完全刻画**：族 ∪ 换向 ∪ 平凡 split。 -/
+theorem isSplitOf_attachRoot {L : Finset (Finset α)} (hlam : LaminarFamily L)
+    (h3 : 3 ≤ Fintype.card (α ⊕ Unit)) (s : Split (α ⊕ Unit)) :
+    (attachRoot L hlam h3).IsSplitOf s ↔
+      s ∈ attachSplitFamily L ∨
+        (∃ x : α ⊕ Unit, s.sideA = {x}) ∨ (∃ x : α ⊕ Unit, s.sideA = {x}ᶜ) :=
+  isSplitOf_ofCompatibleSplits (attachSplitFamily L) (Sum.inr ())
+    (attachSplitFamily_compatible hlam) (attachSplitFamily_nontrivial)
+    (attachSplitFamily_swap_closed L) h3 s
+
+/-- ★★ **根叶在附着族的每一条 split 的 `sideB`**（「根叶」这个名字的机器内容）。 -/
+theorem mem_sideB_attachFamily {L : Finset (Finset α)} {s : Split (α ⊕ Unit)}
+    (hs : s ∈ attachFamily L) : Sum.inr () ∈ s.sideB := by
+  obtain ⟨C, -, -, -, hCs⟩ := mem_attachFamily.mp hs
+  rw [Split.sideB_eq_compl, hCs, Finset.mem_compl]
+  simp
+
+/-- ★★★ **`attachRoot` 的 `IsClade` 完全刻画**（本节的**唯一出口**）：
+
+`A.image Sum.inl` 是 `attachRoot L` 的一条边的一侧 **⟺** `A` 是 `L` 的成员，
+或 `A` 平凡（`A.card = 1`；`A = univ` 由根叶的悬挂边给出）。
+
+★ 三个平凡支的可计算内容：`A = {x}` ⇒ `A.image Sum.inl = {Sum.inl x}`（单点 split）；
+`A = univ` ⇒ `A.image Sum.inl = {Sum.inr ()}ᶜ`（根叶悬挂边的另一侧）。
+
+★ `hne : ∀ C ∈ L, C.Nonempty` 只用来排除 `∅ ∈ L`（否则 `A = ∅` 时左端为假、右端为真）。 -/
+theorem attachRoot_isClade {L : Finset (Finset α)} (hlam : LaminarFamily L)
+    (hne : ∀ C ∈ L, C.Nonempty) (h3 : 3 ≤ Fintype.card (α ⊕ Unit)) (A : Finset α) :
+    (attachRoot L hlam h3).IsClade (A.image (Sum.inl : α → α ⊕ Unit)) ↔
+      A ∈ L ∨ A.card = 1 ∨ A = Finset.univ := by
+  classical
+  constructor
+  · -- 正向：把 `IsSplitOf` 的三支逐条化成 `α` 侧断言
+    rintro ⟨s, hs, hside⟩
+    rcases (isSplitOf_attachRoot hlam h3 s).mp hs with hfam | htriv1 | htriv2
+    · rcases Finset.mem_union.mp hfam with hmem | hswap
+      · -- 族里：`s.sideA = C.image inl` ⇒ `A = C`
+        obtain ⟨C, hCL, -, -, hCs⟩ := mem_attachFamily.mp hmem
+        have hAC : A = C := by
+          have hEq : A.image (Sum.inl : α → α ⊕ Unit) = C.image Sum.inl := by
+            rw [← hside, hCs]
+          refine Finset.Subset.antisymm ?_ ?_
+          · intro z hz
+            have hz' : Sum.inl z ∈ C.image (Sum.inl : α → α ⊕ Unit) := by
+              rw [← hEq]
+              exact Finset.mem_image.mpr ⟨z, hz, rfl⟩
+            obtain ⟨w, hw, hwe⟩ := Finset.mem_image.mp hz'
+            rw [Sum.inl.injEq] at hwe
+            subst hwe
+            exact hw
+          · intro z hz
+            have hz' : Sum.inl z ∈ A.image (Sum.inl : α → α ⊕ Unit) := by
+              rw [hEq]
+              exact Finset.mem_image.mpr ⟨z, hz, rfl⟩
+            obtain ⟨w, hw, hwe⟩ := Finset.mem_image.mp hz'
+            rw [Sum.inl.injEq] at hwe
+            subst hwe
+            exact hw
+        exact Or.inl (hAC ▸ hCL)
+      · -- 换向支：`sideB` 含根叶，而 `A.image inl` 不含
+        obtain ⟨t, ht, rfl⟩ := Finset.mem_image.mp hswap
+        have hm := mem_sideB_attachFamily ht
+        rw [← Split.swap_sideA] at hm
+        rw [hside] at hm
+        simp at hm
+    · -- 平凡支 1：`A.image inl = {x}` ⇒ `A` 单点
+      obtain ⟨x, hx⟩ := htriv1
+      refine Or.inr (Or.inl ?_)
+      have hx' : A.image (Sum.inl : α → α ⊕ Unit) = ({x} : Finset (α ⊕ Unit)) := by
+        rw [← hside]; exact hx
+      have hxmem : x ∈ A.image (Sum.inl : α → α ⊕ Unit) := by
+        rw [hx']; exact Finset.mem_singleton_self x
+      obtain ⟨y, hy, hxy⟩ := Finset.mem_image.mp hxmem
+      have hAeq : A = {y} := by
+        ext z
+        constructor
+        · intro hz
+          have hzin : Sum.inl z ∈ ({x} : Finset (α ⊕ Unit)) := by
+            rw [← hx']
+            exact Finset.mem_image.mpr ⟨z, hz, rfl⟩
+          rw [Finset.mem_singleton] at hzin
+          rw [Finset.mem_singleton]
+          exact Sum.inl_injective (hzin.trans hxy.symm)
+        · intro hz
+          rw [Finset.mem_singleton] at hz
+          subst hz
+          exact hy
+      rw [hAeq, Finset.card_singleton]
+    · -- 平凡支 2：`A.image inl = {x}ᶜ`
+      obtain ⟨x, hx⟩ := htriv2
+      have hx' : A.image (Sum.inl : α → α ⊕ Unit) = ({x} : Finset (α ⊕ Unit))ᶜ := by
+        rw [← hside]; exact hx
+      cases x with
+      | inl y =>
+        exfalso
+        have hmem : Sum.inr () ∈ ({Sum.inl y} : Finset (α ⊕ Unit))ᶜ := by simp
+        rw [← hx'] at hmem
+        simp at hmem
+      | inr u =>
+        cases u
+        refine Or.inr (Or.inr ?_)
+        ext z
+        refine ⟨fun _ => Finset.mem_univ z, fun _ => ?_⟩
+        have hz : Sum.inl z ∈ ({Sum.inr ()} : Finset (α ⊕ Unit))ᶜ := by simp
+        rw [← hx'] at hz
+        obtain ⟨w, hw, hwe⟩ := Finset.mem_image.mp hz
+        rw [Sum.inl.injEq] at hwe
+        subst hwe
+        exact hw
+  · -- 反向：三个来源各给一条见证 split
+    have hsingle : A.card = 1 → (attachRoot L hlam h3).IsClade (A.image Sum.inl) := by
+      intro h1
+      obtain ⟨x, rfl⟩ := Finset.card_eq_one.mp h1
+      have hset : ({x} : Finset α).image (Sum.inl : α → α ⊕ Unit) = {Sum.inl x} :=
+        Finset.image_singleton (Sum.inl : α → α ⊕ Unit) x
+      refine ⟨Phylo.splitOf ({Sum.inl x} : Finset (α ⊕ Unit)) (Finset.singleton_nonempty _)
+        ⟨Sum.inr (), by simp⟩, ?_, ?_⟩
+      · exact (isSplitOf_attachRoot hlam h3 _).mpr
+          (Or.inr (Or.inl ⟨Sum.inl x, Phylo.splitOf_sideA _ _ _⟩))
+      · exact (Phylo.splitOf_sideA _ _ _).trans hset.symm
+    have huniv : A = Finset.univ → (attachRoot L hlam h3).IsClade (A.image Sum.inl) := by
+      intro hU
+      subst hU
+      have hcα : 0 < Fintype.card α := by
+        have hc : Fintype.card (α ⊕ Unit) = Fintype.card α + 1 := by
+          rw [Fintype.card_sum, Fintype.card_unit]
+        omega
+      have hnon : ((Finset.univ : Finset α).image (Sum.inl : α → α ⊕ Unit)).Nonempty :=
+        ⟨Sum.inl (Classical.choice (Fintype.card_pos_iff.mp hcα)),
+          Finset.mem_image.mpr ⟨_, Finset.mem_univ _, rfl⟩⟩
+      have hset : ((Finset.univ : Finset α).image (Sum.inl : α → α ⊕ Unit))
+          = ({Sum.inr ()} : Finset (α ⊕ Unit))ᶜ := by
+        ext x
+        cases x with
+        | inl y =>
+            constructor
+            · intro _
+              rw [Finset.mem_compl, Finset.mem_singleton]
+              exact Sum.inl_ne_inr
+            · intro _
+              exact Finset.mem_image.mpr ⟨y, Finset.mem_univ y, rfl⟩
+        | inr u =>
+            cases u
+            constructor
+            · intro h
+              obtain ⟨w, -, hw⟩ := Finset.mem_image.mp h
+              rw [Finset.mem_compl, Finset.mem_singleton]
+              exact fun _ => Sum.inl_ne_inr hw
+            · intro h
+              exact absurd (Finset.mem_singleton_self (Sum.inr ()))
+                (Finset.mem_compl.mp h)
+      let s : Split (α ⊕ Unit) :=
+        Phylo.splitOf ((Finset.univ : Finset α).image (Sum.inl : α → α ⊕ Unit)) hnon
+          ⟨Sum.inr (), by simp⟩
+      have hsd : s.sideA = ((Finset.univ : Finset α).image (Sum.inl : α → α ⊕ Unit)) :=
+        Phylo.splitOf_sideA _ _ _
+      exact ⟨s, (isSplitOf_attachRoot hlam h3 s).mpr
+        (Or.inr (Or.inr ⟨Sum.inr (), hsd.trans hset⟩)), hsd⟩
+    have hpush : A ∈ L → 2 ≤ A.card → A.card ≤ Fintype.card α - 1 →
+        (attachRoot L hlam h3).IsClade (A.image Sum.inl) := by
+      intro hAL h2 hle
+      have hlt : A.card < Fintype.card α := by
+        have := Finset.card_pos.mpr (hne A hAL)
+        omega
+      have hne' : A ≠ Finset.univ := by
+        intro h
+        rw [h, Finset.card_univ] at hlt
+        exact absurd hlt (Nat.lt_irrefl _)
+      exact ⟨Phylo.splitOf (A.image Sum.inl) ((hne A hAL).image Sum.inl) ⟨Sum.inr (), by simp⟩,
+        (isSplitOf_attachRoot hlam h3 _).mpr
+          (Or.inl (Finset.mem_union.mpr
+            (Or.inl (mem_attachFamily.mpr ⟨A, hAL, hne', h2, rfl⟩)))),
+        Phylo.splitOf_sideA _ _ _⟩
+    rintro (hAL | h1 | hU)
+    · by_cases h2 : 2 ≤ A.card
+      · by_cases hle : A.card ≤ Fintype.card α - 1
+        · exact hpush hAL h2 hle
+        · exact huniv (Finset.eq_univ_of_card A (by have := Finset.card_le_univ A; omega))
+      · exact hsingle (by have := Finset.card_pos.mpr (hne A hAL); omega)
+    · exact hsingle h1
+    · exact huniv hU
+
+end Cladogram
