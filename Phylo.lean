@@ -97,6 +97,7 @@ import Phylo.Stat.CASTERTopo
 import Phylo.Stat.CASTERTopoSplit
 import Phylo.Stat.CASTERWeights
 import Phylo.Stat.CladeCount
+import Phylo.Stat.ClanPairLaw
 import Phylo.Stat.Coalescent
 import Phylo.Stat.CoalescentHistoryCount
 import Phylo.Stat.CoalescentStats
