@@ -340,6 +340,29 @@ theorem bme_pauplin_identity_gap_binary_holds (δ : Dissimilarity X) (h2 : 2 ≤
   obtain ⟨T, hbin, hreal⟩ := exists_binary_realizingPhylogram δ h2 hfp
   exact ⟨T, bme_pauplin_identity_gap_binary_of_isBinary δ T hbin hreal⟩
 
+/-- ★★★★ **BME 分解（四点条件形态，无 `PositiveDefinite`）**：`2 ≤ |X|` ＋ `FourPoint`
+⇒ 存在边集 `E`（`Type 0`）、关联 `S`、边权 `l`、拓扑距离 `p` 使三条合取成立
+（可加性 / 指示和 = `p` / Pauplin 归一化）—— 即 `def bme_pauplin_identity_gap`
+（`Phylo/BMELeastSquares.lean`）的 ∃-体**脱离 `def` 前提**后的更强形态。
+
+**W32（定理加强）**：只需 `2 ≤ |X|` 与 `FourPoint`，**不需要** `PositiveDefinite`
+（`bme_pauplin_identity_gap_of_normalization` 的证明体 `intro _hFP _hPD` 把两者皆弃用；
+`PositiveDefinite` 与 `FourPoint` 互不蕴含，且 PD 在**收缩下不保持**：
+`Phylo/BunemanShrinkPD.lean:12-18` 与 ★★★ `not_positiveDefinite_shrinkDissimilarity`（`:92`））。
+路线：`exists_binary_realizingPhylogram δ h2 hfp` 取**二叉**实现树 `T`，
+二叉 ⇒ `BmePauplinNormalization T`（★★★ `bmePauplinNormalization_of_isBinary`），
+再喂进 ★★★★ `exists_bmeDecomposition_of_normalization`。
+★ 命名**刻意不含** `gap`/`Gap`：它不是缺口，而是缺口的**结论内容**（旧 `def` 逐字未动，★C）。 -/
+theorem exists_bmeDecomposition_of_fourPoint (δ : Dissimilarity X) (h2 : 2 ≤ Fintype.card X)
+    (hfp : δ.FourPoint) :
+    ∃ (E : Type) (_ : Fintype E) (S : X → X → E → ℝ) (l : E → ℝ) (p : X → X → ℕ),
+      (∀ i j : X, δ.val i j = ∑ e : E, S i j e * l e) ∧
+      (∀ i j : X, i ≠ j → (∑ e : E, S i j e) = (p i j : ℝ)) ∧
+      (∀ e : E, ∑ x ∈ plane, bmeCoeff (p x.1 x.2) * S x.1 x.2 e = 2) := by
+  obtain ⟨T, hbin, hreal⟩ := exists_binary_realizingPhylogram δ h2 hfp
+  exact exists_bmeDecomposition_of_normalization δ T hreal
+    (bmePauplinNormalization_of_isBinary T hbin)
+
 /-! ## §4 字面形态的反例（`|X| = 1`） -/
 
 /-- ★★★ **字面形态的反例**：派单把目标写成「`∀ δ, … → ∃ T, …`」，

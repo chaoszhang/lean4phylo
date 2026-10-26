@@ -530,15 +530,28 @@ theorem exists_equiv_fin_edgeSet (T : Phylogram X) :
 ⚠️ 本定理是**条件形态**（命名如实 ✓，不叫 `…_proof`）：它**没有**证明 (d)，也**不**声称缺口已证。 -/
 
 omit [DecidableEq X] in
-/-- ★★★ **归约**：`δ` 由 `T` 实现（`T.dist = δ.val`）且 `T` 满足 Pauplin 归一化
-⟹ `bme_pauplin_identity_gap δ`。取 `E := Fin n`（`n` = 边数，`Type 0` ✓，见 §8 宇宙事实）、
-`S i j k := [(idx.symm k).1 ∈ P_ij]`、`l k := T.wExt (idx.symm k).1`、`p i j := #(P_ij)`。 -/
-theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Phylogram X)
+/-- ★★★★ **BME 分解（归一化形态）**：`T` 实现 `δ`（`T.dist = δ.val`）且 `T` 满足
+Pauplin 归一化 ⟹ 存在分解数据 `(E, S, l, p)` 使三条合取成立（可加性 / 指示和 = `p` /
+Pauplin 归一化）—— 即 `def bme_pauplin_identity_gap` 的**结论内容**，与它的
+`FourPoint` / `PositiveDefinite` 前提**无关**。
+
+**W32 抽取**：本定理的证明体**原样**来自 `bme_pauplin_identity_gap_of_normalization`；
+原证明体开头的 `intro _hFP _hPD` 把两个前提**双双丢弃** ⇒ 「归一化 ⟹ 分解」这一步
+既不需要 `FourPoint` 也不需要 `PositiveDefinite`（`FourPoint` 只用于「产生实现树」，
+见 `exists_binary_realizingPhylogram`，`Phylo/BinaryRealization.lean:240`）。
+⇒ **无 `PositiveDefinite` 的更强形态**见 `exists_bmeDecomposition_of_fourPoint`
+（`Phylo/BinaryRealization.lean`，仅需 `2 ≤ card X` 与 `FourPoint`）。
+构造：取 `E := Fin n`（`n` = 边数，`Type 0` ✓，见 §8 宇宙事实）、
+`S i j k := [(idx.symm k).1 ∈ P_ij]`、`l k := T.wExt (idx.symm k).1`、`p i j := #(P_ij)`。
+★ 命名**不含** `gap`/`Gap`：本定理不是缺口，而是缺口的结论（旧 `def` 逐字未动，★C）。 -/
+theorem exists_bmeDecomposition_of_normalization (δ : Dissimilarity X) (T : Phylogram X)
     (hreal : ∀ i j : X, T.dist (T.leaf i) (T.leaf j) = δ.val i j)
     (hnorm : BmePauplinNormalization T) :
-    bme_pauplin_identity_gap δ := by
+    ∃ (E : Type) (_ : Fintype E) (S : X → X → E → ℝ) (l : E → ℝ) (p : X → X → ℕ),
+      (∀ i j : X, δ.val i j = ∑ e : E, S i j e * l e) ∧
+      (∀ i j : X, i ≠ j → (∑ e : E, S i j e) = (p i j : ℝ)) ∧
+      (∀ e : E, ∑ x ∈ plane, bmeCoeff (p x.1 x.2) * S x.1 x.2 e = 2) := by
   classical
-  intro _hFP _hPD
   obtain ⟨n, ⟨idx⟩⟩ := exists_equiv_fin_edgeSet T
   refine ⟨Fin n, inferInstance,
     (fun i j (k : Fin n) =>
@@ -601,6 +614,20 @@ theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Ph
   · -- (3) 归一化
     intro k
     exact hnorm (idx.symm k).1 (idx.symm k).2
+
+omit [DecidableEq X] in
+/-- ★★★ **归约**：`δ` 由 `T` 实现（`T.dist = δ.val`）且 `T` 满足 Pauplin 归一化
+⟹ `bme_pauplin_identity_gap δ`。取 `E := Fin n`（`n` = 边数，`Type 0` ✓，见 §8 宇宙事实）、
+`S i j k := [(idx.symm k).1 ∈ P_ij]`、`l k := T.wExt (idx.symm k).1`、`p i j := #(P_ij)`。
+
+**W32**：证明体已抽成 ★★★★ `exists_bmeDecomposition_of_normalization`（上一条）；
+本定理现在只剩 `intro _ _; exact …` —— 两个前提（`FourPoint`、`PositiveDefinite`）**仍被丢弃**。 -/
+theorem bme_pauplin_identity_gap_of_normalization (δ : Dissimilarity X) (T : Phylogram X)
+    (hreal : ∀ i j : X, T.dist (T.leaf i) (T.leaf j) = δ.val i j)
+    (hnorm : BmePauplinNormalization T) :
+    bme_pauplin_identity_gap δ := by
+  intro _ _
+  exact exists_bmeDecomposition_of_normalization δ T hreal hnorm
 
 /-! ## 10. ★★★ 子树倍增和接口（W12e18）：(d) 的等价形式
 
