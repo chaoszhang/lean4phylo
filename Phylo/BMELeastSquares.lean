@@ -376,7 +376,14 @@ theorem ex4_nonempty :
 ★★★ `bme_pauplin_identity_gap_of_normalization` 已把本缺口**归约**到
 `BmePauplinNormalization T`（§7）。⇒ 剩下的唯一数学内容 = `BmePauplinNormalization`
 （§10 的逐边倍增和 `D_e = 1`），**且它必须配 `T.IsBinary`**：
-多分叉时该命题**为假**（4 叶星形树 plane 和 `= 3 ≠ 2`，见 §12）。 -/
+多分叉时该命题**为假**（4 叶星形树 plane 和 `= 3 ≠ 2`，见 §12）。
+
+**★ W32：`PositiveDefinite` 前提经核为多余**（`bme_pauplin_identity_gap_of_normalization`
+的证明体 `intro _hFP _hPD` 两者皆弃用；`Phylo/AttesonRadius.lean:857` 与
+`Phylo/BunemanShrinkPD.lean:12-18` 给出同款先例与 PD 在收缩下不保持的机器反例）。
+**更强形态（无 PD，仅需 `2 ≤ card X` 与 `FourPoint`）已由 `exists_bmeDecomposition_of_fourPoint`
+证成**。本 `def` 字面按 ★C「旧 def 逐字保留」**未改**；若将来要把它换成更强字面，
+需另立名字并处理台账桶位。 -/
 def bme_pauplin_identity_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite →
     ∃ (E : Type) (_ : Fintype E) (S : X → X → E → ℝ) (l : E → ℝ) (p : X → X → ℕ),
@@ -932,7 +939,7 @@ end NJ
 
 | 要素 | 内容 |
 | - | - |
-| **① 旧形态**（逐字未动） | `bme_pauplin_identity_gap`（`:380`）与其归约目标 `BmePauplinNormalization`（`:458`）。被判为**假**的是它们的**全称闭包** `∀ T : Phylogram (Fin 4), BmePauplinNormalization T`。 |
+| **① 旧形态**（逐字未动） | `bme_pauplin_identity_gap`（`:387`）与其归约目标 `BmePauplinNormalization`（`:465`）。被判为**假**的是它们的**全称闭包** `∀ T : Phylogram (Fin 4), BmePauplinNormalization T`。 |
 | **② 新形态**（新名字） | `bme_pauplin_identity_gap_binary δ T`：把 `T.IsBinary` 放进**数据**（合取项，**不是**定理假设），其余内容与 `BmePauplinNormalization` **逐字相同**。 |
 | **③ 文献 `文件:行号`** | `references/md/DesperGascuel2004_BalancedMinimumEvolution.md:381`「if one of the two, say **B, is made of two subtrees denoted as B1 and B2**, then `dT_AB = (dT_AB1 + dT_AB2)/2`」；`:2003` 式 (7) `Σ 2^{r_AB}·p_ab = 1`（建立其上）；`:2026–2027` 式 (9) `SᵗF = 1`。 |
 | **④ 理由** | 文献**没有**把 "binary" 写进任何定理假设，但**平衡平均的构造只对「两个子树」递归定义** ⇒ 式 (7)(9) 的成立范围本身就是 **binary 型构造**。多分叉顶点 `c` 上 `D_e(c) = (deg c − 1)/2`，故 plane 和 `= deg c − 1 ≠ 2`（只有 `deg = 3` 才 `= 2`）。⇒ 按老师口径（文献不显式限定 ⇒ 是数学事实）：**证伪原形态的全称闭包 ＋ 另立忠实形态**，而**不是**给旧 `def` 悄悄加前提。 |
@@ -1243,8 +1250,9 @@ def bme_pauplin_identity_gap_binary (δ : Dissimilarity X) (T : Phylogram X) : P
     BmePauplinNormalization T
 
 omit [DecidableEq X] in
-/-- ★★★ **归约定理按新形态重述**（旧 `bme_pauplin_identity_gap_of_normalization`（`:536`）
-**一字未动**）：二叉忠实形态 ⟹ 原缺口 `bme_pauplin_identity_gap δ`。
+/-- ★★★ **归约定理按新形态重述**（旧 `bme_pauplin_identity_gap_of_normalization`（`:632`）
+**签名未变**；W32 起证明体由 `exists_bmeDecomposition_of_normalization` 两行转出）：
+二叉忠实形态 ⟹ 原缺口 `bme_pauplin_identity_gap δ`。
 
 ⇒ 新形态是原缺口的**充分条件**（不是削弱）：一旦补上「二叉实现树」（§12 器材 2
 `exists_binary_realizing_phylogram`）与二叉上的 `D_e = 1`（§12 器材 3），

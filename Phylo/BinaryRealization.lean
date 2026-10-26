@@ -11,12 +11,12 @@ import Phylo.InductiveAssembly
 
 ## 本文件解决什么
 
-`Phylo/BMELeastSquares.lean:1213` 的 `def bme_pauplin_identity_gap_binary δ T`
+`Phylo/BMELeastSquares.lean:1247` 的 `def bme_pauplin_identity_gap_binary δ T`
 （W26-B 另立的**二叉忠实形态**，旧 `def` 逐字未动）要求三件：
 
 1. `T.IsBinary`（`Phylo/Core.lean:93`）；
 2. `T` 实现 `δ`（`∀ i j, T.dist (T.leaf i) (T.leaf j) = δ.val i j`）；
-3. `BmePauplinNormalization T`（式 (9)，`BMELeastSquares.lean:458`）。
+3. `BmePauplinNormalization T`（式 (9)，`BMELeastSquares.lean:465`）。
 
 派单（`DISPATCH.md` T3 段）登记的两件缺件，状态如下：
 
@@ -138,7 +138,7 @@ theorem bmePauplinNormalization_of_isBinary (T : Phylogram X) (hbin : T.IsBinary
 /-! ## §2 二叉忠实形态的充分条件 -/
 
 /-- ★★★ **足够条件**：`T` 二叉**且**实现 `δ` ⇒ 二叉忠实形态
-（`bme_pauplin_identity_gap_binary`，`BMELeastSquares.lean:1213`，`def` 逐字未动）。 -/
+（`bme_pauplin_identity_gap_binary`，`BMELeastSquares.lean:1247`，`def` 逐字未动）。 -/
 theorem bme_pauplin_identity_gap_binary_of_isBinary (δ : Dissimilarity X) (T : Phylogram X)
     (hbin : T.IsBinary) (hreal : ∀ i j : X, T.dist (T.leaf i) (T.leaf j) = δ.val i j) :
     bme_pauplin_identity_gap_binary δ T :=
