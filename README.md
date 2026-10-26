@@ -113,8 +113,20 @@ lake build
 
 在 VS Code 中打开**目录**（不是单个文件）以获得完整补全。
 
-## 说明
+## 收录纪律（本仓库里到底有什么）
 
-- 本仓库只收录**项目成果**：证明代码、本文件、LICENSE。
-- 设计与工作记录类文档（概念设计、工作日志、任务交接等，含参考文献汇编）
-  在本仓库**之外**维护，故不在 GitHub 上。
+判据只有一条：**`git ls-files` 的输出必须与本节一致**。
+
+- **项目成果**：证明代码（`Phylo/**`、`Phylo.lean`）、`README.md`、`LICENSE`、
+  `scripts/`（护栏脚本 `list_gaps.sh` / `gap_ledger.py` / `check_vacuous.sh` /
+  `check_file_imports.sh` / `measure.sh`，以及 `scripts/f84/`、`scripts/msc/` 的可复现数据脚本）。
+- **构建与 CI 配置**：`lakefile.toml` · `lake-manifest.json` · `lean-toolchain` ·
+  `.gitattributes` · `.gitignore` · `.github/workflows/build.yml`。
+- **仍在被证明引用的规格 / 发现记录（5 份，入库）**：`MSC_INSTANCE_SPEC.md` ·
+  `MSC_KINGMAN_SPEC.md` · `W10_COALESCENT_SPEC.md` · `CASTER_F84_PROPASPEC.md` ·
+  `CASTER_F84_FINDING.md`。它们以「`<文件名>` §x.y」的形式被 `Phylo/**` 的 docstring
+  指名引用（规格条目、笔误更正、常数因子定位），属**证据链的一部分**，故留在库内。
+- **不在库内**：工作日志 / 总结 / 卡点报告 / 任务交接（原先入库的 `W10_SUMMARY.md`、
+  `W16a_BLOCKER.md`、`W16b_HANDOVER.md` 已于 W35 移出，见 `git log`）、参考文献汇编
+  （`references/`）、agent 记忆与交接文档（`MEMORY.md` / `HANDOVER.md` 等，由 `.gitignore` 挡住）。
+  这些在项目外维护，不在 GitHub 上。

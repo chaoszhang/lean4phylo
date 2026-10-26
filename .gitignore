@@ -46,6 +46,17 @@ references/
 _retired/
 _scripts_tmp/
 
+# ============================================================
+# 过程文档（W35 移出仓库）—— 目的是让 README §收录纪律 与 `git ls-files` 一致
+#
+# ★ 注意：`.gitignore` 对**已跟踪**文件不生效 ⇒ W35 的处置是 `git rm`（真移出），
+#   这三条只是**兜底**，防止日后 `git add -A` 把它们从本机副本再扫回库里。
+#   文件现位于项目外 `/Project/lean/_WB_ONLY/`（与仓库同级）。
+# ============================================================
+/W10_SUMMARY.md
+/W16a_BLOCKER.md
+/W16b_HANDOVER.md
+
 # Python 运行产物（判据脚本在 repo 内被 python3 直接跑时会生成 __pycache__）
 __pycache__/
 *.pyc

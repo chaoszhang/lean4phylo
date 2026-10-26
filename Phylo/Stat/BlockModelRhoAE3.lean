@@ -26,7 +26,7 @@ set_option maxHeartbeats 800000
 
 > **本文件不证识别等式 `hlim`、也不给端到端定理** —— 那是第 ② 件。
 
-本文件就是第 ② 件。`W16a_BLOCKER.md`（250 行版）§8 给出了**已推好的归约**
+本文件就是第 ② 件。`W16a_BLOCKER.md`（项目外留痕）（250 行版）§8 给出了**已推好的归约**
 （`integral_map` → `blockWR_eq_blockW` → `integral_prod` → `blockW_integral`
 ⇒ 「Dirac 混合」引理 ⇒ 组端到端），本文件**照单实施**。
 
@@ -308,7 +308,7 @@ theorem integrable_blockLR (M : SiteRateModel) (C : ℕ)
 
 证明 = `integral_map` ⇒ `blockWR_eq_blockW` ⇒ `integral_prod`（拆 `sp`）
 ⇒ 内层 `blockW_integral`（固定物种树）⇒ 提出常数 ⇒ **`integral_expWeight_dirac_mix`**
-（`W16a_BLOCKER.md` §8.3 的归约链）。 -/
+（`W16a_BLOCKER.md`（项目外留痕）§8.3 的归约链）。 -/
 theorem blockW_integral_R (M : SiteRateModel) (C : ℕ)
     (ρ : Measure ((Fin 4 → ℝ) × ℝ≥0 × ℝ≥0)) [IsProbabilityMeasure ρ]
     (νL : Measure (LIdx C)) [IsProbabilityMeasure νL]
@@ -342,7 +342,7 @@ theorem blockW_integral_R (M : SiteRateModel) (C : ℕ)
         exact integrable_blockWR (M := M) (C := C) (ρ := ρ) (νL := νL) hlx0 hbox T)
   rw [MeasureTheory.integral_prod _ hIntP]
   -- ③ 内层（固定 `sp`）＝ `𝔼[L] · expWeight (dirac sp)`
-  -- ★ 改为 `ρ`-a.e. 陈述（原为 `∀ sp` ✗ 且其"叶长非负"证据为假 ✗；见 W16b_HANDOVER §12.6）
+  -- ★ 改为 `ρ`-a.e. 陈述（原为 `∀ sp` ✗ 且其"叶长非负"证据为假 ✗；见 `W16b_HANDOVER`（项目外留痕）§12.6）
   have hinner : ∀ᵐ sp ∂ρ,
       (∫ r : ((ℝ × ℝ) × LIdx C) × (Fin C → M.Rate),
         blockWR M C T (BlockR.ofRaw (sp, r))
@@ -625,7 +625,7 @@ theorem block_emp_tendsto_ae_R_dirac_target (M : SiteRateModel) (_C : ℕ)
 
 -- ★ 2026-10-13 W18：本声明处为**纯 elaboration 成本**（`whnf` 心跳超时，非数学问题 ✓）⇒
 --   在**最小作用域**内局部放宽心跳。★ 注意：本文件第 12 行【原本已有】`set_option maxHeartbeats 800000`
---   （= 默认 200000 的 4 倍 ✗）—— 该放宽**已如实登记在 W16b_HANDOVER.md §12.7** ✓。
+--   （= 默认 200000 的 4 倍 ✗）—— 该放宽**已如实登记在 `W16b_HANDOVER.md`（项目外留痕）§12.7** ✓。
 set_option maxHeartbeats 4000000 in
 /-- ★★★ **门 5（`∫ blockW` 侧）**：`ρ = Measure.dirac ((leaf, a, b) : (Fin 4 → ℝ) × ℝ≥0 × ℝ≥0)` 时，
 `blockW_integral_R` 的右端**逐字**是 `BlockModelAE.blockW_integral`（`:604`）的右端。 -/
@@ -634,7 +634,7 @@ set_option maxHeartbeats 4000000 in
 --   而其**库内对应物** `BlockModelAE.blockW_integral`（`:604`）**本身就带** `(hleaf : ∀ i, 0 ≤ leaf i)` ✓
 --   ⇒ 故此处**补上与库内一致的那一条假设** ✓（这是**还原**假设面 ✓，**不是**为过门放松口径 ✗）。
 --   另一处 `le_rfl` ✗ 同探针③：它会强行要求 `lx0 = 0` ✗，而 `boxParam_dirac_ae` 给 `lx0 = ↑a + ↑b` ✗
---   ⇒ 换成 `by positivity` ✓（`a b : ℝ≥0` ⇒ `0 ≤ ↑a + ↑b` ✓）。★ 该改动已登记 W16b_HANDOVER.md §12.7 ✓。
+--   ⇒ 换成 `by positivity` ✓（`a b : ℝ≥0` ⇒ `0 ≤ ↑a + ↑b` ✓）。★ 该改动已登记 `W16b_HANDOVER.md`（项目外留痕）§12.7 ✓。
 theorem blockW_integral_R_dirac (M : SiteRateModel) (C : ℕ)
     (leaf : Fin 4 → ℝ) (a b : ℝ≥0)
     (νL : Measure (LIdx C)) [IsProbabilityMeasure νL] (T : Topo)
@@ -648,7 +648,7 @@ theorem blockW_integral_R_dirac (M : SiteRateModel) (C : ℕ)
 
 -- ★ 2026-10-13 W18：本声明处为**纯 elaboration 成本**（`whnf` 心跳超时，非数学问题 ✓）⇒
 --   在**最小作用域**内局部放宽心跳。★ 注意：本文件第 12 行【原本已有】`set_option maxHeartbeats 800000`
---   （= 默认 200000 的 4 倍 ✗）—— 该放宽**已如实登记在 W16b_HANDOVER.md §12.7** ✓。
+--   （= 默认 200000 的 4 倍 ✗）—— 该放宽**已如实登记在 `W16b_HANDOVER.md`（项目外留痕）§12.7** ✓。
 set_option maxHeartbeats 4000000 in
 /-- ★★★ **门 5（识别等式侧）**：`ρ = dirac (leaf, a, b)` 时 `blockW_div_blockL_R` 的右端
 **逐字**是 `BlockModelAE.blockW_div_blockL`（`:700`）的右端，故两式的商**同值**。 -/
