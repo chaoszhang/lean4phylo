@@ -501,7 +501,8 @@ def mnCorollary_gap : Prop :=
         ∀ P : Profile (α := α) k, (∀ i, IsNTree (P i)) →
           C P = ThresholdRule (α := α) k t P
 
-/-- ⬜ **缺口 2（§2 Arrow 型不可能性，127–283 行）**：`|S| ≥ 3` 时**不存在**同时满足
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `arrowTreeQuasiOrder_gap_refuted`（`Phylo/ConsensusAxioms.lean:548`）。
+⬜ **缺口 2（§2 Arrow 型不可能性，127–283 行）**：`|S| ≥ 3` 时**不存在**同时满足
 `(P)`（Pareto）、`(I)`（无关备选独立性）与 `(D)`（非独裁）的共识函数 `C : 𝒯^k → 𝒯`
 （文献 154–155 行 Theorem 1）。
 

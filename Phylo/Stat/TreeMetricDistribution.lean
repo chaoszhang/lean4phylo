@@ -602,7 +602,8 @@ theorem card_fourSubsets_fin3 : (Fintype.card {A : Finset (Fin 3) // A.card = 4}
       simpa using Finset.card_le_univ A.1
     omega⟩
 
-/-- **缺口 1**（Steel & Penny 1993 **第 355–410 行** Theorem 1 与第 393–404 行 Corollary）：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_rfPoissonAsymptotic_gap`（`Phylo/Stat/TreeMetricDistribution.lean:928`）。
+**缺口 1**（Steel & Penny 1993 **第 355–410 行** Theorem 1 与第 393–404 行 Corollary）：
 partition metric 的共享 split 数 `v_p` **渐近 Poisson**。
 
 本库**没有**把「`n` 叶树空间上的
@@ -667,7 +668,8 @@ def quartetMeanEquidistributed_gap : Prop :=
     (∑ r ∈ 𝒯, ∑ r' ∈ 𝒯, quartetDistFull r r')
       = 48 * k ^ 2 * Fintype.card {A : Finset X // A.card = 4}
 
-/-- **缺口 3**（Bandelt & Dress 1986，如 Alon–Naves–Sudakov 2016 **第 137–141 行**所述；
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_maxQuartetDistance_gap`（`Phylo/Stat/TreeMetricDistribution.lean:765`）。
+**缺口 3**（Bandelt & Dress 1986，如 Alon–Naves–Sudakov 2016 **第 137–141 行**所述；
 改进见第 199 行 Theorem 1.1 `(0.69 + o(1))·C(n,4)`）：
 **最大** quartet 距离 `≤ (14/15)·C(n,4)`。
 
@@ -687,7 +689,8 @@ def maxQuartetDistance_gap : Prop :=
   ∀ (X : Type) [Fintype X] [DecidableEq X] (r r' : QuartetRes X),
     15 * quartetDistFull r r' ≤ 28 * Fintype.card {A : Finset X // A.card = 4}
 
-/-- **缺口 4**（Steel & Penny 1993 **第 456–458 行**）—— ★ **2026-10-14 W19 按文献更正命题** ✓。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_quartetMinDistance_gap`（`Phylo/Stat/TreeMetricDistribution.lean:853`）。
+**缺口 4**（Steel & Penny 1993 **第 456–458 行**）—— ★ **2026-10-14 W19 按文献更正命题** ✓。
 
 **文献原话（`references/md/SteelPenny1993_DistributionsTreeComparisonMetrics.md:456-458`，逐字）**：
 > "At the other end of the distribution, **the minimal possible value of `d_q` on two distinct trees with `n`

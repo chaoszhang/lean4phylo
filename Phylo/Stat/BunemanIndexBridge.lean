@@ -238,7 +238,8 @@ theorem isDSplit_iff_isDSplitStrong_of_fourPoint (δ : NJ.Dissimilarity X) {A B 
 
 故「正确形态」如下（用库内 `bunemanIndex` 表达隔离指数；`Dissimilarity` = 对称 + 零对角）。 -/
 
-/-- ⬜ **正确形态（W12j 登记）**：`Σ` 弱相容 ⟹ 存在**对称零对角** `δ`，使 `Σ` 恰是
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `weakCompatibilityRealization_gap_correct_shape_refuted`（`Phylo/Stat/BunemanIndexBridge.lean:351`）。
+⬜ **正确形态（W12j 登记）**：`Σ` 弱相容 ⟹ 存在**对称零对角** `δ`，使 `Σ` 恰是
 其**正隔离指数**的 split 集，且**隔离指数就是给定权重 `w`**、非成员的隔离指数为 `0`。
 
 ⚠️ **W25-a：本形态是假命题** ✗（本 `def` 原文**逐字未改**）—— 形式化反例见 §4.1 的
@@ -888,7 +889,8 @@ theorem canonicalSplitDecomposition_gap_correct_shape_holds :
 
 /-! ## 8.2 ⛔ **BdD Theorem 2 的忠实形态**（W25-b 登记；**W26-c 由 `§8.5` 机器证伪**） -/
 
-/-- ⛔ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；★★★ W26-c 已机器证伪）**：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap_faithful`（`Phylo/Stat/BunemanIndexBridge.lean:1368`）。
+⛔ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；★★★ W26-c 已机器证伪）**：
 
 `δ` 是 `X` 上的**度量**（`M(X)`：对称、`x = x ⟹ 0`、非负、三角不等式 —— `:673-684`、
 `:816`、`:825` 的框架），且**残差 `δ₀` 仍是度量**、并且 split-prime（隔离指数处处 `0`）。
@@ -2634,7 +2636,8 @@ theorem sideA_subset_cluster_meets (S u : Split X) (ρ : X)
 
 /-! ### 11.6 (★′) 极小性一步：登记（W19） -/
 
-/-- ❌ **(★″) 极小 cluster 存在性 —— 已证伪（W20）**：本命题**为假** ✗（反例全文见 §11.7：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `minimalCluster_exists_gap_false`（`Phylo/Stat/BunemanIndexBridge.lean:2833`）。
+❌ **(★″) 极小 cluster 存在性 —— 已证伪（W20）**：本命题**为假** ✗（反例全文见 §11.7：
 `α = Fin 5`、`F = { {0,1}|{2,3,4}, {2,3}|{0,1,4} }`（两两相容、**相离**）、`S = {0,2}|{1,3,4}`、`ρ = 4 ∈ S.sideB`；
 两个 cluster `{0,1}`、`{2,3}` **都咬** `S.sideA = {0,2}` 却**相离** ⇒ **不存在**被所有咬 `S.sideA` 者包含的 `u₀` ✗）。
 ⇒ 保留此 `def` 仅为**历史登记**，**不得**用作任何证明步骤 ✗；极小性路线已作废，**(★′)** 需另走路线 ✓。
@@ -3346,7 +3349,8 @@ theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} 
 层析论证，不在 W27-b 时间盒内。本节**只**交「**忠实 ⟹ 弱化**」方向
 （`weakCompatibilityRealization_gap_of_weights`，**无条件、零 `sorry`**）。 -/
 
-/-- ★★★★ **忠实形态**（W27-b 新立；BdD Theorem 3 的**两条**断言一起，一般 `α` 的 `_holds` 形态）。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_weakCompatibilityRealization_gap_weights`（`Phylo/Stat/BunemanIndexBridge.lean:4528`）。
+★★★★ **忠实形态**（W27-b 新立；BdD Theorem 3 的**两条**断言一起，一般 `α` 的 `_holds` 形态）。
 
 `F` 弱相容、`w > 0` 于 `F` ⇒ 取 `δ := Σ_{u∈F} w_u δ_u`，则
 ① `IsDSplit δ s.sideA s.sideB ⟺ ∃ t ∈ F, t = s ∨ t.swap = s`（**弱化形态**的全部内容）；

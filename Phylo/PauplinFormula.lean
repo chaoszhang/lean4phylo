@@ -902,7 +902,8 @@ theorem ex3_nonempty :
 
 /-! ## 8. 缺口（`def … : Prop`，**不是** `axiom`、**不是** `sorry`） -/
 
-/-- ⬜ ★★★ **缺口 D2-A：逐边 Pauplin 归一化**（式 (9)，`:2027`）—— 公式的**唯一**剩余难点。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `pauplinEdgeCoeff_gap_refuted`（`Phylo/PauplinFormula.lean:988`）。
+⬜ ★★★ **缺口 D2-A：逐边 Pauplin 归一化**（式 (9)，`:2027`）—— 公式的**唯一**剩余难点。
 
 **陈述**：对二叉树 `T`（`T.IsBinary`）与每条边 `e`，
 

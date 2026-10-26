@@ -991,7 +991,8 @@ def TwoClanLawGap : Prop :=
           (fun ω => (tree ω).IsClade A ∧ (tree ω).IsClade B), prob ω)
         = if A.card + B.card = n then qnExhaustive A.card B.card else qn n A.card B.card
 
-/-- **缺口 G3（Theorem 6.4(i) 的概率层：三个 clan）** —— ★ **2026-10-14 W19 按文献更正前提** ✓。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `TripleClanLawGap_false`（`Phylo/Stat/ReciprocalMonophyly.lean:1093`）。
+**缺口 G3（Theorem 6.4(i) 的概率层：三个 clan）** —— ★ **2026-10-14 W19 按文献更正前提** ✓。
 
 **文献原话（`references/md/ZhuDegnanSteel2011_CladesClansReciprocalMonophylyarXiv1101.1311.md:1171-1191`）**：
 > 「**Theorem 6.4.** Let `n = a₁ + a₂ + a₃`. Then: **(i)** `q(a₁,a₂,a₃) = 4a₁!a₂!a₃!/(n−1)! · Σ_{i=1}^{3} 1/((n−a_i)((n−a_i)²−1))`」

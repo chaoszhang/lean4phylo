@@ -429,7 +429,8 @@ theorem exGreedy_trees_exist :
 
 /-! ## §6 显式缺口（C3 / C4） -/
 
-/-- ⬜ **缺口 C4（贪心共识）：ADR2016 `:779–781` 的一句话转述不定义一个函数。**
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `greedyConsensus_gap_refuted`（`Phylo/ConsensusGreedy.lean:449`）。
+⬜ **缺口 C4（贪心共识）：ADR2016 `:779–781` 的一句话转述不定义一个函数。**
 
 下式即该转述**隐含需要**的性质：贪心输出**只依赖候选多重集**（与次序无关）。
 本文件**已证它为假**（`greedyConsensus_gap_refuted`）：`Fin 4` 上同一候选多重集

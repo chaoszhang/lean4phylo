@@ -403,7 +403,8 @@ def IsCircularDist {n : ℕ} (f : α ≃ Fin n) (d : α → α → ℝ) : Prop :
       d (f.symm i) (f.symm l) + d (f.symm j) (f.symm k) ≤
         d (f.symm i) (f.symm k) + d (f.symm j) (f.symm l)
 
-/-- ⬜ **缺口 1（环形距离的实现 + `A` 满秩，文献 805–812、1058–1078 行）**：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `circularDistanceRealization_gap_false_at_fin3`（`Phylo/Algorithm/NeighborNet.lean:1280`）。
+⬜ **缺口 1（环形距离的实现 + `A` 满秩，文献 805–812、1058–1078 行）**：
 每个环形（Kalmanson）距离矩阵都是某个**非负**加权环形 split 族的系统发生距离。
 
 未落原因：这需要 Bandelt–Dress (1992) 的孤立指数/分裂分解理论（本库 `Phylo/SplitWeak.lean`

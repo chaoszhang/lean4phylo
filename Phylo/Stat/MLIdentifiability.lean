@@ -417,7 +417,8 @@ theorem fourTaxon_argmax_eq_truth {t : Fin 3}
   norm_num
 /-! ## 6. 显式缺口（**不硬编、不弱化**） -/
 
-/-- ⬜ **缺口（一般模型类的可识别性输入 · 模型层）** —— **假设槽**，不是普遍真命题：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `generalModelIdentifiability_gap_false`（`Phylo/Stat/MLIdentifiability.lean:446`）。
+⬜ **缺口（一般模型类的可识别性输入 · 模型层）** —— **假设槽**，不是普遍真命题：
 对 **JC69 / K80 / GTR**、任意 `n ≥ 4`、任意枝长，**期望对数似然在真树处唯一最大**
 （Chang 1996 的 identifiability 定理）。
 

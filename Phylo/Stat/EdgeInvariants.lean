@@ -272,7 +272,8 @@ theorem minor_mem_edgeIdeal :
 
 /-! ## 7. 诚实边界（显式缺口） -/
 
-/-- **缺口（I6 的「充分性」半边）**：Casanellas–Fernández-Sánchez (2011)
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `edgeInvariants_suffice_gap_refuted`（`Phylo/Stat/EdgeInvariants.lean:385`）。
+**缺口（I6 的「充分性」半边）**：Casanellas–Fernández-Sánchez (2011)
 **Theorem 4.4（1528–1548 行）＋ Corollary 4.8（1672–1700 行）**：
 
 > 对一般点 `p ∈ U`（各拓扑的「展平秩都取到期望最大值」的开集）与任意树 `T₀`，

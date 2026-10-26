@@ -451,7 +451,8 @@ namespace Split
 
 variable {α : Type*} [Fintype α] [DecidableEq α]
 
-/-- ⬜ **缺口（T-4）：NNI 图的连通性 ＋ 精确 NNI 距离的闭式**。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `nniDistance_exact_gap_false`（`Phylo/Algorithm/NNINeighborhood.lean:526`）。
+⬜ **缺口（T-4）：NNI 图的连通性 ＋ 精确 NNI 距离的闭式**。
 
 **陈述**：对任意两个「同为某二叉树的 split 系统」的 `S, S'`，
 
@@ -534,7 +535,8 @@ theorem nniDistance_exact_gap_not_universal :
     ¬ (∀ (n : ℕ) (S S' : Finset (Split (Fin n))), nniDistance_exact_gap n S S') :=
   fun h => nniDistance_exact_gap_false (h 4 ∅ {exS₀})
 
-/-- ⚠️ **缺口（W12g 登记 · W25 判定：【陈述为假】）**：NNI 图（组合 split 层）的**连通性** ——
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `nniConnectivity_gap_refuted`（`Phylo/Algorithm/NNINeighborhood.lean:634`）。
+⚠️ **缺口（W12g 登记 · W25 判定：【陈述为假】）**：NNI 图（组合 split 层）的**连通性** ——
 即 `nniDistance_exact_gap` 的**第一项**。
 
 **W25 结论**：`NNIDist` 每一步都是 `NNIMove`（删一条、加一条）⇒ split 数**守恒**

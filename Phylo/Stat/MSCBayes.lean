@@ -493,7 +493,8 @@ example : ∃ M : FiniteBayesModel (Fin 2),
 
 /-! ## 5. 显式缺口（超范围项，**不硬编**） -/
 
-/-- **缺口（X6-A）：一般连续先验下的后验一致性 / MCMC**。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `ContinuousPriorPosteriorConsistencyGap_false`（`Phylo/Stat/MSCBayes.lean:576`）。
+**缺口（X6-A）：一般连续先验下的后验一致性 / MCMC**。
 
 Heled–Drummond (2010) Eq. (1)（**496–510** 行）与 Rannala–Yang (2003) (4)(5) 式
 （**355–370** 行）给出的对象，是**连续**物种树空间上的后验，其计算靠

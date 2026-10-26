@@ -391,7 +391,8 @@ def bme_pauplin_identity_gap (δ : Dissimilarity X) : Prop :=
       (∀ i j : X, i ≠ j → (∑ e : E, S i j e) = (p i j : ℝ)) ∧
       (∀ e : E, ∑ x ∈ plane, bmeCoeff (p x.1 x.2) * S x.1 x.2 e = 2)
 
-/-- ★★★ **缺口 2：距离估计量的相合性（模型/概率层）**（DesperGascuel2004 `:653–669`）。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `bme_statistical_consistency_gap_refuted`（`Phylo/BMELeastSquares.lean:830`）。
+★★★ **缺口 2：距离估计量的相合性（模型/概率层）**（DesperGascuel2004 `:653–669`）。
 
 **陈述**：设 `Δ̂ n` 是样本量 `n` 下的距离估计矩阵，`D` 是真距离矩阵。则
 

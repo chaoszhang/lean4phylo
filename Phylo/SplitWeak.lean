@@ -565,7 +565,8 @@ def weakCompatibilityRealization_gap : Prop :=
       ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
         ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s
 
-/-- ⬜ **缺口 2（典范分解，1651–1655 行 Theorem 2 + 673–684 行）**：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap`（`Phylo/Stat/BunemanIndexBridge.lean:704`）。
+⬜ **缺口 2（典范分解，1651–1655 行 Theorem 2 + 673–684 行）**：
 任一对称 `δ` 可写成 `δ = δ₀ + Σ_{S ∈ Σ} c_S · δ_S`，其中 `c_S > 0`、残差 `δ₀` **split-prime**。
 
 未落原因：需要先把「度量」「四点条件」与树的边权（`Phylogram.dist`）接起来，

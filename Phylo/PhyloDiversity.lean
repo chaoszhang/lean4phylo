@@ -301,7 +301,8 @@ theorem not_PD_submodular :
 
 /-! ## §5 显式缺口登记（Steel 式 (1) 的「极大链」装配） -/
 
-/-- ★★★ **Steel 2005 Theorem 1 的最终装配（显式缺口登记）**。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_greedy_gap`（`Phylo/PhyloDiversity.lean:341`）。
+★★★ **Steel 2005 Theorem 1 的最终装配（显式缺口登记）**。
 
 文献链条：Steel 式 (1)（第 262–275 行）⟹「`PD_k` 的任一元素由 `PD_{k−1}` 的任一元素加一个
 元素得到，且该元素必使 `PD` 增量最大」（第 332–337 行的「greedoid 论证」）⟹ Theorem 1。

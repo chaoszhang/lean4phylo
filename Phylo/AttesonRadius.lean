@@ -1018,7 +1018,8 @@ theorem atteson_lemma11_gap_holds (δ : Dissimilarity X) : atteson_lemma11_gap �
     exact absurd ⟨(k, l), hmemP⟩ hPne
 
 
-/-- ★★★ **缺口 2：Atteson Lemma 6 的归约步**（`:677–694` 边权公式 (7)），
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `atteson_reduction_gap_refuted`（`Phylo/AttesonRadius.lean:1144`）。
+★★★ **缺口 2：Atteson Lemma 6 的归约步**（`:677–694` 边权公式 (7)），
 即 Theorem 1（`:868–916`）归纳不变量 (a)(b) 的递推。
 
 设 `δ` 可加（`FourPoint`）、`(i,j)` 是 `δ` 的樱桃、`θ ∈ [0,1]`。则把 `i,j` 按更新式 (6)
