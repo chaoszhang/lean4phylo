@@ -88,21 +88,23 @@ Phylo/
 
 ## 规模
 
-★ 下表全部为 **`2026-10-27` 实测值**（`2026-10-26` 那一版「156 模块 / 101,916 行 / 6,378 声明 / 3988 jobs」
-已被本表取代；更早的「155 模块 / 100,768 行 / 6,323 声明 / 3987 jobs」、「151 模块 / 98,677 行 / 6,207 声明 / 3983 jobs」
+★ 下表全部为 **`2026-10-27` 实测值**（同日更早的「105,222 行」那一版已被本表取代 —— W35 给 21 条
+已证伪缺口的 docstring 加了标记行；`2026-10-26` 那一版「156 模块 / 101,916 行 / 6,378 声明 / 3988 jobs」
+亦已作废；更早的「155 模块 / 100,768 行 / 6,323 声明 / 3987 jobs」、「151 模块 / 98,677 行 / 6,207 声明 / 3983 jobs」
 与「27 文件 / 7200 行 / 401 声明 / 3187 jobs」均已作废）。
 复跑：`bash scripts/measure.sh`（**仓库内脚本**，口径与本表逐字一致 —— 剥注释后统计；口径说明见脚本头部）。
 
 | 指标 | 值（`2026-10-27` 实测） |
 |---|---|
 | Lean 模块 | **156**（`Phylo/**` 的 `.lean` 文件数 **恒等于** `Phylo.lean` 的 `import Phylo` 条数；另有根模块 `Phylo.lean` 本身，故库内 `.lean` 计 **157** 个） |
-| Lean 源行数 | **105,222**（`Phylo/**/*.lean`） |
+| Lean 源行数 | **105,243**（`Phylo/**/*.lean`） |
 | 顶层声明 | **6,486**（剥注释后机械统计 `theorem`/`lemma`/`def`/`abbrev`/`structure`/`class`/`instance`/`inductive`） |
 | `sorry` / `axiom` / `opaque` | **0 / 0 / 0**（未形式化处落成显式 `def … : Prop` 缺口登记） |
 | `lake build` | **通过（3988 jobs）** |
 | 缺口台账（七桶 · `scripts/list_gaps.sh`） | 真开放 **0** · 已收口 44 · 条件收口 2 · 已证伪 21 · 追溯 1 · 判定收档 2 · 长期开放 1 ＝ **71** |
 
-复跑方式：`lake build`（job 数）、`bash scripts/list_gaps.sh B`（七桶）、`bash scripts/check_vacuous.sh`（空转自证）。
+复跑方式：`lake build`（job 数）、`bash scripts/list_gaps.sh B`（七桶）、`bash scripts/check_vacuous.sh`（空转自证）、
+`bash scripts/check_refuted.sh`（已证伪标记）、`bash scripts/measure.sh`（本表全部数字）。
 
 ## 缺口台账：七桶怎么读（正面回答外部审查的「53%」）
 
