@@ -647,4 +647,175 @@ theorem both_blocks_iff_rootSplit {n : ℕ} (hn : 2 ≤ n) (ω : RankedGeneTree.
     · rw [card_compl_eq n A]; omega
     · rw [card_compl_eq n A]; omega
 
+variable {N : ℕ}
+
+/-! ## 试验：chainMap 与 gchain 在倒数第二层的对齐 -/
+
+theorem chainMap_last_level (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n) :
+    RankedGeneTree.chainMap n f (n - 2) = gchain (n - 1) f ((n - 1) - 1) := rfl
+
+/-! ## 纤维二分 -/
+
+theorem fiber_eq_of_mem_blocksOf {n : ℕ} {r : Fin n → Fin n} {A : Finset (Fin n)}
+    (hA : A ∈ RankedGeneTree.blocksOf n r) :
+    ∃ a : Fin n, A = Finset.univ.filter (fun z => r z = r a) := by
+  rw [RankedGeneTree.blocksOf, Finset.mem_image] at hA
+  obtain ⟨w, -, hw⟩ := hA
+  exact ⟨w, hw.symm⟩
+
+theorem fiber_dichotomy {n : ℕ} {r : Fin n → Fin n} {A : Finset (Fin n)}
+    (hA : A ∈ RankedGeneTree.blocksOf n r) (hAc : Aᶜ ∈ RankedGeneTree.blocksOf n r)
+    (w : Fin n) :
+    Finset.univ.filter (fun z => r z = r w) = A ∨
+      Finset.univ.filter (fun z => r z = r w) = Aᶜ := by
+  obtain ⟨a, ha⟩ := fiber_eq_of_mem_blocksOf hA
+  obtain ⟨b, hb⟩ := fiber_eq_of_mem_blocksOf hAc
+  have hw : w ∈ A ∪ Aᶜ := by
+    rw [Finset.union_compl]
+    exact Finset.mem_univ w
+  rcases Finset.mem_union.mp hw with h | h
+  · left
+    have hrw : r w = r a := by
+      rw [ha] at h
+      simpa using h
+    rw [ha, hrw]
+  · right
+    have hrw : r w = r b := by
+      rw [hb] at h
+      simpa using h
+    rw [hb, hrw]
+
+/-! ## s 上「恰两层」的等价关系描述 -/
+
+def SplitEq (s A : Finset (Fin N)) (r : Fin N → Fin N) : Prop :=
+  ∀ w ∈ s, ∀ w' ∈ s, r w = r w' ↔ (w ∈ A ↔ w' ∈ A)
+
+instance instDecidableSplitEq (s A : Finset (Fin N)) (r : Fin N → Fin N) :
+    Decidable (SplitEq s A r) := by unfold SplitEq; infer_instance
+
+def LastSplit (s A : Finset (Fin N)) (m : ℕ) (f : Fin m → Fin N × Fin N) : Prop :=
+  SplitEq s A (gchain m f (m - 1))
+
+instance instDecidableLastSplit (s A : Finset (Fin N)) (m : ℕ) (f : Fin m → Fin N × Fin N) :
+    Decidable (LastSplit s A m f) := by unfold LastSplit; infer_instance
+
+def IsMHP (s A : Finset (Fin N)) (m : ℕ) (f : Fin m → Fin N × Fin N) : Prop :=
+  IsMH s m f ∧ LastSplit s A m f
+
+instance instDecidableIsMHP (s A : Finset (Fin N)) (m : ℕ) : DecidablePred (IsMHP s A m) :=
+  fun f => by unfold IsMHP; infer_instance
+
+def mhFinsetP (N m : ℕ) (s A : Finset (Fin N)) : Finset (Fin m → Fin N × Fin N) :=
+  (Finset.univ : Finset (Fin m → Fin N × Fin N)).filter (IsMHP s A m ·)
+
+theorem mem_mhFinsetP {m : ℕ} {s A : Finset (Fin N)} {f : Fin m → Fin N × Fin N} :
+    f ∈ mhFinsetP N m s A ↔ IsMHP s A m f := by
+  simp [mhFinsetP]
+
+/-! ## 「两侧都是块」⟺「倒数第二层恰为 A | Aᶜ」 -/
+
+theorem splitEq_univ_iff_blocksOf {n : ℕ} {r : Fin n → Fin n} {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    SplitEq (Finset.univ : Finset (Fin n)) A r ↔
+      (A ∈ RankedGeneTree.blocksOf n r ∧ Aᶜ ∈ RankedGeneTree.blocksOf n r) := by
+  constructor
+  · intro h
+    have hane : A.Nonempty := Finset.card_pos.mp (by omega)
+    obtain ⟨a, ha⟩ := hane
+    have hAcne : Aᶜ.Nonempty := by
+      rw [← Finset.card_pos, card_compl_eq n A]; omega
+    obtain ⟨b, hb⟩ := hAcne
+    have hfib : ∀ w : Fin n, w ∈ A → Finset.univ.filter (fun z => r z = r w) = A := by
+      intro w hw
+      ext z
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      exact (h z (Finset.mem_univ z) w (Finset.mem_univ w)).trans (by simp [hw])
+    have hfibc : ∀ w : Fin n, w ∉ A → Finset.univ.filter (fun z => r z = r w) = Aᶜ := by
+      intro w hw
+      ext z
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_compl]
+      constructor
+      · intro hz
+        rw [h z (Finset.mem_univ z) w (Finset.mem_univ w)] at hz
+        exact fun hzA => hw (hz.mp hzA)
+      · intro hzA
+        rw [h z (Finset.mem_univ z) w (Finset.mem_univ w)]
+        exact ⟨fun h => absurd h hzA, fun h2 => absurd h2 hw⟩
+    constructor
+    · rw [RankedGeneTree.blocksOf, Finset.mem_image]
+      exact ⟨a, Finset.mem_univ a, hfib a ha⟩
+    · rw [RankedGeneTree.blocksOf, Finset.mem_image]
+      exact ⟨b, Finset.mem_univ b, hfibc b (Finset.mem_compl.mp hb)⟩
+  · rintro ⟨hA, hAc⟩ w _ w' _
+    constructor
+    · intro heq
+      have hmem' : w' ∈ Finset.univ.filter (fun z => r z = r w) := by
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+        exact heq.symm
+      have hmem : w ∈ Finset.univ.filter (fun z => r z = r w) := by
+        simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+      rcases fiber_dichotomy hA hAc w with h | h
+      · rw [h] at hmem hmem'
+        exact ⟨fun _ => hmem', fun _ => hmem⟩
+      · rw [h] at hmem hmem'
+        exact ⟨fun h1 => absurd h1 (Finset.mem_compl.mp hmem), fun h1 => absurd h1 (Finset.mem_compl.mp hmem')⟩
+    · intro hiff
+      by_cases hw : w ∈ A
+      · have hw' : w' ∈ A := hiff.mp hw
+        rcases fiber_dichotomy hA hAc w with h | h
+        · have h2 : w' ∈ Finset.univ.filter (fun z => r z = r w) := by rw [h]; exact hw'
+          exact (by simpa using h2 : r w' = r w).symm
+        · exfalso
+          have : w ∈ Aᶜ := h ▸ Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl⟩
+          exact (Finset.mem_compl.mp this) hw
+      · have hwAc : w ∈ Aᶜ := Finset.mem_compl.mpr hw
+        have hw' : w' ∉ A := fun hh => hw (hiff.mpr hh)
+        have hw'Ac : w' ∈ Aᶜ := Finset.mem_compl.mpr hw'
+        rcases fiber_dichotomy hA hAc w with h | h
+        · exfalso
+          have : w ∈ A := h ▸ Finset.mem_filter.mpr ⟨Finset.mem_univ _, rfl⟩
+          exact hw this
+        · have h2 : w' ∈ Finset.univ.filter (fun z => r z = r w) := by rw [h]; exact hw'Ac
+          exact (by simpa using h2 : r w' = r w).symm
+
+
+/-! ## 主桥：交项计数 = 「倒数第二层恰为 A | Aᶜ」的合并史条数 -/
+
+theorem inter_card_eq_mhFinsetP (n : ℕ) {A : Finset (Fin n)}
+    (h1 : 2 ≤ A.card) (h2 : A.card ≤ n - 2) :
+    (blockHistories n A ∩ blockHistories n Aᶜ).card
+      = (mhFinsetP n (n - 1) (Finset.univ : Finset (Fin n)) A).card := by
+  classical
+  have hn : 2 ≤ n := by omega
+  rw [inter_blockHistories_eq]
+  refine Finset.card_bij
+    (fun ω (_ : ω ∈ Finset.univ.filter (fun ω : RankedGeneTree.RankedTree n =>
+      A ∈ blockFamily n ω ∧ Aᶜ ∈ blockFamily n ω)) => ω.1) ?_ ?_ ?_
+  · intro ω hω
+    obtain ⟨-, hA, hAc⟩ := Finset.mem_filter.mp hω
+    rw [mem_mhFinsetP]
+    refine ⟨(isMH_univ_iff n ω.1).mpr ω.2, ?_⟩
+    exact (splitEq_univ_iff_blocksOf h1 h2).mpr ((both_blocks_iff_rootSplit hn ω h1 h2).mp ⟨hA, hAc⟩)
+  · intro ω₁ _ ω₂ _ heq
+    exact Subtype.ext heq
+  · intro g hg
+    rw [mem_mhFinsetP] at hg
+    obtain ⟨hmh, hls⟩ := hg
+    refine ⟨⟨g, (isMH_univ_iff n g).mp hmh⟩, ?_, rfl⟩
+    rw [Finset.mem_filter]
+    exact ⟨Finset.mem_univ _, (both_blocks_iff_rootSplit hn ⟨g, (isMH_univ_iff n g).mp hmh⟩ h1 h2).mpr
+      ((splitEq_univ_iff_blocksOf h1 h2).mp hls)⟩
+
+/-! ## 装配：mhFinsetP 的闭式计数 ⟹ lockInterCount -/
+
+theorem blockInterCount_of_mhFinsetPCard
+    (H : ∀ (n : ℕ) (A : Finset (Fin n)), 2 ≤ A.card → A.card ≤ n - 2 →
+      (mhFinsetP n (n - 1) (Finset.univ : Finset (Fin n)) A).card
+        = Hnat A.card * Hnat (n - A.card) * ((n - 2).choose (A.card - 1))) :
+    ∀ n : ℕ, blockInterCount n := by
+  intro n A h1 h2
+  rw [inter_card_eq_mhFinsetP n h1 h2, H n A h1 h2]
+  push_cast
+  rw [cast_Hnat, cast_Hnat, ← H_mul_pnHatExh_eq h1 h2]
+
 end Phylo.Stat.RankedTreeClanLaw
