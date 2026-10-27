@@ -1,18 +1,18 @@
 name = "lean4phylo"
 defaultTargets = ["Phylo"]
 
-# mathlib 依赖 —— ★ 钉死到具体 commit（2026-10-28 审计第 11 条的第一步，老师批「A+D」）。
-#   为什么用 commit 而不是 tag：本库的 toolchain 是 `leanprover/lean4:v4.35.0-rc3`
-#   （见 `lean-toolchain`），而 mathlib 的 tag 是按 **Lean 版本** 打的 ——
-#   `v4.35.0` 要求 lean4 `v4.35.0`（stable），与 rc3 **不配对**。
-#   这个 hash 就是 `lake-manifest.json` 里已经在用的那个 commit
-#   （= 2026-09-29 的 mathlib master），所以钉它**不改变任何构建结果**。
-#   ⚠️ 升级流程：改这里的 rev → 跑 `lake update` → **把新 manifest 一起提交** →
-#      跑 `bash scripts/check_pins.sh` 确认三者一致 → 全量重编并贴 job 数。
+# mathlib 依赖 —— ★ 钉到**已发布的稳定 tag**（2026-10-28 审计第 11 条 C 方案，老师批「预检→重编」）。
+#   mathlib 的 tag 按 **Lean 版本** 打：`v4.35.0` 要求 `leanprover/lean4:v4.35.0`，
+#   与本仓库 `lean-toolchain` **严格配对**（两者都钉在同一个已发布版本上，不用 RC、不用 master）。
+#   换了 tag 就必须同时换 toolchain，否则 compiler 与库的版本对不上。
+#   ⚠️ 升级流程（四步缺一不可）：
+#     ① 改这里的 rev ＋ 改 `lean-toolchain` ② `lake update`（会重下缓存，需要网络）
+#     ③ **把新 `lake-manifest.json` 一起提交** ④ `bash scripts/check_pins.sh` 核三者一致
+#     然后全量重编；job 数会随 Mathlib 版本变（v4.35.0 起是 4007），**不是**固定值。
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "0f64d30a9a4593b3ae50375b960a5cf7f0845606"
+rev = "v4.35.0"
 
 [[lean_lib]]
 name = "Phylo"

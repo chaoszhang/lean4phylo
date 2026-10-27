@@ -12,8 +12,9 @@
 #  ★ 判据（三选一，全部硬性）：
 #    · `lean-toolchain` 必须有内容，且**不许是浮动 ref**（`stable` / `latest` / 空）；
 #    · lakefile 的 mathlib `rev` **不许是 `master` / `main` / `stable`** 这类浮动 ref；
-#    · 若 lakefile 的 rev 是 40 位 commit hash ⇒ 必须**逐字等于** manifest 里 mathlib 的 `rev`。
-#      （若用 tag，则只打印提示：tag 的解析值由 manifest 记录，两者无法离线互推。）
+#    · 若 lakefile 的 rev 是 40 位 commit hash ⇒ 必须**逐字等于** manifest 里 mathlib 的 `rev`；
+#    · 若 rev 是 `vX.Y.Z` tag ⇒ 三条同时对上：manifest 的 `inputRev` = tag，且
+#      `lean-toolchain` = `leanprover/lean4:<同一个 tag>`（mathlib tag 按 Lean 版本打，必须成对）。
 #
 #  用法：  bash scripts/check_pins.sh          # 核（不一致 ⇒ EXIT 1）
 #  前置：  无（纯静态解析，不需要 `lake`，Windows 下也能跑）
@@ -117,8 +118,27 @@ if rev and mrev and bad == 0:
             say("  ✗ 不一致：lakefile = %s…，manifest = %s…" % (rev[:12], mrev[:12]))
             say("      ⇒ 改了 rev 就要跑 `lake update` 并把新 manifest **一起提交**")
             bad += 1
+    elif re.fullmatch(r'v\d+\.\d+\.\d+(-rc\d+)?', rev):
+        # 用了 tag ⇒ 三条必须同时对上：manifest.inputRev = tag，且 lean-toolchain 是同一个 tag。
+        # 这是 mathlib「tag 按 Lean 版本打」的硬约束，对不上必然编不过。
+        if minput != rev:
+            say("  ✗ manifest 的 inputRev = %r，与 lakefile rev = %r 不一致" % (minput, rev))
+            bad += 1
+        tc2 = ""
+        try:
+            tc2 = open("lean-toolchain", encoding="utf-8").read().strip()
+        except FileNotFoundError:
+            pass
+        want_tc = "leanprover/lean4:" + rev
+        if tc2 != want_tc:
+            say("  ✗ toolchain 与 mathlib tag 不配对：lean-toolchain = %r，应为 %r" % (tc2, want_tc))
+            say("      （mathlib 的 tag 按 Lean 版本打，必须成对升级）")
+            bad += 1
+        if bad == 0:
+            say("  ✓ lakefile rev = %s（tag）＝ manifest inputRev ＝ toolchain tag" % rev)
+            say("      manifest 解析到的 commit = %s…" % mrev[:12])
     else:
-        say("  ⚠ lakefile rev = \"%s\"（非 commit）⇒ 无法离线与 manifest 互推；" % rev)
+        say("  ⚠ lakefile rev = \"%s\"（既非 commit 也非 vX.Y.Z tag）⇒ 无法离线验证；" % rev)
         say("      manifest 记录的实际 commit = %s…，请人工确认它是该 ref 的解析值" % mrev[:12])
 
 say("")
