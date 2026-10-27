@@ -16,9 +16,36 @@
 #  用法：  bash scripts/axioms_snapshot.sh            # 核
 #          bash scripts/axioms_snapshot.sh --update   # 重录
 #  前置：  `lake build` 已绿（否则 `lake env lean` 找不到 olean）
+#
+#  ★ 执行环境（W39-7 补写；很重要，否则失败会被误读成「脚本坏了」）：
+#    本脚本**必须跑在 Linux（WSL）里**，且 PATH 里有 elan 装的 `lake`/`lean`。
+#    在 Windows 原生 shell（PowerShell / Git Bash / cmd）里跑，`lake` 不存在，
+#    会是裸的 `EXIT=127`（`lake: command not found`）——**那是环境不对，不是代码失败**。
+#    正确跑法：
+#        wsl -e bash -lc 'cd ~/lean4phylo-main && bash scripts/axioms_snapshot.sh'
+#    （`~/lean4phylo-main` 是有 olean 的构建镜像；canonical 仓库的 `.lake` 只有配置，
+#     没有 olean，在那里跑会报 `unknownIdentifier` / 缺 import。）
+#    ⇒ 脚本自己做环境自检：找不到 `lake` 就打印人话提示并以 **EXIT=2** 退出，
+#      与「快照真的不一致」的 **EXIT=1** 区分开（三态：0 一致 / 1 不一致 / 2 环境不对）。
 # ============================================================================
 set -u
 cd "$(dirname "$0")/.." || exit 9
+
+# ── 环境自检：缺 lake 时不要吐裸 127 ────────────────────────────────────────
+if ! command -v lake >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+✗ 环境不对：PATH 里没有 `lake`（elan 未加载，或当前是 Windows 原生 shell）。
+
+  本脚本必须在 **WSL (Linux)** 里跑，且要有 elan：
+      wsl -e bash -lc 'cd ~/lean4phylo-main && bash scripts/axioms_snapshot.sh'
+
+  另外：canonical 仓库的 `.lake` 只有配置、没有 olean，请在构建镜像里跑
+  （`~/lean4phylo-main`，用 `bash ~/w28/build.sh` 同步并构建）。
+
+  ⇒ 这不是代码失败，是执行环境不对（EXIT=2）；真不一致才是 EXIT=1。
+EOF
+  exit 2
+fi
 
 EXPECTED="scripts/axioms_expected.txt"
 TMP="AxiomsSnapshot.lean"
