@@ -99,7 +99,7 @@ end Phylo.Stat.HookLength
 | 1 | build | `lake build Phylo` **EXIT 0** | `bash ~/w28/build.sh` |
 | 2 | job 数 | **3988 ＋ 新增模块数**（每刀 +1，三刀 +3 = 3991） | 同上，末行 `Build completed successfully (N jobs)` |
 | 3 | 模块数 | 156 ＋ 新增（每刀 +1） | `grep -c '^import' Phylo.lean` |
-| 4 | 七桶台账 | 仍 **72**：真开放 1 / 已收口 43 / 条件收口 2 / 已证伪 17 / 追溯 6 / 判定收档 2 / 长期开放 1 | `bash scripts/list_gaps.sh B` |
+| 4 | 七桶台账 | 仍 **72**：真开放 1 / 已收口 38 / 条件收口 2 / 已证伪 17 / 追溯 6 / 判定收档 7 / 长期开放 1（W40 降级后口径） | `bash scripts/list_gaps.sh B` |
 | 5 | `check_vacuous.sh` | **44/44**，VERDICT ✓（它用 `grep -F` 名字与字面量，**不依赖行号** ⇒ 搬家不该让它变） | `bash scripts/check_vacuous.sh` |
 | 6 | `check_refuted.sh` | 21/21 ✓ | `bash scripts/check_refuted.sh` |
 | 7 | `check_file_imports` | EXIT 0 | `bash scripts/check_file_imports.sh` |

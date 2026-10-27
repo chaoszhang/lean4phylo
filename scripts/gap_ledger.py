@@ -73,7 +73,23 @@ PHYLO = os.path.join(ROOT, "Phylo")
 #   (c) 老师明文认可「判定完成 / 任务完成」（不是 dsh 自己说了算）。
 # 现值：rStarConsensus_gap —— (a) 谓词式 ＋ W19 判不忠实；(b) rStarConsensus_gap_strictSplits；
 #       (c) W24 派单「A-10 任务完成，代码归档」。
-ARCHIVED_JUDGED = ["rStarConsensus_gap", "bme_pauplin_identity_gap"]
+ARCHIVED_JUDGED = [
+    "rStarConsensus_gap",
+    "bme_pauplin_identity_gap",
+    # ★★ 2026-10-28 老师批准「5 条空转降 [判定收档]」（依据 W39-4 的逐条四问结论，
+    #    见 `scripts/vacuous_coverage.md` §「6 条『疑似自由槽』逐条结论」）。
+    #    这 5 条的登记形态是**恒真**的（`∃` 绑定了全部实质数据，可取退化值），`_vacuous_*` 就是它的机器证据。
+    #    为什么从「已收口」移出：`[已收口]` 的语义是「无条件、无特化地**证出了这个命题**」——
+    #    命题恒真并不等于证出了文献那条定理；留在「已收口」会让读者以为文献结论在库内。
+    #    ★ 移出**不删任何东西**：`_vacuous_holds` / `_vacuous_degenerate` 全部保留，
+    #    名字一字未改 ⇒ 口径 A 仍 72，**没有静默删债**；`check_vacuous.sh` 仍把它们列在表内（归类「自由槽」）。
+    #    ★ 反空真见证（谁取什么退化值使之为真）写在 `VACUOUS` 表与 `vacuous_coverage.md`。
+    "quarnetRules_level1_gap",              # QuarnetRules:358（`_vacuous_holds`）
+    "level1QuartetSystem_gap",              # QuarnetRules:378（唯一收口 `_vacuous_degenerate`）
+    "neighborNetAgglomeration_gap",         # NeighborNet:453（`_vacuous_holds`）
+    "bootstrap_confidence_gap",             # Bootstrap:1031（`_vacuous_holds`）
+    "msc_split_probability_object_gap",     # SplitProbabilities（`_vacuous_holds`）
+]
 # ★ 2026-10-23 老师裁定：`bme_pauplin_identity_gap`（原形态）**收档** —— 不再作为待证条目。
 #   技术备注（协调侧镜像实测）：它其实**2 行就能条件收口**
 #   （`_binary_holds` 给 `∃ T`，`_of_binary` 直接给本体，带 `2 ≤ |X|`）；
