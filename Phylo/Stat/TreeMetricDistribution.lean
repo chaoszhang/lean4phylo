@@ -631,7 +631,10 @@ def rfPoissonAsymptotic_gap : Prop :=
     ∀ eps : ℚ, 0 < eps → ∃ N : ℕ, ∀ n ≥ N, ∀ k ≤ n,
       |P n k / P n 0 - lam ^ k / (k.factorial : ℚ)| < eps
 
-/-- **缺口 2**（Steel & Penny 1993 **第 486–490 行** Eq.(11)；Alon–Naves–Sudakov 2016
+/--
+✅ **已收口**（`quartetMeanEquidistributed_gap_holds`，`Phylo/Stat/QuartetMeanEquidistributed.lean:225`，W12d 收口 `c88540c`）；下方「未证」是**历史记录**，勿据此判状态。
+
+**缺口 2**（Steel & Penny 1993 **第 486–490 行** Eq.(11)；Alon–Naves–Sudakov 2016
 **第 341–353 行** Prop 2.2 + Prop 2.3）：
 **label-invariant 分布下 quartet 距离的均值是分布无关的**，等于 `(2/3)·C(n,4)`。
 
@@ -644,7 +647,7 @@ def rfPoissonAsymptotic_gap : Prop :=
 等价地**归一化**均值 `= (2/3)·C(n,4)`（因为 `|𝒯| = 6k`，故
 `48k²C(n,4) / (2·36k²) = (2/3)C(n,4)`）。
 
-**未证**：需要一个「每个 4-子集恰有 6 个小侧、3 个互补类」的计数引理 + 交换求和。
+**当时未证**：需要一个「每个 4-子集恰有 6 个小侧、3 个互补类」的计数引理 + 交换求和。
 
 **已由脚本穷举核对**（`scripts/msc/tree_metric_distribution.py` §★D，
 **文献的原 setting**：固定一棵树 `T`，两棵树都取 `T` 的均匀随机重标号 `σ ∈ Sₙ`，

@@ -622,7 +622,10 @@ theorem iso_preserves_splits_gap :
       e.gIso.toEquiv.apply_symm_apply] at h
     exact h.symm
 
-/-- ★ **显式缺口 2 —— 原文 Figure 1 的分类定理**（113–116 行）：
+/--
+✅ **已收口**（`two_parent_trees_gap_holds`，`Phylo/TwoParentTrees.lean:590`，W21 任务 C3 `321585d`）；下方「终局 ⬜ 保留缺口」是**历史记录**，勿据此判状态。
+
+★ **显式缺口 2 —— 原文 Figure 1 的分类定理**（113–116 行）：
 > "there are precisely two trees that are parent trees for this collection of trees."
 
 本文件的主定理**不需要**它（§4 只用两条 quartet）。此处把它落成 `Prop`：
@@ -639,7 +642,7 @@ theorem iso_preserves_splits_gap :
 2. 最后一条的措辞是**包含**（`T₁` 的 split 系统 `⊆ T` 的），**不是**「`T` 恰是 `T₁` 或 `T₂`」
    —— 而 "there are **precisely two**" 的内容是**相等**（`↔`）。
 
-### ★D（W12a）**真值机器穷举**：本 `Prop` 为**真** ✓ —— 但 Lean 内仍缺「构造两棵树」的器材
+### ★D（W12a）**真值机器穷举**：本 `Prop` 为**真** ✓ —— 但当时 Lean 内仍缺「构造两棵树」的器材
 
 `scripts/msc/w12a_twoparent_check.py`（纯标准库、穷举、无 Monte Carlo）在
 「无根树 ↔ 两两相容的非平凡 split 族」模型下**穷举** 6 taxa 的全部相容族（**236** 个，最大族大小 3）：
@@ -657,7 +660,7 @@ theorem iso_preserves_splits_gap :
 ⇒ **本 `Prop` 不是可证伪的**（我早前"两条不忠实"的担心只涉及**措辞**，不涉及真值）；
 它**真**，且真内容正是**分类定理**（机器已在小模型上证实）。
 
-**Lean 内仍缺什么（W12a8 修正：原「缺精确构造」的判断是错的 ✓）**：
+**当时 Lean 内仍缺什么（W12a8 修正：原「缺精确构造」的判断是错的 ✓）**：
 1. ~~两棵显式 `Cladogram.{0,0} (Fin 6)`，其 split 系统**恰为** `P₁`、`P₂`~~
    **❌ 该器材库内早有**：`Phylo/ConsensusExtra.lean:222` 的
    ```text
@@ -686,7 +689,7 @@ theorem iso_preserves_splits_gap :
    机器见证已在 `scripts/msc/w12a_twoparent_check.py`（236 个相容族穷举、parent 族**恰 2**、
    每条族的**显式树构造**核验 `V=10, E=9` ✓）。
 
-**终局 ⬜ 保留缺口**（真值已确认为**真**，唯一剩余器材 = 上面的**分类定理**）。 -/
+**终局 ⬜（当时保留缺口）**（真值已确认为**真**，唯一剩余器材 = 上面的**分类定理**）。 -/
 def two_parent_trees_gap : Prop :=
   ∃ T₁ T₂ : Cladogram.{0, 0} (Fin 6),
     (∀ q ∈ prof, DisplaysQP T₁ q) ∧ (∀ q ∈ prof, DisplaysQP T₂ q) ∧
@@ -695,7 +698,10 @@ def two_parent_trees_gap : Prop :=
       (∀ s : Split (Fin 6), T₁.IsSplitOf s → T.IsSplitOf s) ∨
       (∀ s : Split (Fin 6), T₂.IsSplitOf s → T.IsSplitOf s))
 
-/-- ★★ **缺口 2 的**改写形态**（W12a 新增，**不替代**原 `def`）**：原文 Figure 1 的"there are **precisely two** trees that are parent trees for this collection of trees"
+/--
+✅ **已收口**（`two_parent_trees_gap_correct_shape_holds`，`Phylo/TwoParentTrees.lean:578`，W21 任务 C3 `321585d`）；下方「仍然未证」是**历史记录**，勿据此判状态。
+
+★★ **缺口 2 的**改写形态**（W12a 新增，**不替代**原 `def`）**：原文 Figure 1 的"there are **precisely two** trees that are parent trees for this collection of trees"
 （113–116 行）＋「`σ` 交换这两棵 parent tree」（141–144 行）的忠实落式。
 
 与原 `two_parent_trees_gap` 的三处差别：
@@ -706,7 +712,7 @@ def two_parent_trees_gap : Prop :=
   `Cladogram` 无 `DecidableEq`，故**不**写 `T₁ ≠ T₂`）；
 * ①②③ 合起来才排除了 `T₁ = T₂` 的退化代入（见下方 `two_parent_trees_correct_shape_not_degenerate`）。
 
-**仍然未证**（真内容 = 分类定理）：存在性与 ② —— 需要「三条 quartet 的展示 ⟹ split 系统被锁定」，
+**当时未证**（真内容 = 分类定理）：存在性与 ② —— 需要「三条 quartet 的展示 ⟹ split 系统被锁定」，
 即 6 taxa 上无根树的分类。**已核过的部分**：`prof_relabel`（`σ` 保持 `prof`，已证）＋
 本文件的 `iso_preserves_splits_gap`（同构 ⟹ split 系统相同，已证）—— 这两条给出
 「若 `T₁` 是 parent tree 且 `T₁` 的 split 系统被 `σ` 保持不变，则 `T₁` 也是 `σ`-不变树」，

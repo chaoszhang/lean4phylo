@@ -682,7 +682,10 @@ theorem concordant3_iff_clades : ∀ f : Fin (3 - 1) → Fin 3 × Fin 3,
 本 `def` 保留为**接口/文档**，不再表示缺口。 -/
 def rankedTree_card_gap : Prop := ∀ n : ℕ, 2 ≤ n → ((mergeHistories n).card : ℝ) = H n
 
-/-- ❌ **仍是缺口 G2（论文 Remark 6，PDF 第 416–424 行）**：给定无次序拓扑的 ranking 数
+/--
+✅ **已收口**（`rankedFiberCount_gap_holds`，`Phylo/Stat/HookLength.lean:5108`，§23 收口 `771e793`）；下方「保留缺口」是**历史记录**，勿据此判状态。
+
+❌ **当时仍是缺口 G2（论文 Remark 6，PDF 第 416–424 行）**：给定无次序拓扑的 ranking 数
 `= (n−1)!/∏_{c ∈ clades, c.card ≥ 2} (c.card − 1)`（内部顶点 ↔ 大小 `≥ 2` 的 clade）。
 
 本批**做到了**：
@@ -747,7 +750,7 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
 * ⚠️ **三次 grep 确认 Mathlib 无线性扩展计数**（`Order/Extension/Linear.lean` 只给
   `LinearExtension` 类型别名 + `extend_partialOrder`；`linearExtension` / `topological` /
   `Nat.card ∘ LinearExtension` 的计数式引理 **0 命中**）⇒ `LE` 是**自造**的；
-* ⬜ **仍缺**：由 §5（分母递推）+ §6（计数恒等式）+ `LE_eq` **归纳**出闭形式
+* ⬜ **当时仍缺**：由 §5（分母递推）+ §6（计数恒等式）+ `LE_eq` **归纳**出闭形式
   `LE T C · ∏_{D ⊆ C} hook T D = (hook T C)!` —— 需要一条**自造的归纳原理**
   （把 `LE` 的 well-founded 递归暴露成 `induction`）＋ `Finset.prod_attach` 对齐；
   这是 Lean 基础设施问题，**不是**数学难点。**未用** `sorry` 绕过。
@@ -765,7 +768,7 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
   两条乘法递推的 instance，以及计数恒等式在 `{1,2}` / `{2}` 上的 instance。
 
 ⇒ 归口：§5 + §6 拼起来 + 归纳假设即得 `LE(T) = N!/∏ s_v`；
-⬜ **仍缺的最后一环**：线性扩展数 `LE` 本身的递推
+⬜ **当时仍缺的最后一环**：线性扩展数 `LE` 本身的递推
 `LE(T) = multinomial(N-1; N_1..N_k) · ∏_B LE(T_B)`（需要先定义 `LE` 并证「根必在第一位 + 块间插空」）。
 
 **★ W12f 第三轮：钩长器材层已落地**（`Phylo/Stat/HookLength.lean`，新模块）
@@ -828,7 +831,7 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
      ＋ ★B `laminarFamily_clades_01_2 / _01_23 / _012_3`（三个枚举 clade 集）。
      ⇒ 这把 `HookLength.lean` 的 `LE_mul_prod_hook_eq_factorial` **所需的
      `LaminarFamily T` 假设在 `T = cladesOf n f` 上真正兑现了**（此前只是假设）。
-   * ⬜ **仍缺 (ii) 的精确剩余内容**（如实登记，**未**作为定理声明）：
+   * ⬜ **当时仍缺 (ii) 的精确剩余内容**（如实登记，**未**作为定理声明）：
      ```text
      ((mergeHistories n).filter (fun g => cladesOf n g = cladesOf n f)).card
        = LE (cladesOf n f) Finset.univ hU          -- hU : univ ∈ cladesOf n f
@@ -837,15 +840,15 @@ n=6  #mergeHistories=2700  H_n=2700  #clade_sets=945  fiber histogram={1: 360, 4
      右端是 §8 的**多项式系数递推**定义；把两者接起来需要
      「`cladesOf` 的 clade 包含偏序的**线性扩展** ⟺ 合并史的 **ranking**」的**显式双射**。
      ⚠️ 本轮**只**完成了它的**前提**（镶嵌性），**没有**给出双射 ⇒ 一般 `n` 的
-     `rankedFiberCount_gap` **仍然开着**。
-   ⬜ **仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
+     `rankedFiberCount_gap` **当时仍然开着**。
+   ⬜ **当时仍缺**：由 §5+§6+`LE_eq` **归纳**出闭形式 `LE · ∏s = N!`
    （需自造 `LE` 的归纳原理 + `Finset.prod_attach` 对齐 —— Lean 基础设施问题），
    以及第 (ii) 条的**显式双射**「`cladesOf` 的 clade 包含偏序的线性扩展 ⟺ 合并史的 ranking」
    —— (ii) 是本缺口的**组合实体**，第 (i) 条的计数公式替代不了它。
    数值核对：`scripts/msc/w12f_hook_count_check.py`（`N ≤ 17` 的全部 `(N_B)` 向量
    `multinomial(N-1; N_B)·∏N_B!·N = N!`，`exit 0`，`ALL_OK`）。
 
-⇒ 一般 `n` **如实保留缺口**；本轮的增量是**器材层**（可复用的钩长定义与递推），
+⇒ 一般 `n` **当时如实保留缺口**；本轮的增量是**器材层**（可复用的钩长定义与递推），
 不是缺口本体。 -/
 def rankedFiberCount_gap : Prop :=
   ∀ (n : ℕ) (f : Fin (n - 1) → Fin n × Fin n), IsMergeHistory n f →
