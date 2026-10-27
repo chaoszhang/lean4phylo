@@ -71,7 +71,7 @@ Algorithmica 25:251–278 (1999)）。本文件所有行号都指该 md 文件�
 ⚠️ **缺口（落成 `Prop`，都不是数学缺口，是本库的工程缺口）**
 
 * `IsCherrySeparated`：**Atteson Lemma 11 的度量版**（`:1989–2009`）—— 本文件唯一的非纯代数假设；
-* `atteson_lemma11_gap`：上述假设对树度量的**可实现性**；
+* `atteson_lemma11_gap_order_form`：上述假设对树度量的**可实现性**；
 * `atteson_reduction_gap`：**Atteson Lemma 6 的归约步**（`:677–694`）—— 需要类型迁移
   `X ↝ (X \ {i,j}) ∪ {u}` 与实现树层的「合并樱桃」算子。
 
@@ -128,7 +128,7 @@ def SharesOneLabel (i j k l : X) : Prop :=
 ✦ **为什么是假设**：Lemma 11 的证明先用 Lemma 10（`:1774–1804`）把 `Q(i,j)` 写成
 `Σ_{e∈E} w_e(i,j)·l(e)`（权重只依赖拓扑），再逐边比较并使用「路径旁子树的叶数」单调性
 （`:2023–2056`）。这需要**实现树 + 路径关联 + 子树叶数**这一层，本库尚未搭好。
-可解性见 ★★ `atteson_lemma11_gap` 的说明。 -/
+可解性见 ★★ `atteson_lemma11_gap_order_form` 的说明。 -/
 def IsCherrySeparated (δ : Dissimilarity X) (δmin : ℝ) : Prop :=
   ∀ k l : X, k ≠ l → ¬ δ.IsCherry k l →
     ∃ i j : X, δ.IsCherry i j ∧
@@ -856,13 +856,56 @@ theorem exDiss_fourPoint : exDiss.FourPoint := by
 ⇒ 本 `def` 证得的是 Lemma 11 的**序关系推论**（「每个非樱桃对都有 `Q` 更小的樱桃对」），
 **Lemma 11 的间隙式本身未证**；`IsCherrySeparated`（`:132–138`）的间隙形状是忠实的，弱的只是这个 `∃`。
 ★ 它作为 Theorem 1 前提的地位**待裁定**（是否从「已收口」降「条件收口」，等老师批；**本批不动桶**）。 -/
-def atteson_lemma11_gap (δ : Dissimilarity X) : Prop :=
+def atteson_lemma11_gap_order_form (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite → 4 ≤ Fintype.card X →
     ∃ δmin : ℝ, 0 < δmin ∧ δ.IsCherrySeparated δmin
 
-/-! ### 8.1 ★★★ 缺口 1 **已证成**：`atteson_lemma11_gap` 是定理（W25 泳道 b）
+/-! ### 8.1.0 ★ W38-1：忠实形态（定量版）所需的两个胶水定义
 
-结论 ★★★ `atteson_lemma11_gap_holds`：`atteson_lemma11_gap` **不需要任何数学假设**即成立；
+方案 d 把原来一条缺口**拆成两半**（老师 2026-10-27 批）：
+* 上面那条 `atteson_lemma11_gap_order_form` 证的是**序关系推论**（W38-1 之前它用的无后缀旧名）；
+* 下面这条 `atteson_lemma11_gap_quantitative` 才是 Lemma 11 的**忠实形态**（常数由树算出，无 `∃`）。
+-/
+
+/-- `T` 的**最短边长** `min_e w(e)`：边权集合的下确界。
+
+    对有限树（边集非空、边权非负）它就是**最小值**；这里写成 `Set.range T.w` 的下确界，
+    是为了省掉 `Finset.inf'` 的非空证明枝节（**定义**用下确界，将来要证 `= min` 再补一条小引理）。 -/
+noncomputable def minEdgeWeight (T : Phylogram X) : ℝ := sInf (Set.range T.w)
+
+/-- 由 `Phylogram` 诱导的 dissimilarity：`δ(x,y) = T.dist (leaf x) (leaf y)`。
+
+    对称性取 `Phylo.TreeDist.dist_comm`（`Phylo/TreeDistance.lean:121`），对角取 `Phylogram.dist_self`。 -/
+noncomputable def toDissimilarity (T : Phylogram X) : Dissimilarity X where
+  val x y := T.dist (T.leaf x) (T.leaf y)
+  symm x y := Phylo.TreeDist.dist_comm T (T.leaf x) (T.leaf y)
+  diag x := T.dist_self (T.leaf x)
+
+/-- ★ **Atteson Lemma 11 的忠实形态（定量版）** —— 本 `def` 里**没有 `∃ δmin`**，
+常数被钉成**由树算出的**最短边长 `minEdgeWeight T`。
+
+依据：`references/md/Atteson1999_PerformanceNeighborJoiningAlgorithmica.md:1989–2009` 的
+**LEMMA 11**：`k,l` 不是邻居 ⟹ 存在邻居对 `i,j` 使
+`S_{k,l} − S_{i,j} ≥ 3(n−4)·min_e l(e)`（两对不交）或 `≥ 2(n−3)·min_e l(e)`（恰交一标签）。
+`IsCherrySeparated`（本文件 `:132`）的形状已忠实（两条间隙式 ＋ 两分支），
+故这里**直接复用**它，只把自由参数换成 `minEdgeWeight T`。
+
+★ **四要素留证（W38-1）**：
+  ① **位置**：本文件新 `def`（`NJ.Dissimilarity.atteson_lemma11_gap_quantitative`）；
+  ② **依据**：上述 md `:1989–2009`（`.w36/D_report.md` §2.2 的符号表，已逐字复核）；
+  ③ **现状**：库里**已证**的是 `atteson_lemma11_gap_order_form_holds`（序关系版，
+     `∃ δmin > 0`）；**本 `def` 未证**，台账记 `[真开放]`（71 → 72）；
+  ④ **未证的原因（缺什么）**：仍缺 D 报告列的三件器材 ——
+     (a)「`Dissimilarity.IsCherry` ⟺ 树中 `a,b` 相邻」的桥、(b)「路径关联 `e ∈ P_{i,j}` ＋
+     子树叶数 `|L_i(e)|`」的层、(c) Lemma 10 的权重公式 `w_e`。
+     ⚠️ 正是这三件把 `∃ δmin`（弱）升级成 `min_e l(e)`（强）。 -/
+def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
+  4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
+
+
+/-! ### 8.1 ★★★ 缺口 1 **已证成**：`atteson_lemma11_gap_order_form` 是定理（W25 泳道 b）
+
+结论 ★★★ `atteson_lemma11_gap_order_form_holds`：`atteson_lemma11_gap_order_form` **不需要任何数学假设**即成立；
 且证明**连 `PositiveDefinite` 都不需要**（只用 `FourPoint` 与 `4 ≤ |X|`）。
 
 **路线（不走树层，(a)(b)(c) 三件器材全部绕过）**：§8 原诊断认为本缺口要实现树 + Lemma 10 的
@@ -907,7 +950,7 @@ omit [Fintype X] [DecidableEq X] in
 二者要么不交（`DisjointPairs`），要么恰交一个标签（`SharesOneLabel`）。
 
 ⇒ ★★ `IsCherrySeparated` 的两条分支合起来覆盖**所有**樱桃，其形态前提**永不落空**；
-这也是 ★★★ `atteson_lemma11_gap_holds` 能用**同一个**樱桃为所有非樱桃对作证的原因。 -/
+这也是 ★★★ `atteson_lemma11_gap_order_form_holds` 能用**同一个**樱桃为所有非樱桃对作证的原因。 -/
 theorem disjointPairs_or_sharesOneLabel_of_isCherry {δ : Dissimilarity X} {i j k l : X}
     (hch : δ.IsCherry i j) (hnc : ¬ δ.IsCherry k l) :
     DisjointPairs i j k l ∨ SharesOneLabel i j k l := by
@@ -941,12 +984,12 @@ theorem disjointPairs_or_sharesOneLabel_of_isCherry {δ : Dissimilarity X} {i j 
     · exact Or.inl ⟨hik, hil, hjk, hjl⟩
 
 omit [DecidableEq X] in
-/-- ★★★ **缺口 1 已证成**：`atteson_lemma11_gap` 是**定理**（无任何数学假设）。
+/-- ★★★ **缺口 1 已证成**：`atteson_lemma11_gap_order_form` 是**定理**（无任何数学假设）。
 
 证明路线与「诚实边界」见本节抬头（`### 8.1`）：`Q`-最小点必为樱桃
 （`maxZCherryCore` + `nj_cherry`）⇒ 非樱桃对的 `Q` 严格更大 ⇒ 形态引理给出统一证人
 ⇒ `δmin := gap / (3n)`。**不用**实现树层与 Lemma 10 的权重公式。 -/
-theorem atteson_lemma11_gap_holds (δ : Dissimilarity X) : atteson_lemma11_gap δ := by
+theorem atteson_lemma11_gap_order_form_holds (δ : Dissimilarity X) : atteson_lemma11_gap_order_form δ := by
   classical
   intro hfp _hpd hcard
   -- ① `4 ≤ |X|` 给出互异两点
@@ -1400,7 +1443,7 @@ Atteson Lemma 10（`:1774–1804`）的权重
 库内已有 `Cladogram.sideLeaves`（`Phylo/Split.lean:529`，用 `T - e` 上的 `Reachable` 实现）
 —— 但**只有叶集、没有计数 API**，本节把计数补上并给出基本性质。
 
-⚠️ **本节不做**（仍是 `def atteson_lemma11_gap` 的缺口，§8/:831 逐字未动）：
+⚠️ **本节不做**（仍是 `def atteson_lemma11_gap_order_form` 的缺口，§8/:831 逐字未动）：
 ① `w_e` 的**权重公式**本身（含 Lemma 10 的逐边比较与「路径旁子树叶数单调性」）；
 ② `Dissimilarity ↔ ExistsRealizingPhylogram`（`Phylo/Buneman.lean:589`）的桥（`δmin > 0` 来源）。 -/
 
@@ -1639,7 +1682,7 @@ Atteson Lemma 10（`:1774–1804`）的两步：
 证出来（后者正是 §13 的桥 ＋ §12 的 `sideLeafCount` 的接口）。
 ⚠️ 完整的 (1)（即 `attesonQ l = NJ 的 Q` 判据）还需要「可加性」`δ(i,k) = Σ_e S_ik(e)·l(e)`
 （库内 `Phylo.PauplinFormula` 的 `dist_eq_sum_incidence`，在 `AttesonRadius` 的 import 锥之外）——
-**未做**，见本轮报告；`def atteson_lemma11_gap`（:833）逐字未动。 -/
+**未做**，见本轮报告；`def atteson_lemma11_gap_order_form`（:833）逐字未动。 -/
 
 namespace Cladogram
 
