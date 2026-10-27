@@ -477,11 +477,16 @@ theorem variance_empFreq_gap_proved (ind : SiteFun X Ω₀)
     variance_const_mul (n : ℝ)⁻¹ Sum μ, sq, hvsS, hcancel2_1, div_eq_mul_inv]
   ring
 
-/-- ★B **反空真（缺口 V 不是空账目）**：缺口 V 的**四个真值前提**
-（`0/1` 取值；`Integrable`；`iIndepFun`；`IdentDistrib`）在**常值指示** `ind ≡ 1/2`
-上**同时可满足**，故该 `def` 不是空转。下面把其中最不平凡的一条
-（可积性）写成 Lean 证明，取 `Ω₀ := Bool`、`μ := Measure.infinitePi (fun _ : ℕ => coin)`
-（可数无限乘积测度，见上方 `kolmogorov_extension_gap_proved`）。 -/
+/-- ★B **反空真（W36-C 更正：本 `def` 目前没有任何非退化见证）**：缺口 V 的四条前提
+（`{0,1}` 取值；`Integrable`；`iIndepFun`；`IdentDistrib`）**未见**任何实例同时满足。
+
+⚠️ **原句失实，已删**：旧文本称「常值指示 `ind ≡ 1/2` 使四条前提同时可满足」—— **不成立**，
+因为前提 1 要求 `ind` **逐点取 `{0,1}` 值**，而 `1/2 ∉ {0,1}`（违反前提 1）。
+下方这条 `example` 只证「**常值可积**」（取 `Ω₀ := Bool`、`μ := Measure.infinitePi (fun _ : ℕ => coin)`，
+见上方 `kolmogorov_extension_gap_proved`），**不涉及**另外三条前提，故**不能**当作该 `def` 非空转的见证。
+
+★ 造真见证的卡点在**第五条**前提（`∫ ind = m.freq.p S hS q`）：需要先说明 `MSCFreq` 能让
+某个 `{0,1}` 指示的期望等于 `m.freq.p`（例如 `p ≡ 1/2`），本批**未**做 ⇒ 如实记「无见证」，不编。 -/
 example : Integrable (fun (_ : ℕ → Bool) => (1 / 2 : ℝ))
     (Measure.infinitePi fun _ : ℕ => (coin : Measure Bool)) :=
   integrable_const _
