@@ -25,7 +25,7 @@ lake exe cache get    # 首次必需：下载 Mathlib 预编译缓存（否则�
 lake build
 ```
 
-四条复跑命令（都只依赖仓库内脚本）：
+五条复跑命令（都只依赖仓库内脚本）：
 
 | 想核什么 | 命令 |
 |---|---|
@@ -33,6 +33,18 @@ lake build
 | 缺口台账与七桶 | `bash scripts/list_gaps.sh` |
 | 「空转缺口」的机械依据 | `bash scripts/check_vacuous.sh` |
 | 「已证伪缺口」的源码层标记 | `bash scripts/check_refuted.sh` |
+| **依赖版本锁是否一致** | `bash scripts/check_pins.sh` |
+
+### 版本锁定（可复现性）
+
+| 锁在哪 | 值 | 谁动 |
+|---|---|---|
+| `lean-toolchain` | `leanprover/lean4:v4.35.0-rc3` | 换编译器才改 |
+| `lakefile.toml`（mathlib `rev`） | 具体 commit `0f64d30a9a45…`（**不是** `master`） | 升级 mathlib 才改 |
+| `lake-manifest.json`（mathlib `rev`） | 同上，必须与 lakefile **逐字相同** | 由 `lake update` 生成，改了就一起提交 |
+
+⇒ 三者一致由 `bash scripts/check_pins.sh` 机器检查（CI 里也跑）。**不要**在不改 `lakefile.toml` 的情况下单独跑
+`lake update` —— 那会让 manifest 漂到一个 lakefile 没声明过的 commit。
 
 ## 已形式化的内容
 

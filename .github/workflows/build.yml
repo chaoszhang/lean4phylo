@@ -12,6 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ★ 依赖版本锁（审计第 11 条的 A+D 方案）：纯静态解析，不需要 elan，先跑先失败。
+      #   查三件事：`lean-toolchain` 非浮动 / lakefile 的 mathlib rev 不是 master·main·stable /
+      #   lakefile 的 rev 与 `lake-manifest.json` 里实际解析到的 commit 逐字相同。
+      - name: 依赖版本锁一致（lean-toolchain · lakefile · manifest）
+        run: bash scripts/check_pins.sh
+
       - name: Install elan
         run: |
           curl -sSfL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh \

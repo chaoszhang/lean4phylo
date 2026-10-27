@@ -1,11 +1,18 @@
 name = "lean4phylo"
 defaultTargets = ["Phylo"]
 
-# mathlib 依赖。rev 可改为某个已发布的 tag/commit 以固定版本。
+# mathlib 依赖 —— ★ 钉死到具体 commit（2026-10-28 审计第 11 条的第一步，老师批「A+D」）。
+#   为什么用 commit 而不是 tag：本库的 toolchain 是 `leanprover/lean4:v4.35.0-rc3`
+#   （见 `lean-toolchain`），而 mathlib 的 tag 是按 **Lean 版本** 打的 ——
+#   `v4.35.0` 要求 lean4 `v4.35.0`（stable），与 rc3 **不配对**。
+#   这个 hash 就是 `lake-manifest.json` 里已经在用的那个 commit
+#   （= 2026-09-29 的 mathlib master），所以钉它**不改变任何构建结果**。
+#   ⚠️ 升级流程：改这里的 rev → 跑 `lake update` → **把新 manifest 一起提交** →
+#      跑 `bash scripts/check_pins.sh` 确认三者一致 → 全量重编并贴 job 数。
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "master"
+rev = "0f64d30a9a4593b3ae50375b960a5cf7f0845606"
 
 [[lean_lib]]
 name = "Phylo"
