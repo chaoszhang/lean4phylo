@@ -7,9 +7,7 @@ import Phylo.Stat.BlockModelRhoAE2
 import Phylo.Stat.BlockSLLNTopoClose
 
 set_option autoImplicit false
-set_option linter.deprecated false
 set_option linter.style.haveILetI false
-set_option maxHeartbeats 800000
 
 /-!
 # `Phylo.Stat.BlockModelRhoAE3` —— **不假设 `hconv`** 的端到端定理（W16b 第 ② 件）

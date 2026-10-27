@@ -139,7 +139,6 @@ Prod.snd (M.scale ...) = Prod.snd (thetaR bb)          -- 两个 Bool，不被 s
 -/
 
 set_option autoImplicit false
-set_option linter.deprecated false
 set_option maxHeartbeats 1000000
 
 noncomputable section

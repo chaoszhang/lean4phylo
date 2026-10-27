@@ -114,7 +114,6 @@ F84 的 `hf_pos` 与 `hf_int` 自此**不再是额外假设**。
 -/
 
 set_option maxHeartbeats 1600000
-set_option maxRecDepth 100000
 
 noncomputable section
 

@@ -52,7 +52,6 @@ namespace Cladogram
 open Classical
 open SimpleGraph
 
-set_option linter.unusedSectionVars false
 
 variable (T : Cladogram.{u, v} X)
 

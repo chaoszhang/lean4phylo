@@ -51,7 +51,6 @@ namespace Phylo
 
 namespace Contract
 
-set_option linter.unusedSectionVars false
 
 variable {X : Type u} (T : Phylogram.{u, v} X)
 

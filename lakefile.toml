@@ -9,3 +9,26 @@ rev = "master"
 
 [[lean_lib]]
 name = "Phylo"
+
+# ── 集中的编译选项（W39-8）───────────────────────────────────────────────
+# 为什么放在这里：`linter.*` 与 `maxHeartbeats` 的**默认值**原先散落在 28 个文件里
+# （每个文件抄一遍 `set_option …`）。集中到一处后，新文件不必再抄，改动也只改这里。
+#
+# ★ 只集中**全局默认**；三类东西故意留在源文件里：
+#   · `set_option … in`（紧跟一条声明）—— 那是**按声明**的局部调参（有个别证明确实要
+#     2 000 000 heartbeats / 1 000 000 recDepth），集中不了；
+#   · `set_option autoImplicit false` —— 这是**语义**开关不是 linter，全局关掉会让依赖
+#     自动隐式绑定的文件全部报错，必须逐文件显式打开；
+#   · `linter.dupNamespace` / `linter.style.haveILetI` —— ⚠ 实测（W39-8）：这两个是
+#     **Mathlib 里定义的** option，`lean -D` 在启动时校验，直接报
+#     `invalid -D parameter, unknown configuration option`，所以**只能逐文件设**。
+#     （同理：任何 `set_option linter.style.*` 都进不了这里。）
+#
+# ★ 注意：这些 `-D` 只对 `lake build` 生效；用 `lake env lean 某文件.lean` 单独编译时
+#   不会带上（那时用默认 200 000 heartbeats），这是 Lake 的行为，不是配置写错。
+leanOptions.maxHeartbeats = 800000
+leanOptions.maxRecDepth = 100000
+leanOptions.linter.unusedSectionVars = false
+leanOptions.linter.deprecated = false
+leanOptions.linter.unusedVariables = false
+leanOptions.warn.classDefReducibility = false

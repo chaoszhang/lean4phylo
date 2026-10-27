@@ -112,7 +112,6 @@ blockW b = ∑_{i ∈ Fin C} [i < L] · siteW b i ,   siteW b i = ∑_{T'} τd �
 -/
 
 set_option autoImplicit false
-set_option linter.deprecated false
 
 noncomputable section
 

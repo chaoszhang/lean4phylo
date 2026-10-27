@@ -36,7 +36,6 @@ namespace Finset
 
 variable {α : Type u} [DecidableEq α]
 
-set_option linter.unusedSectionVars false
 
 /-! ## 辅助引理 -/
 

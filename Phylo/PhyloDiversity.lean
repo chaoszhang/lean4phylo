@@ -117,7 +117,6 @@ greedoid 的「交换」公理正是式 (1) 的抽象，而**次模/拟阵**框�
 `Phylogram` 侧的声明加在独立命名空间 `Phylo.PhyloDiversity` 内。
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

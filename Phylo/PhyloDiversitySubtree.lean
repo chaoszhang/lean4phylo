@@ -99,7 +99,6 @@ Steel 2005 式 (1)（PD 的加权交换性质）的选 `x` 论证需要「`W` �
 也不声称证出它们 ✓；**没有**半成品或占位证明 ✓）。
 -/
 
-set_option linter.unusedSectionVars false
 
 noncomputable section
 

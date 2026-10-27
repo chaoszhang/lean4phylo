@@ -850,7 +850,6 @@ section QuotCladogram
 
 -- 本段大量使用「无实例参数」的小引理与 `Nontrivial`（`Prop` 类）实例，按 `Phylo/ContractCount.lean:54`
 -- 的先例关掉这两条 linter，保证**零 warning**。
-set_option linter.unusedSectionVars false
 set_option linter.style.haveILetI false
 
 variable {X : Type u} [Fintype X] [DecidableEq X]

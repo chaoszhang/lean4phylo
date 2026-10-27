@@ -90,7 +90,6 @@ import Mathlib.Data.Fin.VecNotation
 ⇒ 本批只把 **JC69** 打到「机器可查的逐模式表 + 三条自检 + 与代表元表的关系」。
 F84 / LM1 留待后续批次（先定记账方式，再补表）。 -/
 
-set_option maxRecDepth 100000
 
 namespace Phylo.Stat.CASTERWeights
 

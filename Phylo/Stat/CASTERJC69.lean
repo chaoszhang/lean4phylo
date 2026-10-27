@@ -95,7 +95,6 @@ open Finset
 open Phylo.JC
 open Phylo.Stat.CASTERWeights
 
-set_option maxRecDepth 100000
 
 /-! ## 0. 星形和 `star4` 与位置辅助 -/
 

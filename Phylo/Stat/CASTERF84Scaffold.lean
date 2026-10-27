@@ -23,7 +23,6 @@ import Phylo.Stat.CASTERF84Events
 -/
 
 set_option maxHeartbeats 3200000
-set_option maxRecDepth 100000
 
 noncomputable section
 

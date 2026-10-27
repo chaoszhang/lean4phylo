@@ -30,8 +30,6 @@ universe u v
 
 variable {X : Type u} [Fintype X] [DecidableEq X]
 
-set_option linter.unusedSectionVars false
-set_option linter.unusedSectionVars false
 
 namespace Cladogram
 

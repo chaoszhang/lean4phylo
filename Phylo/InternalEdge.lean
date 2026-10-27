@@ -55,7 +55,6 @@ namespace Cladogram
 
 variable {X : Type u} [Fintype X] [DecidableEq X]
 
-set_option linter.unusedSectionVars false
 
 variable (T : Cladogram.{u, v} X)
 
@@ -140,7 +139,6 @@ end Split
 
 namespace Cladogram
 
-set_option linter.unusedSectionVars false
 
 variable {X : Type u} [Fintype X] [DecidableEq X]
 variable (T : Cladogram.{u, v} X)

@@ -56,7 +56,6 @@ universe u v
 variable {X : Type*} [Fintype X] [DecidableEq X]
 
 set_option linter.style.haveILetI false
-set_option linter.unusedSectionVars false
 
 /-! ## 第 1 层：`p` 与 `Cluster` -/
 
