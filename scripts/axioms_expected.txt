@@ -1,0 +1,12 @@
+'Phylo.Stat.ClanPairLaw.twoClanLawGap_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'NJ.Pauplin.pauplinFormula_gap_of_isBinary' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.InvariantsRank.treeMarkovFactorGap_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.Bootstrap.bootstrap_confidence_gap_vacuous_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.SplitProbabilities.msc_split_probability_object_gap_vacuous_holds' depends on axioms: [propext,
+ Classical.choice,
+ Quot.sound]
+'NeighborNet.neighborNetAgglomeration_gap_vacuous_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Split.quarnetRules_level1_gap_vacuous_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Split.level1QuartetSystem_gap_vacuous_degenerate' depends on axioms: [propext, Classical.choice, Quot.sound]
+'NJ.Dissimilarity.atteson_lemma11_gap_order_form_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Split.nniDistance_min_gap_nonempty_nontrivial' depends on axioms: [propext, Classical.choice, Quot.sound]
