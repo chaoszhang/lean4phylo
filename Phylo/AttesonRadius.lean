@@ -1070,6 +1070,54 @@ theorem atteson_lemma11_gap_order_form_holds (δ : Dissimilarity X) : atteson_le
     exact absurd ⟨(k, l), hmemP⟩ hPne
 
 
+/-! ### 8.1.2 ★ W39-3：`_order_form` 在**具体树度量**上的实例（逐项实算，非特化）
+
+上一节把 `atteson_lemma11_gap_order_form` 证成「对一切 `δ` 成立」——但**特化一条 `∀δ` 定理
+是零信息量的**，所以那不能算「这条缺口被用在具体对象上」（W35 审计对 15 条的口径即此）。
+
+本节给的是**不经过上一节**的实例：取 ★C 的 4 叶真树度量 `exDiss`（树 `((0,1),(2,3))`，
+挂边 `1,2,3,4`、内部边 `5`），**逐对算出** `Q` 并直接给出 `δmin = 5`：
+
+* 两颗樱桃 `(0,1)`、`(2,3)` 上 `Q = −40`；四个交叉对（非樱桃）上 `Q = −30`；
+* ⇒ 间隙 `Q(k,l) − Q(i,j) = 10 = 2·(n−3)·5`（`n = 4`，`SharesOneLabel` 分支），
+  与 Atteson Lemma 11 的 `2(n−3)·δmin` 常数**逐字吻合**，`δmin := 5` 是它的精确解
+  （不是 `∃` 里随便取的数）。
+
+⇒ 这条缺口从「无实例」升为**有非退化实例**：具体 4 叶树上是真的，且常数看得见。 -/
+
+/-- ★C 的 `exDiss` 上 `(2,3)` 也是樱桃（与 `exDiss_isCherry_01` 对称）。 -/
+theorem exDiss_isCherry_23 : exDiss.IsCherry 2 3 := by
+  refine ⟨by decide, ?_⟩
+  intro k l hk2 hk3 hl2 hl3
+  have hk : k = 0 ∨ k = 1 := by fin_cases k <;> simp_all
+  have hl : l = 0 ∨ l = 1 := by fin_cases l <;> simp_all
+  rcases hk with rfl | rfl <;> rcases hl with rfl | rfl <;>
+    (simp only [exDiss, exVal]; constructor <;> norm_num)
+
+/-- ★★★ **`exDiss` 上 `IsCherrySeparated` 的具体常数**：`δmin = 5`。
+
+逐对验证：12 个异于对角的有序对里，4 个是樱桃（`(0,1),(1,0),(2,3),(3,2)`，被前提排除），
+其余 8 个交叉对都以 `(0,1)` 为证人、走 `SharesOneLabel` 分支，间隙恰为 `10 = 2·(4−3)·5`。 -/
+theorem exDiss_isCherrySeparated_five : exDiss.IsCherrySeparated (X := Fin 4) 5 := by
+  intro k l hkl hnc
+  fin_cases k <;> fin_cases l <;> first
+    | (exfalso; exact hkl rfl)
+    | (exfalso; exact hnc exDiss_isCherry_01)
+    | (exfalso; exact hnc exDiss_isCherry_01.swap)
+    | (exfalso; exact hnc exDiss_isCherry_23)
+    | (exfalso; exact hnc exDiss_isCherry_23.swap)
+    | exact ⟨0, 1, exDiss_isCherry_01, Or.inr ⟨by unfold SharesOneLabel; decide, by
+        simp only [Dissimilarity.Q, Fintype.card_fin, sum_univ_four_fin, exDiss, exVal]
+        norm_num⟩⟩
+
+/-- ★ W39-3：**`_order_form` 在具体对象上的实例** —— `exDiss` 满足该缺口，
+`δmin = 5` 逐项算出（`exDiss_isCherrySeparated_five`）。
+
+注意：本定理**不**调用 `atteson_lemma11_gap_order_form_holds`，故它是实例而不是特化。 -/
+theorem atteson_lemma11_gap_order_form_at_exDiss :
+    atteson_lemma11_gap_order_form (X := Fin 4) exDiss :=
+  fun _ _ _ => ⟨5, by norm_num, exDiss_isCherrySeparated_five⟩
+
 /-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `atteson_reduction_gap_refuted`（`Phylo/AttesonRadius.lean:1144`）。
 ★★★ **缺口 2：Atteson Lemma 6 的归约步**（`:677–694` 边权公式 (7)），
 即 Theorem 1（`:868–916`）归纳不变量 (a)(b) 的递推。

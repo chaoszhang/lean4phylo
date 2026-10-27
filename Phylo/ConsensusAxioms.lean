@@ -831,5 +831,28 @@ theorem mnCorollary_gap_proof :
       exact hclu ⟨X, hCl P X hX⟩
     rw [h1, h2]
 
+/-! ### 9.5 ★ W39-3：推论在**具体共识函数**（严格多数阈值规则）上的实例
+
+`mnCorollary_gap` 的原意是「`(MN)(M)(S)(A)` ＋ n-tree 值 ＋ 只含簇 ⇒ 恰是严格多数阈值规则」。
+本节把推论**用在**最自然的具体 `C := ThresholdRule k t`（`t ≤ k` 且 `k < 2t`）上：
+结论断言 `ThresholdRule k t` **等于某个**严格多数阈值规则 —— 于是「阈值参数由规则本身确定」，
+不是 `∃ t'` 里随便取的一个数。
+
+★ 这与「把 `∀C` 定理特化成 `C := C`」的零信息特化不同：六条前提要逐条证，
+其中 `NTreeValued` 必须用鸽笼（`thresholdRule_isNTree`）、`(A)` 必须用 `t ≤ k`、
+`ClusterValued` 必须拆 `mem_thresholdRule`。 -/
+theorem mnCorollary_gap_at_thresholdRule {α : Type*} [Fintype α] [DecidableEq α] {k t : ℕ}
+    (ht : t ≤ k) (hk : k < 2 * t) :
+    ∃ t' : ℕ, k < 2 * t' ∧
+      ∀ P : Profile (α := α) k, (∀ i, IsNTree (P i)) →
+        ThresholdRule (α := α) k t P = ThresholdRule (α := α) k t' P :=
+  mnCorollary_gap_proof (ThresholdRule (α := α) k t)
+    (thresholdRule_mnSet (α := α) (k := k) (t := t))
+    (thresholdRule_monotone (α := α) (k := k) (t := t))
+    (thresholdRule_symmetric (α := α) (k := k) (t := t))
+    (thresholdRule_autonomous (α := α) (k := k) (t := t) ht)
+    (thresholdRule_isNTree (α := α) (k := k) (t := t) hk)
+    (fun _ _ hX => (mem_thresholdRule.mp hX).1)
+
 
 end NTreeConsensus
