@@ -324,7 +324,7 @@ end Split
 
 /-! ## 7. ⬜ 缺口：level-1 载体不存在
 
-★ **判定**（§9）：本 `Prop` 为**真**（`quarnetRules_level1_gap_holds`），但四条规则都是自由谓词、可整体消去（`quarnetRules_level1_gap_iff_display`）⇒ **空转缺口**，不含 level-1 内容。 -/
+★ **判定**（§9）：本 `Prop` 为**真**（`quarnetRules_level1_gap_vacuous_holds`），但四条规则都是自由谓词、可整体消去（`quarnetRules_level1_gap_iff_display`）⇒ **空转缺口**，不含 level-1 内容。 -/
 
 namespace Split
 
@@ -398,7 +398,7 @@ def level1QuartetSystem_gap : Prop :=
   ★ 注意 (b) 的 `∃ F, …` **确实可被 `F = ∅` 满足**，故这不是「前提矛盾」，是**真·空转**。 -/
 
 /-- ★E **第 6 条的空转见证**：`level1QuartetSystem_gap` 被最小退化数据满足。 -/
-theorem level1QuartetSystem_gap_degenerate : level1QuartetSystem_gap := by
+theorem level1QuartetSystem_gap_vacuous_degenerate : level1QuartetSystem_gap := by
   refine ⟨PUnit, inferInstance, fun _ Y => if Y.card = 4 then 2 else 0, ?_, ?_⟩
   · intro Q Y hY
     right
@@ -426,7 +426,7 @@ theorem quarnetRules_level1_gap_degenerate : quarnetRules_level1_gap := by
 §8 已给出该 `Prop` 的退化见证 `quarnetRules_level1_gap_degenerate`。本节把它升成**判定**
 （不是「可满足」，而是「内容恰好是什么」），并登记标准名 `_holds`：
 
-* `quarnetRules_level1_gap_holds`（**无假设**）：该 `Prop` **为真**。⇒ 它**不是**未证缺口，
+* `quarnetRules_level1_gap_vacuous_holds`（**无假设**）：该 `Prop` **为真**。⇒ 它**不是**未证缺口，
   而是**空转缺口**：其真值不依赖任何 level-1 / quarnet 内容。
 * `quarnetRules_level1_gap_iff_display`（`↔`，**无假设**）：该 `Prop` **等价于**它的残量
 
@@ -489,7 +489,7 @@ theorem quarnetRules_level1_gap_iff_display :
 
 ⚠️ 本定理**不是** Theorem 2（同文 `:605`）的证明：`Prop` 的四条规则谓词是自由变量，
 故为真**不带** level-1 内容（见 `_iff_display` 的残量）。 -/
-theorem quarnetRules_level1_gap_holds : quarnetRules_level1_gap :=
+theorem quarnetRules_level1_gap_vacuous_holds : quarnetRules_level1_gap :=
   quarnetRules_level1_gap_iff_display.mpr
     ⟨PUnit, PUnit, inferInstance, inferInstance, fun _ _ => False, fun _ => False,
      {PUnit.unit}, by

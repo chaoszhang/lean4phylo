@@ -1027,7 +1027,7 @@ example :
 §3/§4 缺口 K 的表述需要复核 —— 该文件**不在** W12a 写域内，此处只登记发现）。
 组件②③（弱收敛、相容性）**仍缺**，故缺口本体不变。
 
-⚠️ **W25c 已机器判定**：本 `Prop` **恒真**（`bootstrap_confidence_gap_iff_true`），且可**无假设证成**（`bootstrap_confidence_gap_holds`）—— 这恰恰说明它是**假设槽 / 空转**（`∃` 的自由槽把想要的结论写进去了），**不**等于「支持度 → 置信度」被证成。真缺口仍是 ②③。 -/
+⚠️ **W25c 已机器判定**：本 `Prop` **恒真**（`bootstrap_confidence_gap_iff_true`），且可**无假设证成**（`bootstrap_confidence_gap_vacuous_holds`）—— 这恰恰说明它是**假设槽 / 空转**（`∃` 的自由槽把想要的结论写进去了），**不**等于「支持度 → 置信度」被证成。真缺口仍是 ②③。 -/
 def bootstrap_confidence_gap : Prop :=
   ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (Fin 4) → ℚ),
     (∀ ω (s : Split (Fin 4)), 0 ≤ p ω s ∧ p ω s ≤ 1) ∧
@@ -1067,7 +1067,7 @@ example : ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (
 
 * `bootstrap_confidence_gap_iff_true`：取 `Ω := Empty`，三条 `∀ ω` 前提**全部空真** ⇒
   整个 `Prop` `↔ True`（连一个 `Split` 都不需要）；
-* `bootstrap_confidence_gap_holds`：由上一行直接得到 —— **零假设**，但**不**表示
+* `bootstrap_confidence_gap_vacuous_holds`：由上一行直接得到 —— **零假设**，但**不**表示
   「频率 → 置信度」被证成了（真缺口见 `def` 的 docstring 第 ②③ 条）；
 * `exists_confidence_account_for`：把 `Ω` 固定成 `PUnit` 后，**任一**候选真树 `s`（包括 §5
   里 `bootstrapSupport = 13/27 < 1/2` 的 `fourAB`）都能配上点质量 `p` 满足三条 ⇒
@@ -1076,7 +1076,7 @@ example : ∃ (Ω : Type) (TrueSplit : Ω → Split (Fin 4)) (p : Ω → Split (
 
 ⇒ 真正的数学内容（Felsenstein L261–263 的「重抽样分布逼近抽样分布」、L275–284 的
 `n` 大时的论证、L776–783 的「方法不相容则 bootstrap 误导」）**不在**这个 `Prop` 里：
-它仍是账目，不是定理。**不要**把 `bootstrap_confidence_gap_holds` 读成缺口已闭合。 -/
+它仍是账目，不是定理。**不要**把 `bootstrap_confidence_gap_vacuous_holds` 读成缺口已闭合。 -/
 
 /-- ★★ **W25c 残量（`↔ True`）**：`bootstrap_confidence_gap` 是**恒真**命题。
 
@@ -1099,7 +1099,7 @@ theorem bootstrap_confidence_gap_iff_true : bootstrap_confidence_gap ↔ True :=
 ⚠️ 这条**只**说明账目可满足（见 `bootstrap_confidence_gap_iff_true` 的 `Empty` 见证），
 **不**说明 Felsenstein 的「支持度 → 置信度」被证成了：`p` 与 `bootstrapSupport`
 之间没有任何桥，弱收敛（L261–263 / L275–284）与估计量相容性（L776–783）仍缺。 -/
-theorem bootstrap_confidence_gap_holds : bootstrap_confidence_gap :=
+theorem bootstrap_confidence_gap_vacuous_holds : bootstrap_confidence_gap :=
   bootstrap_confidence_gap_iff_true.mpr trivial
 
 /-- ★★ **W25c 残量（`p` 槽对「真树」无约束）**：对**任意**候选真树 `s`，都存在一个

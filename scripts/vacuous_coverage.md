@@ -9,6 +9,9 @@
 >
 > **实测日期**：2026-10-27（W35）。行号为该次实测，`W35-7a` 给部分 `def` 的 docstring 加了标记行，
 > 故与旧文档里的行号可能差 1–3 行；**权威行号以 `bash scripts/list_gaps.sh` 的输出为准**。
+>
+> ★ **W36 追加**：本表是 **W35（`10c353d`）快照**；W36 的 7b/7c/8 改名与 docstring 订正见 §4–§6
+> 末尾的「★ W36 已落地」注（表内名字/行号仍按 W35 记录，不改）。
 
 ## 方法与判定（三选一）
 
@@ -118,11 +121,17 @@
 * `variance_empFreq_gap` 的 docstring（`EmpiricalConvergence.lean:480–484`）称常值指示 `ind ≡ 1/2`
   使四条前提同时可满足 —— 但 `1/2 ∉ {{0,1}}` 违反前提 1；`:485` 的 `example` 只证常值**可积**。
   ⇒ 目前**没有**机器证据说它非空真（不影响它「已收口」，但「非空真」这句话要撤回或补真见证）。
+  ★ **W36-C 已落地**：`EmpiricalConvergence.lean` 的该 docstring 已改成「**无见证**」并写明失实处
+  （`ind ≡ 1/2` 违反前提 1；`example` 只证常值可积；卡点在第五条前提 `∫ ind = m.freq.p`）。
+  ⇒ 本表第 30 行的判定**无需改动**（原本就记「无」）—— 派单称它「疑似自由槽」是**记错行**：
+  疑似自由槽那 6 条 = `VACUOUS` 白名单，`variance_empFreq_gap` 不在其中。
 
 ### 5. `level1QuartetSystem_gap` 只有退化见证
 
 全库 grep 无 `level1QuartetSystem_gap_holds`，唯一收口是 `_degenerate`（`QuarnetRules.lean:401`）。
 ⇒ item 8 的改名要写成 `_vacuous_degenerate`（不是 `_vacuous_holds`），台账后缀表需同时收两种。
+★ **W36-A 已落地**：改名 `level1QuartetSystem_gap_vacuous_degenerate`；`CLOSURE_SUFFIXES` 已同收
+`_vacuous_holds` 与 `_vacuous_degenerate`；七桶实测仍 **真开放 0 / 已收口 43**。
 
 ### 6. 4 条已收口的 `def` docstring 仍写「未证 / 仍然开着」
 
@@ -130,6 +139,8 @@
 （`TreeMetricDistribution.lean:646`）、`two_parent_trees_gap`（`SupertreeLimits.lean:689`）、
 `two_parent_trees_gap_correct_shape`（`:709`）—— 与台账「已收口」矛盾，属 docstring 漂移，
 建议下一批统一订正（本批不动数学陈述，docstring 可改）。
+★ **W36-B 已落地**：四条 docstring 首行已加 `✅ **已收口**（定理名，文件:行，批次）` 状态行，
+并把文内「保留缺口 / 仍然开着 / 未证」全部转成过去时（`def` 本体一字未动）。
 
 ---
 

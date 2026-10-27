@@ -92,7 +92,9 @@ FORM_OVERRIDE = {
     "greedyConsensus_gap": "闭命题（`¬ gap`）",
     "pauplinEdgeCoeff_gap": "谓词式（反例附加数据条件：binary `T` ＋ 边 `e ∉ graph`）",
     "greedy_gap": "谓词式（逐点为假：`∀ T, ¬ greedy_gap T`）",
-    "canonicalSplitDecomposition_gap": "闭命题（`¬ gap.{0}`）",
+    "canonicalSplitDecomposition_gap_legacy": "闭命题（`¬ gap.{0}`）",
+    # ★ W36（7b/7c）：原 `canonicalSplitDecomposition_gap` 已降级为 `_legacy`（进 `[追溯]`），
+    #   本键仅留档；抢到正名的新形态是**收口**的，不属已证伪。
     "edgeInvariants_suffice_gap": "全称闭包为假（`¬ ∀ U Model, …`）",
     "generalModelIdentifiability_gap": "全称闭包为假（`¬ ∀ Θ …,`）",
     "rfPoissonAsymptotic_gap": "闭命题（`¬ gap`）",
@@ -120,7 +122,9 @@ VACUOUS = {
     "neighborNetAgglomeration_gap":
         "空转：`∃ Step` 是自由槽 ⇒ 输入 `d` 与算法都消失；残量 `_iff_star` 把它钉成「每个 X 上存在星形族」。"
         "真缺件四件：Cluster 载体 / 簇距离与极小化选择 / 约化式 / 反演展开（md:453–465 等）",
-    "canonicalSplitDecomposition_gap_correct_shape":
+    # ★ W36（7b/7c）：本 `def` 已降级为 `…_correct_shape_legacy`（进 `[追溯]`），键同步改名；
+    #   空转事实仍成立，`check_vacuous.sh` 继续守它。
+    "canonicalSplitDecomposition_gap_correct_shape_legacy":
         "空转：只需「∃ 某个分解」，取退化 δ₀ = δ − M·Σδ_s 即可（非对角任意负）。"
         "真 BdD Thm 2 还要求 ① 残差仍在 M(X)（δxx=0/非负/三角）② 系数 = 隔离指数 α_s ③ 唯一性",
     "bootstrap_confidence_gap":
@@ -364,7 +368,10 @@ def main():
                 return sorted(hit, key=lambda d: (d[0], d[1]))[0]
         return None
 
-    CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof", "_degenerate"]
+    CLOSURE_SUFFIXES = ["_holds", "_proved", "_true", "_of_isBinary", "_proof", "_degenerate",
+                        "_vacuous_holds", "_vacuous_degenerate"]
+    # ★ W36-A（item 8）：空转缺口的收口定理改名成 `_vacuous_holds`（`level1QuartetSystem_gap` 只有
+    #   `_vacuous_degenerate` 形态，故两个后缀都要收）—— 不加则 5 条会掉回 `[真开放]`（0 → 5）。
     buckets = {k: [] for k in ("refuted", "closed", "cond", "trace", "judged", "longterm", "open")}
 
     for (rel, ln, kind, name, sig) in gaps:

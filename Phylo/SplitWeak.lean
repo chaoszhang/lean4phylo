@@ -565,7 +565,7 @@ def weakCompatibilityRealization_gap : Prop :=
       ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
         ∀ s : Split α, IsDSplit δ s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s
 
-/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap`（`Phylo/Stat/BunemanIndexBridge.lean:704`）。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap_legacy`（`Phylo/Stat/BunemanIndexBridge.lean:704`）。
 ⬜ **缺口 2（典范分解，1651–1655 行 Theorem 2 + 673–684 行）**：
 任一对称 `δ` 可写成 `δ = δ₀ + Σ_{S ∈ Σ} c_S · δ_S`，其中 `c_S > 0`、残差 `δ₀` **split-prime**。
 
@@ -581,7 +581,7 @@ def weakCompatibilityRealization_gap : Prop :=
 `¬Max ⟹ ¬Strong` 而反向不成立；不过本缺口的致命伤是**非空侧条件缺失**，比这一条更基本。
 ⚠️ 一旦确认 `SplitPrime` **恒假**（不可满足），「`SplitPrime` 比 `SplitPrimeStd` 严格」这个比较
 就**不再有实际用途**（前者抓不到任何 `δ`）⇒ 无需为它形式化分离反例（W12l 决定：只在 docstring 登记）。 -/
-def canonicalSplitDecomposition_gap : Prop :=
+def canonicalSplitDecomposition_gap_legacy : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
       (∀ s ∈ F, 0 < c s) ∧ SplitPrime δ₀ ∧

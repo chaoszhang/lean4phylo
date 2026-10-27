@@ -548,7 +548,7 @@ MSC gene tree 分布**诱导**」在 **quartet 层**已经有了**正面对象**
 上述新对象是**每个 4-元子集**层面的（对任意 `X`）。
 **本文件不在任何证明中使用它。**
 
-⚠️ **W25c 机器判定（2026-10-19）**：本 `Prop` **可被平凡满足** —— 退化见证已被提升为**全 `n`** 的 Lean 定理 ★★★★ `msc_split_probability_object_gap_holds`（见下方 §5.1）。这**不**表示缺口已闭合：`∃` 的自由槽把「要造的对象」整个写成了断言，故本 `Prop` 是**账目**（恒真可满足），不是「`P` 由参数诱导」的定理。真缺件仍是 `MSCTreeLaw n`（`Phylo/Stat/ReciprocalMonophyly.lean:898`、`:950`）＋ 带枝长的 binary 物种树对象。 -/
+⚠️ **W25c 机器判定（2026-10-19）**：本 `Prop` **可被平凡满足** —— 退化见证已被提升为**全 `n`** 的 Lean 定理 ★★★★ `msc_split_probability_object_gap_vacuous_holds`（见下方 §5.1）。这**不**表示缺口已闭合：`∃` 的自由槽把「要造的对象」整个写成了断言，故本 `Prop` 是**账目**（恒真可满足），不是「`P` 由参数诱导」的定理。真缺件仍是 `MSCTreeLaw n`（`Phylo/Stat/ReciprocalMonophyly.lean:898`、`:950`）＋ 带枝长的 binary 物种树对象。 -/
 def msc_split_probability_object_gap : Prop :=
   ∀ n : ℕ, 3 ≤ n → ∀ ε : ℝ, 0 ≤ ε →
     ∃ (σ : Type) (_ : Nonempty σ) (Displays : σ → Split (Fin n) → Prop)
@@ -562,7 +562,7 @@ def msc_split_probability_object_gap : Prop :=
 上面 ★E 的退化见证在 W12a 只用 Python（`scripts/msc/w12a_gap_check.py` Part III）复核了
 `n = 3…10`；本节把它升为**全 `n`** 的 Lean 定理（**零假设**）：
 
-* `msc_split_probability_object_gap_holds : msc_split_probability_object_gap` —— 证成的是
+* `msc_split_probability_object_gap_vacuous_holds : msc_split_probability_object_gap` —— 证成的是
   **陈述本身**，不是缺口背后的数学。
 * 见证（与 ★E 逐条一致）：`σ := Unit`、`Displays := fun _ _ => True`、
   `P r := if IsTrivialSplit r then 1 else (if r = r₀ then 2n − 6 else 0)`，
@@ -583,7 +583,7 @@ def msc_split_probability_object_gap : Prop :=
 「平凡 split 取 `1`，其余质量 `2n − 6` 全压在锚点 `r₀ = {0,1} | X∖{0,1}` 上」。
 它**只**证明本 `Prop` 为真（本 `Prop` 的 `∃` 把「要造的对象」写成自由槽），
 **不是**缺口 G2 的闭合：真缺口要求 `P` 由 binary 物种树＋MSC gene tree 分布**诱导**。 -/
-theorem msc_split_probability_object_gap_holds : msc_split_probability_object_gap := by
+theorem msc_split_probability_object_gap_vacuous_holds : msc_split_probability_object_gap := by
   intro n hn ε _
   -- 锚点 split `{0,1} | X ∖ {0,1}`（`n ≥ 3` 保证两侧非空）
   let a : Fin n := ⟨0, by omega⟩

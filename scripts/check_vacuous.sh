@@ -50,22 +50,23 @@ check() {
 }
 
 # ── 6 条由 gap_ledger.py 的 VACUOUS 台账登记的「空转」 ─────────────────────
-check "quarnetRules_level1_gap" "∃自由槽" "quarnetRules_level1_gap_holds" \
+check "quarnetRules_level1_gap" "∃自由槽" "quarnetRules_level1_gap_vacuous_holds" \
       "四条规则（consistent/minimallyDense/cyclative/saturated）与 displayedBy/isTypeI 全被 ∃ 绑定 ⇒ 取退化数据即真；另有 _degenerate 见证"
-check "level1QuartetSystem_gap" "∃自由槽" "level1QuartetSystem_gap_degenerate" \
+check "level1QuartetSystem_gap" "∃自由槽" "level1QuartetSystem_gap_vacuous_degenerate" \
       "QuartetSystem / multiplicity 同样被 ∃ 绑定；只有退化见证，无一般形态定理"
 check "neighborNetAgglomeration_gap" "∃自由槽" "neighborNetAgglomeration_gap_iff_star" \
       "残量把 Prop 钉成「每个 X 上存在星形族」；输入 d 与 ∃Step 双双消失（另有 _holds 直接证成）"
-check "canonicalSplitDecomposition_gap_correct_shape" "∃自由槽" "canonicalSplitDecomposition_gap_correct_shape_holds" \
+# ★ W36：本 `def` 已降级为 `…_correct_shape_legacy`（进 `[追溯]`）；空转事实不变，键与依据同步改名。
+check "canonicalSplitDecomposition_gap_correct_shape_legacy" "∃自由槽" "canonicalSplitDecomposition_gap_correct_shape_legacy_holds" \
       "只需「∃ 某个分解」，取退化 δ₀ = δ − M·Σδ_s（非对角任意负）即真 ⇒ 不是 BdD Thm 2"
 check "bootstrap_confidence_gap" "∃自由槽" "bootstrap_confidence_gap_iff_true" \
       "「∃ Ω TrueSplit p」三个自由槽 ⇒ 取 Ω := Empty 三条 ∀ω 全空真 ⇒ Prop ↔ True（另有 _holds）"
-check "msc_split_probability_object_gap" "∃自由槽" "msc_split_probability_object_gap_holds" \
+check "msc_split_probability_object_gap" "∃自由槽" "msc_split_probability_object_gap_vacuous_holds" \
       "取 σ := Unit、P r = if IsTrivialSplit r then 1 else (if r = r₀ then 2n−6 else 0) 即满足账目 2n+(2n−6)=2(2n−3)，对一切 n ≥ 3 恒真"
 
 # ── 第 7 条：旧形态空转、但**已被改强修复**（不计入 VACUOUS 台账）────────────
 check "TreeMarkovFactorGap" "已证半边冒充" "rank_flatAB_le_four_of_factor" \
-      "旧 def 只是「给定因子分解 ⇒ rank ≤ 4」的逐字重述（这半边早已证）；W25 已改强为 IsTreeModelFreq P → ∃ A B, … 并证成（treeMarkovFactorGap_holds），四要素见 commit 497766c"
+      "旧 def 只是「给定因子分解 ⇒ rank ≤ 4」的逐字重述（这半边早已证）；W25 已改强为 IsTreeModelFreq P → ∃ A B, … 并证成（treeMarkovFactorGap_holds），四要素见 commit 497766c。★ W36 注：「rank_flatAB_le_four_of_factor」是**改强前**旧 def 的依据定理（旧 def 已废），现登记的是**改强后**形态「treeMarkovFactorGap_holds」；本条**保留不撤**"
 
 printf '%s\n' "--------------------------------------------------------------------------------------------------------------------------------------------"
 echo "合计 ${rows} 行 · 有机械依据 ${ok} · 无依据 ${bad}"

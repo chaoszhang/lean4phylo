@@ -238,16 +238,16 @@ theorem isDSplit_iff_isDSplitStrong_of_fourPoint (δ : NJ.Dissimilarity X) {A B 
 
 故「正确形态」如下（用库内 `bunemanIndex` 表达隔离指数；`Dissimilarity` = 对称 + 零对角）。 -/
 
-/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `weakCompatibilityRealization_gap_correct_shape_refuted`（`Phylo/Stat/BunemanIndexBridge.lean:351`）。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `weakCompatibilityRealization_gap_correct_shape_legacy_refuted`（`Phylo/Stat/BunemanIndexBridge.lean:351`）。
 ⬜ **正确形态（W12j 登记）**：`Σ` 弱相容 ⟹ 存在**对称零对角** `δ`，使 `Σ` 恰是
 其**正隔离指数**的 split 集，且**隔离指数就是给定权重 `w`**、非成员的隔离指数为 `0`。
 
 ⚠️ **W25-a：本形态是假命题** ✗（本 `def` 原文**逐字未改**）—— 形式化反例见 §4.1 的
-`weakCompatibilityRealization_gap_correct_shape_refuted`。病根：`bunemanIndex` 是 `μ`（`min` 形），
+`weakCompatibilityRealization_gap_correct_shape_legacy_refuted`。病根：`bunemanIndex` 是 `μ`（`min` 形），
 「`μ_t = 0`（非成员）」强迫 `t` 的**每个**四元组取值 `≥ 0`，与「`μ_s = w_s > 0`（成员）」在
 对角四元组上互斥（`Fin 4`：`{0,1}|{2,3}` 与 `{0,2}|{1,3}`）。忠实形态须改用 `max` 形的
 隔离指数 `α`（即 `IsDSplit` 一侧），不是 `bunemanIndex`。 -/
-def weakCompatibilityRealization_gap_correct_shape : Prop :=
+def weakCompatibilityRealization_gap_correct_shape_legacy : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
       ∃ δ : NJ.Dissimilarity α,
@@ -264,7 +264,7 @@ theorem not_isDSplit_implies_bunemanIndex_pos :
   linarith [cex_bunemanIndex_neg]
 
 
-/-! ## 4.1 ★B **`weakCompatibilityRealization_gap_correct_shape` 是假命题**（W25-a 形式化反例）
+/-! ## 4.1 ★B **`weakCompatibilityRealization_gap_correct_shape_legacy` 是假命题**（W25-a 形式化反例）
 
 §4 的「正确形态」把 BdD 的隔离指数 `α` 换成了库内 `bunemanIndex` —— 而 ★D 校正已认定后者是
 **Buneman 1971 的 `μ_σ`（`min` 形）**，与 `α` 的关键差别：`μ` 是 `inf'`。于是
@@ -345,12 +345,12 @@ theorem no_bunemanIndex_pair (δ : NJ.Dissimilarity (Fin 4))
   rw [h2, hv2] at hb2
   linarith
 
-/-- ★B **`weakCompatibilityRealization_gap_correct_shape` 是假命题**（全称闭包为假：
+/-- ★B **`weakCompatibilityRealization_gap_correct_shape_legacy` 是假命题**（全称闭包为假：
 `α = Fin 4`、`F = {{0,1}|{2,3}}`、`w ≡ 1` 处不存在实现的 `δ`）。
 
 `def` 原文**逐字未改**；本定理只新增反例，核心矛盾在 `no_bunemanIndex_pair`。 -/
-theorem weakCompatibilityRealization_gap_correct_shape_refuted :
-    ¬ weakCompatibilityRealization_gap_correct_shape.{0} := by
+theorem weakCompatibilityRealization_gap_correct_shape_legacy_refuted :
+    ¬ weakCompatibilityRealization_gap_correct_shape_legacy.{0} := by
   intro h
   obtain ⟨δ, _, hw, hz⟩ :=
     h (F := {cexSplit}) (w := fun _ => 1) weaklyCompatible_cexSplit
@@ -661,7 +661,7 @@ def fourPointOfSplitMetricSum_gap_correct_shape : Prop :=
     (∀ s ∈ F, ∀ t ∈ F, s.Compatible t) → (∀ s ∈ F, 0 < w s) →
       FourPointStd (fun x y => ∑ s ∈ F, w s * SplitMetric s x y)
 
-/-! ## 8. ★D `SplitPrime` 是**不可满足**的 ⇒ `canonicalSplitDecomposition_gap` **平凡为假**
+/-! ## 8. ★D `SplitPrime` 是**不可满足**的 ⇒ `canonicalSplitDecomposition_gap_legacy` **平凡为假**
 
 协调侧怀疑「库内 `SplitPrime`（= 处处 `¬ IsDSplit`，`max` 形式）**严格强于**文献形态
 （= 处处 `¬ IsDSplitStrong`）」；本文件核出的结论**更强**：
@@ -669,14 +669,14 @@ def fourPointOfSplitMetricSum_gap_correct_shape : Prop :=
 > 库内 `SplitPrime δ := ∀ A B : Finset α, ¬ IsDSplit δ A B` **对任何 `δ` 都不成立** ✗ ——
 > 取 `A = ∅`：`IsDSplit δ ∅ B` 是**空真**（`∀ a ∈ ∅, …`）⇒ `¬ IsDSplit δ ∅ B` 为假。
 
-⇒ **`canonicalSplitDecomposition_gap` 平凡为假**（它的结论要求 `∃ δ₀, SplitPrime δ₀`，
-而这样的 `δ₀` 不存在）：见 `not_canonicalSplitDecomposition_gap` ✓。
+⇒ **`canonicalSplitDecomposition_gap_legacy` 平凡为假**（它的结论要求 `∃ δ₀, SplitPrime δ₀`，
+而这样的 `δ₀` 不存在）：见 `not_canonicalSplitDecomposition_gap_legacy` ✓。
 根因：BdD 的「(partial) split」两侧**非空**，库内 `def SplitPrime` 漏了这个侧条件
 （文献形态应写 `A.Nonempty → B.Nonempty → ¬ …`）。
 
-⇒ 补齐非空侧后的形态登记为 `SplitPrimeStd` + `canonicalSplitDecomposition_gap_correct_shape`；
+⇒ 补齐非空侧后的形态登记为 `SplitPrimeStd` + `canonicalSplitDecomposition_gap_correct_shape_legacy`；
 ★ **W25-b ★D 校正**：`SplitPrimeStd`（`μ` 形）**仍不是**忠实 split-prime，忠实形态 = `SplitPrimeFaithful`
-（`§8.1`）；且 `……_correct_shape` 已被**证成**（`canonicalSplitDecomposition_gap_correct_shape_holds`），
+（`§8.1`）；且 `……_correct_shape` 已被**证成**（`canonicalSplitDecomposition_gap_correct_shape_legacy_holds`），
 但它是**空转**缺口（见该 `def` 的 docstring）；
 原 `def` **逐字未改** ✓。 -/
 
@@ -700,19 +700,19 @@ theorem splitPrimeStd_of_splitPrimeNE {α : Type*} {δ : α → α → ℝ}
   exact h A B hA hB fun a ha a' ha' b hb b' hb' =>
     lt_of_lt_of_le (hS a ha a' ha' b hb b' hb').1 (le_max_left _ _)
 
-/-- ★★★ **`canonicalSplitDecomposition_gap` 是假命题**（`.{0}` 实例；原 `def` 未改）：
+/-- ★★★ **`canonicalSplitDecomposition_gap_legacy` 是假命题**（`.{0}` 实例；原 `def` 未改）：
 其结论要求 `SplitPrime δ₀`，而该谓词**不可满足**。 -/
-theorem not_canonicalSplitDecomposition_gap : ¬ canonicalSplitDecomposition_gap.{0} := by
+theorem not_canonicalSplitDecomposition_gap_legacy : ¬ canonicalSplitDecomposition_gap_legacy.{0} := by
   intro h
   obtain ⟨_F, _c, δ₀, _hpos, hprime, _hdec⟩ :=
     h (α := Fin 4) (fun _ _ => 0) (fun _ _ => rfl)
   exact not_splitPrime δ₀ hprime
 
-/-- ✓ **`canonicalSplitDecomposition_gap` 的正确形态**（W12k 登记；**W25-b：已证成**，但见下「空转」）：
+/-- ✓ **`canonicalSplitDecomposition_gap_legacy` 的正确形态**（W12k 登记；**W25-b：已证成**，但见下「空转」）：
 残差改为**非空侧 + 强形式** `SplitPrimeStd`。
 
 ★★ **W25-b 判定：本 `Prop` 为真，且证明不需要 `δ` 的对称性**
-（`canonicalSplitDecomposition_gap_correct_shape_holds`，主引理 `exists_splitPrimeFaithful_decomposition`）：
+（`canonicalSplitDecomposition_gap_correct_shape_legacy_holds`，主引理 `exists_splitPrimeFaithful_decomposition`）：
 取 `F := 全体 split`、系数恒为足够大的 `M`，残差 `δ₀ := δ − M·∑_s δ_s` 的**非对角元**可任意负，
 而对角元 `δ₀ x x = δ x x` 不动（`δ_s x x = 0`）⇒ 一对**退化四元组** `a = a'`、`b = b'`
 就使每个非空 `A,B` 的隔离指数 `≤ 0` ✓。
@@ -724,8 +724,8 @@ and it is **split-prime**」（另见 `:816`、`:825`「a split-prime metric and
 multiples of …」），且系数必须**等于隔离指数**（`:1651-1655` Thm 2）、分解**唯一**。
 本 `Prop` 缺的恰是这三件：①`δ` 与 `δ₀` 的**度量约束**（`M(X)`：`δ x x = 0`、非负、三角不等式；
 松掉它 ⇒ 非对角可任意下压 ⇒ 平凡为真）；②**典范性** `c s = α_s`；③**唯一性**。
-⇒ 忠实形态登记为 `canonicalSplitDecomposition_gap_faithful`（`§8.2`；仍为缺口）。 -/
-def canonicalSplitDecomposition_gap_correct_shape : Prop :=
+⇒ 忠实形态登记为 `canonicalSplitDecomposition_gap_faithful_legacy`（`§8.2`；仍为缺口）。 -/
+def canonicalSplitDecomposition_gap_correct_shape_legacy : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
       (∀ s ∈ F, 0 < c s) ∧ SplitPrimeStd δ₀ ∧
@@ -878,19 +878,19 @@ theorem exists_splitPrimeFaithful_decomposition {α : Type*} [Fintype α] [Decid
     dsimp only
     ring
 
-/-- ★★★ **`canonicalSplitDecomposition_gap_correct_shape` 成立**（`_holds` 形态；**零假设**，
+/-- ★★★ **`canonicalSplitDecomposition_gap_correct_shape_legacy` 成立**（`_holds` 形态；**零假设**，
 连 `δ` 的对称性都不用）。★ 但见该 `def` 的 docstring：这是**空转**结论 —— 真正的 BdD 内容
 （残差仍是度量 + 系数 = 隔离指数 + 唯一性）不在本 `Prop` 里。 -/
-theorem canonicalSplitDecomposition_gap_correct_shape_holds :
-    canonicalSplitDecomposition_gap_correct_shape.{0} := by
+theorem canonicalSplitDecomposition_gap_correct_shape_legacy_holds :
+    canonicalSplitDecomposition_gap_correct_shape_legacy.{0} := by
   intro α _ _ δ _
   obtain ⟨F, c, δ₀, hpos, hfaith, heq⟩ := exists_splitPrimeFaithful_decomposition δ
   exact ⟨F, c, δ₀, hpos, splitPrimeStd_of_splitPrimeNE hfaith, heq⟩
 
 /-! ## 8.2 ⛔ **BdD Theorem 2 的忠实形态**（W25-b 登记；**W26-c 由 `§8.5` 机器证伪**） -/
 
-/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap_faithful`（`Phylo/Stat/BunemanIndexBridge.lean:1368`）。
-⛔ **`canonicalSplitDecomposition_gap` 的忠实形态（W25-b 登记；★★★ W26-c 已机器证伪）**：
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_canonicalSplitDecomposition_gap_faithful_legacy`（`Phylo/Stat/BunemanIndexBridge.lean:1368`）。
+⛔ **`canonicalSplitDecomposition_gap_legacy` 的忠实形态（W25-b 登记；★★★ W26-c 已机器证伪）**：
 
 `δ` 是 `X` 上的**度量**（`M(X)`：对称、`x = x ⟹ 0`、非负、三角不等式 —— `:673-684`、
 `:816`、`:825` 的框架），且**残差 `δ₀` 仍是度量**、并且 split-prime（隔离指数处处 `0`）。
@@ -900,12 +900,12 @@ theorem canonicalSplitDecomposition_gap_correct_shape_holds :
 故本形态**不是空转**；它等价于 `:1651-1655` Thm 2 的**存在性**一半
 （本 `Prop` 未要求 `c s = α_s` 与唯一性，故弱于 Thm 2 全文）。缺的具名器材见报告「卡点」。
 
-★ **W26-c（`§8.4` 的机器结论）**：本 `Prop` 的结论其实**把残差压成 `0`**（`eq_zero_of_splitPrimeFaithful` ✓ 机器证明 —— 注册形态的 `SplitPrimeFaithful` 量化了**非划分对** `{x}|{y}`，其隔离指数含退化项 `2·δ₀ x y`），故本 `Prop` 的结论等价于「`δ` 是正系数 split 度量之和」，**不是** BdD Thm 2 的残差形态。忠实形态见 `§8.4` 的 `canonicalSplitDecomposition_gap_faithful_v2`（四要素在 `§8.4` 头部）。
+★ **W26-c（`§8.4` 的机器结论）**：本 `Prop` 的结论其实**把残差压成 `0`**（`eq_zero_of_splitPrimeFaithful` ✓ 机器证明 —— 注册形态的 `SplitPrimeFaithful` 量化了**非划分对** `{x}|{y}`，其隔离指数含退化项 `2·δ₀ x y`），故本 `Prop` 的结论等价于「`δ` 是正系数 split 度量之和」，**不是** BdD Thm 2 的残差形态。忠实形态见 `§8.4` 的 `canonicalSplitDecomposition_gap`（四要素在 `§8.4` 头部）。
 
-★★★ **W26-c 追加：本 `Prop` 已被机器证伪** —— `not_canonicalSplitDecomposition_gap_faithful`
+★★★ **W26-c 追加：本 `Prop` 已被机器证伪** —— `not_canonicalSplitDecomposition_gap_faithful_legacy`
 （`§8.5`）：`Fin 5` 上的度量 `d₅`（`{0,1,2}` 两两 `2`；`3、4` 到三者 `1`；`d(3,4) = 1`）使结论失败
 （超度量泛函 `Φ`：每个 split 度量上 `≤ 0`，而 `Φ(d₅) = 2`）。 -/
-def canonicalSplitDecomposition_gap_faithful : Prop :=
+def canonicalSplitDecomposition_gap_faithful_legacy : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -927,7 +927,7 @@ def canonicalSplitDecomposition_gap_faithful : Prop :=
 （`Phylo/SplitWeak.lean:251`）；把它写成 BdD 的「`max` 里含第三项」只差一个恒等式
 `max{max{P,Q}, I} − I = max{max{P,Q} − I, 0}`，故「`max` 里含 `I`」与「取 `pairDeficit` 再截断
 到 `0`」是**同一个数**。★ 关键结论（本节的桥）：`0 < α_{A,B} ⟺ IsDSplit δ A B`（`max` 形），
-这正是 `IsDSplit` 忠实性的**定义级证明**，也把 `canonicalSplitDecomposition_gap_faithful` 缺的
+这正是 `IsDSplit` 忠实性的**定义级证明**，也把 `canonicalSplitDecomposition_gap_faithful_legacy` 缺的
 第 ② 件器材（系数 `c s = α_{s.sideA, s.sideB}`）落成了库内**可命名**的对象。 -/
 
 /-- 隔离指数取 `inf'` 的**四元组集** `A × A × B × B`（含退化四元组：允许 `a = a'`、`b = b'`）。 -/
@@ -1056,17 +1056,17 @@ theorem residue_le_of_nonneg {α : Type*} [Fintype α] [DecidableEq α]
 隔离指数只剩 `max{2·(δ₀ x y), δ₀ x x + δ₀ y y} − δ₀ x x − δ₀ y y`；对角 `0` 加非负使它等于 `2·δ₀ x y`
 ⇒ `¬ IsDSplit` 就是 `δ₀ x y ≤ 0` ⇒ 与「非负」合用即得 `δ₀ ≡ 0`（`eq_zero_of_splitPrimeFaithful` ✓）。
 
-⇒ `§8.2` 的 `canonicalSplitDecomposition_gap_faithful` 的结论**退化**成
+⇒ `§8.2` 的 `canonicalSplitDecomposition_gap_faithful_legacy` 的结论**退化**成
 「`δ` 是一族**正系数** split 度量之和」（`exists_splitMetric_sum_of_faithful` ✓）：
 残差没有留下任何「split-prime 但非零」的余地。这不是 BdD Thm 2 的形态。
 
 ### 四要素（`§8.1`/`§8.2` 登记形态 ⇒ 忠实形态）
 
 * **旧形态**（**逐字保留**，未改）：`SplitPrimeFaithful δ := ∀ A B, A.Nonempty → B.Nonempty →
-  ¬ IsDSplit δ A B`（`§8.1`）；`canonicalSplitDecomposition_gap_faithful`（`§8.2`，同样未改）；
+  ¬ IsDSplit δ A B`（`§8.1`）；`canonicalSplitDecomposition_gap_faithful_legacy`（`§8.2`，同样未改）；
 * **新形态**：`SplitPrimeFaithfulPartition δ := ∀ A B, A.Nonempty → B.Nonempty → Disjoint A B →
   A ∪ B = Finset.univ → ¬ IsDSplit δ A B`（只取 `X` 的**划分** `A|B`），配套
-  `canonicalSplitDecomposition_gap_faithful_v2`（残差用新形态）＋
+  `canonicalSplitDecomposition_gap`（残差用新形态）＋
   `splitPrimeFaithfulPartition_iff_isolationIndex_nonpos`（与 `§8.3` 隔离指数的桥，形态照抄 `§8.3`）；
 * **文献**：`references/md/BandeltDress1992_CanonicalDecompositionMetrics.md:1245-1253`
   （split 度量 `δ_{A,B}` 定义在 `A ⊔ B` 上 ⇒ split = **不交并覆盖 `X`** 的一对子集）＋ `:1255-1262`
@@ -1081,7 +1081,7 @@ theorem residue_le_of_nonneg {α : Type*} [Fintype α] [DecidableEq α]
   ★ 下一步（未做）：用 `K₂,₃` 五点度量机器验证「严格强于」（旧形态假、新形态真）。
 
 ★ **W26-c 追加（`§8.5`）**：由本节的退化定理可**推出** `§8.2` 的 `Prop` 为**假**
-（`not_canonicalSplitDecomposition_gap_faithful`）：退化后结论要求「`δ` 是正系数 split 度量之和」，
+（`not_canonicalSplitDecomposition_gap_faithful_legacy`）：退化后结论要求「`δ` 是正系数 split 度量之和」，
 而 `Fin 5` 上的 `d₅` 不是（超度量泛函 `Φ` 反证）。 -/
 
 /-- ★★★ **注册形态的 `SplitPrimeFaithful` 逼出「残差恒为零」**：取**非划分对** `A = {x}`、`B = {y}`
@@ -1148,12 +1148,12 @@ theorem splitPrimeFaithfulPartition_iff_isolationIndex_nonpos {α : Type*} [Fint
     exact absurd (h A B hA hB hd hu)
       (not_le.mpr ((isolationIndex_pos_iff_isDSplit δ hA hB).mpr hds))
 
-/-- ⬜ **忠实缺口（四要素校正版；未证）**：与 `§8.2` 的 `canonicalSplitDecomposition_gap_faithful`
+/-- ⬜ **忠实缺口（四要素校正版；未证）**：与 `§8.2` 的 `canonicalSplitDecomposition_gap_faithful_legacy`
 **逐字相同**，只把残差的 split-prime 换成**划分版** `SplitPrimeFaithfulPartition`。
 
 ★ 这是 BdD Thm 2（`:1281-1285`）的**存在性**一半（不要求 `c s = α_s`、不要求唯一性）；
 `§8.2` 的原版因残差被压成 `0` 而**不是** Thm 2（见 `§8.4`）。 -/
-def canonicalSplitDecomposition_gap_faithful_v2 : Prop :=
+def canonicalSplitDecomposition_gap : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) →
     (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) →
     ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -1161,7 +1161,7 @@ def canonicalSplitDecomposition_gap_faithful_v2 : Prop :=
         (∀ x y, 0 ≤ δ₀ x y) ∧
           ∀ x y, δ x y = δ₀ x y + ∑ s ∈ F, c s * SplitMetric s x y
 
-/-! ## 8.5 ★★★ W26-c：注册形态 `canonicalSplitDecomposition_gap_faithful` **为假**（机器反例）
+/-! ## 8.5 ★★★ W26-c：注册形态 `canonicalSplitDecomposition_gap_faithful_legacy` **为假**（机器反例）
 
 ### 三行思路
 
@@ -1365,10 +1365,10 @@ theorem witnessForm_witnessDist : witnessForm witnessDist = 2 := by
   rw [h, h2]
   norm_num
 
-/-- ★★★ **`canonicalSplitDecomposition_gap_faithful` 是假命题**（`Fin 5` 上的度量反例 `d₅`）：
+/-- ★★★ **`canonicalSplitDecomposition_gap_faithful_legacy` 是假命题**（`Fin 5` 上的度量反例 `d₅`）：
 结论会把 `d₅` 写成**正系数** split 度量之和，从而 `Φ(d₅) ≤ 0`；而 `Φ(d₅) = 2`。 -/
-theorem not_canonicalSplitDecomposition_gap_faithful :
-    ¬ canonicalSplitDecomposition_gap_faithful.{0} := by
+theorem not_canonicalSplitDecomposition_gap_faithful_legacy :
+    ¬ canonicalSplitDecomposition_gap_faithful_legacy.{0} := by
   intro h
   obtain ⟨F, c, δ₀, hpos, hsp, hdiag, hnn, heq⟩ :=
     h (α := Fin 5) witnessDist witnessDist_symm witnessDist_diag witnessDist_nonneg
@@ -1393,7 +1393,7 @@ theorem not_canonicalSplitDecomposition_gap_faithful :
 
 ### 本节的机器结论（四要素：旧形态 / 新形态 / 文献 / 理由）
 
-`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，**未改一字**）的结论要求
+`canonicalSplitDecomposition_gap`（`:1154`，**未改一字**）的结论要求
 `δ = δ₀ + Σ_{s∈F} c_s·δ_s`，`c_s > 0`、`δ₀` 划分版 split-prime、`δ₀` 非负且对角为 `0`。
 存在性 ① = 「把正隔离指数的 split 逐个剥离」。**本节只落地剥离单步的全部度量保形结论**
 （= Thm 2 末句「`d'` 仍是 dissimilarity/metric」），不声称已证 ①。
@@ -1733,7 +1733,7 @@ theorem peelCoeff_pos {α : Type*} [Fintype α] [DecidableEq α]
 `δ` 是度量（对称 / 对角 `0` / 非负 / 三角不等式）、`s` 是 `δ` 的 d-split ⇒
 `c = α_s/2 > 0`，`δ' := δ - c·δ_s` **仍是度量**，且 `s` **不再是** `δ'` 的 d-split。
 
-⚠️ 这**不是** `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`）：还缺 (P1)「剥离后
+⚠️ 这**不是** `canonicalSplitDecomposition_gap`（`:1154`）：还缺 (P1)「剥离后
 d-split 集合严格缩小」（BdD Lemma 3–6）与 (P2) 终止性 —— 见本节头部。 -/
 theorem peelStep {α : Type*} [Fintype α] [DecidableEq α]
     {δ : α → α → ℝ} {s : Split α}
@@ -1751,16 +1751,16 @@ theorem peelStep {α : Type*} [Fintype α] [DecidableEq α]
    peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1)⟩
 
 
-/-! ## 8.7 ★★★ W27 泳道 e：`_v2` 结论的**两整类非空真实例** ＋ 归纳步的封闭性
+/-! ## 8.7 ★★★ W27 泳道 e：`最终形态` 结论的**两整类非空真实例** ＋ 归纳步的封闭性
 
-`§8.6` 给的是**剥离一步**的度量保形（存在性 ① 的器材）。本节给 `canonicalSplitDecomposition_gap_faithful_v2`
-（`:1154`，**def 未改**）的**结论**（`∃ F c δ₀, …`）的两整类真实例，用来排除「`_v2` 也像 v1 一样为假」的可能
-（v1 已被 `not_canonicalSplitDecomposition_gap_faithful`（`:1368`）机器证伪）：
+`§8.6` 给的是**剥离一步**的度量保形（存在性 ① 的器材）。本节给 `canonicalSplitDecomposition_gap`
+（`:1154`，**def 未改**）的**结论**（`∃ F c δ₀, …`）的两整类真实例，用来排除「`最终形态` 也像 v1 一样为假」的可能
+（v1 已被 `not_canonicalSplitDecomposition_gap_faithful_legacy`（`:1368`）机器证伪）：
 
 1. `splitPrimeFaithfulPartition_zero`：残差取 `0` 时划分版 split-prime 成立；
-2. `…_v2_conclusion_of_splitMetricSum`：**`δ` = 正系数 split 度量之和**（= 树度量类，含全部树度量）
+2. `…_conclusion_of_splitMetricSum`：**`δ` = 正系数 split 度量之和**（= 树度量类，含全部树度量）
    取 `F` = 支撑、`c` = 系数、`δ₀ = 0` 即满足结论；
-3. `…_v2_conclusion_of_splitPrime`：**`δ` 本身划分版 split-prime**（非负、对角 `0`）取
+3. `…_conclusion_of_splitPrime`：**`δ` 本身划分版 split-prime**（非负、对角 `0`）取
    `F = ∅`、`c = 0`、`δ₀ = δ` 即满足结论（= 剥离到 `F = ∅` 的终止态）。
 
 ★ 这四条合起来把 ① 的缺口**精确定位**成一条：剥离链的**终止性**（(P1) 的全局下降 ＋ (P2) 的测度）。
@@ -1775,11 +1775,11 @@ theorem splitPrimeFaithfulPartition_zero {α : Type*} [Fintype α] [DecidableEq 
   have h := hds a ha a ha b hb b hb
   simp at h
 
-/-- ★★★ **`_v2` 结论的一整类非空真实例**：`δ` 是**正系数 split 度量之和**时，
-取 `F` = 支撑、`c` = 系数、`δ₀ = 0` 即满足 `canonicalSplitDecomposition_gap_faithful_v2` 的结论。
+/-- ★★★ **`最终形态` 结论的一整类非空真实例**：`δ` 是**正系数 split 度量之和**时，
+取 `F` = 支撑、`c` = 系数、`δ₀ = 0` 即满足 `canonicalSplitDecomposition_gap` 的结论。
 
 （含**全部树度量**：BdD md `:1245-1253` 的 split 度量正是树的边权展开。） -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitMetricSum
+theorem canonicalSplitDecomposition_gap_conclusion_of_splitMetricSum
     {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} {F : Finset (Split α)}
     {c : Split α → ℝ} (hpos : ∀ s ∈ F, 0 < c s)
     (hδ : ∀ x y, δ x y = ∑ s ∈ F, c s * SplitMetric s x y) :
@@ -1793,9 +1793,9 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitMetricSum
      rw [hδ x y]
      simp⟩
 
-/-- ★★★ **`_v2` 结论的另一整类非空真实例**：`δ` 本身**划分版 split-prime**（非负、对角 `0`）时，
+/-- ★★★ **`最终形态` 结论的另一整类非空真实例**：`δ` 本身**划分版 split-prime**（非负、对角 `0`）时，
 取 `F = ∅`、`c = 0`、`δ₀ = δ` 即满足结论（= 剥离到 `F = ∅` 的终止态）。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
+theorem canonicalSplitDecomposition_gap_conclusion_of_splitPrime
     {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ}
     (hsp : SplitPrimeFaithfulPartition δ) (hdiag : ∀ x, δ x x = 0) (hnn : ∀ x y, 0 ≤ δ x y) :
     ∃ (F' : Finset (Split α)) (c' : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -1808,14 +1808,14 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
      intro x y
      simp⟩
 
-/-! ## 8.8 ★★★ W27 泳道 e：`_v2` 结论的**归纳步封闭性**（存在性 ① 的骨架）
+/-! ## 8.8 ★★★ W27 泳道 e：`最终形态` 结论的**归纳步封闭性**（存在性 ① 的骨架）
 
 `§8.7` 给了两端：split 锥内（`F` = 支撑、`δ₀ = 0`）与 split-prime 端（`F = ∅`、`δ₀ = δ`）。
 本节补上中间的**归纳步**：结论对「再加一条正系数 split 度量」封闭 ⇒
 
 > 存在性 ① ＝ 基例（split-prime 端，已证）＋ 归纳步（本节，已证）＋ **剥离链的终止性**（缺，即 §8.6 的 (P1)+(P2)）。
 
-这就是把 `_v2` 的缺口**收缩到唯一一件**：终止性。 -/
+这就是把 `最终形态` 的缺口**收缩到唯一一件**：终止性。 -/
 
 /-- ★★ 系数并合的展开（`s₀ ∈ F` 情形用的 `c'`）：
 `(if s = s₀ then c s₀ + c₀ else c s) = c s + (if s = s₀ then c₀ else 0)`。 -/
@@ -1893,11 +1893,11 @@ theorem sum_splitMetric_add_not_mem {α : Type*} [Fintype α] [DecidableEq α]
   rw [hv]
   ring
 
-/-- ★★★ **`_v2` 结论的归纳步**：若 `δ` 有分解，则 `δ + c₀·δ_{s₀}`（`c₀ > 0`）也有分解 ——
+/-- ★★★ **`最终形态` 结论的归纳步**：若 `δ` 有分解，则 `δ + c₀·δ_{s₀}`（`c₀ > 0`）也有分解 ——
 残差 `δ₀` 与 split-prime 性**逐字不动**，只把 `s₀` 并进 `F`（已在则系数相加）。
 
 ⇒ 存在性 ① 只剩「剥离链终止」这一件（见 §8.6 的 (P1)+(P2)）。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_conclusion_add_split
+theorem canonicalSplitDecomposition_gap_conclusion_add_split
     {α : Type*} [Fintype α] [DecidableEq α] {δ : α → α → ℝ} {s₀ : Split α} {c₀ : ℝ}
     (hc₀ : 0 < c₀)
     (h : ∃ (F : Finset (Split α)) (c : Split α → ℝ) (δ₀ : α → α → ℝ),
@@ -3349,7 +3349,7 @@ theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} 
 层析论证，不在 W27-b 时间盒内。本节**只**交「**忠实 ⟹ 弱化**」方向
 （`weakCompatibilityRealization_gap_of_weights`，**无条件、零 `sorry`**）。 -/
 
-/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_weakCompatibilityRealization_gap_weights`（`Phylo/Stat/BunemanIndexBridge.lean:4528`）。
+/-- ⚠️ **已证伪，非待证目标** —— 机器反例见 `not_weakCompatibilityRealization_gap_weights_legacy`（`Phylo/Stat/BunemanIndexBridge.lean:4528`）。
 ★★★★ **忠实形态**（W27-b 新立；BdD Theorem 3 的**两条**断言一起，一般 `α` 的 `_holds` 形态）。
 
 `F` 弱相容、`w > 0` 于 `F` ⇒ 取 `δ := Σ_{u∈F} w_u δ_u`，则
@@ -3359,7 +3359,7 @@ theorem fourPointCharacterization_gap_proof : fourPointCharacterization_gap.{0} 
 
 ★ 与 `Split.weakCompatibilityRealization_gap`（`Phylo/SplitWeak.lean:562`）的**唯一**差别就是新增的 ②：
 `w` 从「只出现在假设里」变成「**进出结论**」⇒ **收口前者的 `_holds` ≠ 形式化 BdD Thm 3**。 -/
-def weakCompatibilityRealization_gap_weights : Prop :=
+def weakCompatibilityRealization_gap_weights_legacy : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
       ∃ δ : α → α → ℝ, (∀ x y, δ x y = δ y x) ∧
@@ -3373,13 +3373,13 @@ def weakCompatibilityRealization_gap_weights : Prop :=
 
 ★ 该方向**只是投影**，故它本身**不**声称忠实形态成立（忠实形态本批仍为 ⬖）。 -/
 theorem weakCompatibilityRealization_gap_of_weights :
-    weakCompatibilityRealization_gap_weights.{0} → Split.weakCompatibilityRealization_gap.{0} := by
+    weakCompatibilityRealization_gap_weights_legacy.{0} → Split.weakCompatibilityRealization_gap.{0} := by
   intro h α instF instD F w hF hw
   obtain ⟨δ, hsymm, hiff, _⟩ := h F w hF hw
   exact ⟨δ, hsymm, hiff⟩
 
 
-/-! ## 8.10 ★★★★ W28 泳道 e：`_v2` 的**收口归约** —— 存在性 ① 只剩 (P1) 一条具名假设
+/-! ## 8.10 ★★★★ W28 泳道 e：`最终形态` 的**收口归约** —— 存在性 ① 只剩 (P1) 一条具名假设
 
 ### 本节做了什么
 
@@ -3391,8 +3391,8 @@ theorem weakCompatibilityRealization_gap_of_weights :
 2. `dSplits_eq_empty_iff_splitPrimeFaithfulPartition`：`dSplits δ = ∅` ⟺ `δ` 划分版 split-prime；
 3. ★★★ `dSplits_peelMetric_card_lt_of_compatible`：**(P1) 的相容半边** —— 若剥离后活下来的
    d-split **都与 `s` 相容**，则 `dSplits` 的基数**严格下降**（终止测度成立）；
-4. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease`：
-   **对 `(dSplits δ).card` 作强归纳**，把 `_v2` 的**完整结论（零额外假设）**归约到**唯一**一条
+4. ★★★★ `canonicalSplitDecomposition_gap_of_dSplits_card_decrease`：
+   **对 `(dSplits δ).card` 作强归纳**，把 `最终形态` 的**完整结论（零额外假设）**归约到**唯一**一条
    具名假设 (P1)：「剥离任一 d-split 后 `dSplits` 的基数严格下降」。
 
 ### 为什么 (P1) 就是全部（终止性 ＋ 装配都在本节内部完成）
@@ -3486,7 +3486,7 @@ theorem dSplits_peelMetric_card_lt_of_compatible
     exact peelMetric_not_isDSplit (s.nonempty 0) (s.nonempty 1) (mem_dSplits.mp hm)
   exact Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩)
 
-/-- ★★★★ **`_v2` 的收口归约（W28 核心）**：`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，
+/-- ★★★★ **`最终形态` 的收口归约（W28 核心）**：`canonicalSplitDecomposition_gap`（`:1154`，
 **def 未改一字**）的**完整结论**（零额外假设、含存在性 ①）由**唯一一条具名假设 (P1)** 推出：
 
 `hdec`：(P1) —— 对任意度量 `δ` 与 `δ` 的任一 d-split `s`，剥离后 `dSplits` 的基数**严格下降**。
@@ -3499,9 +3499,9 @@ theorem dSplits_peelMetric_card_lt_of_compatible
 
 ★ 本定理**不叫** `_holds`：前提 `hdec`（(P1) 的不相容半边，BdD Lemma 3–6）**未证**，
 半成品不许用 `_holds` 命名（台账只认该后缀为「已证」）。
-★ 一旦 (P1) 证成，`_holds` 只需 `canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+★ 一旦 (P1) 证成，`_holds` 只需 `canonicalSplitDecomposition_gap_of_dSplits_card_decrease
   (fun δ hδ hdiag hnn htri s hds => …)` 一行装配。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+theorem canonicalSplitDecomposition_gap_of_dSplits_card_decrease
     {α : Type*} [Fintype α] [DecidableEq α]
     (hdec : ∀ (δ : α → α → ℝ), (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) →
       (∀ x y, 0 ≤ δ x y) → (∀ x y z, δ x z ≤ δ x y + δ y z) → ∀ s : Split α,
@@ -3525,7 +3525,7 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
   | _ n ih =>
     intro δ hδ hdiag hnn htri hle
     by_cases hemp : dSplits δ = ∅
-    · exact canonicalSplitDecomposition_gap_faithful_v2_conclusion_of_splitPrime
+    · exact canonicalSplitDecomposition_gap_conclusion_of_splitPrime
         (dSplits_eq_empty_iff_splitPrimeFaithfulPartition.mp hemp) hdiag hnn
     · obtain ⟨s, hs⟩ := Finset.nonempty_iff_ne_empty.mpr hemp
       have hdss : IsDSplit δ s.sideA s.sideB := mem_dSplits.mp hs
@@ -3538,7 +3538,7 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
           (peelMetric_nonneg hδ hdiag hnn (s.nonempty 0) (s.nonempty 1))
           (peelMetric_triangle hδ hdiag htri (s.nonempty 0) (s.nonempty 1)) le_rfl
       obtain ⟨F', c', δ₀', hpos', hsp', hdiag'', hnn'', heq'⟩ :=
-        canonicalSplitDecomposition_gap_faithful_v2_conclusion_add_split
+        canonicalSplitDecomposition_gap_conclusion_add_split
           (δ := peelMetric δ s) (s₀ := s) (c₀ := peelCoeff δ s) hcpos
           ⟨F, c, δ₀, hpos, hsp, hdiag', hnn', heq⟩
       refine ⟨F', c', δ₀', hpos', hsp', hdiag'', hnn'', ?_⟩
@@ -3568,8 +3568,8 @@ theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
    ```
    即**危险模式下的亏损落在 `[0, α_s)` 内**。★ 这就是 (P1) 剩下的**唯一**缺口，且它是**逐点**的；
 5. `dSplitsPeelDecrease`：(P1) 的具名 `Prop`（零假设、零证明，供台账追踪）；
-6. ★★★★ `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease`：
-   **一行装配** —— `dSplitsPeelDecrease → canonicalSplitDecomposition_gap_faithful_v2`。
+6. ★★★★ `canonicalSplitDecomposition_gap_of_dSplitsPeelDecrease`：
+   **一行装配** —— `dSplitsPeelDecrease → canonicalSplitDecomposition_gap`。
 
 ### 为什么第 4 条仍是缺口（为什么它不能由现有器材推出）
 
@@ -3726,7 +3726,7 @@ theorem cross_mode_obstruction {α : Type*} [Fintype α] [DecidableEq α]
 /-- ⬜ **(P1) 的具名登记**（零假设、零证明）：剥离 `δ` 的任一 d-split 后，`dSplits` 的基数**严格下降**。
 
 ★ 这是 `§8.10` 的收口归约唯一欠的假设 ⇒ **存在性 ① 的全部残余缺口就是本条**。
-★★ **命名说明**：本 `Prop` **故意不带 `gap`** —— 它是 `_v2` 的**内部子义务**（(P1) 的测度载体性质），
+★★ **命名说明**：本 `Prop` **故意不带 `gap`** —— 它是 `最终形态` 的**内部子义务**（(P1) 的测度载体性质），
 **不是**新的独立文献缺口；台账口径 `A/B` 是机械的（`def` 名含 `gap` 就多登记一行），
 故此处只作具名 `Prop`，不计入「还剩几条真开放」。
 其**相容半边**见 `§8.10` 的 `dSplits_peelMetric_card_lt_of_compatible`；
@@ -3744,14 +3744,14 @@ def dSplitsPeelDecrease : Prop :=
 
 universe u
 
-/-- ★★★★ **一行装配**：`(P1)` ⟹ `canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改**）。
+/-- ★★★★ **一行装配**：`(P1)` ⟹ `canonicalSplitDecomposition_gap`（`:1154`，`def` **未改**）。
 
 ★ 本定理**不叫** `_holds`：前提 `dSplitsPeelDecrease` **未证**。
-一旦 (P1) 证成（`h := …`），`canonicalSplitDecomposition_gap_faithful_v2_holds` 即本定理的直接实例。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease
-    (h : dSplitsPeelDecrease.{u}) : canonicalSplitDecomposition_gap_faithful_v2.{u} := by
+一旦 (P1) 证成（`h := …`），`canonicalSplitDecomposition_gap_holds` 即本定理的直接实例。 -/
+theorem canonicalSplitDecomposition_gap_of_dSplitsPeelDecrease
+    (h : dSplitsPeelDecrease.{u}) : canonicalSplitDecomposition_gap.{u} := by
   intro α _ _ δ hδ hdiag hnn htri
-  exact canonicalSplitDecomposition_gap_faithful_v2_of_dSplits_card_decrease
+  exact canonicalSplitDecomposition_gap_of_dSplits_card_decrease
     (fun (δ : α → α → ℝ) hδ hdiag hnn htri s hds => h δ hδ hdiag hnn htri s hds)
     δ hδ hdiag hnn htri
 
@@ -4371,15 +4371,15 @@ theorem isDSplit_of_isDSplit_peelMetric_general {α : Type*} [Fintype α] [Decid
     exact hpos
 
 
-/-! ## 8.13 ★★★★★ W28 泳道 e：**收口** —— `canonicalSplitDecomposition_gap_faithful_v2_holds`
+/-! ## 8.13 ★★★★★ W28 泳道 e：**收口** —— `canonicalSplitDecomposition_gap_holds`
 
 `§8.12` 证了 (P1) 的核心「剥离下 d-split 无条件存活」。本节把它接成三级：
 
 1. `dSplits_peelMetric_subset`：`dSplits δ' ⊆ dSplits δ`（逐点用 `§8.12` 的存活引理）；
 2. ★★★ `dSplitsPeelDecrease_holds`：**(P1) 成立** —— `(dSplits δ').card < (dSplits δ).card`
    （真子集：`s` 是 `δ` 的 d-split 而 `peelMetric_not_isDSplit` 说它**不再**是 `δ'` 的）；
-3. ★★★★★ `canonicalSplitDecomposition_gap_faithful_v2_holds`：
-   **BdD Thm 2 的存在性一半**（`§8.4` 的 `canonicalSplitDecomposition_gap_faithful_v2`，`:1154`，
+3. ★★★★★ `canonicalSplitDecomposition_gap_holds`：
+   **BdD Thm 2 的存在性一半**（`§8.4` 的 `canonicalSplitDecomposition_gap`，`:1154`，
    `def` **未改一字**）—— 由 `§8.11` 的收口归约 `…_of_dSplitsPeelDecrease` 一步得出。
 
 ★ 链条回顾（全部机器验证、零 `sorry`/`axiom`）：
@@ -4416,28 +4416,28 @@ theorem dSplitsPeelDecrease_holds : dSplitsPeelDecrease := by
   exact Finset.card_lt_card (Finset.ssubset_iff_subset_ne.mpr ⟨hsub, hne⟩)
 
 /-- ★★★★★ **BdD Thm 2 的存在性一半 —— 收口**：
-`canonicalSplitDecomposition_gap_faithful_v2`（`:1154`，`def` **未改一字**）**成立**。
+`canonicalSplitDecomposition_gap`（`:1154`，`def` **未改一字**）**成立**。
 
 即：任意有限度量 `δ`（对称、对角 `0`、非负、三角不等式）都存在
 `F`、正系数 `c`、残差 `δ₀`，使 `δ = δ₀ + Σ_{s∈F} c_s·δ_s`，`δ₀` **划分版 split-prime**、
 非负、对角 `0`，且 `F` 上系数**全正**。
 
-★ 证明：`§8.11` 的 `canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease`
+★ 证明：`§8.11` 的 `canonicalSplitDecomposition_gap_of_dSplitsPeelDecrease`
 （对 `(dSplits δ).card` 的强归纳；基例 `§8.7`、归纳步 `§8.8`）＋ `dSplitsPeelDecrease_holds`（(P1)）。
 ★ **零 `sorry` / `admit` / `axiom` / `opaque`，零额外前提**。 -/
-theorem canonicalSplitDecomposition_gap_faithful_v2_holds :
-    canonicalSplitDecomposition_gap_faithful_v2 :=
-  canonicalSplitDecomposition_gap_faithful_v2_of_dSplitsPeelDecrease dSplitsPeelDecrease_holds
+theorem canonicalSplitDecomposition_gap_holds :
+    canonicalSplitDecomposition_gap :=
+  canonicalSplitDecomposition_gap_of_dSplitsPeelDecrease dSplitsPeelDecrease_holds
 
 end Split
 
-/-! ## 8.12 ★★★★ `weakCompatibilityRealization_gap_weights`（`:3358`）**已被机器证伪**
+/-! ## 8.12 ★★★★ `weakCompatibilityRealization_gap_weights_legacy`（`:3358`）**已被机器证伪**
 
 ### 结论
 
-`def weakCompatibilityRealization_gap_weights` 的**第三个合取项**（`:3363-3365`）**为假**，
+`def weakCompatibilityRealization_gap_weights_legacy` 的**第三个合取项**（`:3363-3365`）**为假**，
 故它的 `_holds` 形态**不可能成立**。反例已机器验证：
-`not_weakCompatibilityRealization_gap_weights : ¬ weakCompatibilityRealization_gap_weights.{0}`。
+`not_weakCompatibilityRealization_gap_weights_legacy : ¬ weakCompatibilityRealization_gap_weights_legacy.{0}`。
 
 ### 缺陷（量词错位）
 
@@ -4524,13 +4524,13 @@ theorem isolationIndex_comm {α : Type*} [Fintype α] [DecidableEq α]
   · have hA0 : A = ∅ := Finset.not_nonempty_iff_eq_empty.mp hA
     simp [isolationIndex, isoQuadruples, hA0]
 
-/-- ★★★ **反例**：`weakCompatibilityRealization_gap_weights`（`:3358`）在宇宙 `0` 上**为假**。
+/-- ★★★ **反例**：`weakCompatibilityRealization_gap_weights_legacy`（`:3358`）在宇宙 `0` 上**为假**。
 
 `F := {s₀}`、`w s₀ = 1`、`w (s₀.swap) = 5`。`F` 是单元集 ⇒ `δ = 1·δ_{s₀}` ⇒
 `α_{s₀} = α_{s₀.swap} = 2`；但结论在 `s₀.swap` 上（`∨` 前提由 `(s₀.swap).swap = s₀ ∈ F` 成立）
 要求 `α = 2·(5 + 1) = 12`。 -/
-theorem not_weakCompatibilityRealization_gap_weights :
-    ¬ weakCompatibilityRealization_gap_weights.{0} := by
+theorem not_weakCompatibilityRealization_gap_weights_legacy :
+    ¬ weakCompatibilityRealization_gap_weights_legacy.{0} := by
   intro h
   have hF : WeaklyCompatible (↑({cexSplit4} : Finset (Split (Fin 4))) : Set (Split (Fin 4))) := by
     have hp := weaklyCompatible_pair cexSplit4 cexSplit4
@@ -4795,14 +4795,14 @@ theorem isolationIndex_ge_two_mul_weight {α : Type*} [Fintype α] [DecidableEq 
   rw [hmin]
   linarith
 
-/-! ## 8.14 ★★★★ `weakCompatibilityRealization_gap_weights_v2` 的登记（量词修正 `s ∈ F`）
+/-! ## 8.14 ★★★★ `weakCompatibilityRealization_gap_weights` 的登记（量词修正 `s ∈ F`）
 
-### 与 `§8.9` 的 `def weakCompatibilityRealization_gap_weights`（`:3358`）的关系
+### 与 `§8.9` 的 `def weakCompatibilityRealization_gap_weights_legacy`（`:3358`）的关系
 
 `§8.12` 已**机器证伪** `:3358`：它的第三个合取项量化
 `∀ s, (s ∈ F ∨ s.swap ∈ F) → …`，当 `s ∉ F` 而 `s.swap ∈ F` 时前提成立，但 `w s` **无任何约束**
 （假设只给 `∀ s ∈ F, 0 < w s`），而 `δ = Σ_{u∈F} w_u δ_u` 根本不含 `w s` 项
-⇒ 右侧可任意大。本节的 `_v2` 把量词收紧为 `∀ s, s ∈ F → …`（**唯一**实质差别），
+⇒ 右侧可任意大。本节的 `最终形态` 把量词收紧为 `∀ s, s ∈ F → …`（**唯一**实质差别），
 其余形态（`δ = Σ_{u∈F} w_u δ_u`、`2·(w s + [s.swap∈F]·w s.swap)`）不变。 -/
 
 /-- **`Σ_{u∈F} w_u · δ_u`**（BdD Thm 3 的 `d = Σ_{S∈𝒮} λ_S δ_S`；`δ_S` 即
@@ -4818,9 +4818,9 @@ noncomputable def sumMetric {α : Type*} [Fintype α] [DecidableEq α]
 
 **四要素**
 
-* **旧形态（已证伪）**：`weakCompatibilityRealization_gap_weights`（本文件 `:3358`，`§8.9`）的
+* **旧形态（已证伪）**：`weakCompatibilityRealization_gap_weights_legacy`（本文件 `:3358`，`§8.9`）的
   第三合取项为 `∀ s, (s ∈ F ∨ s.swap ∈ F) → α_s = 2·(w s + [s.swap ∈ F]·w s.swap)`；
-  `§8.12` 的 `not_weakCompatibilityRealization_gap_weights`（`:4528`）已**机器证伪**它
+  `§8.12` 的 `not_weakCompatibilityRealization_gap_weights_legacy`（`:4528`）已**机器证伪**它
   （`Fin 4`、`F = {s₀}`、`w s₀ = 1`、`w s₀.swap = 5`：`∨` 前提在 `s₀.swap` 上成立，
   但右侧给 `12`，而 `α = 2`）。
 * **新形态（本节登记）**：量词收紧为 `∀ s, s ∈ F → α_s = 2·(w s + [s.swap ∈ F]·w s.swap)`；
@@ -4846,14 +4846,14 @@ noncomputable def sumMetric {α : Type*} [Fintype α] [DecidableEq α]
 ★ **状态**：本 `def` 是**待证形态**；`_holds` 见本节末尾（上界 = 唯一具名缺件 (B)）。
 `_holds` 只在真证成时使用。
 
-★★★ **W30 已收口**（`2026-10-24`）：`Split.weakCompatibilityRealization_gap_weights_v2_holds`
+★★★ **W30 已收口**（`2026-10-24`）：`Split.weakCompatibilityRealization_gap_weights_holds`
 在 `Phylo/Stat/BunemanIndexQuartet.lean:274`（落地 commit `beb6517`）—— **零额外前提**、本 `def` **逐字未改**。
 两个合取项分别由：第一项 `⟸` = `isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible`
 （`SplitWeak:975`）、`⟹` = `Split.weakCompatibilityNonMemberCore`（`SplitWeak:1968`）＋
 `core_holds`（`SplitWeak:2539`，W27-b）；第二项 = `isolationIndex_eq_two_mul_weight`
 （含 `|sideA| = 1` / `|sideB| = 1` 的单点侧）。
 上面「待证形态」一句**保留为留痕**（登记时的状态，不删）。 -/
-def weakCompatibilityRealization_gap_weights_v2 : Prop :=
+def weakCompatibilityRealization_gap_weights : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (w : Split α → ℝ),
     WeaklyCompatible (↑F : Set (Split α)) → (∀ s ∈ F, 0 < w s) →
       (∀ s : Split α, IsDSplit (sumMetric F w) s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s)
@@ -4927,7 +4927,7 @@ def QuartetAvoiding {α : Type*} [Fintype α] [DecidableEq α]
 /-- ★★★★★ **唯一具名缺件 (B)**（逐字）：`F` 弱相容、`s ∈ F` ⇒ 存在 `a a' ∈ s.sideA`、
 `b b' ∈ s.sideB`，使 `F ∖ {s, s.swap}` 中**不存在** `u` 满足 `u.Separates a a' b b'`。
 
-**它是 `weakCompatibilityRealization_gap_weights_v2` 第二个合取项（上界）的唯一缺口**：
+**它是 `weakCompatibilityRealization_gap_weights` 第二个合取项（上界）的唯一缺口**：
 有了 (B)，取该四元组，`pairDeficit_sum_eq`（`:4665`）给
 `pd = 2·max(c_W − c_P)(c_W − c_X) ≤ 2·c_W`（`c_P, c_X ≥ 0`），而 `c_W = w s + [s.swap∈F]·w s.swap`
 （成员恰好是 `s`、`s.swap`）⇒ `α_s ≤ 2(w_s + [s.swap∈F]·w_swap)`；与已证下界
@@ -4939,7 +4939,7 @@ def QuartetAvoiding {α : Type*} [Fintype α] [DecidableEq α]
 见 `§8.14.1` 尾部：`Decidable (∀ u ∈ F, …)` 走 `Fintype (Split _)`，而
 `instFintypeKPartition` 是 `noncomputable`）。
 **注**：(B) 的平凡情形 `|s.sideA| = 2` 或 `|s.sideB| = 2`（覆盖全部 `n ≤ 5`）也**尚未**形式化。 -/
--- ★ W29 台账口径：本 `def` 是 `weakCompatibilityRealization_gap_weights_v2` 的**内部子义务**，
+-- ★ W29 台账口径：本 `def` 是 `weakCompatibilityRealization_gap_weights` 的**内部子义务**，
 --   **不是**独立缺口登记 ⇒ 名字里**不带** `gap/Gap`（否则 `gap_ledger.py` 会多登记一条真开放）。
 def weakCompatibilityQuartetCore : Prop :=
   ∀ {α : Type*} [Fintype α] [DecidableEq α] (F : Finset (Split α)) (s : Split α),
@@ -5015,7 +5015,7 @@ theorem wcomp_mono {n : ℕ} {F G : Finset (Split (Fin n))} (hFG : F ⊆ G) :
   exact hG ⟨a, b, c, e, ⟨s, hFG hs, Rs⟩, ⟨t, hFG ht, Rt⟩, ⟨u, hFG hu, Ru⟩⟩
 
 
-/-! ### 8.14.4 `_v2` 第一合取项的两个方向：**核查结论**
+/-! ### 8.14.4 `最终形态` 第一合取项的两个方向：**核查结论**
 
 第一合取项是 `∀ s, IsDSplit (sumMetric F w) s.sideA s.sideB ↔ ∃ t ∈ F, t = s ∨ t.swap = s`。
 
@@ -5041,7 +5041,7 @@ def SeparatesSomeQuartet {α : Type*} [Fintype α] [DecidableEq α]
   ∃ a ∈ s.sideA, ∃ a' ∈ s.sideA, ∃ b ∈ s.sideB, ∃ b' ∈ s.sideB,
     a ≠ a' ∧ b ≠ b' ∧ u.Separates a a' b b'
 
-/-- ★★★★ **结构事实（候选成员至多两个）—— 具名陈述**（`_v2` 的内部子义务，非独立缺口）。
+/-- ★★★★ **结构事实（候选成员至多两个）—— 具名陈述**（`最终形态` 的内部子义务，非独立缺口）。
 
 `F` 弱相容、`s ∈ F` ⇒ `F` 中**能** W-分离某个非退化四元组（两侧各取两点）的成员
 **至多两个**。
@@ -5064,7 +5064,7 @@ def candidateTripleCore : Prop :=
 
 end Split
 
-/-! ## 8.15 ★★★★ W30 泳道 a：BdD Thm 2 的完整形态（系数钉成隔离指数）⇒ _v2
+/-! ## 8.15 ★★★★ W30 泳道 a：BdD Thm 2 的完整形态（系数钉成隔离指数）⇒ 最终形态
 
 本节按 Bandelt–Dress 1992（期刊 pp.56–62 = PDF 10–14）的**原文路线**落地三件：
 
@@ -5076,7 +5076,7 @@ ot_nonneg_residual_of_dSplits_peelCoeff（Fin 4、δ = δ_{0,1|2,3}、点 (0,2)�
    见 coeffFaithfulDecomposition；
 2. d := sumMetric F w 的**度量公理**（splitMetric_triangle / sumMetric_symm / _diag / _nonneg /
    _triangle）—— BdD Thm 2 是度量定理，本节把它对本库的 d 实例化；
-3. ★★★★★ weakCompatibilityRealization_gap_weights_v2_of_coeffFaithful：把 _v2 **归约到唯一具名缺件**
+3. ★★★★★ weakCompatibilityRealization_gap_weights_of_coeffFaithful：把 最终形态 **归约到唯一具名缺件**
    coeffFaithfulDecomposition（= BdD Thm 2 的「More generally」从句：剥一个 d-split 后
    α'_{A,B} = α_{A,B} − λ_{A,B} **对所有 A,B**）。归约本身 = BdD p.62 那条**逐点非负链**（不需要线性无关）。
 
@@ -5237,7 +5237,7 @@ theorem sumMetric_triangle (F : Finset (Split α)) (w : Split α → ℝ)
 其中 `F` 是 `dSplits δ` 的 **`swap`-自由代表集**（每个无向 split 恰好一个定向）、
 系数**恰为** `peelCoeff δ t = α_t/2`（BdD 的 `α_S`）、`δ₀` 非负且划分版 split-prime。
 
-★ **与 `canonicalSplitDecomposition_gap_faithful_v2_holds`（`:4424`）的差别**：那里系数只是
+★ **与 `canonicalSplitDecomposition_gap_holds`（`:4424`）的差别**：那里系数只是
 「某个正数」（存在性），没有钉成 `α_S`；本 `def` 钉死了。
 ★ **与派工书 §1.3 (C) 的差别（★D 更正）**：不能对**全** `dSplits` 求和（会双计 `s` 与 `s.swap`，
 见 `not_nonneg_residual_of_dSplits_peelCoeff`）；必须取代表集。
@@ -5250,9 +5250,9 @@ def coeffFaithfulDecomposition (δ : α → α → ℝ) : Prop :=
         SplitPrimeFaithfulPartition δ₀ ∧ (∀ x, δ₀ x x = 0) ∧ (∀ x y, 0 ≤ δ₀ x y) ∧
           ∀ x y, δ x y = δ₀ x y + ∑ t ∈ F, peelCoeff δ t * SplitMetric t x y
 
-/-- ★★★★★ **W30 泳道 a：`_v2` 归约到唯一具名缺件 `coeffFaithfulDecomposition`**。
+/-- ★★★★★ **W30 泳道 a：`最终形态` 归约到唯一具名缺件 `coeffFaithfulDecomposition`**。
 
-即：**BdD Thm 2 的完整形态（系数 = 隔离指数）⇒ `weakCompatibilityRealization_gap_weights_v2`**。
+即：**BdD Thm 2 的完整形态（系数 = 隔离指数）⇒ `weakCompatibilityRealization_gap_weights`**。
 
 证明 = 派工书 §1.3 的 (D) 链（BdD p.62 的**逐点非负**论证，不需要线性无关）：
 
@@ -5268,11 +5268,11 @@ def coeffFaithfulDecomposition (δ : α → α → ℝ) : Prop :=
 
 ★ 本定理**不叫** `_holds`：缺件 `coeffFaithfulDecomposition` 未证（BdD pp.58–60 的正文，
 含 Corollary 1 / Theorem 1 的「延伸 d-split 的 `α` 和 ≤ `α`」估计）。 -/
-theorem weakCompatibilityRealization_gap_weights_v2_of_coeffFaithful
+theorem weakCompatibilityRealization_gap_weights_of_coeffFaithful
     (hC : ∀ {β : Type u} [Fintype β] [DecidableEq β] (δ : β → β → ℝ),
       (∀ x y, δ x y = δ y x) → (∀ x, δ x x = 0) → (∀ x y, 0 ≤ δ x y) →
       (∀ x y z, δ x z ≤ δ x y + δ y z) → coeffFaithfulDecomposition δ) :
-    weakCompatibilityRealization_gap_weights_v2.{u} := by
+    weakCompatibilityRealization_gap_weights.{u} := by
   classical
   intro β _ _ F w hF hw
   have hCd : coeffFaithfulDecomposition (sumMetric F w) :=

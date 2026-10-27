@@ -1190,7 +1190,7 @@ split）：注册 `Prop` 的两个合取项**都成立**（下一条 `example`�
 ★★ **2026-10-19 W25-a 复核（四要素；`def neighborNetAgglomeration_gap` 本身一字未动）**
 
 * **旧形态**：上段（W12g）「按 ★E **不**登记为已证、**没有**对应定理」。
-* **新形态**：新增 `neighborNetAgglomeration_gap_holds`（**无假设**）＋ **残量**
+* **新形态**：新增 `neighborNetAgglomeration_gap_vacuous_holds`（**无假设**）＋ **残量**
   `neighborNetAgglomeration_gap_iff_star`（§13）。后者把该 `Prop` 的**全部内容**写成
   「每个 `1 < card X` 的 `X` 上存在一个环形族、每个 taxon 有一条单点侧成员」——
   `∃ Step` 与输入 `d` **都被消去**（`⟹` 方向只用恒 `0` 这一个对称 `d`）。
@@ -3242,7 +3242,7 @@ theorem circularDistanceRealization_gap_corrected_holds :
 (a) 任何 `Step d F` 都给出环形族、且每个 taxon 都有一条单点侧成员；
 (b) 任何对称 `d` 都有某个 `F` 满足 `Step d F`」。
 
-★ 判定：该 `Prop` **为真**（`neighborNetAgglomeration_gap_holds`，**无任何数学假设**），
+★ 判定：该 `Prop` **为真**（`neighborNetAgglomeration_gap_vacuous_holds`，**无任何数学假设**），
 但它是**空转缺口** —— `Step` 是 `∃` 绑定的**自由槽**，见证可与 `d` 无关地任取，于是 `d` 在
 **残量**里整个消失（`neighborNetAgglomeration_gap_iff_star`，`↔`，**无假设**）：
 
@@ -3358,7 +3358,7 @@ theorem neighborNetAgglomeration_gap_iff_star :
 ⚠️ 本定理**不是** Neighbor-Net 的 agglomeration 算法：被证的 `Prop` 只要求「**存在**一个 `Step`」，
 而见证（`Step d F := (F = starSplits X h2)`）与输入 `d` 无关 ⇒ 该 `Prop` 不承载文献
 `:289–320`、`:443–556` 的任何内容。真缺口见 §13.3 的四件具名器材。 -/
-theorem neighborNetAgglomeration_gap_holds : neighborNetAgglomeration_gap.{u} :=
+theorem neighborNetAgglomeration_gap_vacuous_holds : neighborNetAgglomeration_gap.{u} :=
   neighborNetAgglomeration_gap_iff_star.mpr starFamily_exists
 
 end NeighborNet

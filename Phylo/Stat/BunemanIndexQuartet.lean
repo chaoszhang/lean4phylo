@@ -14,7 +14,7 @@ import Phylo.Stat.BunemanIndexBridge
 弱相容族里，对两侧都 `≥ 2` 的成员 `s`，存在**非退化**四元组
 `a ≠ a' ∈ s.sideA`、`b ≠ b' ∈ s.sideB`，使 `F` 中除 `s`、`s.swap` 外无成员 W-分离它。
 
-本文件把 (B) 接到隔离指数（`weakCompatibilityRealization_gap_weights_v2` 的第二合取项，
+本文件把 (B) 接到隔离指数（`weakCompatibilityRealization_gap_weights` 的第二合取项，
 在两侧都 `≥ 2` 的成员上）：
 
 ```
@@ -40,7 +40,7 @@ isolationIndex (sumMetric F w) s.sideA s.sideB = 2 * (w s + [s.swap ∈ F]·w s.
 
 * 结论要求 `2 ≤ |s.sideA|` 且 `2 ≤ |s.sideB|`。**单点侧**（`|sideA| = 1` 或 `|sideB| = 1`）
   不在 (B) 的覆盖范围内（那里不存在非退化四元组），其 `α_s = 2λ_s` 另需论证
-  —— 见 `.w30/report_b.md` 的「卡点」。`_v2` 的第二合取项因此在**单点侧成员**上尚未收口。
+  —— 见 `.w30/report_b.md` 的「卡点」。`最终形态` 的第二合取项因此在**单点侧成员**上尚未收口。
 * 库内 `isolationIndex`、`pairDeficit` **均无 `½`**（`isolationIndex = 2·α_BDD`），
   故 (B) ⇒ `α_s = 2λ_s` 不需要任何 `×2 / ÷2` 换算。
 -/
@@ -160,7 +160,7 @@ theorem pairDeficit_eq_two_mul_of_quartetAvoiding (F : Finset (Split α)) (w : S
   exact hpd
 
 /-- ★★★★★ **W30 泳道 b 主结论**：弱相容 ＋ 正权重 ⇒ 两侧都 `≥ 2` 的成员 `s` 的隔离指数
-恰为 `2·(w s + [s.swap ∈ F]·w s.swap)`（= `_v2` 第二合取项在该情形）。 -/
+恰为 `2·(w s + [s.swap ∈ F]·w s.swap)`（= `最终形态` 第二合取项在该情形）。 -/
 theorem isolationIndex_eq_two_mul_weight_of_quartetAvoiding
     (F : Finset (Split α)) (w : Split α → ℝ)
     (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
@@ -201,7 +201,7 @@ theorem exists_nondegenerate_quartet_attaining (F : Finset (Split α)) (w : Spli
   rw [isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA hB]
   exact (pairDeficit_eq_two_mul_of_quartetAvoiding F w hF hw hs ha ha' hb hb' havoid).symm
 
-/-- ★★★★★★★ **W30 泳道 b 收官：`_v2` 第二合取项的等式对 `F` 的每个成员成立**。 -/
+/-- ★★★★★★★ **W30 泳道 b 收官：`最终形态` 第二合取项的等式对 `F` 的每个成员成立**。 -/
 theorem isolationIndex_eq_two_mul_weight (F : Finset (Split α)) (w : Split α → ℝ)
     (hF : WeaklyCompatible (↑F : Set (Split α))) (hw : ∀ u ∈ F, 0 < w u)
     {s : Split α} (hs : s ∈ F) :
@@ -258,7 +258,7 @@ theorem isolationIndex_eq_two_mul_weight (F : Finset (Split α)) (w : Split α �
       linarith
     · exact isolationIndex_eq_two_mul_weight_of_quartetAvoiding F w hF hw hs hA2 hB2
 
-/-! ## W30 泳道 b：`_v2` 第一合取项的装配
+/-! ## W30 泳道 b：`最终形态` 第一合取项的装配
 
 `⟸`：成员（及 `swap`）是 d-split —— `Split.isDSplit_splitMetricSum_of_mem_or_swap_of_weaklyCompatible`（`SplitWeak:975`）。
 `⟹`：非成员（`s ∉ F`、`s.swap ∉ F`）⇒ `¬IsDSplit` —— **`Split.core_holds`**（`SplitWeak:2539`，
@@ -266,13 +266,13 @@ theorem isolationIndex_eq_two_mul_weight (F : Finset (Split α)) (w : Split α �
 
 ★ 这里**没有**用 (B)：非成员半边要的是 `λ₀ = 0`（`core`），与 (B) 的 `λ₀ = λ_s` 互为对偶但**不等价**。 -/
 
-/-- ★★★★★★★ **W30 泳道 b 收口**：`weakCompatibilityRealization_gap_weights_v2` **成立**
+/-- ★★★★★★★ **W30 泳道 b 收口**：`weakCompatibilityRealization_gap_weights` **成立**
 （原 `def`（`BunemanIndexBridge:4844`）**逐字未改**）。
 
 * 第一合取项：`⟸` = `SplitWeak:975`；`⟹` = `Split.core_holds`（`:2539`）；
 * 第二合取项：`isolationIndex_eq_two_mul_weight`（本文件，`∀ s ∈ F`，含单点侧）。 -/
-theorem weakCompatibilityRealization_gap_weights_v2_holds :
-    weakCompatibilityRealization_gap_weights_v2 := by
+theorem weakCompatibilityRealization_gap_weights_holds :
+    weakCompatibilityRealization_gap_weights := by
   intro α instF instD F w hF hw
   refine ⟨?_, fun s hs => isolationIndex_eq_two_mul_weight F w hF hw hs⟩
   intro s
