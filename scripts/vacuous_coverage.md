@@ -157,6 +157,104 @@
 
 ---
 
+## 6 条「疑似自由槽」逐条结论（W39-4，2026-10-27）
+
+> **范围**：`gap_ledger.py` 的 `VACUOUS` 白名单 6 键，与上表「疑似自由槽」6 行**逐个重合**。
+> **本轮不改桶位**（改桶要老师批）：6 条现在的桶是 —— 5 条 `[已收口]`（`quarnetRules_level1_gap`、
+> `level1QuartetSystem_gap`、`neighborNetAgglomeration_gap`、`bootstrap_confidence_gap`、
+> `msc_split_probability_object_gap`）＋ 1 条 `[追溯]`（`canonicalSplitDecomposition_gap_correct_shape_legacy`）。
+> 下列「建议」只是建议，**台账一行未动**；`bash scripts/check_vacuous.sh` 仍是它们的机械护栏（6/6 有依据）。
+
+每条四问：**① 现在证的是什么　② 忠实形态长什么样　③ 建议（加强 / 保持登记 / 降级）　④ 要什么器材、量级**。
+
+### 1. `quarnetRules_level1_gap`（`Phylo/QuarnetRules.lean:358`）→ 建议 **降级**
+
+① 证的是：`∃ Qnet Net displayedBy 四个规则谓词 isTypeI`，使 (a) 四规则同时成立 ⟹ 该 `F` 被某个 `N` 展示、
+(b) 存在一个「非展示」的 `consistent ∧ cyclative ∧ saturated` 系统。**这八件器材全是 `∃` 绑定的自由变量**，
+取 `consistent = cyclative = saturated := (F = ∅)`、`displayedBy := ⊥`、`minimallyDense := ⊥` 即满足
+（`_vacuous_holds` ＋ `_degenerate` 双见证）。所以它证的是「这个 `Prop` 恒真」，不是 Theorem 2。
+② 忠实形态：把 `Qnet` 钉成**真的 quartet 载体**（`Quartet` 已有）、`displayedBy` 钉成 `Q(N)`（网络展示关系）、
+四个谓词给**文献里的定义**（Buneman 1998 level-1 quarnet 规则），结论证「四规则 ⟹ 存在网络 N 使 Q(N) = F」。
+③ **降级**（`[判定收档]`）。理由：登记形态零内容，而「已收口」会让读者以为 Theorem 2 在库内；降级不删东西 ——
+`_vacuous_holds` 本身是有价值的机器证据（它证明该 Prop 是空的）。
+④ 缺：网络载体（本库无 `PhyloNet`）＋ `Q(N)` 定义 ＋ level-1 判定。量级 **1500–2500 行 ＋ 1 个新模块**。
+
+### 2. `level1QuartetSystem_gap`（`Phylo/QuarnetRules.lean:378`）→ 建议 **降级**
+
+① 证的是：`∃ QuartetSystem multiplicity`，使每个 4-元集 `Y` 上 `m ∈ {1,2}`，且某处 `m = 2`。
+`QuartetSystem` 是自由变量类型 ⇒ 取 `PUnit`、`m _ Y := if Y.card = 4 then 2 else 0` 即真
+（唯一收口就是 `_vacuous_degenerate`，连 `_holds` 都没有）。**没有「level-1」**：
+level-1 的真正内容是「5-元集上的相容性」，这里一个字都没有。
+② 忠实形态：`QuartetSystem := Finset (Quartet (Fin n))`、`multiplicity Y := (Q.filter (·.on Y)).card`，
+并证 **（D1）⟺ level-1**：每 4-元集至多 2 个、每 5-元集上选中的 quartet 两两相容。
+③ **降级**（`[判定收档]`），与第 1 条同因。
+④ 缺：`Quartet.on`（限制到子集）与 quartet 相容关系的基本引理。量级 **600–1000 行**（无网络层，比第 1 条小）。
+
+### 3. `neighborNetAgglomeration_gap`（`Phylo/Algorithm/NeighborNet.lean:453`）→ 建议 **降级**
+
+① 证的是：`∃ Step : (X→X→ℝ) → Finset (Split X) → Prop`，使每个 `Step d F` 都给「circular ＋ 每个叶在某个 split 一侧」，
+且每个对称 `d` 都有 `F` 使 `Step d F`。**`Step` 与输入 `d` 无关** —— `_iff_star` 把整个命题压成
+「每个 `X` 上存在星形族」，`d` 在残量里彻底消失。故它是 `_holds`（`NeighborNet.lean:3361`）一行零假设收口。
+② 忠实形态：把 `Step` 从**关系**改成**算法函数** `agglomerate : (X→X→ℝ) → Finset (Split X) → Finset (Split X)`，
+并证三条不变式：(i) 输出 circular；(ii) 逐步保持「cluster 是 partial order 的理想」；(iii) `d` 本身是 circular 距离时输出精确恢复（NN 的一致性）。
+③ **降级**（`[判定收档]`）。这条最该降：它是唯一「名字像算法、内容是一行 `_holds`、且 `d` 被消去」的。
+④ 缺：Neighbor-Net 凝聚本体（Bryant–Moulton 2004 §3）：split 相容/partial order 的计算、cluster 合并、循环性判定
+（`Circular` 已有）。量级 **800–1500 行**，大头是「逐步保持 circularable」的不变量。
+
+### 4. `canonicalSplitDecomposition_gap_correct_shape_legacy`（`BunemanIndexBridge.lean:728`）→ 建议 **保持登记（`_legacy`，已在 `[追溯]`）**
+
+① 证的是：对任意对称 `δ`，`∃ F, c, δ₀`，`c > 0`、`δ₀` split-prime、`δ = δ₀ + Σ c_s δ_s`。
+证明取 `F := univ`、`c ≡ M`（巨大常数）、`δ₀ := δ − M·Σδ_s` ⇒ `δ₀` 非对角**任意负** ⇒ split-prime 空真。
+即「系数全压同一个巨数」的构造，与 BdD Thm 2 的**规范唯一性**无关。
+② 忠实形态 = **已在库里的正名那条** `canonicalSplitDecomposition_gap`（`:1156`，收口 `_holds:4428`）：
+`SplitPrimeFaithfulPartition δ₀` ＋ `δ₀` 非负 ＋ `δ₀` 对角 0 ＋ 分解，四要素齐全。W36-7b 已把旧形态打进 `[追溯]`。
+③ **保持登记**。要做的只是 docstring 里点明「本形态的 `F, c` 与忠实形态不同」（已有类似措辞），**不动桶**。
+④ 无缺口。量级 **0**（忠实形态已证）。
+
+### 5. `bootstrap_confidence_gap`（`Phylo/Stat/Bootstrap.lean:1031`）→ 建议 **降级**
+
+① 证的是：`∃ Ω TrueSplit p`，`p ∈ [0,1]`、`p(ω, TrueSplit ω) > 1/2`、且 `p > 1/2` 的 `s` 与 `TrueSplit ω` 相容。
+取 `Ω := Empty` ⇒ 三条 `∀ω` **全空真** ⇒ `↔ True`（`_iff_true:1088`）。**这是 6 条里最彻底的空转**：
+连 `Ω` 都不必非空。
+② 忠实形态：把 `p` 钉成 `bootstrapSupport`（库内已有定义），要证的是
+「重抽样支持度 `≥ 1−α` ⟹ 真树含 `s` 的概率 `≥ 1−α`」。⚠️ **这不是纯组合命题**：
+它在统计上依赖「真树生成数据 ⟹ 重抽样树族以高概率含真 split」，需要数据生成模型 + 重抽样分布 + 渐近。
+③ **降级**（`[判定收档]`）。理由：登记形态与 bootstrap 的置信语义之间**没有桥**，且忠实形态不是定理而是启发式；
+库里应如实登记「只有支持度的定义」。另一条路是**加强成可证的条件命题**（把「真树含 s」挪进前提），但那样只剩定义重述。
+④ 缺：统计层 —— `bootstrapSupport`（有）＋ 数据生成模型（`MSCFreq`/`SiteFreq` 有）＋ 重抽样分布
+（`Resample`/`weightOf` 有，`multinomial_weight_count_gap` 已证）＋ 渐近（`EmpiricalConvergence` 有一部分）。
+量级 **2000+ 行**，且**数学上需要额外假设**（bootstrap 一致性不是无条件定理）。
+
+### 6. `msc_split_probability_object_gap`（`Phylo/Stat/SplitProbabilities.lean:552`）→ 建议 **降级**
+
+① 证的是：`∀n≥3 ∀ε≥0`，`∃ σ Displays P`，使 (i) 平凡 split 上 `P = 1`、(ii) `Σ_r P s r = 2(2n−3)`、
+(iii) `P ≥ (1/3)e^{−ε}` 的 split 被 `Displays`。见证 `σ := Unit`、`Displays := True`、
+`P := ` 平凡取 1 ＋ 锚点取 `2n−6` ⇒ (ii) 是**恒等式** `2n + (2n−6) = 2(2n−3)`、(iii) 由 `Displays := True` 恒真。
+② 忠实形态：`σ` 钉成基因树空间（`RankedTree n` / 拓扑空间）、`Displays` 钉成「基因树展示 split」、
+`P s r` 钉成 **MSC 下的 split 概率**（Yang 2002 / Allman–Degnan–Rhodes 的 closed form），
+并要求账目与 `P(triv) = 1` 是**从模型算出来的**，而不是压进 `P` 的定义。
+③ **降级**（`[判定收档]`）。可信度高于第 1/2/3 条（账目本身是对的），高在「账目是 MSC 的真性质」，
+但登记形态把它当定义用 ⇒ 仍然零内容。
+④ 缺：把 `σ` 固定为 `RankedTree n` 并把 `P` 定义成 MSC 概率（可复用库内 `mscConcordant`、
+`RankedGeneTree` 的计数、`card_trivial_splits_gap` 已证的部分），再证 `Σ = 2(2n−3)`。量级 **800–1200 行**。
+
+### 汇总（**建议**，不动桶）
+
+| # | 缺口 | 现桶 | 建议 | 若采纳，桶位变化 | 器材量级 |
+|---|---|---|---|---|---|
+| 1 | `quarnetRules_level1_gap` | 已收口 | 降级 | 已收口 43 → 42，判定收档 2 → 3 | 1500–2500 行 |
+| 2 | `level1QuartetSystem_gap` | 已收口 | 降级 | （同上，若 1、2 都降则 43 → 41，判定收档 → 4） | 600–1000 行 |
+| 3 | `neighborNetAgglomeration_gap` | 已收口 | 降级 | 再 −1 | 800–1500 行 |
+| 4 | `canonicalSplitDecomposition_gap_correct_shape_legacy` | **追溯** | 保持（`_legacy`） | 不变 | 0 |
+| 5 | `bootstrap_confidence_gap` | 已收口 | 降级 | 再 −1 | 2000+ 行 |
+| 6 | `msc_split_probability_object_gap` | 已收口 | 降级 | 再 −1 | 800–1200 行 |
+
+★ 若 5 条全降：`已收口 43 → 38`、`判定收档 2 → 7`，**合计仍 72**（`list_gaps.sh` 的口径 A/B 不受影响，
+因为降级只换桶、不改名字 ⇒ **没有静默删债**）。注意 `已收口 38` 恰好等于「严格口径 = 43 − 5 条空转」
+（见 W36 记录），所以这个建议其实是把口径**显式化**，不是新增判断。
+
+---
+
 ## 复跑/维护
 
 * 桶位：`bash scripts/list_gaps.sh B`
