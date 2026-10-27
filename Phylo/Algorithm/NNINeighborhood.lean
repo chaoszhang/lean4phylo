@@ -648,7 +648,9 @@ theorem nniDistance_min_gap_proved (n : ℕ) (S S' : Finset (Split (Fin n))) :
     nniDistance_min_gap n S S' :=
   fun h => nniDist_existsUnique_min h
 
-/-- ★B **修复形态非空真**：单元素系统到自身的 0 步行走给出非平凡见证。 -/
+/-- ★B **修复形态非空真（退化见证）**：单元素系统到自身的 **0 步**行走（自反）——
+⚠️ 这是**退化**见证，不含任何 NNI 移动；**非退化**见证见
+`nniDistance_min_gap_nonempty_nontrivial`（`tree₁ ≠ tree₂`，真实 1 步）。 -/
 theorem nniDistance_min_gap_nonempty :
     nniDistance_min_gap 4 ({exS₀} : Finset (Split (Fin 4))) {exS₀} :=
   nniDistance_min_gap_proved 4 _ _
@@ -763,6 +765,13 @@ theorem tree_nniDist₁₂_eq_one :
 
 /-- ★C `tree₁ ≠ tree₂`（两者的内部 quartet 不同；`n = 4` 上由 `decide` 判定）。 -/
 theorem tree_ne : tree₁ ≠ tree₂ := by decide
+
+/-- ★★ **非退化见证（W36-E）**：`Fin 4` 上两棵**不同**的二叉树（`tree_ne`），其 NNI 距离恰为 `1`
+（`tree_nniDist₁₂_eq_one`）⇒ `nniDistance_min_gap` 在 `S ≠ S'` 上成立。与 `nniDistance_min_gap_nonempty`
+（取 `S = S'`，0 步自反）不同，这里**至少一次**真实 NNI 移动。 -/
+theorem nniDistance_min_gap_nonempty_nontrivial :
+    nniDistance_min_gap 4 tree₁ tree₂ ∧ tree₁ ≠ tree₂ :=
+  ⟨nniDistance_min_gap_proved 4 _ _, tree_ne⟩
 
 /-! ## 8. `n = 5` 的 NNI 连通性实例（W12g-5）
 
