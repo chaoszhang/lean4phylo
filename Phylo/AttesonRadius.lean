@@ -846,7 +846,16 @@ theorem exDiss_fourPoint : exDiss.FourPoint := by
 * **为什么不改命题** ✓：它是 ★★★ `njCriterion_minimizer_is_cherry` 从条件定理变成「无条件 Atteson 安全半径定理」的
   **唯一剩余前提** ✓ ⇒ 改成 Lemma 11 的间隙不等式会**破坏该用途** ✗（且库内 docstring 已列明其所缺的三件器材
   (a)(b)(c) ✓）。故依 W19 护栏精神：**改归属 ＋ 留证** ✓，**不动命题** ✓；
-* **护栏③**：本处仅改 docstring ⇒ 仍需跑全库 build（**job 数以当批实测为准** ✓ —— 原文写的「应仍 3966」是 W19 开跑前的旧基线，★ **2026-10-15 W20 任务 C 更正**：W20 起点实测为 **3968**，本批新增模块后为 **3972**）＋ `scripts/list_star_claims.sh` ✓。 -/
+* **护栏③**：本处仅改 docstring ⇒ 仍需跑全库 build（**job 数以当批实测为准** ✓ —— 原文写的「应仍 3966」是 W19 开跑前的旧基线，★ **2026-10-15 W20 任务 C 更正**：W20 起点实测为 **3968**，本批新增模块后为 **3972**）＋ `scripts/list_star_claims.sh` ✓。
+
+★ **W36-D 复核（2026-10-27，只改措辞，`def`/`_holds` 一字未动）**：
+`references/md/Atteson1999_PerformanceNeighborJoiningAlgorithmica.md:1989–2009` 的 **LEMMA 11** 常数是
+「**由树算出的**最短边长 `min_e l(e)`」；本 `def` 把它换成 `∃ δmin > 0` —— 二者**不等价**：
+数值实测（`.w36/d_mincheck.py`，`ε = 1e-6`）最大可行 `δmin* ≈ 0.667`，是 `min_e l(e)` 的 **6.7×10⁵ 倍**，
+且 `ε → 0` 时 `δmin* → 2/3`（常数）而 `min_e l(e) → 0`。
+⇒ 本 `def` 证得的是 Lemma 11 的**序关系推论**（「每个非樱桃对都有 `Q` 更小的樱桃对」），
+**Lemma 11 的间隙式本身未证**；`IsCherrySeparated`（`:132–138`）的间隙形状是忠实的，弱的只是这个 `∃`。
+★ 它作为 Theorem 1 前提的地位**待裁定**（是否从「已收口」降「条件收口」，等老师批；**本批不动桶**）。 -/
 def atteson_lemma11_gap (δ : Dissimilarity X) : Prop :=
   δ.FourPoint → δ.PositiveDefinite → 4 ≤ Fintype.card X →
     ∃ δmin : ℝ, 0 < δmin ∧ δ.IsCherrySeparated δmin
