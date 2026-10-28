@@ -586,6 +586,32 @@ theorem two_parent_trees_gap_correct_shape_holds : SBD.two_parent_trees_gap_corr
     ⟨SBD.sP2a, by rw [Cladogram.treeP2_isSplitOf]; exact Or.inl (by decide),
       by rw [Cladogram.treeP1_isSplitOf]; decide⟩⟩
 
+/-- ★★ **非退化实例（具名对象版）**：`SBD.two_parent_trees_gap_correct_shape` 的见证树就是
+`Cladogram.treeP1` 与 `Cladogram.treeP2` —— 把那个 `∃` 在**具体两条树**上摊成五个合取项。
+
+★ 为什么另立一条（2026-10-28，外聘复审 review_v2 #2）：`scripts/check_vacuous.sh` 原先给这一行填的
+「实例依据」是 `two_parent_trees_gap_correct_shape_holds`，也就是**它自己的收口定理** ⇒ **自指**：
+把见证删掉、只留收口定理，护栏照样绿 ⇒ 那一行等于没有护栏。本条**不经过**收口定理，
+且作用在两条可命名的树上，下游可直接引用。 -/
+theorem two_parent_trees_gap_correct_shape_witness :
+    (∀ q ∈ SBD.prof, SBD.DisplaysQP Cladogram.treeP1 q) ∧
+    (∀ q ∈ SBD.prof, SBD.DisplaysQP Cladogram.treeP2 q) ∧
+    (∀ s : Split (Fin 6),
+      Cladogram.treeP2.IsSplitOf s ↔ Cladogram.treeP1.IsSplitOf (Split.relabel SBD.sig s)) ∧
+    (∀ T : Cladogram.{0, 0} (Fin 6), (∀ q ∈ SBD.prof, SBD.DisplaysQP T q) →
+      (∀ s : Split (Fin 6), Cladogram.treeP1.IsSplitOf s ↔ T.IsSplitOf s) ∨
+      (∀ s : Split (Fin 6), Cladogram.treeP2.IsSplitOf s ↔ T.IsSplitOf s)) ∧
+    (∃ s : Split (Fin 6), Cladogram.treeP2.IsSplitOf s ∧ ¬ Cladogram.treeP1.IsSplitOf s) :=
+  ⟨treeP1_displays_prof, treeP2_displays_prof,
+    (by
+      intro s
+      rw [Cladogram.treeP2_isSplitOf s, Cladogram.treeP1_isSplitOf (Split.relabel SBD.sig s),
+        SBD.mem_famP2_iff_relabel_mem_famP1 s]
+      exact or_congr Iff.rfl (SBD.trivial_relabel_iff SBD.sig s)),
+    (fun T hT => tree_splits_classified T hT),
+    ⟨SBD.sP2a, by rw [Cladogram.treeP2_isSplitOf]; exact Or.inl (by decide),
+      by rw [Cladogram.treeP1_isSplitOf]; decide⟩⟩
+
 /-- ★★★★ **B-5 原登记形态（`SBD.two_parent_trees_gap`）** —— 由改写形态经库内已证的桥得到。 -/
 theorem two_parent_trees_gap_holds : SBD.two_parent_trees_gap :=
   SBD.two_parent_trees_gap_of_correct_shape two_parent_trees_gap_correct_shape_holds

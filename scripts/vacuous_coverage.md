@@ -11,7 +11,9 @@
 > （数据源 = `bash scripts/list_gaps.sh B` 与 `bash scripts/check_vacuous.sh` 的实跑输出，不是抄旧表）。
 > 表内**不再抄行号**（旧表里 `名字:NNN` 一律剥掉）—— 行号随每次改动漂移，权威行号一律看脚本输出。
 > 名字按 W36 后的现状：`_legacy` / 正名 / `_vacuous_*` / `atteson_lemma11_gap_order_form`。
-> 机械护栏：`bash scripts/check_vacuous.sh` 现在覆盖**全部 44 条**（实例 25 · 自由槽 6 · 无实例 13）。
+> 机械护栏：`bash scripts/check_vacuous.sh` 现在覆盖**全部 44 条**（实例 24 · 自由槽 6 · 无实例 14）。
+> ⚠️ 2026-10-28 外聘复审 review_v2 后修正两处：`two_parent_trees_gap_correct_shape` 换**具名见证**（原依据是它自己的收口定理，自指）；
+> `ranked4_probability_gap` **降为「无实例」**（原依据是收口定理在 `t=1` 的特化，与本表「特化不算实例」的口径矛盾）。
 
 ### ★D 更正：派单给的自查命令会对任何正确的表误报
 
@@ -57,7 +59,7 @@ W39-3 是**新造**了不经过收口定理、逐项算出常数的具体实例�
 | **自由槽** | **6** | 与 `gap_ledger.py` 的 `VACUOUS` 白名单**完全重合**（6/6）—— 两个独立口径互证 |
 | **无实例** | **13** | **不是空转**：零假设收口、证明含真数学，只是库里没有具体对象实例；每条附可造性预判 |
 
-★ 回答派单的问题：「44 条里几条有非退化实例」= **25 条**；
+★ 回答派单的问题：「44 条里几条有非退化实例」= **24 条**（2026-10-28 前为 25；`ranked4_probability_gap` 按「特化不算实例」降级后减 1）；
 「几条疑似空转」= **6 条**（全部已登记、且 `check_vacuous.sh` 有机械依据）；
 剩下 **13 条**是「真证明、零实例」。
 
@@ -105,14 +107,14 @@ W39-3 是**新造**了不经过收口定理、逐项算出常数的具体实例�
 | 33 | `rankedTree_card_gap` | `Phylo/Stat/RankedGeneTree.lean:683` | `rankedTree_card_gap_proved`@`Phylo/Stat/CoalescentHistoryCount.lean:583` | **实例** | `theorem card_mergeHistories_four_eq_H` | `RankedGeneTree.lean`（n=4→H₄）、`CoalescentHistoryCount.lean`（n=5→180） | 无 ∃；一般 n 走合并史逐层归纳，n=4/5 有独立数值实例。 |
 | 34 | `rankedFiberCount_gap` | `Phylo/Stat/RankedGeneTree.lean:853` | `rankedFiberCount_gap_holds`@`Phylo/Stat/HookLength.lean:5108` | **实例** | `theorem rankedFiberCount_four_all` | `RankedGeneTree.lean`（n=4 一般 f）、（n=3 全部）；纤维非空 | 无 ∃；n≥2 由 reconstruct 满射 ＋ LE 收口，n=4 纤维 1/2 有独立实例 |
 | 35 | `sd2012_eq4_uniform_rates_gap` | `Phylo/Stat/RankedGeneTree.lean:899` | `sd2012_eq4_uniform_rates_gap_proved`@`Phylo/Stat/RankedGeneTree.lean:1033` | **实例** | `theorem eq4_two_uniform_rates` | `RankedGeneTree.lean`（m=2 独立实例）、（m=2 复算） | 无 ∃；分母闭形式 ＋ 二项式定理实算，m=2 另有独立实例 |
-| 36 | `ranked4_probability_gap` | `Phylo/Stat/RankedGeneTree.lean:910` | `ranked4_probability_gap_proved`@`Phylo/Stat/RankedGeneTree.lean:1058` | **实例** | `ranked4_probability_gap_proved 1 (by norm_num)` | `RankedGeneTree.lean`（`t=1` 实例）、（2+16 纤维计数） | p 被三式钉住、t 经 `mscConcordant t` 进入；c∈(1/3,1)，取 2 个 `c/2`、16 个 `(1−c)/16`，p=0 失败 |
+| 36 | `ranked4_probability_gap` | `Phylo/Stat/RankedGeneTree.lean:910` | `ranked4_probability_gap_proved`@`Phylo/Stat/RankedGeneTree.lean:1058` | **无实例** | — | 库内用例只有收口定理在 `t=1` 的**特化**（匿名 `example`） | p 被三式钉住、非自由槽；按本表口径「把已证 `∀…` 特化不算实例」⇒ 如实降为无实例（2026-10-28 review_v2 #2） |
 | 37 | `YHKClanLawGap` | `Phylo/Stat/ReciprocalMonophyly.lean:924` | `yhkClanLawGap_holds`@`Phylo/Stat/RankedTreeClanLaw.lean:1166` | **实例** | `theorem yhkLawFour_clanEvent_two` | `ReciprocalMonophyly.lean`（n=4 整条）、（`clanProb 4 2 = 1/3`） | RHS 取 1/3 等非 0/1 值，退化分布填不出；n=4 切片有显式见证 |
 | 38 | `TwoClanLawGap` | `Phylo/Stat/ReciprocalMonophyly.lean:985` | `twoClanLawGap_holds`@`Phylo/Stat/ClanPairLaw.lean:3458` | **实例** | `theorem yhkLawFour_twoClanEvent` | `ReciprocalMonophyly.lean`（n=4 整条）、（`qn 4 1 2 = 1/3`） | RHS 取 1/3 等非 0/1 值；载体 `RankedTree n` ＋ `prob≡1/H n` 显式装配 |
 | 39 | `card_trivial_splits_gap` | `Phylo/Stat/SplitProbabilities.lean:407` | `card_trivial_splits_gap_holds`@`Phylo/Stat/TrivialSplitCount.lean:160` | **实例** | `theorem card_trivial_splits_four` | `TrivialSplitCount.lean`（n=4→8）、（可计算代理 4→8） | 无 ∃；`sideA`／`sideB` 双射实算，n=4 有独立实例 8 |
 | 40 | `msc_split_probability_object_gap` | `Phylo/Stat/SplitProbabilities.lean:552` | `msc_split_probability_object_gap_vacuous_holds`@`Phylo/Stat/SplitProbabilities.lean:586` | **自由槽** | `theorem msc_split_probability_object_gap_vacuous_holds` | 退化见证 `SplitProbabilities.lean`：`σ=Unit`、`Displays=True`、`P`＝平凡 1／锚点 `2n−6` | 取 `σ=Unit`、`Displays=True`、`P` 压锚点即恒真；ε 只剩空转蕴含。 |
 | 41 | `quartetMeanEquidistributed_gap` | `Phylo/Stat/TreeMetricDistribution.lean:667` | `quartetMeanEquidistributed_gap_holds`@`Phylo/Stat/QuartetMeanEquidistributed.lean:225` | **无实例** | — | 无（`X=Fin 3` 是退化支；`n=4` 只核右端 48，未给具体 𝒯 实例） | 无 ∃；证明是 6 侧×k 的实质双计数，但库内无 n≥4 具体 𝒯 上的实例／用途 |
 | 42 | `two_parent_trees_gap` | `Phylo/SupertreeLimits.lean:693` | `two_parent_trees_gap_holds`@`Phylo/TwoParentTrees.lean:590` | **实例** | `theorem treeP1_displays_prof` | `TwoParentTrees.lean`（`treeP1`/`treeP2` 显式对＋②分类定理） | 显式 T₁/T₂ 展示 prof，分类定理已证；正确形态见证非退化。 |
-| 43 | `two_parent_trees_gap_correct_shape` | `Phylo/SupertreeLimits.lean:722` | `two_parent_trees_gap_correct_shape_holds`@`Phylo/TwoParentTrees.lean:578` | **实例** | `theorem two_parent_trees_gap_correct_shape_holds` | `TwoParentTrees.lean`（`treeP1`/`treeP2`）、（`sP2a∈T₂∖T₁`） | ③ 直接排除 T₁=T₂；显式 split 系统与 σ 交换逐条 `decide`。 |
+| 43 | `two_parent_trees_gap_correct_shape` | `Phylo/SupertreeLimits.lean:722` | `two_parent_trees_gap_correct_shape_holds`@`Phylo/TwoParentTrees.lean:578` | **实例** | `theorem two_parent_trees_gap_correct_shape_witness`（2026-10-28 新立） | `TwoParentTrees.lean`（`treeP1`/`treeP2` 两条具名树）、（`sP2a∈T₂∖T₁`） | ★ 原依据填的是**收口定理自身** ⇒ 自指、无护栏作用；现改指把 `∃` 摊在两条具名树上的见证定理 |
 | 44 | `canonicalSplitDecomposition_gap_correct_shape_legacy` | `Phylo/Stat/BunemanIndexBridge.lean:728` | `canonicalSplitDecomposition_gap_correct_shape_legacy_holds`@`Phylo/Stat/BunemanIndexBridge.lean:884` | **自由槽** | `theorem canonicalSplitDecomposition_gap_correct_shape_legacy_holds` | 退化构造 `F:=univ`、`c≡M=2S+1`、`δ₀:=δ−M·Σδ_s`（非对角任意负）⇒ `SplitPrimeStd` 恒真 | W36-7b 降名 `_legacy`（进 `[追溯]`）；忠实形态另有正名 `canonicalSplitDecomposition_gap` |
 
 ## 备注（合并 4 条泳道的发现，按重要性）

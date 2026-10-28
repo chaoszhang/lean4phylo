@@ -133,8 +133,10 @@ check "rankedFiberCount_gap" "实例" "theorem rankedFiberCount_four_all" \
       "n = 4 一般 f 上的纤维计数（另有 n = 3）"
 check "sd2012_eq4_uniform_rates_gap" "实例" "theorem eq4_two_uniform_rates" \
       "m = 2 独立实例，与一般公式互核"
-check "ranked4_probability_gap" "实例" "ranked4_probability_gap_proved 1 (by norm_num)" \
-      "t = 1 的具体概率表（2+16 纤维）；p 被三式钉住，非自由槽"
+# ★ 2026-10-28 外聘复审 review_v2 #2：原依据是收口定理在 t=1 的**特化**（且在匿名 example 体内），
+#   与本表自己写的「特化不算实例」矛盾 ⇒ 按自家口径如实降为「无实例」。
+noinst "ranked4_probability_gap" \
+      "p 被三条合取钉住、非自由槽；但库内用例都是收口定理的特化（t=1 的匿名 example）⇒ 按本表口径『特化不算实例』"
 check "YHKClanLawGap" "实例" "theorem yhkLawFour_clanEvent_two" \
       "n = 4 整条；RHS 取 1/3 的非 0/1 值，退化分布填不出"
 check "TwoClanLawGap" "实例" "theorem yhkLawFour_twoClanEvent" \
@@ -143,8 +145,9 @@ check "card_trivial_splits_gap" "实例" "theorem card_trivial_splits_four" \
       "n = 4 → 8（另有可计算代理 example）"
 check "two_parent_trees_gap" "实例" "theorem treeP1_displays_prof" \
       "显式 T₁/T₂（treeP1/treeP2，Fin 6）展示同一 prof"
-check "two_parent_trees_gap_correct_shape" "实例" "theorem two_parent_trees_gap_correct_shape_holds" \
-      "同一对显式树 ＋ ③ 分类定理（precisely two）＋ sP2a ∈ T₂∖T₁ 的非退化见证"
+# ★ 2026-10-28 外聘复审 review_v2 #2：原依据填的是 `…_correct_shape_holds`，即**它自己的收口定理** ⇒
+check "two_parent_trees_gap_correct_shape" "实例" "theorem two_parent_trees_gap_correct_shape_witness" \
+      "具名见证（treeP1/treeP2 各自的 prof 展示 ＋ σ 交换 ＋ 分类定理 ＋ sP2a 严格多出），不经收口定理"
 
 # ── ② 无实例（已复核）13 条 + 可造性预判 ───────────────────────────────────
 noinst "atteson_reduction_gap_correct_shape" \
