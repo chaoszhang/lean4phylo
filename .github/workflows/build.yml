@@ -51,6 +51,13 @@ jobs:
           set -o pipefail
           lake build 2>&1 | tee /tmp/build.log
 
+      # ★ 全库公理扫描（2026-10-28，外援 review_v2 #5 / audit_v2 建议 #1）：
+      #   `axioms_snapshot.sh` 只抽查 10 条人工挑的定理，覆盖太窄。
+      #   这里跑 `scripts/axioms_all.lean`（在 Lean 里遍历环境，自动枚举 **全部 62 条**收口定理），
+      #   逐字比对 `scripts/axioms_all_expected.txt`，并额外硬拦 sorryAx / ofReduceBool / trustCompiler。
+      - name: 公理全库扫描（全部 62 条收口定理，逐字比对快照）
+        run: bash scripts/check_axioms_all.sh
+
       # ★ sorry 门禁：`lake build` 对 `sorry` **只警告不失败**。本库纪律是零 sorry，
       #   但在此之前**没有任何机器保证**它持续为零（外部审计 §三·问题 5 第 1 条）。
       - name: Sorry 门禁（零 sorry）
