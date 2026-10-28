@@ -9,6 +9,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120      # 正常 40–60 min（cache 25 + build 10 + 护栏）；超 2h 必是卡住，早失败早重跑
     steps:
       - uses: actions/checkout@v4
 
@@ -24,8 +25,24 @@ jobs:
             | sh -s -- -y --default-toolchain none
           echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
-      - name: Get mathlib cache
-        run: lake exe cache get
+      # ★ 为什么加重试（2026-10-28 实测）：这一步要在 cache.mathlib.org 下 9000+ 个 olean 文件，
+      #   窗口长（~25 min）⇒ 任何一次连接抖动都会让整步失败，进而 Build 及后面 5 道护栏全部 skipped。
+      #   本库已发生一次：提交 `53f1e9c` **只改了 README.md** 却在这里红 ⇒ 属「基建失败」不是「代码失败」。
+      #   三次重试 + 失败时明确打印归类，避免下次又被当成代码回归去查。
+      - name: Get mathlib cache（3 次重试）
+        run: |
+          for i in 1 2 3; do
+            echo "── attempt $i/3 ──"
+            if lake exe cache get; then
+              echo "✓ mathlib cache ok (attempt $i)"
+              exit 0
+            fi
+            echo "⚠ attempt $i 失败（下载中断？），20s 后重试"
+            sleep 20
+          done
+          echo "✗ 三次都失败 ⇒ 归类为 **基建失败（cache 服务器/网络）**，不是代码失败。"
+          echo "  处置：re-run 该 job 即可；若持续失败，检查 https://cache.mathlib.org 可达性。"
+          exit 1
 
       # `set -o pipefail` 是必须的：否则 `lake build | tee` 的退出码取的是 `tee` 的，
       # 构建失败会被吞掉（GitHub Actions 的 bash 默认**不**开 pipefail）。
