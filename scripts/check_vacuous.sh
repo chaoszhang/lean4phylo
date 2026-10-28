@@ -34,7 +34,9 @@ cd "$(dirname "$0")/.." || exit 9
 
 LEDGER="scripts/gap_ledger.py"
 rows=0; ok=0; bad=0
-n_inst=0; n_free=0; n_none=0
+n_inst=0; n_free=0; n_none=0; n_noevid=0
+# n_noevid = 「无实例」的条数（仅人工原因、**无机械依据**）。2026-10-28 外援 review_v2 指出：
+# 这些行原来也 ok=$((ok+1))，导致汇总行把 13 条无依据的算进「有机械依据」⇒「44/44 有机械依据」是失真。
 
 printf '%-42s | %-6s | %-9s | %s\n' "缺口名" "归类" "机械依据" "位置 / 原因"
 printf '%s\n' "----------------------------------------------------------------------------------------------------------------------"
@@ -66,7 +68,8 @@ check() {
 # noinst <缺口名> <原因>：**无实例（已复核）**，不要求定理依据，但必须写清原因
 noinst() {
   local name="$1" reason="$2"
-  rows=$((rows+1)); n_none=$((n_none+1)); ok=$((ok+1))
+  rows=$((rows+1)); n_none=$((n_none+1)); n_noevid=$((n_noevid+1))
+  # ★ 不增加 ok：它们**合规**（口径只要求「有归类」），但**没有机械依据**，不能计入 ok。
   printf '%-42s | %-6s | %-9s | %s\n' "$name" "无实例" "—" "已复核，无具体对象用法"
   printf '%-42s   ↳ %s\n' "" "$reason"
 }
@@ -172,7 +175,7 @@ noinst "quartetMeanEquidistributed_gap" \
       "可造性：需 Fin 4 上 3 个拓扑的 quartetDistFull 值表（9 个有序对）求和 = 48 ⇒ 缺 quartetDistFull 在具体 quartet 上的求值引理"
 
 printf '%s\n' "----------------------------------------------------------------------------------------------------------------------"
-echo "合计 ${rows} 行 · 有机械依据 ${ok} · 无依据 ${bad}"
+echo "合计 ${rows} 行 · 有机械依据 ${ok}（＝实例 ${n_inst} ＋ 自由槽 ${n_free}）· 无机械依据 ${n_noevid}（＝无实例，仅人工原因）· 依据缺失 ${bad}"
 echo "归类：实例 ${n_inst} · 自由槽 ${n_free} · 无实例 ${n_none}（= $((n_inst+n_free+n_none))，应为 44）"
 
 # ── 台账一致性 ①：VACUOUS 里的键必须都在上面出现 ──────────────────────────
@@ -221,4 +224,4 @@ if [ "$bad" -ne 0 ]; then
   exit 1
 fi
 echo
-echo "VERDICT: ✓ ${rows}/${rows} 条全部有归类且依据可复跑（实例 ${n_inst} · 自由槽 ${n_free} · 无实例 ${n_none}）"
+echo "VERDICT: ✓ ${rows}/${rows} 条全部有归类（有机械依据 ${ok} ＝ 实例 ${n_inst} ＋ 自由槽 ${n_free}；无实例 ${n_none} 仅人工原因、无机械依据）"

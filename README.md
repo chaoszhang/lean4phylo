@@ -122,6 +122,12 @@ lake build
 ## 规模
 
 ★ 下表为 **`2026-10-28` 实测值**，复跑：`bash scripts/measure.sh`（口径与本表逐字一致 —— 剥注释后统计）。
+★ **声明数的统计口径**（`scripts/measure.sh` 就这一条正则，可复跑）：
+`^\s*(?:@\[[^\]]*\]\s*)?(?:private|protected|noncomputable|partial|unsafe|scoped\s+)*(theorem|lemma|def|abbrev|structure|class|instance|inductive)`
+—— 它**会计入匿名的 `instance`**，也**会计入 `where` 块等嵌套处的局部声明**。
+⇒ 独立复算通常会比这个数小十几个（外部审查实测 6,479，差 **15**）。**差异是口径，不是注水**；
+本表只以 `scripts/measure.sh` 的输出为准。
+
 ★ **`lake build` 的 job 数随 Mathlib 版本变**（它含依赖图里的全部目标）：Mathlib `master` 时代是 3988，
 换到 `v4.35.0` 后是 **4007** —— 所以 job 数只能与同一份 `lake-manifest.json` 下的数字比。
 
@@ -129,7 +135,7 @@ lake build
 |---|---|
 | Lean 模块 | **156**（`Phylo/**` 的 `.lean` 文件数 **恒等于** `Phylo.lean` 的 `import Phylo` 条数） |
 | Lean 源行数 | **105,372**（`Phylo/**/*.lean`） |
-| 顶层声明 | **6,494**（剥注释后机械统计） |
+| 顶层声明 | **6,494**（剥注释后机械统计；**口径见下**） |
 | `sorry` / `axiom` / `opaque` | **0 / 0 / 0** |
 | `lake build` | **通过（4007 jobs）** |
 | 缺口台账（七桶） | 真开放 **1** · 已收口 38 · 条件收口 2 · 已证伪 17 · 追溯 6 · 判定收档 7 · 长期开放 1 ＝ **72** |
@@ -158,6 +164,8 @@ lake build
 **先看 `bash scripts/list_gaps.sh B` 给出的桶位，再读源码**。源码层也已处置：这 17 条 `def` 的 docstring
 **首行**都带 `⚠️ **已证伪，非待证目标** —— 机器反例见 <定理名>（<文件>:<行>）`，
 由 `bash scripts/check_refuted.sh` 机器核（缺标记、或标记点名的定理与实际反例不符，即非零退出）。
+⚠️ 脚本实际核 **21** 条，不是 17：除【已证伪】这 17 条，还含【追溯】桶里 4 条 `_legacy`（旧形态被证伪、正名已收口）。
+两个数各有各的用途，**别拿 17 去对脚本输出**。
 
 ### 「空转」6 条：已登记、有机械依据
 
