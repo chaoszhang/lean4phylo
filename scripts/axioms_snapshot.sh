@@ -73,6 +73,7 @@ LIST=(
   "Phylo.Stat.MassModel.anchor_iso_ae"
   "Phylo.Stat.MassModel.parsimonyMulti_iso_ae"
   "Phylo.Stat.MassModel.anchorMulti_iso_ae"
+  "Phylo.Stat.AnchorGap.mu_eq_mass_sub"
 )
 
 {

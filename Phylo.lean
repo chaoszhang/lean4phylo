@@ -65,6 +65,7 @@ import Phylo.SplitsDetermineTreeBase
 import Phylo.SplitsMaximal
 import Phylo.SplitWeak
 import Phylo.Stat.AESampling
+import Phylo.Stat.AnchorGap
 import Phylo.Stat.AnomalousGeneTree
 import Phylo.Stat.ASTRAL
 import Phylo.Stat.BlockModelAE
