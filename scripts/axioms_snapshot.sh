@@ -67,6 +67,12 @@ LIST=(
   "NJ.Dissimilarity.atteson_lemma11_gap_order_form_holds"
   # ④ W36-E 的非退化见证
   "Split.nniDistance_min_gap_nonempty_nontrivial"
+  # ⑤ W43：MASS_MAJORIZES 与四条交付（identifiability 不再是假设）
+  "Phylo.Stat.MassMajorizes.mass_majorizes"
+  "Phylo.Stat.MassModel.AnchorModel.majorizes"
+  "Phylo.Stat.MassModel.anchor_iso_ae"
+  "Phylo.Stat.MassModel.parsimonyMulti_iso_ae"
+  "Phylo.Stat.MassModel.anchorMulti_iso_ae"
 )
 
 {

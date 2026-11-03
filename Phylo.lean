@@ -120,6 +120,7 @@ import Phylo.Stat.KmatNonneg
 import Phylo.Stat.LMLumping
 import Phylo.Stat.LongBranchAttraction
 import Phylo.Stat.MassMajorizes
+import Phylo.Stat.MassModel
 import Phylo.Stat.MLIdentifiability
 import Phylo.Stat.MLSamplingAE
 import Phylo.Stat.MSC

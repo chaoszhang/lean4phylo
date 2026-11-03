@@ -10,3 +10,8 @@
 'Split.level1QuartetSystem_gap_vacuous_degenerate' depends on axioms: [propext, Classical.choice, Quot.sound]
 'NJ.Dissimilarity.atteson_lemma11_gap_order_form_holds' depends on axioms: [propext, Classical.choice, Quot.sound]
 'Split.nniDistance_min_gap_nonempty_nontrivial' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.MassMajorizes.mass_majorizes' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.MassModel.AnchorModel.majorizes' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.MassModel.anchor_iso_ae' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.MassModel.parsimonyMulti_iso_ae' depends on axioms: [propext, Classical.choice, Quot.sound]
+'Phylo.Stat.MassModel.anchorMulti_iso_ae' depends on axioms: [propext, Classical.choice, Quot.sound]

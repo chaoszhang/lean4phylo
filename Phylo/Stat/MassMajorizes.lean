@@ -232,49 +232,74 @@ theorem induces_eq_or_swap {s₀ s : Split X} {S : Finset X} {q r : Split ↥S}
       exact eq_or_swap_of_compatible (compatible_swap_left (compatible_swap_right hc))
         hq hr hqc hrc hS
 
-/-! ## 4. `mass`（锚间距）与其性质 -/
+/-! ## 4. `mass`（锚间距）与其性质
 
-/-- 四元集 `S` 上 quartet `q` 的**锚间距（mass）**：`F` 中诱导出 `q` 的 split 的权重和。
+分两层（踩坑后的结构）：`massRaw` 是那个**和**，`mass` 再套一层 **2|2 闸门**。
+理由：`MSCSite.majorizes` 对**所有** `r : Split ↥S` 断言（含 `1|3`），而一条树 split 在四元集上
+完全可以诱导出 `1|3`（如 `{a} | {b,c,d}`）—— 若不加闸门，`mass(1|3) > 0`，`majorizes` 就是**假**的。
+闸门后 `1|3` 的 `mass` 为 `0`，而真 quartet 的 `mass > 0`。
+
+（分成两个 `def` 而不是把 `if` 写进一个 `def`：否则 `mass = ∑ … if …` 这种**陈述**会要求
+`Decidable (Induces …)` 在陈述层可合成，而 `Induces` 是 `def`、实例搜索不展开它 ⇒ 陈述直接编不过。） -/
+
+/-- 锚间距的**裸和**：`F` 中诱导出 `q` 的 split 的权重和（不看 `q` 是不是 `2|2`）。 -/
+def massRaw (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X) (q : Split ↥S) : ℝ := by
+  classical
+  exact ∑ s ∈ F, (if Induces s S q then w s else 0)
+
+/-- 四元集 `S` 上 quartet `q` 的**锚间距（mass）**：`massRaw` 加 **2|2 闸门**。
 
 ⚠️ 口径（派单 §3(b)）：这是**物种树侧**的质量，即 `E_G[mass_G(q)]` 的**期望**；
-把 `E_G[mass_G] = mass` 这条桥（两谱系期望共祖距离 = 物种树距离）留作模型字段
-（`MassModel.meanMass`），**不假装已证**。 -/
-def mass (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X) (q : Split ↥S) : ℝ := by
-  classical
-  exact ∑ s ∈ F, if Induces s S q then w s else 0
+把 `E_G[mass_G] = mass` 这条桥（两谱系期望共祖距离 = 物种树距离）留作模型字段（`hmean`），
+**不假装已证**。 -/
+def mass (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X) (q : Split ↥S) : ℝ :=
+  if q.sideA.card = 2 then massRaw F w S q else 0
 
-theorem mass_swap (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X)
-    (q : Split ↥S) : mass F w S q.swap = mass F w S q := by
+theorem mass_of_card_ne {F : Finset (Split X)} {w : Split X → ℝ} {S : Finset X}
+    {q : Split ↥S} (h : q.sideA.card ≠ 2) : mass F w S q = 0 := by
+  rw [mass, if_neg h]
+
+theorem mass_of_card_eq {F : Finset (Split X)} {w : Split X → ℝ} {S : Finset X}
+    {q : Split ↥S} (h : q.sideA.card = 2) : mass F w S q = massRaw F w S q := by
+  rw [mass, if_pos h]
+
+/-! ### 4.1 `massRaw` 的性质 -/
+
+theorem massRaw_swap (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X)
+    (q : Split ↥S) : massRaw F w S q.swap = massRaw F w S q := by
   classical
-  unfold mass
+  rw [massRaw]
   exact Finset.sum_congr rfl fun s _ => by rw [induces_swap]
 
-theorem mass_nonneg {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
-    (S : Finset X) (q : Split ↥S) : 0 ≤ mass F w S q := by
+theorem massRaw_nonneg {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
+    (S : Finset X) (q : Split ↥S) : 0 ≤ massRaw F w S q := by
   classical
+  rw [massRaw]
   exact Finset.sum_nonneg fun s hs => by
-    split_ifs with h
+    split_ifs with hI
     · exact (hw s hs).le
     · exact le_refl 0
 
-/-- ★ **`m_Q > 0` 的出口**：只要 `F` 里有一条 split 诱导 `q` 且权重为正，`mass(q) > 0`。 -/
-theorem mass_pos {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
-    {S : Finset X} {q : Split ↥S} (h : ∃ s ∈ F, Induces s S q) : 0 < mass F w S q := by
+/-- ★ **`m_Q > 0` 的出口**：`F` 里有一条 split 诱导 `q`、权重为正 ⇒ `massRaw(q) > 0`。 -/
+theorem massRaw_pos {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
+    {S : Finset X} {q : Split ↥S} (h : ∃ s ∈ F, Induces s S q) : 0 < massRaw F w S q := by
   classical
+  rw [massRaw]
   obtain ⟨s₀, hs₀, hind⟩ := h
   refine Finset.sum_pos' (fun s hs => ?_) ⟨s₀, hs₀, ?_⟩
-  · split_ifs with h
+  · split_ifs with hI
     · exact (hw s hs).le
     · exact le_refl 0
   · simpa only [hind, ↓reduceIte] using hw s₀ hs₀
 
-/-- ★★★ **`mass` 的三值性**：不是 `q`、也不是 `q.swap` 的 quartet，其 `mass` **精确为零**。 -/
-theorem mass_eq_zero {F : Finset (Split X)} {w : Split X → ℝ}
+/-- ★★★ **三值性**：`2|2` 且不是 `q`、`q.swap` 的 quartet，`massRaw` **精确为零**。 -/
+theorem massRaw_eq_zero {F : Finset (Split X)} {w : Split X → ℝ}
     (hcomp : ∀ s ∈ F, ∀ t ∈ F, Split.Compatible s t) {s₀ : Split X} (hs₀ : s₀ ∈ F)
     {S : Finset X} {q : Split ↥S} (hq : Induces s₀ S q)
     (hqc : q.sideA.card = 2) (hS : S.card = 4) {r : Split ↥S} (hrc : r.sideA.card = 2)
-    (hr1 : r ≠ q) (hr2 : r ≠ q.swap) : mass F w S r = 0 := by
+    (hr1 : r ≠ q) (hr2 : r ≠ q.swap) : massRaw F w S r = 0 := by
   classical
+  rw [massRaw]
   refine Finset.sum_eq_zero fun s hs => ?_
   split_ifs with hI
   · exfalso
@@ -282,26 +307,61 @@ theorem mass_eq_zero {F : Finset (Split X)} {w : Split X → ℝ}
     tauto
   · rfl
 
+/-! ### 4.2 `mass`（带闸门）的性质 -/
+
+/-- `q.swap` 的 A 侧基数（`|S| = 4` 时）。 -/
+theorem card_swap_sideA {S : Finset X} (hS : S.card = 4) (q : Split ↥S) :
+    q.swap.sideA.card = 4 - q.sideA.card := by
+  rw [Split.swap_sideA]
+  exact card_sideB hS q
+
+theorem mass_swap (F : Finset (Split X)) (w : Split X → ℝ) (S : Finset X)
+    (hS : S.card = 4) (q : Split ↥S) : mass F w S q.swap = mass F w S q := by
+  by_cases h : q.sideA.card = 2
+  · rw [mass_of_card_eq (by rw [card_swap_sideA hS q, h]), mass_of_card_eq h, massRaw_swap]
+  · rw [mass_of_card_ne (by rw [card_swap_sideA hS q]; omega), mass_of_card_ne h]
+
+theorem mass_nonneg {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
+    (S : Finset X) (q : Split ↥S) : 0 ≤ mass F w S q := by
+  by_cases h : q.sideA.card = 2
+  · rw [mass_of_card_eq h]; exact massRaw_nonneg hw S q
+  · rw [mass_of_card_ne h]
+
+theorem mass_pos {F : Finset (Split X)} {w : Split X → ℝ} (hw : ∀ s ∈ F, 0 < w s)
+    {S : Finset X} {q : Split ↥S} (hqc : q.sideA.card = 2)
+    (h : ∃ s ∈ F, Induces s S q) : 0 < mass F w S q := by
+  rw [mass_of_card_eq hqc]; exact massRaw_pos hw h
+
+theorem mass_eq_zero {F : Finset (Split X)} {w : Split X → ℝ}
+    (hcomp : ∀ s ∈ F, ∀ t ∈ F, Split.Compatible s t) {s₀ : Split X} (hs₀ : s₀ ∈ F)
+    {S : Finset X} {q : Split ↥S} (hq : Induces s₀ S q)
+    (hqc : q.sideA.card = 2) (hS : S.card = 4) {r : Split ↥S} (hrc : r.sideA.card = 2)
+    (hr1 : r ≠ q) (hr2 : r ≠ q.swap) : mass F w S r = 0 := by
+  rw [mass_of_card_eq hrc]
+  exact massRaw_eq_zero hcomp hs₀ hq hqc hS hrc hr1 hr2
+
 /-- ★★★★ **MASS_MAJORIZES**（派单 §3 的目标命题，本单唯一的新数学）：
 
 设 `F` 两两相容、`w` 在 `F` 上为正、`q` 是 `2|2` quartet、且 `F` 中**有**一条 split 在四元集 `S` 上
-诱导出 `q`（这就是「`q` 是真 quartet」）。则对**任何**另一个 `2|2` quartet `r`（`r ≠ q`、`r ≠ q.swap`），
+诱导出 `q`（这就是「`q` 是真 quartet」）。则对**任何**另一个 quartet `r`（`r ≠ q`、`r ≠ q.swap`），
 
 ```text
 mass(r) = 0 < mass(q) = m_Q .
 ```
 
-⇒ `q` 的锚间距**严格最大**，且另外两个 quartet 的质量**恰为零**（不是「更小」）。 -/
+⇒ `q` 的锚间距**严格最大**，且另外两个 quartet 的质量**恰为零**（不是「更小」）。
+对 `1|3` 的 `r` 也成立（闸门直接给 `0`）。 -/
 theorem mass_majorizes {F : Finset (Split X)} {w : Split X → ℝ}
     (hw : ∀ s ∈ F, 0 < w s) (hcomp : ∀ s ∈ F, ∀ t ∈ F, Split.Compatible s t)
     {S : Finset X} {q : Split ↥S} (hqc : q.sideA.card = 2) (hS : S.card = 4)
-    (hq : ∃ s ∈ F, Induces s S q) {r : Split ↥S} (hrc : r.sideA.card = 2)
+    (hq : ∃ s ∈ F, Induces s S q) {r : Split ↥S}
     (hr1 : r ≠ q) (hr2 : r ≠ q.swap) : mass F w S r < mass F w S q := by
-  classical
-  obtain ⟨s₀, hs₀, hind⟩ := hq
-  have h0 : mass F w S r = 0 := mass_eq_zero (w := w) hcomp hs₀ hind hqc hS hrc hr1 hr2
-  have hpos := mass_pos hw ⟨s₀, hs₀, hind⟩
-  rw [h0]
-  exact hpos
+  have hpos := mass_pos hw hqc hq
+  by_cases hrc : r.sideA.card = 2
+  · obtain ⟨s₀, hs₀, hind⟩ := hq
+    rw [mass_eq_zero hcomp hs₀ hind hqc hS hrc hr1 hr2]
+    exact hpos
+  · rw [mass_of_card_ne hrc]
+    exact hpos
 
 end Phylo.Stat.MassMajorizes
