@@ -3,7 +3,7 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license in the file LICENSE.
 Authors: ASTER LAB
 -/
-import Phylo.Stat.CASTERFourPoint4
+import Phylo.Stat.CASTERD
 
 /-!
 # `Phylo.Stat.CASTERFourPointN` —— `n ≥ 5` 的四点不等式（W44/W46 · L4.2）
@@ -52,12 +52,20 @@ import Phylo.Stat.CASTERFourPoint4
 ## 诚实边界
 
 * `ε` 由**树距离的严格四点判据**定义（`casterEps`）；`{x,y}`/`{z,w}` 的**严格樱桃性**
-  作为显式假设 `hcx`/`hcz` 传入。它由「实现树二叉 ＋ 边权全正」供给
-  （`Cladogram.dist_add_le_of_isCherry`（`Phylo/CherryQuartet.lean:131`）是**非严格**版，
-  严格版还需二叉性：度 ≥ 4 的顶点让 quartet 退化）。**本文件不证「二叉 ⇒ 严格」这一条**。
+  作为显式假设 `hcx`/`hcz` 传入。它由「实现树二叉 ＋ 边权全正」供给 ——
+  该命题已落成**具名缺口** `Phylo.Stat.StrictCherry.strictCherry_of_isBinary_pos_gap`
+  （库内 `Cladogram.dist_add_le_of_isCherry`（`Phylo/CherryQuartet.lean:131`）只是**非严格**版；
+  非二叉树上严格版**为假**，见该缺口文件头的星形树反例）。**本文件不证它**。
 * **不用** A3 的单一指数形式；`α` 是 A3 的常数，`c` 是 A4 的常数（`f ≡ c`）。
-* `n = 4` 的特例在 `Phylo/Stat/CASTERFourPoint4.lean`（`casterDelta4` / `fourPoint_n4_eq`）；
-  本文件的 `casterDeltaN` 在 `n ≥ 5` 时多出的项全部 `≥ 0`，是它的推广。
+
+## ★ L4.1 已删除（协调侧 W46 复核第 ① 条，2026-11-05）
+
+原 `Phylo/Stat/CASTERFourPoint4.lean` 是**空壳**：`casterDelta4` 把 `Δ` 手写死，
+`fourPoint_n4_pos` 又用 `hD : casterDelta4 … = α*c*(…)` 当前提（`hD` 就是定义展开）
+—— **全程没碰 `D̃`**。按复核给的两条路选 **(a) 删**：
+
+`fourPoint_n_pos` 对**任意**四个互异点成立，`X := Fin 4` 即是 `n = 4` 情形
+⇒ **L4.1 ⊂ L4.2**，本文件即其载体（结论落在 `CASTD.Dtilde` 上，`hD` 不存在）。
 -/
 
 noncomputable section

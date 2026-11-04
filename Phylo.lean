@@ -94,7 +94,6 @@ import Phylo.Stat.CASTERLM1
 import Phylo.Stat.CASTERNJ
 import Phylo.Stat.CASTERNJStep
 import Phylo.Stat.CASTERD
-import Phylo.Stat.CASTERFourPoint4
 import Phylo.Stat.CASTERFourPointN
 import Phylo.Stat.CASTERtL1
 import Phylo.Stat.CASTERRateAE
@@ -159,6 +158,7 @@ import Phylo.Stat.SiteWeightMeasurable
 import Phylo.Stat.SplitFin4Count
 import Phylo.Stat.SplitProbabilities
 import Phylo.Stat.Stability
+import Phylo.Stat.StrictCherry
 import Phylo.Stat.SVDQuartets
 import Phylo.Stat.TKF91
 import Phylo.Stat.ToricIdeals
