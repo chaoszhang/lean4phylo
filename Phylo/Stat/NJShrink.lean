@@ -1242,15 +1242,86 @@ theorem exists_walk_of_shrink_sum (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
 三支分别是「旧–旧」（路径不过 `w`，两边走法互搬、边权和不变）、「新–旧」
 （★★★ `StrictCherry.mergeStep_val_eq` 的算术核 ＋ `w` 在路径上）、「新–新」（`dist_self`）。 -/
 
-/-- ★★★ **A8-3e｜旧–旧距离不变**：`x, y ∉ {a,b}` 时
-`T'.dist (leaf' x) (leaf' y) = δ(x,y)`。
+/-- ★★★ **A8-3e｜旧–旧距离（一般形式）**：若 `u, v` 都**不是**合并叶的像
+（`u.1, v.1 ≠ T.leaf a`），则 `T'.dist u v = T.dist u.1 v.1`。
 
 两个方向：
-* `≤`：`T` 里 `leaf x → leaf y` 的路径**避开** `leaf b`（度 1）与 `w`（★★ 一般化中点避开），
-  整条搬进 `G`，边权和不变（★★★ `exists_walk_shrink_sum`）⇒ `dist' ≤ walkDist = δ(x,y)`；
+* `≤`：`T` 里 `u.1 → v.1` 的路径**避开** `leaf b`（度 1）与 `w`（★★ 一般化中点避开），
+  整条搬进 `G`，边权和不变（★★★ `exists_walk_shrink_sum`）⇒ `dist' ≤ walkDist = dist_T`；
 * `≥`：`G` 里那条唯一路径**不含** `⟨leaf a⟩`（它在 `G` 里度为 1，且不是端点 ⇒
-  ★★ `not_mem_support_of_degree_one`），搬回 `T` 得一条 `leaf x → leaf y` 的走法
-  ⇒ `δ(x,y) = dist_T ≤ walkDist ≤ dist'`。 -/
+  ★★ `not_mem_support_of_degree_one`），搬回 `T` 得一条 `u.1 → v.1` 的走法
+  ⇒ `dist_T ≤ walkDist ≤ dist'`。
+
+这一支是 `dist` 对齐的地基：新–旧那支要用 `u = ⟨z, ·⟩`（`z` 不是叶标签的像）。 -/
+theorem shrinkPhylogram_dist_old (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {u v : ShrinkV T b w}
+    (hua : u.1 ≠ T.leaf a) (hva : v.1 ≠ T.leaf a) :
+    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v = T.dist u.1 v.1 := by
+  have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
+  have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hz : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
+  by_cases huv : u.1 = v.1
+  · have hsub : u = v := Subtype.ext huv
+    rw [hsub]
+    simp only [Phylogram.dist_self]
+  · have h1 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v
+        ≤ T.dist u.1 v.1 := by
+      set P := (T.existsUnique_path u.1 v.1).choose with hPdef
+      have hPpath : P.IsPath := (T.existsUnique_path u.1 v.1).choose_spec.1
+      have hwP : w ∉ P.support :=
+        midpoint_not_mem_support_gen T hbin hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2
+          hva v.2.1 v.2.2 P hPpath
+      have hdb : T.graph.degree (T.leaf b) = 1 :=
+        (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+      have hbP : T.leaf b ∉ P.support :=
+        not_mem_support_of_degree_one T hdb P hPpath u.2.1 v.2.1
+      have hsupp : ∀ t ∈ P.support, t ≠ T.leaf b ∧ t ≠ w := by
+        intro t ht
+        exact ⟨fun h => hbP (h ▸ ht), fun h => hwP (h ▸ ht)⟩
+      obtain ⟨q, hq⟩ := exists_walk_shrink_sum T a b w z hza haw hzw ha hz P hsupp u.2 v.2
+      have hqw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q
+          = T.dist u.1 v.1 := by
+        have hsum : (P.edges.map T.wExt).sum = T.dist u.1 v.1 := by
+          have hwalk : (P.edges.map T.wExt).sum = T.walkDist P := rfl
+          rw [hwalk, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath T P hPpath]
+        rw [shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q, hq]
+        exact hsum
+      have hdw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v
+          ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q :=
+        Phylo.Contract.dist_le_walkDist
+          (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) q
+      linarith
+    have h2 : T.dist u.1 v.1 ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v := by
+      obtain ⟨q', hq'path, -⟩ :=
+        (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).existsUnique_path u v
+      have hdeg : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).graph.degree
+          (⟨T.leaf a, ha⟩ : ShrinkV T b w) = 1 :=
+        degree_shrink_leaf_a T a b w z hza haw ha hz
+      have hqa : (⟨T.leaf a, ha⟩ : ShrinkV T b w) ∉ q'.support :=
+        not_mem_support_of_degree_one
+          (T := shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) hdeg q' hq'path
+          (fun h => hua (congrArg Subtype.val h))
+          (fun h => hva (congrArg Subtype.val h))
+      obtain ⟨p, hp⟩ := exists_walk_of_shrink_sum T a b w z hza haw hzw ha hz q'
+        (fun t ht hcon => hqa (by
+          have hteq : t = (⟨T.leaf a, ha⟩ : ShrinkV T b w) := Subtype.ext hcon
+          rwa [hteq] at ht))
+      have e1 : T.dist u.1 v.1 ≤ T.walkDist p := Phylo.Contract.dist_le_walkDist T p
+      have e3 : T.walkDist p = (q'.edges.map (shrinkW T a b w z hza ha hz)).sum := hp.symm
+      have e4 : (q'.edges.map (shrinkW T a b w z hza ha hz)).sum
+          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q' :=
+        (shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q').symm
+      have e5 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q'
+          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v :=
+        (Phylo.TreeDist.dist_eq_walkDist_of_isPath _ q' hq'path).symm
+      linarith
+    exact le_antisymm h1 h2
+
+/-- ★★★ **A8-3e′｜旧–旧距离（叶标签形式）**：`x, y ∉ {a,b}` 时
+`T'.dist (leaf' x) (leaf' y) = δ(x,y)`。由 ★★★ `shrinkPhylogram_dist_old` ＋ 实现树的 `hT`。 -/
 theorem shrinkPhylogram_dist_inl_inl (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsBinary)
     {a b : X} (hab : a ≠ b) {w z : T.V} (haw : T.graph.Adj (T.leaf a) w)
     (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
@@ -1260,82 +1331,17 @@ theorem shrinkPhylogram_dist_inl_inl (δ : NJ.Dissimilarity X) (hbin : T.toClado
         ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
         ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl y))
       = δ.val x.1 y.1 := by
-  have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
-  have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
-  have hz : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
   have hxa : T.leaf x.1 ≠ T.leaf a := fun h => mergeOld_ne_left x (T.leaf.injective h)
-  have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
-  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw x.1
   have hya : T.leaf y.1 ≠ T.leaf a := fun h => mergeOld_ne_left y (T.leaf.injective h)
+  have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
   have hyb : T.leaf y.1 ≠ T.leaf b := fun h => mergeOld_ne_right y (T.leaf.injective h)
+  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw x.1
   have hyw : T.leaf y.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw y.1
   have hxu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
       = (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) := Subtype.ext rfl
   have hyu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl y))
       = (⟨T.leaf y.1, ⟨hyb, hyw⟩⟩ : ShrinkV T b w) := Subtype.ext rfl
-  rw [hxu, hyu]
-  by_cases hxy : x.1 = y.1
-  · have hsub : (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) = ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩ :=
-      Subtype.ext (congrArg T.leaf hxy)
-    rw [hsub, Phylogram.dist_self, hxy, δ.diag]
-  · have h1 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-        (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩
-        ≤ δ.val x.1 y.1 := by
-      set P := (T.existsUnique_path (T.leaf x.1) (T.leaf y.1)).choose with hPdef
-      have hPpath : P.IsPath := (T.existsUnique_path (T.leaf x.1) (T.leaf y.1)).choose_spec.1
-      have hwP : w ∉ P.support :=
-        midpoint_not_mem_support_gen T hbin hab haw hbw hwz hza hzb hzw hxa hxb hxw hya hyb hyw
-          P hPpath
-      have hdb : T.graph.degree (T.leaf b) = 1 :=
-        (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
-      have hbP : T.leaf b ∉ P.support := not_mem_support_of_degree_one T hdb P hPpath hxb hyb
-      have hsupp : ∀ v ∈ P.support, v ≠ T.leaf b ∧ v ≠ w := by
-        intro v hv
-        exact ⟨fun h => hbP (h ▸ hv), fun h => hwP (h ▸ hv)⟩
-      obtain ⟨q, hq⟩ := exists_walk_shrink_sum T a b w z hza haw hzw ha hz P hsupp
-        ⟨hxb, hxw⟩ ⟨hyb, hyw⟩
-      have hqw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q
-          = δ.val x.1 y.1 := by
-        have hsum : (P.edges.map T.wExt).sum = δ.val x.1 y.1 := by
-          have hwalk : (P.edges.map T.wExt).sum = T.walkDist P := rfl
-          rw [hwalk, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath T P hPpath, hT x.1 y.1]
-        rw [shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q, hq]
-        exact hsum
-      have hdw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-          (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩
-          ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q :=
-        Phylo.Contract.dist_le_walkDist
-          (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) q
-      linarith
-    have h2 : δ.val x.1 y.1 ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-        (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩ := by
-      obtain ⟨q', hq'path, -⟩ := (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).existsUnique_path
-        (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩
-      have hdeg : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).graph.degree
-          (⟨T.leaf a, ha⟩ : ShrinkV T b w) = 1 :=
-        degree_shrink_leaf_a T a b w z hza haw ha hz
-      have hqa : (⟨T.leaf a, ha⟩ : ShrinkV T b w) ∉ q'.support :=
-        not_mem_support_of_degree_one
-          (T := shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) hdeg q' hq'path
-          (fun h => hxa (congrArg Subtype.val h))
-          (fun h => hya (congrArg Subtype.val h))
-      obtain ⟨p, hp⟩ := exists_walk_of_shrink_sum T a b w z hza haw hzw ha hz q'
-        (fun v hv hcon => hqa (by
-          have hveq : v = (⟨T.leaf a, ha⟩ : ShrinkV T b w) := Subtype.ext hcon
-          rwa [hveq] at hv))
-      have e1 : δ.val x.1 y.1 = T.dist (T.leaf x.1) (T.leaf y.1) := (hT x.1 y.1).symm
-      have e2 : T.dist (T.leaf x.1) (T.leaf y.1) ≤ T.walkDist p :=
-        Phylo.Contract.dist_le_walkDist T p
-      have e3 : T.walkDist p = (q'.edges.map (shrinkW T a b w z hza ha hz)).sum := hp.symm
-      have e4 : (q'.edges.map (shrinkW T a b w z hza ha hz)).sum
-          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q' :=
-        (shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q').symm
-      have e5 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q'
-          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-            (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) ⟨T.leaf y.1, ⟨hyb, hyw⟩⟩ :=
-        (Phylo.TreeDist.dist_eq_walkDist_of_isPath _ q' hq'path).symm
-      linarith
-    exact le_antisymm h1 h2
+  rw [hxu, hyu, shrinkPhylogram_dist_old T hbin hab haw hbw hza hzb hwz hpos hxa hya]
+  exact hT x.1 y.1
 
 end Phylo.Stat.NJShrink
