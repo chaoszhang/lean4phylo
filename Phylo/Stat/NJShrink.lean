@@ -45,6 +45,24 @@ import Phylo.AttesonRadius
 | A8 | 边权、`dist` 对齐、`HasPosReal` 收口 | ⏳ |
 
 **纪律**：零 sorry / axiom / opaque。本文件只加新声明，不动任何既有定理。
+
+## ⚠️ 一条被排除的捷径（W46 长程第 18 轮）
+
+**`HasPosReal` 不能从 `FourPoint` 推出来** —— 所以「用 `exists_realizingPhylogram_pos_of_addConst`
+绕开树层收缩」这条路**不通**。反例（3 叶）：
+
+```text
+δ(1,2) = δ(1,3) = 1,  δ(2,3) = 2   （additive，四点条件平凡成立）
+唯一的实现是星形：中心 w，垂枝 (0, 1, 1)
+```
+
+`HasPosReal` 要求**每条边权 > 0**，而叶 1 的垂枝必须是 `0` ⇒ 无反例可救。
+（`addConst` 技巧只给出 `δ + ε` 的**正权**实现；把 `ε/2` 从垂枝上减回来，垂枝就回到 `ℓ ≥ 0`，
+可能是 `0`。内部边确实仍是正的，但 `HasPosReal` 管的是**所有**边。）
+
+⇒ 结论：`njAdditiveGap` 里那条「归约保持正权实现」**不是**可绕过的技术条件，
+树层收缩（本文件的 A 步）是**唯一**出路。这条记录避免下一轮重走。
+
 -/
 
 noncomputable section
