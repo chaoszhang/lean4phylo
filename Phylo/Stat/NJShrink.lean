@@ -1548,4 +1548,22 @@ theorem shrinkPhylogram_isBinary (hbin : T.toCladogram.IsBinary) {a b : X} (hab 
   rw [hdeg]
   exact hbin v.1 hnotleaf
 
+/-- ★★★ **收缩后每条边权都正**（`shrinkPhylogram` 的 `w` 字段版本，`Sym2.ind` 把边拆成端点对）。 -/
+theorem shrinkPhylogram_w_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    ∀ e : Edge (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).toCladogram,
+      0 < (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).w e := by
+  have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hz : z ≠ T.leaf b ∧ z ≠ w :=
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+  have key : ∀ e' : Sym2 (ShrinkV T b w),
+      e' ∈ (shrinkGraph T a b w z hza).edgeSet → 0 < shrinkW T a b w z hza ha hz e' :=
+    Sym2.ind (fun u v he =>
+      shrinkW_pos T hbin hab haw hbw hza hzb hwz hpos ha hz ((SimpleGraph.mem_edgeSet _).mp he))
+  intro e
+  exact key e.1 e.2
+
 end Phylo.Stat.NJShrink

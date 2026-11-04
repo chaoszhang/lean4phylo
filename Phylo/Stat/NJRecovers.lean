@@ -527,4 +527,116 @@ theorem iso_of_shrink_equiv {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w
   · intro x
     exact hleafc x
 
+/-! ## 7. 归纳装配：**拓扑唯一性**
+
+对 `|Y|` 强归纳。`|Y| ≤ 2` 用 ★★ `Cladogram.iso_of_card_le_two`；否则取 `Q`-最小对 `(a,b)`，
+两棵树都把它当樱桃（★★★ `isCherry_of_njStep`），各自收缩（★★★ `shrinkPhylogram`），
+归纳假设给收缩树的同构，最后由 ★★★ `iso_of_shrink_equiv` 提升回 `T ≅ T'`。 -/
+
+/-- ★★★ **拓扑唯一性**：`δ` 的两个「正权 ＋ 二叉」实现树必同构。
+
+这正是 `nj_recovers_topology_additive` 的数学内容：NJ 每轮选的 `Q`-最小对**必是真樱桃**
+（★★★ `isCherry_of_njStep`），而「正权 ＋ 二叉 ＋ 实现」在归约下保持（★★★ `njReductionStep`），
+故 NJ 的递归输出与真树实现同一个 `δ`，从而同构。 -/
+theorem iso_of_realizes_binary : ∀ (n : ℕ),
+    ∀ {Y : Type u} [Fintype Y] [DecidableEq Y], Fintype.card Y ≤ n →
+      ∀ (δ : NJ.Dissimilarity Y) (T T' : Phylogram.{u, v} Y),
+        (∀ e : Edge T.toCladogram, 0 < T.w e) → T.toCladogram.IsBinary →
+        (∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y) →
+        (∀ e : Edge T'.toCladogram, 0 < T'.w e) → T'.toCladogram.IsBinary →
+        (∀ x y : Y, T'.dist (T'.leaf x) (T'.leaf y) = δ.val x y) →
+        Nonempty (Iso T.toCladogram T'.toCladogram) := by
+  intro n
+  induction n with
+  | zero =>
+      intro Y _ _ hcard δ T T' _ _ _ _ _ _
+      exact Cladogram.iso_of_card_le_two (by omega)
+  | succ n ih =>
+      intro Y _ _ hcard δ T T' hwT hbinT hrealT hwT' hbinT' hrealT'
+      by_cases hsmall : Fintype.card Y ≤ 2
+      · exact Cladogram.iso_of_card_le_two hsmall
+      · have hge3 : 3 ≤ Fintype.card Y := by omega
+        obtain ⟨a, b, hstep⟩ := exists_njStep δ (by omega : 2 ≤ Fintype.card Y)
+        have hab : a ≠ b := hstep.1
+        have hcT : T.IsCherry a b := NJShrink.isCherry_of_njStep δ hwT hrealT hge3 hstep
+        have hcT' : T'.IsCherry a b := NJShrink.isCherry_of_njStep δ hwT' hrealT' hge3 hstep
+        have hcTk := hcT
+        have hcT'k := hcT'
+        obtain ⟨-, w, haw, hbw⟩ := hcT
+        obtain ⟨-, w', haw', hbw'⟩ := hcT'
+        obtain ⟨z, hwz, hza, hzb, -⟩ := NJShrink.exists_third T hbinT hab haw hbw
+        obtain ⟨z', hwz', hza', hzb', -⟩ := NJShrink.exists_third T' hbinT' hab haw' hbw'
+        have hlaT : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+          ⟨fun h => hab (T.leaf.injective h), NJShrink.leaf_ne_midpoint T hbinT hab haw hbw a⟩
+        have hzmT : z ≠ T.leaf b ∧ z ≠ w :=
+          ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+        have hlaT' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w' :=
+          ⟨fun h => hab (T'.leaf.injective h),
+            NJShrink.leaf_ne_midpoint T' hbinT' hab haw' hbw' a⟩
+        have hzmT' : z' ≠ T'.leaf b ∧ z' ≠ w' :=
+          ⟨hzb', fun h => T'.graph.loopless.irrefl z' (h ▸ hwz')⟩
+        have hwbT : w ≠ T.leaf b :=
+          (NJShrink.leaf_ne_midpoint T hbinT hab haw hbw b).symm
+        have hwbT' : w' ≠ T'.leaf b :=
+          (NJShrink.leaf_ne_midpoint T' hbinT' hab haw' hbw' b).symm
+        -- 两侧的收缩树
+        set ST := NJShrink.shrinkPhylogram T hbinT hab haw hbw hza hzb hwz hwT with hST
+        set ST' := NJShrink.shrinkPhylogram T' hbinT' hab haw' hbw' hza' hzb' hwz' hwT' with hST'
+        have hposST : ∀ e : Edge ST.toCladogram, 0 < ST.w e :=
+          NJShrink.shrinkPhylogram_w_pos T hbinT hab haw hbw hza hzb hwz hwT
+        have hbinST : ST.toCladogram.IsBinary :=
+          NJShrink.shrinkPhylogram_isBinary T hbinT hab haw hbw hza hzb hwz hwT
+        have hrealST : ∀ u v : MergeIdx Y a b,
+            ST.dist (ST.leaf u) (ST.leaf v) = (mergeStep δ a b).val u v :=
+          fun u v => NJShrink.shrinkPhylogram_dist T δ hbinT hab haw hbw hza hzb hwz hwT hcTk hrealT u v
+        have hposST' : ∀ e : Edge ST'.toCladogram, 0 < ST'.w e :=
+          NJShrink.shrinkPhylogram_w_pos T' hbinT' hab haw' hbw' hza' hzb' hwz' hwT'
+        have hbinST' : ST'.toCladogram.IsBinary :=
+          NJShrink.shrinkPhylogram_isBinary T' hbinT' hab haw' hbw' hza' hzb' hwz' hwT'
+        have hrealST' : ∀ u v : MergeIdx Y a b,
+            ST'.dist (ST'.leaf u) (ST'.leaf v) = (mergeStep δ a b).val u v :=
+          fun u v =>
+            NJShrink.shrinkPhylogram_dist T' δ hbinT' hab haw' hbw' hza' hzb' hwz' hwT' hcT'k hrealT' u v
+        -- 归纳假设
+        have hcardS : Fintype.card (MergeIdx Y a b) ≤ n := by
+          have h := mergeStep_card (a := a) (b := b) hab
+          omega
+        obtain ⟨isoS⟩ := ih hcardS (mergeStep δ a b) ST ST'
+          hposST hbinST hrealST hposST' hbinST' hrealST'
+        -- 取出收缩树的顶点等价与两条保性质
+        let φ : ShrinkV T b w ≃ ShrinkV T' b w' := isoS.gIso.toEquiv
+        have hφadj : ∀ p q : ShrinkV T b w,
+            (shrinkGraph T a b w z hza).Adj p q
+              ↔ (shrinkGraph T' a b w' z' hza').Adj (φ p) (φ q) :=
+          fun p q => (isoS.gIso.map_rel_iff').symm
+        have hφleaf : ∀ u : MergeIdx Y a b,
+            φ (leafShrink T hbinT hab haw hbw u) = leafShrink T' hbinT' hab haw' hbw' u :=
+          fun u => isoS.leaf_compat u
+        have hφa : φ ⟨T.leaf a, hlaT⟩ = ⟨T'.leaf a, hlaT'⟩ := hφleaf (Sum.inr ())
+        have hφz : φ ⟨z, hzmT⟩ = ⟨z', hzmT'⟩ := by
+          have h1 : (shrinkGraph T' a b w' z' hza').Adj
+              (φ ⟨T.leaf a, hlaT⟩) (φ ⟨z, hzmT⟩) :=
+            (hφadj ⟨T.leaf a, hlaT⟩ ⟨z, hzmT⟩).mp (Or.inr (Or.inl ⟨rfl, rfl⟩))
+          rw [hφa] at h1
+          have h2 : (φ ⟨z, hzmT⟩).1 = z' :=
+            (NJShrink.shrinkGraph_adj_leaf_a_iff T' a b w' z' hza' haw' hlaT'
+              (v := φ ⟨z, hzmT⟩)).mp h1
+          exact Subtype.ext h2
+        exact iso_of_shrink_equiv hbinT hbinT' hab haw hbw hwz hza hzb haw' hbw' hwz' hza' hzb'
+          φ hwbT hwbT' hlaT hlaT' hφa hzmT hzmT' hφz hφadj hφleaf
+
+/-- ★★★ **L5a｜`nj_recovers_topology_additive`**：可加（正权 binary 实现）情形下，
+`δ` **唯一决定**系统发生树的拓扑 —— 即任何一致算法（含 NJ）都只能给出同一个拓扑。
+
+`n := Fintype.card Y` 处取 ★★★ `iso_of_realizes_binary`。 -/
+theorem nj_recovers_topology_additive {Y : Type u} [Fintype Y] [DecidableEq Y]
+    (δ : NJ.Dissimilarity Y) (T T' : Phylogram.{u, v} Y)
+    (hwT : ∀ e : Edge T.toCladogram, 0 < T.w e) (hbinT : T.toCladogram.IsBinary)
+    (hrealT : ∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
+    (hwT' : ∀ e : Edge T'.toCladogram, 0 < T'.w e) (hbinT' : T'.toCladogram.IsBinary)
+    (hrealT' : ∀ x y : Y, T'.dist (T'.leaf x) (T'.leaf y) = δ.val x y) :
+    Nonempty (Iso T.toCladogram T'.toCladogram) :=
+  iso_of_realizes_binary (Fintype.card Y) (le_refl _) δ T T'
+    hwT hbinT hrealT hwT' hbinT' hrealT'
+
 end Phylo.Stat.NJRecovers
