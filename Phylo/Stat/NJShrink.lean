@@ -326,4 +326,16 @@ theorem leaf_mem_support_eq_end (hdeg : T.graph.degree y = 1) {x z' : T.V}
               exact absurd hx0mem hx0q
         · exact Or.inr h1
 
+/-- ★★ **A6f 第 1 步**：度为 1 的顶点若**既不是起点也不是终点**，就不在任何无重复走法的支撑集里。
+
+直接由 ★★★ `leaf_mem_support_eq_end` 取逆否。这条正是把 `T.leaf a`、`T.leaf b`
+从「`u.1 → z` 的路径」上排除掉的工具（A4′ 的穷尽性随后才能把 `w` 的两个路径邻居逼到 `z`）。 -/
+theorem not_mem_support_of_degree_one {y x z' : T.V} (hdeg : T.graph.degree y = 1)
+    (p : T.graph.Walk x z') (hp : p.IsPath) (hx : x ≠ y) (hz : z' ≠ y) :
+    y ∉ p.support := by
+  intro hmem
+  rcases leaf_mem_support_eq_end T hdeg p hp.support_nodup hmem with h | h
+  · exact hx h.symm
+  · exact hz h.symm
+
 end Phylo.Stat.NJShrink
