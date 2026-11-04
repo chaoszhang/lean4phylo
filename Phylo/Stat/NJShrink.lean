@@ -275,4 +275,15 @@ theorem shrinkGraph_adj_leaf_a_iff (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
     rw [hv]
     exact Or.inr (Or.inl ⟨rfl, rfl⟩)
 
+/-- 被删掉的叶 `T.leaf b` 在收缩图里**不再有任何邻居**（它在 `T` 里唯一的邻居 `w` 已被删）。
+这条是「删叶」这一步的**正确性**依据：`T.leaf b` 的旧边全部随 `w` 一起消失。 -/
+theorem not_adj_leaf_b {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w)
+    {v : ShrinkV T b w} : ¬ T.graph.Adj (T.leaf b) v.1 := by
+  have hd1 : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  obtain ⟨c, _, hcuniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hd1
+  have hcw : c = w := (hcuniq w hbw).symm
+  intro h
+  exact v.2.2 ((hcuniq v.1 h).trans hcw)
+
 end Phylo.Stat.NJShrink
