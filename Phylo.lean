@@ -81,6 +81,7 @@ import Phylo.Stat.BunemanIndexBridge
 import Phylo.Stat.BunemanIndexQuartet
 import Phylo.Stat.CASTERBridge
 import Phylo.Stat.CASTEREngine
+import Phylo.Stat.CASTERExpect
 import Phylo.Stat.CASTERF84
 import Phylo.Stat.CASTERF84Events
 import Phylo.Stat.CASTERF84Pos
