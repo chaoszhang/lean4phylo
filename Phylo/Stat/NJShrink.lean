@@ -286,4 +286,44 @@ theorem not_adj_leaf_b {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w)
   intro h
   exact v.2.2 ((hcuniq v.1 h).trans hcw)
 
+/-! ## A6f 前置｜度为 1 的顶点在无重复走法上只能当端点 -/
+
+/-- ★★★ **A6f 的前置引理**：度为 1 的顶点若出现在一条**无重复**走法的支撑集里，
+则它必是该走法的一个**端点**。
+
+（这是上一轮定位出的**循环依赖**的解药：A6f 要证「`w` 的两个路径邻居 ∉ `{leaf a, leaf b}`」，
+而那只因为 `leaf a`/`leaf b` 度为 1 只能当端点 —— 所以必须先**独立**证本条。）
+
+证法：按走法结构归纳。
+* `nil`：支撑集是单点集，`y = x`。
+* `cons h q`（`h : Adj x0 mid`）：若 `y = x0` 成；否则 `y ∈ q.support`，由归纳假设
+  `y = mid ∨ y = z0`。若 `y = z0` 成；若 `y = mid`，则 `q` 必为 `nil` ——
+  否则 `q = cons h' r`，由 `y` 的唯一邻居 `c` 得 `x0 = c` 且 `m1 = c`，
+  即 `x0 = m1 ∈ q.support`，与 `Nodup` 给的首元素不在尾支撑集里矛盾。 -/
+theorem leaf_mem_support_eq_end (hdeg : T.graph.degree y = 1) {x z' : T.V}
+    (p : T.graph.Walk x z') (hp : p.support.Nodup) (hy : y ∈ p.support) :
+    y = x ∨ y = z' := by
+  induction p with
+  | nil => exact Or.inl (by simpa using hy)
+  | @cons x0 mid z0 h q ih =>
+      rw [SimpleGraph.Walk.support_cons] at hy
+      obtain ⟨hx0q, hqnd⟩ := List.nodup_cons.mp hp
+      rcases List.mem_cons.mp hy with hyx | hyq
+      · exact Or.inl hyx
+      · rcases ih hqnd hyq with h1 | h1
+        · obtain ⟨c, _, hcuniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+          cases q with
+          | nil => exact Or.inr h1
+          | @cons m0 m1 m2 h' r =>
+              have hxc : x0 = c := hcuniq x0 (h1 ▸ h).symm
+              have hm1 : m1 = c := hcuniq m1 (h1 ▸ h')
+              have hmem1 : m1 ∈ r.support := SimpleGraph.Walk.start_mem_support r
+              have hmem : m1 ∈ (SimpleGraph.Walk.cons h' r).support := by
+                rw [SimpleGraph.Walk.support_cons]
+                exact List.mem_cons_of_mem _ hmem1
+              have hx0mem : x0 ∈ (SimpleGraph.Walk.cons h' r).support := by
+                simpa [hm1, hxc] using hmem
+              exact absurd hx0mem hx0q
+        · exact Or.inr h1
+
 end Phylo.Stat.NJShrink
