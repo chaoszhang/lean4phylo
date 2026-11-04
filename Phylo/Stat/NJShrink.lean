@@ -562,4 +562,25 @@ theorem exists_walk_of_shrink (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
         · exact absurd h'.2 hM
       exact ⟨SimpleGraph.Walk.cons htedge q'⟩
 
+/-! ## A6g 前置｜顶点计数（边数记账的那一半） -/
+
+/-- ★★ **A6g 前置**：`ShrinkV` 比 `T.V` 少**两个**顶点。
+
+（`ShrinkV T b w = {v // v ≠ leaf b ∧ v ≠ w}`；与 `univ \ {leaf b, w}` 建立显式等价后数基数。） -/
+theorem card_shrinkV {b : X} {w : T.V} (hne : T.leaf b ≠ w) :
+    Fintype.card (ShrinkV T b w) + 2 = Fintype.card T.V := by
+  have hset : (Finset.univ.filter (fun v : T.V => v ≠ T.leaf b ∧ v ≠ w))
+      = (Finset.univ : Finset T.V) \ {T.leaf b, w} := by
+    ext v
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_sdiff,
+      Finset.mem_insert, Finset.mem_singleton, not_or]
+  rw [Fintype.card_subtype, hset, Finset.card_sdiff,
+    Finset.inter_eq_left.mpr (Finset.subset_univ _), Finset.card_univ, Finset.card_pair hne]
+  have h2 : 2 ≤ Fintype.card T.V := by
+    have h := Finset.card_le_univ ({T.leaf b, w} : Finset T.V)
+    have h1 : ({T.leaf b, w} : Finset T.V).card = 2 := Finset.card_pair hne
+    have h3 : (Finset.univ : Finset T.V).card = Fintype.card T.V := Finset.card_univ
+    omega
+  omega
+
 end Phylo.Stat.NJShrink
