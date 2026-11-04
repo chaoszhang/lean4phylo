@@ -484,4 +484,48 @@ theorem midpoint_not_mem_support (hbin : T.toCladogram.IsBinary) {a b : X} (hab 
     hp.getVert_injOn (by omega : i - 1 ≤ p.length) (by omega : i + 1 ≤ p.length) hinj
   omega
 
+/-! ## A6f｜收缩图**连通** -/
+
+/-- ★★★ **A6f `Connected`**：收缩图连通。
+
+路线：**每个顶点都能走到合并叶 `⟨T.leaf a, ·⟩`** ——
+* `u = ⟨T.leaf a, ·⟩`：平凡；
+* 否则取 `T` 里 `u.1 → z` 的**唯一**简单路径 `p`：`w ∉ p.support`（★★★ `midpoint_not_mem_support`）、
+  `T.leaf b ∉ p.support`（★★ `not_mem_support_of_degree_one`）⇒ 由 ★★★ `exists_walk_shrink`
+  得 `u → ⟨z, ·⟩` 的走法，再走新边 `⟨z, ·⟩ — ⟨T.leaf a, ·⟩`。
+最后 `Preconnected` 由「两段接到同一个汇点」拼出。 -/
+theorem shrinkGraph_connected (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w) :
+    (shrinkGraph T a b w z hza).Connected := by
+  have hza_mem : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hz_mem : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
+  have hedge : (shrinkGraph T a b w z hza).Adj ⟨z, hz_mem⟩ ⟨T.leaf a, hza_mem⟩ :=
+    Or.inr (Or.inr ⟨rfl, rfl⟩)
+  have hdb : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  -- 每个顶点都能走到合并叶
+  have hhub : ∀ u : ShrinkV T b w,
+      Nonempty ((shrinkGraph T a b w z hza).Walk u ⟨T.leaf a, hza_mem⟩) := by
+    intro u
+    by_cases hua : u.1 = T.leaf a
+    · have hud : u = ⟨T.leaf a, hza_mem⟩ := Subtype.ext hua
+      rw [hud]
+      exact ⟨SimpleGraph.Walk.nil⟩
+    · obtain ⟨p, hp, _⟩ := T.toCladogram.existsUnique_path u.1 z
+      have hlb : T.leaf b ∉ p.support := not_mem_support_of_degree_one T hdb p hp u.2.1 hzb
+      have hw : w ∉ p.support :=
+        midpoint_not_mem_support T hbin hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2 p hp
+      have hsupp : ∀ v ∈ p.support, v ≠ T.leaf b ∧ v ≠ w :=
+        fun v hv => ⟨fun h => hlb (h ▸ hv), fun h => hw (h ▸ hv)⟩
+      obtain ⟨q⟩ := exists_walk_shrink T a b w z hza p hsupp ⟨u.2.1, u.2.2⟩ hz_mem
+      exact ⟨q.append (SimpleGraph.Walk.cons hedge SimpleGraph.Walk.nil)⟩
+  rw [SimpleGraph.connected_iff]
+  refine ⟨?_, ⟨⟨T.leaf a, hza_mem⟩⟩⟩
+  intro u v
+  obtain ⟨q1⟩ := hhub u
+  obtain ⟨q2⟩ := hhub v
+  exact ⟨q1.append q2.reverse⟩
+
 end Phylo.Stat.NJShrink
