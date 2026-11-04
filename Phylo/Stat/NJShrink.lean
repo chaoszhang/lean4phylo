@@ -39,12 +39,28 @@ import Phylo.Stat.CASTERNJStep
 | A2 | 两个不同邻居 ⇒ `w` 不是叶 | ✅ |
 | A3 | `IsBinary` ⇒ `degree w = 3` | ✅ |
 | A5 | `leafShrink : MergeIdx X a b ↪ ShrinkV T b w` ＋ 单射 | ✅ |
-| A4 | 第三邻居 `z` 的存在 | ⏳ 下一步 |
-| A6 | 图（诱导 ＋ 一条边）与 `IsTree` | ⏳ |
-| A7 | `leaf_iff_degree_one` / `no_degree_two` | ⏳ |
+| A4 | 第三邻居 `z` 的存在 ＋ **穷尽性** | ✅ |
+| A6 | 图（诱导 ＋ 一条边）、`Connected`、`IsAcyclic` ⇒ **`IsTree` 两半** | ✅ |
+| A7 | **`deg_G v = deg_T v.1`**（三支：合并叶 / `z` / 其余） | ✅ |
+| A7′ | 把 `leaf_iff_degree_one` / `no_degree_two` 从 `T` 搬过来 | ⏳ 下一步 |
 | A8 | 边权、`dist` 对齐、`HasPosReal` 收口 | ⏳ |
 
 **纪律**：零 sorry / axiom / opaque。本文件只加新声明，不动任何既有定理。
+
+## A7b 的做法（第 31 轮）：度数**不变**，不必重建
+
+收缩对每个**存活顶点**只做「删一条旧边、补一条新边」的局部平衡，于是
+
+```text
+∀ v : ShrinkV, (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1
+```
+
+（★★★ `degree_shrinkGraph`，三支：合并叶 `⟨T.leaf a, ·⟩` / `z` / 其余）。
+⇒ `Cladogram` 的两个度字段（`leaf_iff_degree_one`、`no_degree_two`）可以**整体**从 `T` 搬过来。
+
+★ 三支都用 `Finset.card_bij`（显式双射），**不用** `Finset.attach/map/∩` 的运算链 ——
+后者要先把 `shrinkGraph` 重写成 `induce ⊔ edge` 再搬 `map_neighborFinset_induce`，
+状态数多、第 29–31 轮实测反复卡在类型不匹配上。
 
 ## ⚠️ 一条被排除的捷径（W46 长程第 18 轮）
 
@@ -696,5 +712,166 @@ instance shrinkGraph_decidableRel (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
   fun u v => by
     unfold shrinkGraph
     infer_instance
+
+/-! ## A7b｜收缩图的**度数不变**：`deg_G v = deg_T v.1`
+
+收缩对每个**存活顶点**只做「删一条旧边、补一条新边」的局部平衡：
+
+| `v` | `T` 里丢的邻居 | 补上的新边 | 度 |
+|---|---|---|---|
+| `T.leaf a` | `w` | `z` | 不变（恒 `1`）|
+| `z` | `w` | `T.leaf a` | 不变（`1` 或 `3`）|
+| 其余 | 无（`N_T v ⊆ S`）| 无 | 不变 |
+
+⇒ `Cladogram` 的两个度字段（`leaf_iff_degree_one`、`no_degree_two`）可以**整体**从 `T` 搬过来，
+不必逐点重建。三支都用 `Finset.card_bij`（显式双射比 Finset 的 `attach/map/∩` 运算稳）。 -/
+
+/-- ★★ **A7b-0｜中点邻居的穷尽性**（把 ★★ `exists_third` 里那个「存在」的 `z` 钉在**给定**的
+`z` 上，便于下游按 `z` 分情形）。 -/
+theorem adj_midpoint_cases (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) :
+    ∀ y : T.V, T.graph.Adj w y → y = T.leaf a ∨ y = T.leaf b ∨ y = z := by
+  obtain ⟨z', _, hz'a, hz'b, hexh⟩ := exists_third T hbin hab haw hbw
+  have hzz : z' = z := by
+    rcases hexh z hwz with h | h | h
+    · exact absurd h hza
+    · exact absurd h hzb
+    · exact h.symm
+  intro y hy
+  rcases hexh y hy with h | h | h
+  · exact Or.inl h
+  · exact Or.inr (Or.inl h)
+  · exact Or.inr (Or.inr (h.trans hzz))
+
+/-- ★★ **A7b-a｜合并叶 `⟨T.leaf a, ·⟩` 的度仍是 `1`**：`T` 里唯一的邻居 `w` 被删，
+新边补上 `z`，一进一出。 -/
+theorem degree_shrink_leaf_a (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (haw : T.graph.Adj (T.leaf a) w)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w) :
+    (shrinkGraph T a b w z hza).degree ⟨T.leaf a, ha⟩ = 1 := by
+  have hG : (shrinkGraph T a b w z hza).neighborFinset ⟨T.leaf a, ha⟩ = {⟨z, hz⟩} := by
+    refine Finset.eq_singleton_iff_unique_mem.mpr ⟨?_, ?_⟩
+    · rw [SimpleGraph.mem_neighborFinset, shrinkGraph_adj_leaf_a_iff T a b w z hza haw ha]
+    · intro y hy
+      rw [SimpleGraph.mem_neighborFinset, shrinkGraph_adj_leaf_a_iff T a b w z hza haw ha] at hy
+      exact Subtype.ext hy
+  rw [show (shrinkGraph T a b w z hza).degree ⟨T.leaf a, ha⟩
+      = ((shrinkGraph T a b w z hza).neighborFinset ⟨T.leaf a, ha⟩).card from rfl, hG]
+  simp
+
+/-- ★★ **A7b-b｜其余顶点：邻居照搬**（`N_T v ⊆ S`，新边不碰 `v`）。
+
+双射取**恒等**：`u ↦ ⟨u, ·⟩`。两件事要证：`N_T v` 里没有 `leaf b`（叶 `b` 的唯一邻居是 `w`）、
+没有 `w`（`w` 的邻居只有 `leaf a`、`leaf b`、`z`，而 `v ∉ {leaf a, z}`）。 -/
+theorem degree_shrink_other (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
+    (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) {v : ShrinkV T b w}
+    (hva : v.1 ≠ T.leaf a) (hvz : v.1 ≠ z) :
+    (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1 := by
+  have hcases := adj_midpoint_cases T hbin hab haw hbw hwz hza hzb
+  have hS : ∀ u : T.V, T.graph.Adj v.1 u → u ≠ T.leaf b ∧ u ≠ w := by
+    intro u hu
+    refine ⟨?_, ?_⟩
+    · intro h
+      exact v.2.2 (leaf_b_adj_eq_midpoint T hbw v.1 (h ▸ hu).symm)
+    · intro h
+      rcases hcases v.1 (h ▸ hu).symm with h1 | h1 | h1
+      · exact hva h1
+      · exact v.2.1 h1
+      · exact hvz h1
+  have hcard : (T.graph.neighborFinset v.1).card
+      = ((shrinkGraph T a b w z hza).neighborFinset v).card := by
+    refine Finset.card_bij (fun u hu => (⟨u, hS u ((SimpleGraph.mem_neighborFinset T.graph v.1 u).mp hu)⟩ :
+      ShrinkV T b w)) ?_ ?_ ?_
+    · intro u hu
+      rw [SimpleGraph.mem_neighborFinset]
+      exact Or.inl ((SimpleGraph.mem_neighborFinset T.graph v.1 u).mp hu)
+    · intro u1 _ u2 _ h
+      exact congrArg Subtype.val h
+    · intro y hy
+      have hadj : (shrinkGraph T a b w z hza).Adj v y :=
+        (SimpleGraph.mem_neighborFinset (shrinkGraph T a b w z hza) v y).mp hy
+      rcases shrinkGraph_adj_cases T a b w z hza hadj with h' | h' | h'
+      · exact ⟨y.1, (SimpleGraph.mem_neighborFinset T.graph v.1 y.1).mpr h', Subtype.ext rfl⟩
+      · exact absurd h'.1 hva
+      · exact absurd h'.1 hvz
+  change ((shrinkGraph T a b w z hza).neighborFinset v).card = (T.graph.neighborFinset v.1).card
+  exact hcard.symm
+
+/-- ★★ **A7b-c｜`v = z`：度也不变**。`w` 这条边被删、新边 `T.leaf a — z` 补上，一进一出。
+
+双射：把 `N_T z` 里的 `w` 换成 `T.leaf a`，其余照搬。
+（注意 `z` **可以**是叶 —— 3 个 taxon 时整棵树就是「`w` 带 3 个叶」；
+此时 `deg_G z = deg_T z = 1`，所以本条**不能**写成 `deg = 3`。） -/
+theorem degree_shrink_z (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
+    (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w) :
+    (shrinkGraph T a b w z hza).degree ⟨z, hz⟩ = T.graph.degree z := by
+  have hnota : ¬ T.graph.Adj z (T.leaf a) := fun h => not_adj_leaf_a_z T haw hz.2 h.symm
+  have hb_ne : ∀ u : T.V, T.graph.Adj z u → u ≠ T.leaf b := by
+    intro u hu hb
+    exact hz.2 (leaf_b_adj_eq_midpoint T hbw z (hb ▸ hu).symm)
+  have hwNT : w ∈ T.graph.neighborFinset z := by
+    rw [SimpleGraph.mem_neighborFinset]; exact hwz.symm
+  have hcard : (T.graph.neighborFinset z).card
+      = ((shrinkGraph T a b w z hza).neighborFinset ⟨z, hz⟩).card := by
+    refine Finset.card_bij (fun u hu => if h : u = w then (⟨T.leaf a, ha⟩ : ShrinkV T b w)
+      else ⟨u, ⟨hb_ne u ((SimpleGraph.mem_neighborFinset T.graph z u).mp hu), h⟩⟩) ?_ ?_ ?_
+    · intro u hu
+      rw [SimpleGraph.mem_neighborFinset]
+      by_cases h : u = w
+      · rw [dif_pos h]
+        exact Or.inr (Or.inr ⟨rfl, rfl⟩)
+      · rw [dif_neg h]
+        exact Or.inl ((SimpleGraph.mem_neighborFinset T.graph z u).mp hu)
+    · intro u1 hu1 u2 hu2 heq
+      by_cases h1 : u1 = w
+      · by_cases h2 : u2 = w
+        · exact h1.trans h2.symm
+        · rw [dif_pos h1, dif_neg h2] at heq
+          have hval : u2 = T.leaf a := (congrArg Subtype.val heq).symm
+          have hu2adj : T.graph.Adj z u2 := (SimpleGraph.mem_neighborFinset T.graph z u2).mp hu2
+          rw [hval] at hu2adj
+          exact absurd hu2adj hnota
+      · by_cases h2 : u2 = w
+        · rw [dif_neg h1, dif_pos h2] at heq
+          have hval : u1 = T.leaf a := congrArg Subtype.val heq
+          have hu1adj : T.graph.Adj z u1 := (SimpleGraph.mem_neighborFinset T.graph z u1).mp hu1
+          rw [hval] at hu1adj
+          exact absurd hu1adj hnota
+        · rw [dif_neg h1, dif_neg h2] at heq
+          exact congrArg Subtype.val heq
+    · intro y hy
+      have hadj : (shrinkGraph T a b w z hza).Adj ⟨z, hz⟩ y :=
+        (SimpleGraph.mem_neighborFinset (shrinkGraph T a b w z hza) ⟨z, hz⟩ y).mp hy
+      rcases shrinkGraph_adj_cases T a b w z hza hadj with h' | h' | h'
+      · refine ⟨y.1, (SimpleGraph.mem_neighborFinset T.graph z y.1).mpr h', ?_⟩
+        rw [dif_neg y.2.2]
+      · exact absurd h'.1 hza
+      · refine ⟨w, hwNT, ?_⟩
+        rw [dif_pos rfl]
+        exact Subtype.ext h'.2.symm
+  change ((shrinkGraph T a b w z hza).neighborFinset ⟨z, hz⟩).card = (T.graph.neighborFinset z).card
+  exact hcard.symm
+
+/-- ★★★ **A7b｜收缩图**逐顶点**度数不变**（三支合流）。 -/
+theorem degree_shrinkGraph (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
+    (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
+    ∀ v : ShrinkV T b w, (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1 := by
+  have hla : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hzm : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+  intro v
+  by_cases hva : v.1 = T.leaf a
+  · have hv : v = ⟨T.leaf a, hla⟩ := Subtype.ext hva
+    rw [hv, degree_shrink_leaf_a T a b w z hza haw hla hzm]
+    exact ((T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩).symm
+  · by_cases hvz : v.1 = z
+    · have hv : v = ⟨z, hzm⟩ := Subtype.ext hvz
+      rw [hv, degree_shrink_z T hbin hab haw hbw hza hzb hwz hla hzm]
+    · exact degree_shrink_other T hbin hab haw hbw hza hzb hwz hva hvz
 
 end Phylo.Stat.NJShrink
