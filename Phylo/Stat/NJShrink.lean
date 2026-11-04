@@ -242,4 +242,37 @@ theorem exists_walk_shrink (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) {x y : T
       obtain ⟨q'⟩ := ih hsub hv hy
       exact ⟨SimpleGraph.Walk.cons (shrinkGraph_adj_of_adj T a b w z hza h) q'⟩
 
+/-! ## A7 前置｜收缩图里「合并叶」`⟨T.leaf a, ·⟩` 的邻居只有 `⟨z, ·⟩`
+
+这就是 `Cladogram.leaf_iff_degree_one` 在合并叶上的那一半。
+（`T.leaf a` 在 `T` 里的唯一邻居是 `w`，而 `w ∉ ShrinkV` ⇒ 旧边全被删掉，只剩新边 `leaf a — z`。） -/
+
+/-- 樱桃叶 `T.leaf a` 在 `T` 里的**唯一**邻居是 `w`。 -/
+theorem leaf_a_adj_eq_midpoint {a : X} {w : T.V} (haw : T.graph.Adj (T.leaf a) w) :
+    ∀ y : T.V, T.graph.Adj (T.leaf a) y → y = w := by
+  have hd1 : T.graph.degree (T.leaf a) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+  obtain ⟨c, _, hcuniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hd1
+  have hcw : c = w := (hcuniq w haw).symm
+  exact fun y hy => (hcuniq y hy).trans hcw
+
+/-- ★★ **A7a｜收缩图里 `⟨T.leaf a, ·⟩` 只与 `⟨z, ·⟩` 相邻**（故其度为 1）。 -/
+theorem shrinkGraph_adj_leaf_a_iff (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (haw : T.graph.Adj (T.leaf a) w)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) {v : ShrinkV T b w} :
+    (shrinkGraph T a b w z hza).Adj ⟨T.leaf a, ha⟩ v ↔ v.1 = z := by
+  have huniq := leaf_a_adj_eq_midpoint T haw
+  constructor
+  · intro h
+    rcases shrinkGraph_adj_cases T a b w z hza h with h' | h' | h'
+    · exact absurd (huniq v.1 h') v.2.2
+    · exact h'.2
+    · exact h'.2.trans h'.1
+  · intro h
+    have hz2 : z ≠ T.leaf b ∧ z ≠ w := by
+      rw [← h]; exact v.2
+    have hv : v = ⟨z, hz2⟩ := Subtype.ext h
+    rw [hv]
+    exact Or.inr (Or.inl ⟨rfl, rfl⟩)
+
 end Phylo.Stat.NJShrink
