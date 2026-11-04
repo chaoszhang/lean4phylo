@@ -1526,4 +1526,26 @@ theorem shrinkPhylogram_dist (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsB
           rw [Phylogram.dist_self]
           rfl
 
+/-- ★★★ **A8-3j｜收缩后的树仍是 binary**（`HasPosRealBinary` 的**归纳不变式**要这条）。
+
+`IsBinary T := ∀ v, ¬ IsLeaf v → degree v = 3`。用 ★★★ `degree_shrinkGraph`
+（`deg_G v = deg_T v.1`）把度数搬回 `T`；叶性判据走反证：
+若 `v.1` 是 `T` 的叶则 `deg_T = 1 ⇒ deg_G = 1`，由 ★★★ `shrinkGraph_leaf_iff_degree_one`
+得 `v` 是收缩树的叶，与假设矛盾。 -/
+theorem shrinkPhylogram_isBinary (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).toCladogram.IsBinary := by
+  intro v hv
+  have hdeg := degree_shrinkGraph T hbin hab haw hbw hza hzb hwz v
+  have hnotleaf : ¬ T.toCladogram.IsLeaf v.1 := by
+    intro hleaf
+    have h1 : T.graph.degree v.1 = 1 := (T.isLeaf_iff_degree_eq_one v.1).mp hleaf
+    have h2 : (shrinkGraph T a b w z hza).degree v = 1 := by
+      rw [hdeg, h1]
+    exact hv ((shrinkGraph_leaf_iff_degree_one T hbin hab haw hbw hza hzb hwz v).mpr h2)
+  rw [hdeg]
+  exact hbin v.1 hnotleaf
+
 end Phylo.Stat.NJShrink

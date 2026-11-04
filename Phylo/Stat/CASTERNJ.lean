@@ -199,6 +199,38 @@ theorem njAdditiveGap_holds : njAdditiveGap (X := X) := by
   · intro u v
     exact NJShrink.shrinkPhylogram_dist T δ hbin hab haw hbw hza hzb hwz hwpos hckeep hT u v
 
+/-- ★★★ **NJ 的归约一步保持「正权 **binary** 实现」** —— L5a 归纳的**不变式**。
+
+比 ★★★ `njAdditiveGap_holds` **更强**：结论不仅要「正权实现」，还要「**二叉**」
+（★★★ `NJShrink.shrinkPhylogram_isBinary`：收缩**不改度数**，故二叉性逐点传递）。
+
+这正是 SK1988 `:321-329` 归纳所需的一步：每轮把 `(a,b)` 合并后，
+「正权 ⋀ 二叉 ⋀ 实现 `mergeStep δ a b`」三件事**同时保持**，于是归纳可以走到 `|X| = 3`。 -/
+theorem njReductionStep (δ : NJ.Dissimilarity X) (hpos : HasPosRealBinary δ)
+    (hcard : 3 ≤ Fintype.card X) {a b : X} (h : njStep δ a b) :
+    HasPosRealBinary (mergeStep δ a b) := by
+  obtain ⟨T, hwpos, hbin, hT⟩ := hpos
+  have hc : T.IsCherry a b := NJShrink.isCherry_of_njStep δ hwpos hT hcard h
+  have hckeep := hc
+  obtain ⟨hab, w, haw, hbw⟩ := hc
+  obtain ⟨z, hwz, hza, hzb, -⟩ := NJShrink.exists_third T hbin hab haw hbw
+  have hla : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), NJShrink.leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hzm : z ≠ T.leaf b ∧ z ≠ w :=
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+  refine ⟨NJShrink.shrinkPhylogram T hbin hab haw hbw hza hzb hwz hwpos, ?_, ?_, ?_⟩
+  · intro e
+    have key : ∀ e' : Sym2 (NJShrink.ShrinkV T b w),
+        e' ∈ (NJShrink.shrinkGraph T a b w z hza).edgeSet →
+          0 < NJShrink.shrinkW T a b w z hza hla hzm e' :=
+      Sym2.ind (fun u v he =>
+        NJShrink.shrinkW_pos T hbin hab haw hbw hza hzb hwz hwpos hla hzm
+          ((SimpleGraph.mem_edgeSet _).mp he))
+    exact key e.1 e.2
+  · exact NJShrink.shrinkPhylogram_isBinary T hbin hab haw hbw hza hzb hwz hwpos
+  · intro u v
+    exact NJShrink.shrinkPhylogram_dist T δ hbin hab haw hbw hza hzb hwz hwpos hckeep hT u v
+
 /-! ## 2. L5b 的「噪声传播」一步（**已由库内器材证出**，不是缺口） -/
 
 /-- ★★ **L5b 的第 ② 条已成立**（Atteson 1999 **Theorem 1** 的归纳不变式 (c)）：
