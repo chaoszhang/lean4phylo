@@ -411,4 +411,77 @@ theorem mergeStep_val_merged_pos (δ : Dissimilarity X)
   have h2 : 0 < δ.val x b := hpos x b hx'
   nlinarith
 
+/-! ## A6f 第 2 步｜樱桃中点 `w` 不在「`x → z`」的路径上 -/
+
+/-- ★★★ **A6f 的核心**：若 `x ∉ {leaf a, leaf b, w}`、`z ∉ {leaf a, leaf b, w}` 且 `Adj w z`，
+则 `w` 不在任何 `x → z` 的**简单**路径的支撑集里。
+
+证法（`getVert` 定位路线 —— 本步的关键器械）：
+令 `i := idxOf w p.support`，则 `p.getVert i = w`，且 `0 < i < p.length`（否则 `w = x` 或 `w = z`）。
+取 `a₀ := p.getVert (i-1)`、`a₁ := p.getVert (i+1)`：
+* `Adj a₀ w`（`adj_getVert_succ` 在 `i-1`）与 `Adj w a₁`（在 `i`）；
+* 二者都在 `p.support` 里（`getVert_mem_support`）⇒ 由 ★★ `not_mem_support_of_degree_one`
+  都 `≠ leaf a, leaf b`；
+* 由 A4′ 的**穷尽性** ⇒ 二者都 `= z`；
+* 于是 `p.getVert (i-1) = p.getVert (i+1)`，由 `IsPath.getVert_injOn` 得 `i-1 = i+1` —— 矛盾。 -/
+theorem midpoint_not_mem_support (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w)
+    {x : T.V} (hxa : x ≠ T.leaf a) (hxb : x ≠ T.leaf b) (hxw : x ≠ w)
+    (p : T.graph.Walk x z) (hp : p.IsPath) : w ∉ p.support := by
+  intro hw
+  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third T hbin hab haw hbw
+  have hzz₀ : z = z₀ := by
+    rcases hexh z hwz with h | h | h
+    · exact absurd h hza
+    · exact absurd h hzb
+    · exact h
+  subst hzz₀
+  have hda : T.graph.degree (T.leaf a) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+  have hdb : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  have hla : T.leaf a ∉ p.support :=
+    not_mem_support_of_degree_one T hda p hp hxa hza
+  have hlb : T.leaf b ∉ p.support :=
+    not_mem_support_of_degree_one T hdb p hp hxb hzb
+  set i := List.idxOf w p.support with hi
+  have hlen : p.support.length = p.length + 1 := SimpleGraph.Walk.length_support p
+  have hilt : i < p.support.length := List.idxOf_lt_length_iff.mpr hw
+  have hile : i ≤ p.length := by omega
+  have hwi : p.getVert i = w := by
+    rw [SimpleGraph.Walk.getVert_eq_support_getElem p hile, List.getElem_idxOf hilt]
+  have hi0 : 0 < i := by
+    rcases Nat.eq_zero_or_pos i with h | h
+    · rw [h, SimpleGraph.Walk.getVert_zero] at hwi
+      exact absurd hwi hxw
+    · exact h
+  have hilen : i < p.length := by
+    rcases lt_or_eq_of_le hile with h | h
+    · exact h
+    · rw [h, SimpleGraph.Walk.getVert_length] at hwi
+      exact absurd hwi hzw
+  have hadj0 : T.graph.Adj (p.getVert (i - 1)) w := by
+    have h := SimpleGraph.Walk.adj_getVert_succ p (i := i - 1) (by omega)
+    rwa [Nat.sub_add_cancel hi0, hwi] at h
+  have hadj1 : T.graph.Adj w (p.getVert (i + 1)) := by
+    have h := SimpleGraph.Walk.adj_getVert_succ p (i := i) (by omega)
+    rwa [hwi] at h
+  have hm0 : p.getVert (i - 1) ∈ p.support := SimpleGraph.Walk.getVert_mem_support p _
+  have hm1 : p.getVert (i + 1) ∈ p.support := SimpleGraph.Walk.getVert_mem_support p _
+  have h0 : p.getVert (i - 1) = z := by
+    rcases hexh _ hadj0.symm with h | h | h
+    · exact absurd (h ▸ hm0) hla
+    · exact absurd (h ▸ hm0) hlb
+    · exact h
+  have h1 : p.getVert (i + 1) = z := by
+    rcases hexh _ hadj1 with h | h | h
+    · exact absurd (h ▸ hm1) hla
+    · exact absurd (h ▸ hm1) hlb
+    · exact h
+  have hinj : p.getVert (i - 1) = p.getVert (i + 1) := h0.trans h1.symm
+  have heq : i - 1 = i + 1 :=
+    hp.getVert_injOn (by omega : i - 1 ≤ p.length) (by omega : i + 1 ≤ p.length) hinj
+  omega
+
 end Phylo.Stat.NJShrink
