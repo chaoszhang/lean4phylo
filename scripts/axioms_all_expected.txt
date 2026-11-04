@@ -1,4 +1,4 @@
-# 64 条收口定理（Phylo.* 模块）
+# 65 条收口定理（Phylo.* 模块）
 BinaryConnectedEqualsSideGap_holds | 3 | Classical.choice,Quot.sound,propext
 Fitch.QuartetBridgeGap_holds | 3 | Classical.choice,Quot.sound,propext
 MultiStatePairwiseInsufficiencyGap_holds | 3 | Classical.choice,Quot.sound,propext
@@ -42,6 +42,7 @@ Phylo.Stat.SplitProbabilities.msc_split_probability_object_gap_vacuous_holds | 3
 Phylo.Stat.SplitProbabilities.msc_split_probability_object_gap_vacuous_holds._simp_1_5 | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.SplitProbabilities.msc_split_probability_object_gap_vacuous_holds._simp_1_6 | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.SplitProbabilities.msc_split_probability_object_gap_vacuous_holds._simp_1_7 | 3 | Classical.choice,Quot.sound,propext
+Phylo.Stat.StrictCherryProved.strictCherry_of_isBinary_pos_gap_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.TrivialSplitCount.card_trivial_splits_gap_holds | 3 | Classical.choice,Quot.sound,propext
 Split.canonicalSplitDecomposition_gap_correct_shape_legacy_holds | 3 | Classical.choice,Quot.sound,propext
 Split.canonicalSplitDecomposition_gap_holds | 3 | Classical.choice,Quot.sound,propext
