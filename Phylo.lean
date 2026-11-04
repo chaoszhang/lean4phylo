@@ -93,6 +93,7 @@ import Phylo.Stat.CASTERLM1
 import Phylo.Stat.CASTERNJ
 import Phylo.Stat.CASTERD
 import Phylo.Stat.CASTERFourPoint4
+import Phylo.Stat.CASTERFourPointN
 import Phylo.Stat.CASTERtL1
 import Phylo.Stat.CASTERRateAE
 import Phylo.Stat.CASTERRateBoxAE
