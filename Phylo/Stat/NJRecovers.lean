@@ -178,4 +178,353 @@ def liftEquiv {b : X} {w : T.V} {w' : T'.V}
   left_inv := liftFun_dropFun φ hwb hw'b
   right_inv := dropFun_liftFun φ hwb hw'b
 
+open NJ NJ.Dissimilarity
+
+/-! ## 4. `ψ` 的注入性、特殊点、以及 `leaf b`／`w` 的邻接
+
+先把后面反复用到的三件小事做掉：
+* ★★ `liftFun_inj`（由 ★★★ `liftFun_dropFun`）；
+* ★★ `liftFun_eq_leafb_iff` / `liftFun_eq_w_iff`（唯一性）；
+* ★★★ `liftFun_special_iff`：`{leaf a, leaf b, z}` 与 `{leaf a, leaf b, z'}` 在 `ψ` 下**对应**
+  （`w` 的三个邻居，两侧一致）。 -/
+
+variable {a b : X} {w z : T.V} {w' z' : T'.V}
+
+/-- ★★ **`ψ` 注入**。 -/
+theorem liftFun_inj (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b) :
+    Function.Injective (liftFun φ) := by
+  intro u v huv
+  have hu := liftFun_dropFun φ hwb hw'b u
+  have hv := liftFun_dropFun φ hwb hw'b v
+  rw [← hu, huv, hv]
+
+/-- ★★ `ψ v = T'.leaf b ↔ v = T.leaf b`。 -/
+theorem liftFun_eq_leafb_iff (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b) (v : T.V) :
+    liftFun φ v = T'.leaf b ↔ v = T.leaf b := by
+  constructor
+  · intro h
+    exact liftFun_inj φ hwb hw'b (h.trans (liftFun_leaf_b φ).symm)
+  · intro h
+    rw [h]
+    exact liftFun_leaf_b φ
+
+/-- ★★ `ψ v = w' ↔ v = w`。 -/
+theorem liftFun_eq_w_iff (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b) (v : T.V) :
+    liftFun φ v = w' ↔ v = w := by
+  constructor
+  · intro h
+    exact liftFun_inj φ hwb hw'b (h.trans (liftFun_w φ hwb).symm)
+  · intro h
+    rw [h]
+    exact liftFun_w φ hwb
+
+/-- ★★ **`ψ` 把 `T.leaf a` 送到 `T'.leaf a`**（`φ` 保标号的推论）。 -/
+theorem liftFun_leaf_a (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩) :
+    liftFun φ (T.leaf a) = T'.leaf a := by
+  rw [liftFun_pack φ ha.1 ha.2, hφa]
+
+/-- ★★ **`ψ` 把 `z` 送到 `z'`**。 -/
+theorem liftFun_z (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩) :
+    liftFun φ z = z' := by
+  rw [liftFun_pack φ hz.1 hz.2, hφz]
+
+/-- ★★★ **`w` 的三个邻居在 `ψ` 下对应**：`v ∈ {leaf a, leaf b, z} ↔ ψ v ∈ {leaf a, leaf b, z'}`。 -/
+theorem liftFun_special_iff (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩) (v : T.V) :
+    (v = T.leaf a ∨ v = T.leaf b ∨ v = z) ↔
+      (liftFun φ v = T'.leaf a ∨ liftFun φ v = T'.leaf b ∨ liftFun φ v = z') := by
+  constructor
+  · rintro (rfl | rfl | rfl)
+    · exact Or.inl (liftFun_leaf_a φ ha ha' hφa)
+    · exact Or.inr (Or.inl (liftFun_leaf_b φ))
+    · exact Or.inr (Or.inr (liftFun_z φ hz hz' hφz))
+  · rintro (h | h | h)
+    · exact Or.inl (liftFun_inj φ hwb hw'b (h.trans (liftFun_leaf_a φ ha ha' hφa).symm))
+    · exact Or.inr (Or.inl ((liftFun_eq_leafb_iff φ hwb hw'b v).mp h))
+    · exact Or.inr (Or.inr (liftFun_inj φ hwb hw'b (h.trans (liftFun_z φ hz hz' hφz).symm)))
+
+
+
+/-! ## 5. `ψ` 与三个特殊点的**对应判定** -/
+
+/-- ★★ `⟨u,·⟩ = ⟨T.leaf a, ·⟩` 在 `φ` 下的像：`u = T.leaf a ↔ (φ ⟨u,·⟩).1 = T'.leaf a`。 -/
+theorem pack_eq_leaf_a_iff {T T' : Phylogram.{u, v} X} {a b : X} {w : T.V} {w' : T'.V}
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    {u : T.V} (hu : u ≠ T.leaf b ∧ u ≠ w) :
+    (u = T.leaf a) ↔ ((φ ⟨u, hu⟩).1 = T'.leaf a) := by
+  constructor
+  · intro h
+    subst u
+    rw [show (⟨T.leaf a, ha⟩ : ShrinkV T b w) = ⟨T.leaf a, ha.1, ha.2⟩ from Subtype.ext rfl, hφa]
+  · intro h
+    have h2 : φ ⟨u, hu⟩ = ⟨T'.leaf a, ha'⟩ := by
+      rw [show (⟨T'.leaf a, ha'⟩ : ShrinkV T' b w')
+        = ⟨(φ ⟨u, hu⟩).1, (φ ⟨u, hu⟩).2⟩ from Subtype.ext h.symm]
+    have h3 : (⟨u, hu⟩ : ShrinkV T b w) = ⟨T.leaf a, ha⟩ :=
+      Equiv.injective φ (by rw [h2, hφa])
+    exact congrArg Subtype.val h3
+
+/-- ★★ `z` 的同款判定：`u = z ↔ (φ ⟨u,·⟩).1 = z'`。 -/
+theorem pack_eq_z_iff {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩)
+    {u : T.V} (hu : u ≠ T.leaf b ∧ u ≠ w) :
+    (u = z) ↔ ((φ ⟨u, hu⟩).1 = z') := by
+  constructor
+  · intro h
+    subst u
+    rw [show (⟨z, hz⟩ : ShrinkV T b w) = ⟨z, hz.1, hz.2⟩ from Subtype.ext rfl, hφz]
+  · intro h
+    have h2 : φ ⟨u, hu⟩ = ⟨z', hz'⟩ := by
+      rw [show (⟨z', hz'⟩ : ShrinkV T' b w') = ⟨(φ ⟨u, hu⟩).1, (φ ⟨u, hu⟩).2⟩ from Subtype.ext h.symm]
+    have h3 : (⟨u, hu⟩ : ShrinkV T b w) = ⟨z, hz⟩ := Equiv.injective φ (by rw [h2, hφz])
+    exact congrArg Subtype.val h3
+
+/-! ## 6. `ψ` **保邻接**（三支）
+
+`T` 的边分三类：与 `leaf b` 相连（唯一：`w`）、与 `w` 相连（`{leaf a, leaf b, z}`）、
+其余（都在 `ShrinkV` 里，即收缩图的**旧边**）。三支分别由
+★★ `leaf_b_adj_eq_midpoint`、★★ `adj_midpoint_cases` ＋ ★★★ `liftFun_special_iff`、
+以及「`shrinkGraph` = 诱导子图 ＋ 一条新边」的分解给出。 -/
+
+/-- ★★ **`leaf b` 那一支**：两侧的唯一邻居都是中点。 -/
+theorem lift_adj_leaf_b {T T' : Phylogram.{u, v} X} {a b : X} {w : T.V} {w' : T'.V}
+    (hbw : T.graph.Adj (T.leaf b) w) (hbw' : T'.graph.Adj (T'.leaf b) w')
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b) (v : T.V) :
+    T.graph.Adj (T.leaf b) v ↔ T'.graph.Adj (T'.leaf b) (liftFun φ v) := by
+  have h1 : ∀ y : T.V, T.graph.Adj (T.leaf b) y ↔ y = w := by
+    intro y
+    exact ⟨leaf_b_adj_eq_midpoint T hbw y, by intro h; rw [h]; exact hbw⟩
+  have h2 : ∀ y : T'.V, T'.graph.Adj (T'.leaf b) y ↔ y = w' := by
+    intro y
+    exact ⟨leaf_b_adj_eq_midpoint T' hbw' y, by intro h; rw [h]; exact hbw'⟩
+  rw [h1 v, h2 (liftFun φ v), liftFun_eq_w_iff φ hwb hw'b v]
+
+/-- ★★ **`w` 那一支**：两侧的邻居集都是 `{leaf a, leaf b, z}`／`{leaf a, leaf b, z'}`。 -/
+theorem lift_adj_w {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (hbin : T.toCladogram.IsBinary) (hbin' : T'.toCladogram.IsBinary) (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (haw' : T'.graph.Adj (T'.leaf a) w') (hbw' : T'.graph.Adj (T'.leaf b) w')
+    (hwz' : T'.graph.Adj w' z') (hza' : z' ≠ T'.leaf a) (hzb' : z' ≠ T'.leaf b)
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩) (v : T.V) :
+    T.graph.Adj w v ↔ T'.graph.Adj w' (liftFun φ v) := by
+  have hcases := adj_midpoint_cases T hbin hab haw hbw hwz hza hzb
+  have hcases' := adj_midpoint_cases T' hbin' hab haw' hbw' hwz' hza' hzb'
+  have h1 : T.graph.Adj w v ↔ (v = T.leaf a ∨ v = T.leaf b ∨ v = z) := by
+    refine ⟨hcases v, ?_⟩
+    rintro (h | h | h)
+    · rw [h]; exact haw.symm
+    · rw [h]; exact hbw.symm
+    · rw [h]; exact hwz
+  have h2 : T'.graph.Adj w' (liftFun φ v) ↔
+      (liftFun φ v = T'.leaf a ∨ liftFun φ v = T'.leaf b ∨ liftFun φ v = z') := by
+    refine ⟨hcases' (liftFun φ v), ?_⟩
+    rintro (h | h | h)
+    · rw [h]; exact haw'.symm
+    · rw [h]; exact hbw'.symm
+    · rw [h]; exact hwz'
+  rw [h1, h2, liftFun_special_iff φ hwb hw'b ha ha' hφa hz hz' hφz v]
+
+/-- ★★ **`ShrinkV` 内部那一支**：收缩图 = 诱导子图 ＋ 一条新边 `leaf a — z`，
+而这条新边在 `T`／`T'` 里都**不是**边（★ `not_adj_leaf_a_z`），故两侧都去掉它即可。 -/
+theorem lift_adj_shrink {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (haw : T.graph.Adj (T.leaf a) w) (haw' : T'.graph.Adj (T'.leaf a) w')
+    (hzw : z ≠ w) (hza : z ≠ T.leaf a) (hza' : z' ≠ T'.leaf a)
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩)
+    (hφadj : ∀ p q : ShrinkV T b w,
+      (shrinkGraph T a b w z hza).Adj p q ↔ (shrinkGraph T' a b w' z' hza').Adj (φ p) (φ q))
+    {u v : T.V} (hu : u ≠ T.leaf b ∧ u ≠ w) (hv : v ≠ T.leaf b ∧ v ≠ w) :
+    T.graph.Adj u v ↔ T'.graph.Adj (liftFun φ u) (liftFun φ v) := by
+  have keyT : T.graph.Adj u v ↔ (shrinkGraph T a b w z hza).Adj ⟨u, hu⟩ ⟨v, hv⟩ ∧
+      ¬((u = T.leaf a ∧ v = z) ∨ (u = z ∧ v = T.leaf a)) := by
+    constructor
+    · intro h
+      refine ⟨Or.inl h, ?_⟩
+      rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact not_adj_leaf_a_z T haw hzw (h1 ▸ h2 ▸ h)
+      · exact not_adj_leaf_a_z T haw hzw ((h1 ▸ h2 ▸ h).symm)
+    · rintro ⟨h, hn⟩
+      rcases h with h | h | h
+      · exact h
+      · exact absurd (Or.inl h) hn
+      · exact absurd (Or.inr h) hn
+  have keyT' : T'.graph.Adj (liftFun φ u) (liftFun φ v) ↔
+      (shrinkGraph T' a b w' z' hza').Adj (φ ⟨u, hu⟩) (φ ⟨v, hv⟩) ∧
+      ¬(((φ ⟨u, hu⟩).1 = T'.leaf a ∧ (φ ⟨v, hv⟩).1 = z') ∨
+        ((φ ⟨u, hu⟩).1 = z' ∧ (φ ⟨v, hv⟩).1 = T'.leaf a)) := by
+    rw [liftFun_pack φ hu.1 hu.2, liftFun_pack φ hv.1 hv.2]
+    constructor
+    · intro h
+      refine ⟨Or.inl h, ?_⟩
+      rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact not_adj_leaf_a_z T' haw' hz'.2 (h1 ▸ h2 ▸ h)
+      · exact not_adj_leaf_a_z T' haw' hz'.2 ((h1 ▸ h2 ▸ h).symm)
+    · rintro ⟨h, hn⟩
+      rcases h with h | h | h
+      · exact h
+      · exact absurd (Or.inl h) hn
+      · exact absurd (Or.inr h) hn
+  rw [keyT, keyT']
+  have hua : (u = T.leaf a) ↔ ((φ ⟨u, hu⟩).1 = T'.leaf a) :=
+    pack_eq_leaf_a_iff φ ha ha' hφa hu
+  have huz : (u = z) ↔ ((φ ⟨u, hu⟩).1 = z') := pack_eq_z_iff (a := a) φ hz hz' hφz hu
+  have hva : (v = T.leaf a) ↔ ((φ ⟨v, hv⟩).1 = T'.leaf a) :=
+    pack_eq_leaf_a_iff φ ha ha' hφa hv
+  have hvz : (v = z) ↔ ((φ ⟨v, hv⟩).1 = z') :=
+    pack_eq_z_iff (a := a) φ hz hz' hφz hv
+  have hnew : ((u = T.leaf a ∧ v = z) ∨ (u = z ∧ v = T.leaf a)) ↔
+      (((φ ⟨u, hu⟩).1 = T'.leaf a ∧ (φ ⟨v, hv⟩).1 = z') ∨
+        ((φ ⟨u, hu⟩).1 = z' ∧ (φ ⟨v, hv⟩).1 = T'.leaf a)) := by
+    constructor
+    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact Or.inl ⟨hua.mp h1, hvz.mp h2⟩
+      · exact Or.inr ⟨huz.mp h1, hva.mp h2⟩
+    · rintro (⟨h1, h2⟩ | ⟨h1, h2⟩)
+      · exact Or.inl ⟨hua.mpr h1, hvz.mpr h2⟩
+      · exact Or.inr ⟨huz.mpr h1, hva.mpr h2⟩
+  rw [hφadj ⟨u, hu⟩ ⟨v, hv⟩, hnew]
+
+/-- ★★★ **`ψ` 保邻接（合流）**：三支（`leaf b`／`w`／`ShrinkV` 内部）拼起来。 -/
+theorem lift_adj_iff {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (hbin : T.toCladogram.IsBinary) (hbin' : T'.toCladogram.IsBinary) (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (haw' : T'.graph.Adj (T'.leaf a) w') (hbw' : T'.graph.Adj (T'.leaf b) w')
+    (hwz' : T'.graph.Adj w' z') (hza' : z' ≠ T'.leaf a) (hzb' : z' ≠ T'.leaf b)
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩)
+    (hφadj : ∀ p q : ShrinkV T b w,
+      (shrinkGraph T a b w z hza).Adj p q ↔ (shrinkGraph T' a b w' z' hza').Adj (φ p) (φ q)) :
+    ∀ u v : T.V, T.graph.Adj u v ↔ T'.graph.Adj (liftFun φ u) (liftFun φ v) := by
+  intro u v
+  have hzww : z ≠ w := by
+    intro h
+    have h2 := hwz
+    rw [h] at h2
+    exact T.graph.loopless.irrefl w h2
+  by_cases hub : u = T.leaf b
+  · subst hub
+    rw [liftFun_leaf_b φ]
+    exact lift_adj_leaf_b (a := a) hbw hbw' φ hwb hw'b v
+  · by_cases huw : u = w
+    · subst huw
+      rw [liftFun_w φ hwb]
+      exact lift_adj_w (a := a) hbin hbin' hab haw hbw hwz hza hzb haw' hbw' hwz' hza' hzb'
+        φ hwb hw'b ha ha' hφa hz hz' hφz v
+    · by_cases hvb : v = T.leaf b
+      · subst hvb
+        rw [liftFun_leaf_b φ]
+        have h := lift_adj_leaf_b (T := T) (T' := T') (a := a) hbw hbw' φ hwb hw'b u
+        exact ⟨fun hh => (h.mp hh.symm).symm, fun hh => (h.mpr hh.symm).symm⟩
+      · by_cases hvw : v = w
+        · subst hvw
+          rw [liftFun_w φ hwb]
+          have h := lift_adj_w (T := T) (T' := T') (a := a) hbin hbin' hab haw hbw hwz hza hzb
+            haw' hbw' hwz' hza' hzb' φ hwb hw'b ha ha' hφa hz hz' hφz u
+          exact ⟨fun hh => (h.mp hh.symm).symm, fun hh => (h.mpr hh.symm).symm⟩
+        · exact lift_adj_shrink (a := a) haw haw'
+            hzww hza hza'
+            φ ha ha' hφa hz hz' hφz hφadj ⟨hub, huw⟩ ⟨hvb, hvw⟩
+
+/-- ★★ **`ψ` 保标号**：`ψ (T.leaf x) = T'.leaf x`。
+
+三分：`x = b` 用 ★★ `liftFun_leaf_b`；`x = a` 用 ★★ `liftFun_leaf_a`；
+其余 `x` 是 `MergeOld` 的成员，`T.leaf x` 落在 `ShrinkV` 里，用 `φ` 的保标号（`hleaf`）。 -/
+theorem liftFun_leaf {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (hbin : T.toCladogram.IsBinary) (hbin' : T'.toCladogram.IsBinary) (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (haw' : T'.graph.Adj (T'.leaf a) w') (hbw' : T'.graph.Adj (T'.leaf b) w')
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hleaf : ∀ u : MergeIdx X a b,
+      φ (leafShrink T hbin hab haw hbw u) = leafShrink T' hbin' hab haw' hbw' u)
+    (x : X) : liftFun φ (T.leaf x) = T'.leaf x := by
+  by_cases hxb : x = b
+  · subst hxb
+    exact liftFun_leaf_b φ
+  · by_cases hxa : x = a
+    · subst hxa
+      exact liftFun_leaf_a φ ha ha' hφa
+    · -- `x ∈ MergeOld`：`T.leaf x` 在 `ShrinkV` 里
+      have hxw : T.leaf x ≠ w := leaf_ne_midpoint T hbin hab haw hbw x
+      have hxb' : T.leaf x ≠ T.leaf b := fun h => hxb (T.leaf.injective h)
+      rw [liftFun_pack φ hxb' hxw]
+      have h1 : (⟨T.leaf x, hxb', hxw⟩ : ShrinkV T b w)
+          = leafShrink T hbin hab haw hbw (Sum.inl ⟨x, by
+              simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Finset.mem_insert,
+                Finset.mem_singleton, not_or]
+              exact ⟨hxa, hxb⟩⟩) := Subtype.ext rfl
+      rw [h1, hleaf]
+      rfl
+
+/-- ★★★ **iso 提升**：把收缩树的顶点等价 ＋ 保邻接 ＋ 保标号，组装成 `T ≅ T'`。
+
+三条输入分别是 ★★★ `lift_adj_iff`（保邻接）、★★ `liftFun_leaf`（保标号）
+与 ★★★ `liftEquiv`（顶点等价）。 -/
+theorem iso_of_shrink_equiv {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w' z' : T'.V}
+    (hbin : T.toCladogram.IsBinary) (hbin' : T'.toCladogram.IsBinary) (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (haw' : T'.graph.Adj (T'.leaf a) w') (hbw' : T'.graph.Adj (T'.leaf b) w')
+    (hwz' : T'.graph.Adj w' z') (hza' : z' ≠ T'.leaf a) (hzb' : z' ≠ T'.leaf b)
+    (φ : ShrinkV T b w ≃ ShrinkV T' b w')
+    (hwb : w ≠ T.leaf b) (hw'b : w' ≠ T'.leaf b)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w)
+    (ha' : T'.leaf a ≠ T'.leaf b ∧ T'.leaf a ≠ w')
+    (hφa : φ ⟨T.leaf a, ha⟩ = ⟨T'.leaf a, ha'⟩)
+    (hz : z ≠ T.leaf b ∧ z ≠ w) (hz' : z' ≠ T'.leaf b ∧ z' ≠ w')
+    (hφz : φ ⟨z, hz⟩ = ⟨z', hz'⟩)
+    (hφadj : ∀ p q : ShrinkV T b w,
+      (shrinkGraph T a b w z hza).Adj p q ↔ (shrinkGraph T' a b w' z' hza').Adj (φ p) (φ q))
+    (hleaf : ∀ u : MergeIdx X a b,
+      φ (leafShrink T hbin hab haw hbw u) = leafShrink T' hbin' hab haw' hbw' u) :
+    Nonempty (Iso T.toCladogram T'.toCladogram) := by
+  have hadj := lift_adj_iff hbin hbin' hab haw hbw hwz hza hzb haw' hbw' hwz' hza' hzb'
+    φ hwb hw'b ha ha' hφa hz hz' hφz hφadj
+  have hleafc := liftFun_leaf (z := z) (z' := z') hbin hbin' hab haw hbw haw' hbw' φ hwb hw'b ha ha' hφa hleaf
+  refine ⟨⟨?_, ?_⟩⟩
+  · exact
+      { toEquiv := liftEquiv φ hwb hw'b
+        map_rel_iff' := fun {u v} => (hadj u v).symm }
+  · intro x
+    exact hleafc x
+
 end Phylo.Stat.NJRecovers
