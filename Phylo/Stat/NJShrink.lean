@@ -358,4 +358,22 @@ theorem not_adj_leaf_b_z {b : X} {w z : T.V} (hbw : T.graph.Adj (T.leaf b) w) (h
     ¬ T.graph.Adj (T.leaf b) z :=
   fun h => hzw (leaf_b_adj_eq_midpoint T hbw z h)
 
+/-- ★★ **A7b-a｜旧叶（非 `z`）在收缩图里的邻居就是它在 `T` 里的邻居**。
+
+若 `T.leaf x.1 ≠ z`（`x` 是 `MergeOld`，故 `x.1 ∉ {a,b}`），则旧叶不碰新边：
+新边的两个端点分别是 `T.leaf a`（会逼迫 `x.1 = a`，与 `MergeOld` 矛盾）与 `z`（被 `hzx` 排除）。
+⇒ 邻域完全由旧边决定 —— `no_degree_two` 与 `leaf_iff_degree_one` 都靠它。 -/
+theorem shrinkGraph_adj_leaf_old (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (x : MergeOld X a b) (hx : T.leaf x.1 ≠ T.leaf b ∧ T.leaf x.1 ≠ w)
+    (hzx : T.leaf x.1 ≠ z) {v : ShrinkV T b w} :
+    (shrinkGraph T a b w z hza).Adj ⟨T.leaf x.1, hx⟩ v ↔ T.graph.Adj (T.leaf x.1) v.1 := by
+  constructor
+  · intro h
+    rcases shrinkGraph_adj_cases T a b w z hza h with h' | h' | h'
+    · exact h'
+    · exact absurd (T.leaf.injective h'.1) (mergeOld_ne_left x)
+    · exact absurd h'.1 hzx
+  · intro h
+    exact shrinkGraph_adj_of_adj T a b w z hza h
+
 end Phylo.Stat.NJShrink
