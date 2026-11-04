@@ -1024,4 +1024,117 @@ theorem isCherry_of_njStep (δ : NJ.Dissimilarity X) {T : Phylogram.{u, v} X}
       z_eq_dist_add_pathLeafStatus δ hpos hT hab] at hz
   exact Cladogram.exists_isCherry_of_max_z hpos hcard hab hmaxT
 
+/-! ## A8｜收缩后的 `Phylogram`：`Cladogram`（字段已齐）＋ 边权
+
+`Cladogram` 六个字段全部到手（见 A1–A7′），本节补 `Phylogram` 的 `w` 与其非负性。
+`dist` 对齐留到 A8-3。 -/
+
+/-- ★★ **A8a｜新边的权**：`½·(d(a,w) + d(b,w)) + d(w,z)`。
+
+来由：「新叶 `u` 挂在 `w` 上、垂枝 `½(w_a+w_b)`」给出 `d(u,x) = ½(w_a+w_b) + d(w,x)`；
+再把 `w` 抑制掉（`w` 的第三邻居是 `z`），`d(w,x) = d(w,z) + d(z,x)` ⇒
+`d(u,x) = [½(w_a+w_b) + d(w,z)] + d(z,x)`，方括号就是新边 `⟨leaf a⟩ — ⟨z⟩` 的权。 -/
+noncomputable def shrinkNewW (a b : X) (w z : T.V) : ℝ :=
+  (1 / 2) * (T.dist (T.leaf a) w + T.dist (T.leaf b) w) + T.dist w z
+
+/-- ★★ **A8a′｜新边权严格正**：`d(a,w)`、`d(b,w)`、`d(w,z)` 三条边权都正 ⇒ 加权和正。 -/
+theorem shrinkNewW_pos {a b : X} {w z : T.V} (haw : T.graph.Adj (T.leaf a) w)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) : 0 < shrinkNewW T a b w z := by
+  have h1 : 0 < T.dist (T.leaf a) w := by
+    rw [Phylo.TreeDist.dist_eq_w_of_adj T haw]; exact hpos _
+  have h2 : 0 < T.dist (T.leaf b) w := by
+    rw [Phylo.TreeDist.dist_eq_w_of_adj T hbw]; exact hpos _
+  have h3 : 0 < T.dist w z := by
+    rw [Phylo.TreeDist.dist_eq_w_of_adj T hwz]
+    exact hpos _
+  unfold shrinkNewW
+  linarith
+
+/-- ★★ **A8b｜收缩后的边权**（作用在 `Sym2 (ShrinkV)` 上；与 `Phylogram.wExt` 同构）。
+新边 `⟨leaf a⟩ — ⟨z⟩` 取 ★★ `shrinkNewW`，其余旧边取原树对应边的 `T.wExt`。 -/
+noncomputable def shrinkW (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w)
+    (e : Sym2 (ShrinkV T b w)) : ℝ :=
+  if e = s((⟨T.leaf a, ha⟩ : ShrinkV T b w), ⟨z, hz⟩) then shrinkNewW T a b w z
+  else T.wExt (e.map (Function.Embedding.subtype (fun v : T.V => v ≠ T.leaf b ∧ v ≠ w)))
+
+/-- ★★ **A8b′｜旧边的权就是原树的边权**（新边的判定必然失败：`T` 里 `leaf a` 与 `z` 不相邻）。
+
+这条是 A8-3 里「走法搬移保持 `walkDist`」的**唯一**边权支点。 -/
+theorem shrinkW_old (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (haw : T.graph.Adj (T.leaf a) w)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w)
+    (hzw : z ≠ w) {u v : T.V} (huv : T.graph.Adj u v)
+    (hu : u ≠ T.leaf b ∧ u ≠ w) (hv : v ≠ T.leaf b ∧ v ≠ w) :
+    shrinkW T a b w z hza ha hz s((⟨u, hu⟩ : ShrinkV T b w), ⟨v, hv⟩) = T.wExt s(u, v) := by
+  have hne : s((⟨u, hu⟩ : ShrinkV T b w), ⟨v, hv⟩) ≠ s((⟨T.leaf a, ha⟩ : ShrinkV T b w),
+      ⟨z, hz⟩) := by
+    intro h
+    rcases Sym2.eq_iff.mp h with ⟨h1, h2⟩ | ⟨h1, h2⟩
+    · have h1' : u = T.leaf a := congrArg Subtype.val h1
+      have h2' : v = z := congrArg Subtype.val h2
+      exact not_adj_leaf_a_z T haw hzw (h2' ▸ h1' ▸ huv)
+    · have h1' : u = z := congrArg Subtype.val h1
+      have h2' : v = T.leaf a := congrArg Subtype.val h2
+      exact not_adj_leaf_a_z T haw hzw ((h1' ▸ h2' ▸ huv).symm)
+  unfold shrinkW
+  rw [if_neg hne, Sym2.map_mk]
+  rfl
+
+/-- ★★ **A8b″｜收缩后的权非负**。 -/
+theorem shrinkW_nonneg (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hwz : T.graph.Adj w z)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (e : Sym2 (ShrinkV T b w)) :
+    0 ≤ shrinkW T a b w z hza ha hz e := by
+  unfold shrinkW
+  split
+  · exact le_of_lt (shrinkNewW_pos T haw hbw hwz hpos)
+  · exact Phylo.TreeDist.wExt_nonneg T _
+
+/-! ## A8-1′｜收缩后的 `Cladogram` 与 `Phylogram` -/
+
+/-- ★★★ **A8c｜收缩后的 `Cladogram`**：顶点 `ShrinkV`、图 `shrinkGraph`、叶 `leafShrink`，
+树性用 ★★★ `shrinkGraph_connected` ＋ ★★★ `shrinkGraph_isAcyclic`，
+两个度字段用 ★★★ `shrinkGraph_leaf_iff_degree_one` ＋ ★★★ `shrinkGraph_no_degree_two`。 -/
+noncomputable def shrinkCladogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
+    Cladogram (MergeIdx X a b) where
+  V := ShrinkV T b w
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := shrinkGraph T a b w z hza
+  decAdj := shrinkGraph_decidableRel T a b w z hza
+  isTree := ⟨shrinkGraph_connected T hbin hab haw hbw hwz hza hzb
+      (fun h => T.graph.loopless.irrefl z (h ▸ hwz)),
+    shrinkGraph_isAcyclic T hbin hab haw hbw hza hzb
+      (fun h => T.graph.loopless.irrefl z (h ▸ hwz))⟩
+  leaf := leafShrink T hbin hab haw hbw
+  leaf_iff_degree_one := fun v =>
+    shrinkGraph_leaf_iff_degree_one T hbin hab haw hbw hza hzb hwz v
+  no_degree_two := fun v =>
+    shrinkGraph_no_degree_two T hbin hab haw hbw hza hzb hwz v
+
+/-- ★★★ **A8d｜收缩后的 `Phylogram`**：拓扑取 ★★★ `shrinkCladogram`，边权取 ★★ `shrinkW`。
+
+**它就是要交给 `HasPosReal (mergeStep δ a b)` 的那棵树** —— 只差 A8-3 的 `dist` 对齐。 -/
+noncomputable def shrinkPhylogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    Phylogram (MergeIdx X a b) where
+  toCladogram := shrinkCladogram T hbin hab haw hbw hza hzb hwz
+  w := fun e => shrinkW T a b w z hza
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩ e.1
+  w_nonneg := fun e => shrinkW_nonneg T a b w z hza haw hbw hwz
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩ hpos e.1
+
+-- `V`／`graph` 投影要能在 `reducible` 透明层归约，才能与 `Sym2 (ShrinkV T b w)` 上的
+-- 陈述自由互转（与 `Phylo.BunemanGraft` 对 `graftCladogram`/`graftPhylogram` 的处理一致）。
+attribute [reducible] shrinkCladogram shrinkPhylogram
+
 end Phylo.Stat.NJShrink
