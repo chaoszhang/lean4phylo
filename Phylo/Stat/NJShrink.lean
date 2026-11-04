@@ -119,4 +119,42 @@ def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.
       exact absurd (T.leaf.injective hxe).symm (mergeOld_ne_left y)
     · exact congrArg Sum.inr (Subsingleton.elim x y)
 
+/-- ★★ **A4｜樱桃中点有**第三邻居 `z`（`z` 既不 `= T.leaf a` 也不 `= T.leaf b`）。
+
+`w` 的度是 3（A3），其邻域是三元集；`T.leaf a`、`T.leaf b` 已占两个不同位置
+⇒ 三元集减去这两点后恰剩下**一个**元素 `z`，它就是第三邻居。 -/
+theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
+    ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b := by
+  have hdeg : T.graph.degree w = 3 := degree_eq_three T hbin hab haw hbw
+  have hcard : (T.graph.neighborFinset w).card = 3 := by
+    rw [SimpleGraph.neighborFinset, Set.toFinset_card, SimpleGraph.card_neighborSet_eq_degree, hdeg]
+  obtain ⟨x, y, z, hxy, hxz, hyz, hset⟩ := Finset.card_eq_three.mp hcard
+  have ha : T.leaf a ∈ ({x, y, z} : Finset T.V) := by
+    rw [← hset, SimpleGraph.mem_neighborFinset]; exact haw.symm
+  have hb : T.leaf b ∈ ({x, y, z} : Finset T.V) := by
+    rw [← hset, SimpleGraph.mem_neighborFinset]; exact hbw.symm
+  have hne : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+  have hcard3 : ({x, y, z} : Finset T.V).card = 3 := by
+    rw [Finset.card_insert_of_notMem (by simp [hxy, hxz]),
+      Finset.card_insert_of_notMem (by simp [hyz]), Finset.card_singleton]
+  have hsub : ({T.leaf a, T.leaf b} : Finset T.V) ⊆ ({x, y, z} : Finset T.V) := by
+    intro v hv
+    rw [Finset.mem_insert, Finset.mem_singleton] at hv
+    rcases hv with rfl | rfl <;> assumption
+  have hsd : (({x, y, z} : Finset T.V) \ {T.leaf a, T.leaf b}).card = 1 := by
+    rw [Finset.card_sdiff, Finset.inter_eq_left.mpr hsub, hcard3, Finset.card_pair hne]
+  obtain ⟨z', hz'⟩ := Finset.card_eq_one.mp hsd
+  have hmem : z' ∈ (({x, y, z} : Finset T.V) \ {T.leaf a, T.leaf b}) := by
+    rw [hz']; exact Finset.mem_singleton_self z'
+  refine ⟨z', ?_, ?_, ?_⟩
+  · have hzw : z' ∈ T.graph.neighborFinset w := by
+      rw [hset]; exact (Finset.mem_sdiff.mp hmem).1
+    rwa [SimpleGraph.mem_neighborFinset] at hzw
+  · intro h
+    exact (Finset.mem_sdiff.mp hmem).2 (by rw [h]; exact Finset.mem_insert_self _ _)
+  · intro h
+    exact (Finset.mem_sdiff.mp hmem).2
+      (by rw [h]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _))
+
 end Phylo.Stat.NJShrink
