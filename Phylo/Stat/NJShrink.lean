@@ -685,4 +685,16 @@ theorem shrinkGraph_isAcyclic (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a
   exact SimpleGraph.IsAcyclic.sup_edge_of_not_reachable hnr
     (T.toCladogram.isTree.isAcyclic.induce _)
 
+/-! ## 实例｜`shrinkGraph` 的 `DecidableRel`（A7b/A8 数度、数边的前提） -/
+
+/-- ★★ **`shrinkGraph` 的 `DecidableRel` 实例**：`shrinkGraph` 是 `def` 出来的图，
+Lean **不会**自动为它的 `Adj` 找可判定性 —— 而 A7b/A8 数度、数边都要它（第 29 轮实测卡在这里）。
+
+`Adj` 展开后是 `T.Adj _ _ ∨ (两个等式 ∧ …)`，可判定性由 `T.decAdj` 与 `DecidableEq` 给出。 -/
+instance shrinkGraph_decidableRel (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
+    DecidableRel (shrinkGraph T a b w z hza).Adj :=
+  fun u v => by
+    unfold shrinkGraph
+    infer_instance
+
 end Phylo.Stat.NJShrink
