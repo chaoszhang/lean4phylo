@@ -4,6 +4,7 @@ Released under Apache 2.0 license in the file LICENSE.
 Authors: ASTER LAB
 -/
 import Phylo.Stat.CASTERNJStep
+import Phylo.Stat.NJShrink
 
 /-!
 # `Phylo.Stat.CASTERNJ` —— CASTER-NJ 的两条**登记缺口**（W44 · L5a / L5b）
@@ -62,7 +63,7 @@ def HasPosReal (δ : NJ.Dissimilarity X) : Prop :=
   ∃ T : Phylogram.{0, 0} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
     ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y
 
-/-- ★★★ **L5a 的缺口（可加版，按 `njStep`/`mergeStep` 重写）**：
+/-! ★★★ **L5a 的缺口（可加版，按 `njStep`/`mergeStep` 重写）**：
 **归约保持「存在边权全正的实现树」**。
 
 即：`δ` 有正权实现树、`(a,b)` 是 NJ 判据 `Q_δ` 的全局最小对 ⇒ 归约后的
@@ -106,8 +107,20 @@ njStep δ 0 1 成立（只有一对，Q 最小化平凡）
 ⚠️ 该反例的**完整形式化尚未落盘**（缺的是「单标签集上无 `Cladogram`」这一条，
 器械已定位：`SimpleGraph.IsTree.exists_ne_and_degree_eq_one`）；本轮只做**陈述更正 ＋ 论证记录**，
 不声称已证。 -/
+/-- ★★ **正权 **binary** 实现树** —— SK1988 `:20-22` 的**原假设**（binary＋所有分支为正）。
+
+为什么要把它从 `HasPosReal` 里拆出来：**树层收缩确实用到二叉性**
+—— 樱桃中点 `w` 的第三邻居 `z` 只在 `deg w = 3` 时存在且唯一
+（★★★ `CASTERNJStep.exists_third`）。非二叉的情形需要**另一支**构造
+（`deg w ≥ 4` 时只删叶、把新叶挂回 `w`），**本库未做**（见下面的诚实边界）。 -/
+def HasPosRealBinary (δ : NJ.Dissimilarity X) : Prop :=
+  ∃ T : Phylogram.{0, 0} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
+    T.toCladogram.IsBinary ∧ ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y
+
+/-- ★★★ **L5a 的缺口（按 `njStep`/`mergeStep` 重写，**binary** 版）**：
+**归约保持「存在正权实现树**」**。 -/
 def njAdditiveGap : Prop :=
-  ∀ (δ : NJ.Dissimilarity X), HasPosReal δ → 3 ≤ Fintype.card X →
+  ∀ (δ : NJ.Dissimilarity X), HasPosRealBinary δ → 3 ≤ Fintype.card X →
     ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
 
 /-! ## 1′. 陈述更正的**形式化核**：单标签集上不存在 `Cladogram`
@@ -151,6 +164,40 @@ theorem not_hasPosReal_of_subsingleton {Y : Type} [Fintype Y] [DecidableEq Y]
     ¬ HasPosReal (X := Y) τ := by
   rintro ⟨T, -, -⟩
   exact not_cladogram_of_subsingleton (Y := Y) T.toCladogram
+
+/-- ★★★ **A8 收口｜`njAdditiveGap` **已证**（不再是缺口）**。
+
+给定正权 **binary** 实现树 `T` 与 `njStep δ a b`：
+1. ★★★ `NJShrink.isCherry_of_njStep`（`Q = −2z` → Weller eq (3) → Thm 2）给出**树层** `T.IsCherry a b`；
+2. 取樱桃中点 `w` 与第三邻居 `z`（★★★ `NJShrink.exists_third`，用 `IsBinary`）；
+3. ★★★ `NJShrink.shrinkPhylogram` 就是归约后的实现树：边权全正（★★★ `shrinkW_pos`）、
+   `dist` 与 `mergeStep` **逐点对齐**（★★★ `shrinkPhylogram_dist`）。
+
+⚠️ **诚实边界**：本定理只覆盖**二叉**实现（`HasPosRealBinary`）。非二叉实现
+（`deg w ≥ 4`）需要**另一支**构造 —— 只删叶 `b`、把新叶 `u` 以权 `½(w_a+w_b)` 挂回 `w`，
+**本库未做**；`dist` 对齐在那支更容易（路径必过 `w`）。 -/
+theorem njAdditiveGap_holds : njAdditiveGap (X := X) := by
+  intro δ hpos hcard a b hstep
+  obtain ⟨T, hwpos, hbin, hT⟩ := hpos
+  have hc : T.IsCherry a b := NJShrink.isCherry_of_njStep δ hwpos hT hcard hstep
+  have hckeep := hc
+  obtain ⟨hab, w, haw, hbw⟩ := hc
+  obtain ⟨z, hwz, hza, hzb, -⟩ := NJShrink.exists_third T hbin hab haw hbw
+  have hla : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), NJShrink.leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hzm : z ≠ T.leaf b ∧ z ≠ w :=
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+  refine ⟨NJShrink.shrinkPhylogram T hbin hab haw hbw hza hzb hwz hwpos, ?_, ?_⟩
+  · intro e
+    have key : ∀ e' : Sym2 (NJShrink.ShrinkV T b w),
+        e' ∈ (NJShrink.shrinkGraph T a b w z hza).edgeSet →
+          0 < NJShrink.shrinkW T a b w z hza hla hzm e' :=
+      Sym2.ind (fun u v he =>
+        NJShrink.shrinkW_pos T hbin hab haw hbw hza hzb hwz hwpos hla hzm
+          ((SimpleGraph.mem_edgeSet _).mp he))
+    exact key e.1 e.2
+  · intro u v
+    exact NJShrink.shrinkPhylogram_dist T δ hbin hab haw hbw hza hzb hwz hwpos hckeep hT u v
 
 /-! ## 2. L5b 的「噪声传播」一步（**已由库内器材证出**，不是缺口） -/
 
