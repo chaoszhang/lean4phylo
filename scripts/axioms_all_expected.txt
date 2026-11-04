@@ -1,4 +1,4 @@
-# 62 条收口定理（Phylo.* 模块）
+# 63 条收口定理（Phylo.* 模块）
 BinaryConnectedEqualsSideGap_holds | 3 | Classical.choice,Quot.sound,propext
 Fitch.QuartetBridgeGap_holds | 3 | Classical.choice,Quot.sound,propext
 MultiStatePairwiseInsufficiencyGap_holds | 3 | Classical.choice,Quot.sound,propext
@@ -16,6 +16,7 @@ Phylo.PhyloDiversity.pdExchange_gap_proof | 3 | Classical.choice,Quot.sound,prop
 Phylo.Stat.AnomalousGeneTree.threeAgtCriterion_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.Bootstrap.bootstrap_confidence_gap_vacuous_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.Bootstrap.multinomial_weight_count_gap_proof | 3 | Classical.choice,Quot.sound,propext
+Phylo.Stat.CASTERNJ.njNoiseStep_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.CladeCount.arithStep_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.ClanPairLaw.arithStepHat_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.ClanPairLaw.arithStepQ_holds | 3 | Classical.choice,Quot.sound,propext

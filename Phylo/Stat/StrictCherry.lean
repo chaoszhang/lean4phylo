@@ -94,4 +94,36 @@ theorem hcx_of_gap (h : strictCherry_of_isBinary_pos_gap.{u, v} (X := X))
           < T.dist (T.leaf x) (T.leaf q) + T.dist (T.leaf y) (T.leaf p) :=
   strictCherry_of_gap h T hpos hbin x y hch
 
+/-! ## 2. L5a 步骤 A 的算术核（**已证**，给树层收缩用）
+
+协调侧批了 L5a（「超预算不是问题」）。步骤 A 的困难在**图构造**，但它的**算术**是免费的：
+樱桃 `{a,b}` 的中点 `w` 处，「θ = ½ 的归约值」正好等于「挂在 `w` 上、边权 `½(w_a+w_b)` 的新叶」
+到各点的距离。这条恒等式说明为什么归约后的树**必须**是「删 `b`、再把 `w` 抑制掉、
+把合并边的权改成 `½(w_a+w_b) + (w 到 z 的权)`」—— 见 `CASTERNJStep.lean` 文件头 §3 的更正。 -/
+
+/-- ★★★ **L5a 步骤 A 的算术核**：设 `δ` 由 `T` 实现、`{a,b}` 是 `T` 的樱桃（中点 `w`），则对任意
+`x ∉ {a,b}`：
+
+```text
+½·δ(x,a) + ½·δ(x,b) = ½·(d(a,w) + d(b,w)) + d(w,x)
+```
+右端正是「把新叶挂在 `w` 上、边权 `½(w_a+w_b)`」后的距离 `d'(u, x)`。
+（`Phylogram.dist_eq_add_of_adj_leaf_dist` 给 `d(a,x) = d(a,w) + d(w,x)`，两式相加即得。） -/
+theorem mergeStep_val_eq (δ : NJ.Dissimilarity X) {T : Phylogram.{u, v} X}
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
+    {a b : X} (hc : T.IsCherry a b) {x : X} (hxa : x ≠ a) (hxb : x ≠ b) :
+    ∃ w : T.V, T.graph.Adj (T.leaf a) w ∧ T.graph.Adj (T.leaf b) w ∧
+      (1 / 2) * δ.val x a + (1 / 2) * δ.val x b
+        = ((1 / 2) * (T.dist (T.leaf a) w + T.dist (T.leaf b) w)) + T.dist w (T.leaf x) := by
+  obtain ⟨_, w, haw, hbw⟩ := hc
+  refine ⟨w, haw, hbw, ?_⟩
+  have h1 : δ.val x a = T.dist (T.leaf a) w + T.dist w (T.leaf x) := by
+    rw [← hT x a, Phylo.TreeDist.dist_comm T (T.leaf x) (T.leaf a)]
+    exact T.dist_eq_add_of_adj_leaf_dist haw (fun h => hxa (T.leaf.injective h))
+  have h2 : δ.val x b = T.dist (T.leaf b) w + T.dist w (T.leaf x) := by
+    rw [← hT x b, Phylo.TreeDist.dist_comm T (T.leaf x) (T.leaf b)]
+    exact T.dist_eq_add_of_adj_leaf_dist hbw (fun h => hxb (T.leaf.injective h))
+  rw [h1, h2]
+  ring
+
 end Phylo.Stat.StrictCherry

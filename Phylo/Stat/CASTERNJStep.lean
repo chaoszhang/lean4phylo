@@ -43,25 +43,28 @@ import Phylo.AttesonRadius
 
 ## 3 方案（三步；工作量按 W46 实读源码估）
 
-### 步骤 A｜树层收缩（**150–250 行**，L5a 的唯一实质工作）
+### 步骤 A｜树层收缩（**200–350 行**，L5a 的唯一实质工作）
 
-设 `T : Phylogram X`、`T.IsCherry x y`（取公共邻居 `w`，`haw : Adj (leaf x) w`、`hbw : ...`），
-`T` 边权全正。构造 `T' : Phylogram (MergeIdx X x y)`：
+设 `T : Phylogram X`、`T.IsCherry a b`（取公共邻居 `w`，`haw : Adj (leaf a) w`、`hbw : ...`），
+`T` 边权全正。构造 `T' : Phylogram (MergeIdx X a b)`：
 
-* 顶点集：`V' := {v : T.V // v ≠ T.leaf y}`（**删掉叶 `y`**，别的都不动）；
-  `leaf' : MergeIdx X x y ↪ V'`：`Sum.inl a ↦ ⟨T.leaf a, _⟩`、`Sum.inr () ↦ ⟨T.leaf x, _⟩`；
-* 图：`T.graph.induce {v | v ≠ T.leaf y}`（诱导子图）；
-  **树性**：无圈子图 + 删叶保持连通（`T.graph` 是树、`T.leaf y` 度为 1）；
-* 边权：`w' e := if e = s(leaf x, w) then ½ * (w ⟨x,w⟩ + w ⟨y,w⟩) else T.w e`（其余原样）；
-* **距离对齐（关键引理）**：对 `u v : MergeIdx X x y`，
-  `T'.dist (leaf' u) (leaf' v) = (mergeStep (dissOf T) x y).val u v`。
-  - 旧–旧：`T'.dist = T.dist`（`T'.dist` 与 `T.dist` 在删叶后一致 —— 需一条「删叶不改路径长」的引理）；
-  - 新–旧：`T'.dist (leaf x) (leaf a) = ½(w_x+w_y) + d(w, a)`
-    （`Phylogram.dist_eq_add_of_adj_leaf_dist`）；
-    右端 `½(d(x,a)+d(y,a)) = ½(w_x + d(w,a) + w_y + d(w,a)) = ½(w_x+w_y) + d(w,a)` ✓。
-  ★ 这一步**不需要**新数学，全是「删一个度为 1 的顶点」的图论 + 一次算术
-  （`Phylogram` 的三条桥接引理已在 `Phylo/Algorithm/NJHardCore.lean:77–122`，
-  `Phylo/PhylogramContract.lean` 有 `suppressGraph`/`suppressLeaf` 可参照）。
+* ⚠️★★ **★D 更正（W46，我上一版方案是错的）**：只「删叶 `b` + 把 `w—a` 的权改成 `½(w_a+w_b)`」
+  **造不出合法 `Phylogram`** —— 删叶后 `w` 的度从 3 掉到 **2**，而 `Cladogram.no_degree_two`
+  （`Phylo/Core.lean:44`）要求**无度 2 顶点**。正确构造必须**再抑制 `w`**：
+  * 顶点集：`V' := {v : T.V // v ≠ T.leaf b ∧ v ≠ w}`（删叶 `b`、再删中点 `w`）；
+    `leaf' : MergeIdx X a b ↪ V'`：`Sum.inl x ↦ ⟨T.leaf x, _⟩`、`Sum.inr () ↦ ⟨T.leaf a, _⟩`；
+  * 图：`T.graph.induce {v | v ≠ T.leaf b ∧ v ≠ w}` **再加一条 `leaf a — z`** 的边
+    （`z` = `w` 除 `a`、`b` 外**唯一**的邻居 —— 二叉性保证存在且唯一）；
+  * 边权：新边 `s(leaf a, z)` 取 `½·(w ⟨a,w⟩ + w ⟨b,w⟩) + w ⟨w,z⟩`，其余原样；
+  * **距离对齐（关键引理）**：对 `u v : MergeIdx X a b`，
+    `T'.dist (leaf' u) (leaf' v) = (mergeStep (dissOf T) a b).val u v`；
+  * **新–旧的那一步算术已经证好了**：★★★
+    `Phylo.Stat.StrictCherry.mergeStep_val_eq` 给出
+    `½·δ(x,a) + ½·δ(x,b) = ½(w_a + w_b) + d(w,x)`
+    —— 正是「把新叶挂在 `w` 上、边权 `½(w_a+w_b)`」的距离。⇒ 剩下的**全是图论**。
+  ★ 器械已在库：`Phylo/PhylogramContract.lean` 的 `suppressGraph` / `suppressLeaf`（抑制度 2 顶点）
+  ＋ `Phylo/Algorithm/NJHardCore.lean:77–122` 的距离桥接。
+  ⇒ 工作量上调到 **200–350 行**（上一版估 150–250 行漏了 `no_degree_two`）。
 
 ### 步骤 B｜算法本体（**80–120 行**）
 
@@ -87,8 +90,10 @@ import Phylo.AttesonRadius
   归约引 **MLP2006 `:141-148`**、归纳骨架照 **SK1988 `:321-329`**；
   **SN1987 只引算法本体**（SK1988 `:46` 明说其证明有误）。
 
-**合计 310–490 行**，超出派单给的 100–250 行预算 ⇒ 按派单 §3.7 的**允许出口**：
-`njAdditiveGap` 保留，台账不变（仍 74）。
+**合计 360–590 行**（★ 上调：步骤 A 漏了 `no_degree_two`，见上）。派单预算 100–250 行，
+但**协调侧 2026-11-05 01:0x 已明确「超预算不是问题」** ⇒ 不再走「允许出口」，
+`njAdditiveGap` 按**真陈述**保留（已重写为「归约保持正权实现」，见 `CASTERNJ.lean`）。
+⏳ 本文件仍**不**含步骤 A/B/C 的实现（本轮只证了其中的算术核 `mergeStep_val_eq`）。
 
 ## 4 诚实边界
 
