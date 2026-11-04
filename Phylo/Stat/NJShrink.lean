@@ -63,6 +63,41 @@ import Phylo.Stat.CASTERNJStep
 ⇒ 结论：`njAdditiveGap` 里那条「归约保持正权实现」**不是**可绕过的技术条件，
 树层收缩（本文件的 A 步）是**唯一**出路。这条记录避免下一轮重走。
 
+## ⏭️ 下一步（A6g 边数记账）的完整方案
+
+`IsTree` 走 `isTree_iff_connected_and_card`（`G.IsTree ↔ G.Connected ∧ Nat.card ↑G.edgeSet + 1 = Nat.card V`），
+`Connected` 已在手（`shrinkGraph_connected`），只差**边数**。
+
+**目标**：`Nat.card ↑(shrinkGraph …).edgeSet = Fintype.card T.V - 3`
+（配合本文件已证的 `card_shrinkV`：`Fintype.card (ShrinkV) + 2 = Fintype.card T.V`，
+即得 `|E| + 1 = |V'|`）。
+
+**计数方案（逐条）**：
+1. `G` 的边 = 「两个端点都在 `ShrinkV` 的 `T`-边」∪ {新边}，且二者**不交**
+   —— 新边不是 `T`-边：`not_adj_leaf_a_z`（已证）。
+2. `T` 里「有一个端点在 `{leaf b, w}`」的边**恰 3 条**：
+   `leaf b` 只有 1 条（`w—leaf b`，`leaf_b_adj_eq_midpoint` 已证）；
+   `w` 有 3 条（`exists_third` 的穷尽性：`leaf a`、`leaf b`、`z`）；
+   并集 = `{w—leaf b, w—leaf a, w—z}`，故共 **3** 条。
+3. `|E_T| = Fintype.card T.V - 1`（`SimpleGraph.IsTree.card_edgeFinset`，已探到）。
+4. 于是 `|E_G| = (|E_T| - 3) + 1 = (n-1) - 3 + 1 = n - 3`；而 `|V'| = n - 2` ⇒ `|E| + 1 = |V'|` ✓。
+
+**已探到的器材**：
+```
+@SimpleGraph.IsTree.card_edgeFinset : G.IsTree → G.edgeFinset.card + 1 = Fintype.card V
+@SimpleGraph.edgeFinset / mem_edgeFinset
+@SimpleGraph.isTree_iff_connected_and_card : G.IsTree ↔ G.Connected ∧ Nat.card ↑G.edgeSet + 1 = Nat.card V
+@SimpleGraph.IsTree.isAcyclic  （拿到 IsTree 后无环性免费）
+```
+**难点**：第 1、2 条的基数记账需要把 `edgeSet` 按端点分类（`Sym2` 的 `mem_edgeSet` 只给
+「三角边 ↔ `Adj`」，取端点要用 `Sym2` 的消去/嵌入引理），这部分是 A 步最后一块工程。
+
+**备选（若边数记账太难）**：反证法「环 ⟹ 顶点度 ≥ 2」—— 但 `Walk.IsCycle` 的 API 很薄
+（只有 `not_nil` 与 `cons_isCycle_iff`），实现「环上顶点有两个相异邻居」要自己从 `cons_isCycle_iff`
+的 `p.IsPath ∧ s(u,v) ∉ p.edges` 剥，且需要 `edges`（边）侧的 API —— 本文件目前全是**顶点**侧器械，
+所以这条路**不建议**。
+
+
 -/
 
 noncomputable section
