@@ -25,7 +25,7 @@ def njAdditiveGap : Prop := ∀ (T : Cladogram X) (w : …), (∀ e, 0 < w e) �
 
 | 缺口 | 新内容 | 为什么不是恒真 |
 |---|---|---|
-| `njAdditiveGap` | **归约保持「正权实现树」**：`δ` 有正权实现 ⇒ 对任何 `njStep` 选出的对 `(a,b)`，`mergeStep δ a b` 仍有正权实现 | 结论提到 `njStep`（Q 判据的全局最小）与 `mergeStep`（θ=½ 归约），**不**由 `Iso.refl` 给出 |
+| `njAdditiveGap` | **归约保持「正权实现树」**：`δ` 有正权实现、`3 ≤ |X|` ⇒ 对任何 `njStep` 选出的对 `(a,b)`，`mergeStep δ a b` 仍有正权实现 | 结论提到 `njStep`（Q 判据的全局最小）与 `mergeStep`（θ=½ 归约），**不**由 `Iso.refl` 给出；`3 ≤ |X|` 见下面的**陈述更正**（`|X| = 2` 时原陈述为假） |
 | `njConsistencyGap` | 三条具名义务的**合取**：① 正权实现 ⇒ 存在正樱桃分离界 `δmin`；② Atteson 半径内扰动下每轮选择仍是真樱桃；③ `njAdditiveGap` | ①③ 都未被证；② 已由库内 `njConsistencyStep` 证出（见下） |
 
 ## 台账口径
@@ -79,10 +79,78 @@ def HasPosReal (δ : NJ.Dissimilarity X) : Prop :=
 `Phylogram.dist_eq_add_of_adj_leaf_dist`（`Phylo/CherryQuartet.lean:79`）。
 
 **诚实边界**：本命题**未被本库证明**。它的**单步正确性**（哪一对被选中）已由
-★★★ `njStep_isCherry`（`CASTERNJStep.lean`）证出 —— 缺的是**树层收缩**。 -/
+★★★ `njStep_isCherry`（`CASTERNJStep.lean`）证出 —— 缺的是**树层收缩**。
+
+## ★★ 2026-11-05（W46 长程第 32 轮）：**加上了 `3 ≤ |X|`** —— 原陈述在 `|X| = 2` 时**为假**
+
+原陈述（无基数限制）不成立，反例是**退化基数**，与 NJ 无关：
+
+```text
+X = Fin 2，δ = 唯一一对的正距离（单边树实现 ⇒ HasPosReal δ 成立）
+njStep δ 0 1 成立（只有一对，Q 最小化平凡）
+⇒ 归约后 MergeIdx X 0 1 = (X ∖ {0,1}) ⊕ Unit ≃ Unit  —— 只剩**一个**标签
+⇒ mergeStep δ 0 1 是 1×1 矩阵（唯一取值 = 0）
+```
+
+而**单标签集上不存在 `Cladogram`**（更不存在 `Phylogram`）：
+`leaf : X ↪ T.V` 只有一个像；若树只有一个顶点，其度为 `0 ≠ 1`；若树有 ≥ 2 个顶点，
+由 Mathlib `SimpleGraph.IsTree.exists_ne_and_degree_eq_one` 存在两个互异的度 1 顶点，
+其中至少一个不是标签像 ⇒ `leaf_iff_degree_one` 被违反。
+⇒ `HasPosReal (mergeStep δ 0 1)` **为假**，故原 `njAdditiveGap` 为假。
+
+这**不是** NJ 的缺陷（算法在 `|X| ≤ 3` 时本来就没有「恢复拓扑」的内容 —— 见
+`CASTERNJStep.lean` §4 与 SK1988 的基例 `|X| ≤ 4`），而是**陈述的量化域**必须与
+其它同族结论一致：库内 ★★★ `Cladogram.exists_isCherry_of_max_z` 也带 `3 ≤ Fintype.card X`。
+⇒ 本缺口加上 `3 ≤ Fintype.card X`（`|X| = 3` 时归约后是 2 标签、单边树，**可实现且正权**）。
+
+⚠️ 该反例的**完整形式化尚未落盘**（缺的是「单标签集上无 `Cladogram`」这一条，
+器械已定位：`SimpleGraph.IsTree.exists_ne_and_degree_eq_one`）；本轮只做**陈述更正 ＋ 论证记录**，
+不声称已证。 -/
 def njAdditiveGap : Prop :=
-  ∀ (δ : NJ.Dissimilarity X), HasPosReal δ →
+  ∀ (δ : NJ.Dissimilarity X), HasPosReal δ → 3 ≤ Fintype.card X →
     ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
+
+/-! ## 1′. 陈述更正的**形式化核**：单标签集上不存在 `Cladogram`
+
+这条是上面反例（`|X| = 2` 归约后只剩 1 个标签）的**唯一非平凡成分**，
+与 NJ 无关，纯 `Cladogram` 结构事实。
+
+证法（`IsTree.exists_ne_and_degree_eq_one`，Mathlib）：
+* 若 `Nontrivial T.V`：树有**两个互异**的度 1 顶点；由 `leaf_iff_degree_one` 二者都是标签像，
+  但标签集是单点集 ⇒ 两个像相等，矛盾。
+* 若 `Subsingleton T.V`：`T.leaf y` 的度必为 `1`（它是标签像），但任一同伴都等于它本身
+  ⇒ 度为 `0`，矛盾。 -/
+theorem not_cladogram_of_subsingleton {Y : Type} [Fintype Y] [DecidableEq Y]
+    [Subsingleton Y] [Nonempty Y] (T : Cladogram Y) : False := by
+  classical
+  obtain ⟨y⟩ := ‹Nonempty Y›
+  by_cases hV : Nontrivial T.V
+  · haveI := hV
+    haveI : Finite T.graph.edgeSet := Finite.of_fintype _
+    obtain ⟨u, v, huv, hu1, hv1⟩ := T.isTree.exists_ne_and_degree_eq_one
+    obtain ⟨x, hx⟩ := (T.isLeaf_iff_degree_eq_one u).mpr hu1
+    obtain ⟨x', hx'⟩ := (T.isLeaf_iff_degree_eq_one v).mpr hv1
+    exact huv (by rw [← hx, ← hx']; exact congrArg T.leaf (Subsingleton.elim x x'))
+  · haveI : Subsingleton T.V := not_nontrivial_iff_subsingleton.mp hV
+    have h1 : T.graph.degree (T.leaf y) = 1 :=
+      (T.isLeaf_iff_degree_eq_one (T.leaf y)).mp ⟨y, rfl⟩
+    have h2 : T.graph.degree (T.leaf y) = 0 := by
+      rw [SimpleGraph.degree_eq_zero]
+      intro w hw
+      have hww : w = T.leaf y := Subsingleton.elim w (T.leaf y)
+      rw [hww] at hw
+      exact T.graph.loopless.irrefl (T.leaf y) hw
+    omega
+
+/-- ★★ **推论**：单标签集上的任何 `Dissimilarity` 都**没有**正权实现。
+
+（`|X| = 2` 时 `MergeIdx X a b ≃ Unit` ⇒ `mergeStep δ a b` 落在这条上 ⇒
+原（无基数限制的）`njAdditiveGap` 在 `|X| = 2` 时为假。） -/
+theorem not_hasPosReal_of_subsingleton {Y : Type} [Fintype Y] [DecidableEq Y]
+    [Subsingleton Y] [Nonempty Y] (τ : NJ.Dissimilarity Y) :
+    ¬ HasPosReal (X := Y) τ := by
+  rintro ⟨T, -, -⟩
+  exact not_cladogram_of_subsingleton (Y := Y) T.toCladogram
 
 /-! ## 2. L5b 的「噪声传播」一步（**已由库内器材证出**，不是缺口） -/
 
