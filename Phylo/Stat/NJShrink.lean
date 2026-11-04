@@ -338,4 +338,24 @@ theorem not_mem_support_of_degree_one {y x z' : T.V} (hdeg : T.graph.degree y = 
   · exact hx h.symm
   · exact hz h.symm
 
+/-- 樱桃叶 `T.leaf b` 在 `T` 里的**唯一**邻居也是 `w`（`A7a` helper 的对称件）。 -/
+theorem leaf_b_adj_eq_midpoint {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w) :
+    ∀ y : T.V, T.graph.Adj (T.leaf b) y → y = w := by
+  have hd1 : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  obtain ⟨c, _, hcuniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hd1
+  have hcw : c = w := (hcuniq w hbw).symm
+  exact fun y hy => (hcuniq y hy).trans hcw
+
+/-- ★★ **新边确实是新的**：`T.leaf a` 与 `z` 在 `T` 里**不**相邻
+（`T.leaf a` 的唯一邻居是 `w`，而 `z ≠ w`）。 -/
+theorem not_adj_leaf_a_z {a : X} {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hzw : z ≠ w) :
+    ¬ T.graph.Adj (T.leaf a) z :=
+  fun h => hzw (leaf_a_adj_eq_midpoint T haw z h)
+
+/-- ★★ **新边确实是新的**（对称件）：`T.leaf b` 与 `z` 在 `T` 里不相邻。 -/
+theorem not_adj_leaf_b_z {b : X} {w z : T.V} (hbw : T.graph.Adj (T.leaf b) w) (hzw : z ≠ w) :
+    ¬ T.graph.Adj (T.leaf b) z :=
+  fun h => hzw (leaf_b_adj_eq_midpoint T hbw z h)
+
 end Phylo.Stat.NJShrink
