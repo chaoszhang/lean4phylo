@@ -43,7 +43,9 @@ import Phylo.Stat.CASTERNJStep
 | A6 | 图（诱导 ＋ 一条边）、`Connected`、`IsAcyclic` ⇒ **`IsTree` 两半** | ✅ |
 | A7 | **`deg_G v = deg_T v.1`**（三支：合并叶 / `z` / 其余） | ✅ |
 | A7′ | `leaf_iff_degree_one` / `no_degree_two` 从 `T` 搬过来 | ✅ |
-| A8 | 边权、`dist` 对齐、`HasPosReal` 收口 | ⏳ 下一步 |
+| A8-0 | 一般化中点避开引理（两端都 ∉ `{leaf a, leaf b, w}`） | ✅ |
+| A8-1 | `njStep` ⇒ 树层 `T.IsCherry a b`（`Q = −2z` → Weller eq (3) → Thm 2） | ✅ |
+| A8-2 | 边权 `shrinkW` ＋ `dist` 对齐 ＋ `HasPosReal` 收口 | ⏳ 下一步 |
 
 **纪律**：零 sorry / axiom / opaque。本文件只加新声明，不动任何既有定理。
 
@@ -927,5 +929,99 @@ theorem shrinkGraph_no_degree_two (hbin : T.toCladogram.IsBinary) {a b : X} (hab
     (shrinkGraph T a b w z hza).degree v ≠ 2 := by
   rw [degree_shrinkGraph T hbin hab haw hbw hza hzb hwz v]
   exact T.toCladogram.no_degree_two v.1
+
+/-! ## A8 前置 A8-0｜**一般化**的中点避开引理（第二个端点不再是 `z`）
+
+★★★ `midpoint_not_mem_support` 的第二个端点被钉死在 `z`（那是「走到 `z`」的语境）。
+A8 的**旧–旧距离**要对**任意**两片非 `{a, b}` 的叶用这条，于是把它一般化成
+「两端都 ∉ `{leaf a, leaf b, w}`」。证法是同一段 `getVert` 论证，只把
+`z ≠ w`／`z ≠ leaf a`／`z ≠ leaf b` 换成终点 `y` 的三条同类事实。 -/
+theorem midpoint_not_mem_support_gen (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w)
+    {x y : T.V} (hxa : x ≠ T.leaf a) (hxb : x ≠ T.leaf b) (hxw : x ≠ w)
+    (hya : y ≠ T.leaf a) (hyb : y ≠ T.leaf b) (hyw : y ≠ w)
+    (p : T.graph.Walk x y) (hp : p.IsPath) : w ∉ p.support := by
+  intro hw
+  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third T hbin hab haw hbw
+  have hzz₀ : z = z₀ := by
+    rcases hexh z hwz with h | h | h
+    · exact absurd h hza
+    · exact absurd h hzb
+    · exact h
+  subst hzz₀
+  have hda : T.graph.degree (T.leaf a) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+  have hdb : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  have hla : T.leaf a ∉ p.support :=
+    not_mem_support_of_degree_one T hda p hp hxa hya
+  have hlb : T.leaf b ∉ p.support :=
+    not_mem_support_of_degree_one T hdb p hp hxb hyb
+  set i := List.idxOf w p.support with hi
+  have hlen : p.support.length = p.length + 1 := SimpleGraph.Walk.length_support p
+  have hilt : i < p.support.length := List.idxOf_lt_length_iff.mpr hw
+  have hile : i ≤ p.length := by omega
+  have hwi : p.getVert i = w := by
+    rw [SimpleGraph.Walk.getVert_eq_support_getElem p hile, List.getElem_idxOf hilt]
+  have hi0 : 0 < i := by
+    rcases Nat.eq_zero_or_pos i with h | h
+    · rw [h, SimpleGraph.Walk.getVert_zero] at hwi
+      exact absurd hwi hxw
+    · exact h
+  have hilen : i < p.length := by
+    rcases lt_or_eq_of_le hile with h | h
+    · exact h
+    · rw [h, SimpleGraph.Walk.getVert_length] at hwi
+      exact absurd hwi hyw
+  have hadj0 : T.graph.Adj (p.getVert (i - 1)) w := by
+    have h := SimpleGraph.Walk.adj_getVert_succ p (i := i - 1) (by omega)
+    rwa [Nat.sub_add_cancel hi0, hwi] at h
+  have hadj1 : T.graph.Adj w (p.getVert (i + 1)) := by
+    have h := SimpleGraph.Walk.adj_getVert_succ p (i := i) (by omega)
+    rwa [hwi] at h
+  have hm0 : p.getVert (i - 1) ∈ p.support := SimpleGraph.Walk.getVert_mem_support p _
+  have hm1 : p.getVert (i + 1) ∈ p.support := SimpleGraph.Walk.getVert_mem_support p _
+  have h0 : p.getVert (i - 1) = z := by
+    rcases hexh _ hadj0.symm with h | h | h
+    · exact absurd (h ▸ hm0) hla
+    · exact absurd (h ▸ hm0) hlb
+    · exact h
+  have h1 : p.getVert (i + 1) = z := by
+    rcases hexh _ hadj1 with h | h | h
+    · exact absurd (h ▸ hm1) hla
+    · exact absurd (h ▸ hm1) hlb
+    · exact h
+  have hinj : p.getVert (i - 1) = p.getVert (i + 1) := h0.trans h1.symm
+  have heq : i - 1 = i + 1 :=
+    hp.getVert_injOn (by omega : i - 1 ≤ p.length) (by omega : i + 1 ≤ p.length) hinj
+  omega
+
+/-! ## A8 前置 A8-1｜把 `njStep` 变成**树层**的「这是一对樱桃」
+
+`njStep` 是度量侧的 `Q`-最小性；A8 的构造需要**树层**的 `T.IsCherry a b`（公共邻居 `w`）。
+桥全部现成：
+* ★★ `Q_eq_neg_two_z`：`Q = −2z` ⇒ `Q` 最小 ⇔ `δ.z` 最大；
+* ★★★ `z_eq_dist_add_pathLeafStatus`（Weller eq (3)）：`δ.z u v = d(u,v) + ℓ_T(p_uv)`
+  ⇒ `δ.z` 的最大性**逐字**搬成树层 `d + ℓ_T` 的最大性；
+* ★★★ `Cladogram.exists_isCherry_of_max_z`（Weller Thm 2）：树层最大的那对叶是樱桃。 -/
+theorem isCherry_of_njStep (δ : NJ.Dissimilarity X) {T : Phylogram.{u, v} X}
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
+    (hcard : 3 ≤ Fintype.card X) {a b : X} (h : njStep δ a b) : T.IsCherry a b := by
+  have hab : a ≠ b := h.1
+  have hmax : ∀ i j : X, i ≠ j → δ.z i j ≤ δ.z a b := by
+    intro i j hij
+    have h1 := h.2 i j hij
+    rw [Q_eq_neg_two_z δ, Q_eq_neg_two_z δ] at h1
+    linarith
+  have hmaxT : ∀ p q : X, p ≠ q →
+      T.dist (T.leaf p) (T.leaf q) + T.pathLeafStatus (T.leaf p) (T.leaf q)
+        ≤ T.dist (T.leaf a) (T.leaf b) + T.pathLeafStatus (T.leaf a) (T.leaf b) := by
+    intro p q hpq
+    have hz := hmax p q hpq
+    rwa [z_eq_dist_add_pathLeafStatus δ hpos hT hpq,
+      z_eq_dist_add_pathLeafStatus δ hpos hT hab] at hz
+  exact Cladogram.exists_isCherry_of_max_z hpos hcard hab hmaxT
 
 end Phylo.Stat.NJShrink
