@@ -528,4 +528,38 @@ theorem shrinkGraph_connected (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a
   obtain ⟨q2⟩ := hhub v
   exact ⟨q1.append q2.reverse⟩
 
+/-! ## A6g 器械｜**反向搬移**（`G`-走法 → `T`-走法） -/
+
+/-- ★★★ **反向搬移**：若收缩图里一条走法的支撑集**不含** `⟨T.leaf a, ·⟩`，则它完全由旧边组成，
+可以搬回 `T`。
+
+理由：新边 `leaf a — z` 的端点必含 `T.leaf a`（`shrinkGraph_adj_cases` 的另两支），
+被支撑集条件排掉 ⇒ 每一步都是 `T`-边。
+
+这是 ★★★ `exists_walk_shrink`（`T → G`）的严格对称件；无环性（A6g）与
+`dist` 对齐（A8 的旧–旧部分）都要用它。 -/
+theorem exists_walk_of_shrink (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
+    ∀ {U V : ShrinkV T b w} (p : (shrinkGraph T a b w z hza).Walk U V),
+      (∀ v ∈ p.support, v.1 ≠ T.leaf a) → Nonempty (T.graph.Walk U.1 V.1) := by
+  intro U V p
+  induction p with
+  | nil => exact fun _ => ⟨SimpleGraph.Walk.nil⟩
+  | @cons U0 M V0 h q ih =>
+      intro hav
+      have hsub : ∀ v ∈ q.support, v.1 ≠ T.leaf a := fun v hv =>
+        hav v (by rw [SimpleGraph.Walk.support_cons]; exact List.mem_cons_of_mem _ hv)
+      have hU : U0.1 ≠ T.leaf a :=
+        hav U0 (by rw [SimpleGraph.Walk.support_cons]; exact List.mem_cons_self)
+      have hM : M.1 ≠ T.leaf a :=
+        hav M (by
+          rw [SimpleGraph.Walk.support_cons]
+          exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support q))
+      obtain ⟨q'⟩ := ih hsub
+      have htedge : T.graph.Adj U0.1 M.1 := by
+        rcases shrinkGraph_adj_cases T a b w z hza h with h' | h' | h'
+        · exact h'
+        · exact absurd h'.1 hU
+        · exact absurd h'.2 hM
+      exact ⟨SimpleGraph.Walk.cons htedge q'⟩
+
 end Phylo.Stat.NJShrink
