@@ -157,4 +157,49 @@ theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {
     exact (Finset.mem_sdiff.mp hmem).2
       (by rw [h]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _))
 
+/-! ## A6｜收缩后的图 = 诱导子图 ＋ 一条 `leaf a — z` -/
+
+/-- ★★ **A6a｜收缩后的图**：旧边照搬（诱导子图），另加一条 `T.leaf a — z`。
+
+（`z` 是樱桃中点的第三邻居，见 ★★ `exists_third`；`hza` 用于无自环的证明。） -/
+def shrinkGraph (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
+    SimpleGraph (ShrinkV T b w) where
+  Adj u v := T.graph.Adj u.1 v.1 ∨
+    (u.1 = T.leaf a ∧ v.1 = z) ∨ (u.1 = z ∧ v.1 = T.leaf a)
+  symm := ⟨fun u v h => by
+    rcases h with h | h | h
+    · exact Or.inl h.symm
+    · exact Or.inr (Or.inr ⟨h.2, h.1⟩)
+    · exact Or.inr (Or.inl ⟨h.2, h.1⟩)⟩
+  loopless := ⟨fun u h => by
+    rcases h with h | h | h
+    · exact T.graph.loopless.irrefl u.1 h
+    · exact hza (h.2.symm.trans h.1)
+    · exact hza (h.1.symm.trans h.2)⟩
+
+/-- ★ **A6b｜旧–旧邻接照搬**：`T.graph` 里相邻 ⇒ 收缩图里相邻。 -/
+theorem shrinkGraph_adj_of_adj (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    {u v : ShrinkV T b w} (h : T.graph.Adj u.1 v.1) :
+    (shrinkGraph T a b w z hza).Adj u v :=
+  Or.inl h
+
+/-- ★★ **A6c｜反向**：收缩图里的相邻，要么是旧边，要么**恰是**新边 `leaf a — z`（两个朝向）。 -/
+theorem shrinkGraph_adj_cases (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
+    {u v : ShrinkV T b w} (h : (shrinkGraph T a b w z hza).Adj u v) :
+    T.graph.Adj u.1 v.1 ∨ (u.1 = T.leaf a ∧ v.1 = z) ∨ (u.1 = z ∧ v.1 = T.leaf a) :=
+  h
+
+/-- ★★ **A6d｜新边确实在**：`⟨T.leaf a, ·⟩` 与 `⟨z, ·⟩` 相邻。
+
+（两个端点都在 `ShrinkV` 里：`T.leaf a ≠ T.leaf b`（`a ≠ b`）、`T.leaf a ≠ w`、`z ≠ T.leaf b`、
+`z ≠ w`（`z` 与 `w` 相邻故不等）。） -/
+theorem shrinkGraph_adj_new {a b : X} (hab : a ≠ b) {w z : T.V}
+    (hbin : T.toCladogram.IsBinary) (haw : T.graph.Adj (T.leaf a) w)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a)
+    (hzb : z ≠ T.leaf b) :
+    (shrinkGraph T a b w z hza).Adj
+      ⟨T.leaf a, ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩⟩
+      ⟨z, ⟨hzb, fun h => (T.graph.loopless.irrefl z) (h ▸ hwz)⟩⟩ :=
+  Or.inr (Or.inl ⟨rfl, rfl⟩)
+
 end Phylo.Stat.NJShrink
