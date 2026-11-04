@@ -3,7 +3,7 @@ Copyright (c) 2026 ASTER LAB. All rights reserved.
 Released under Apache 2.0 license in the file LICENSE.
 Authors: ASTER LAB
 -/
-import Phylo.AttesonRadius
+import Phylo.Stat.CASTERNJStep
 
 /-!
 # `Phylo.Stat.NJShrink` —— L5a 步骤 A：树层樱桃收缩（W46 长程，**进行中**）
@@ -73,6 +73,7 @@ namespace Phylo.Stat.NJShrink
 
 open SimpleGraph
 open NJ NJ.Dissimilarity
+open Phylo.Stat.CASTERNJStep
 
 variable {X : Type u} [Fintype X] [DecidableEq X]
 
@@ -393,5 +394,21 @@ theorem shrinkGraph_adj_leaf_old (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
     · exact absurd h'.1 hzx
   · intro h
     exact shrinkGraph_adj_of_adj T a b w z hza h
+
+/-! ## A8 前置｜归约后的**新垂枝**严格正 -/
+
+/-- ★★ **A8 前置**：归约后「合并标签 `u` 到旧标签 `x`」的距离**严格正**
+（`= ½·δ(x,a) + ½·δ(x,b)`，两个正数之和）。
+
+这正是 `HasPosReal (mergeStep δ a b)` 里**新垂枝**那一项的正性：
+收缩树的合并垂枝权取 `½(w_a+w_b) + w(w,z)`，其第一项由本条保证为正。 -/
+theorem mergeStep_val_merged_pos (δ : Dissimilarity X)
+    (hpos : ∀ x y : X, x ≠ y → 0 < δ.val x y) {a b : X} (hab : a ≠ b)
+    {x : X} (hx : x ≠ a) (hx' : x ≠ b) :
+    0 < (mergeStep δ a b).val (mergeQ a b x) (mergeQ a b b) := by
+  rw [mergeStep_val_merged δ a b hx hx']
+  have h1 : 0 < δ.val x a := hpos x a hx
+  have h2 : 0 < δ.val x b := hpos x b hx'
+  nlinarith
 
 end Phylo.Stat.NJShrink
