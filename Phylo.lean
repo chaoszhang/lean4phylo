@@ -91,6 +91,7 @@ import Phylo.Stat.CASTERInstances
 import Phylo.Stat.CASTERJC69
 import Phylo.Stat.CASTERLM1
 import Phylo.Stat.CASTERNJ
+import Phylo.Stat.CASTERtL1
 import Phylo.Stat.CASTERRateAE
 import Phylo.Stat.CASTERRateBoxAE
 import Phylo.Stat.CASTERTheorem1
