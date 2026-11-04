@@ -119,13 +119,15 @@ def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.
       exact absurd (T.leaf.injective hxe).symm (mergeOld_ne_left y)
     · exact congrArg Sum.inr (Subsingleton.elim x y)
 
-/-- ★★ **A4｜樱桃中点有**第三邻居 `z`（`z` 既不 `= T.leaf a` 也不 `= T.leaf b`）。
+/-- ★★ **A4｜第三邻居 `z` 及**穷尽性**。
 
 `w` 的度是 3（A3），其邻域是三元集；`T.leaf a`、`T.leaf b` 已占两个不同位置
-⇒ 三元集减去这两点后恰剩下**一个**元素 `z`，它就是第三邻居。 -/
+⇒ 三元集减去这两点后恰剩**一个**元素 `z`。结论同时给出**穷尽性**
+（`w` 的每个邻居必是 `leaf a`、`leaf b`、`z` 之一）—— 连通性与无环性都要用它。 -/
 theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
-    ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b := by
+    ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b ∧
+      (∀ v : T.V, T.graph.Adj w v → v = T.leaf a ∨ v = T.leaf b ∨ v = z) := by
   have hdeg : T.graph.degree w = 3 := degree_eq_three T hbin hab haw hbw
   have hcard : (T.graph.neighborFinset w).card = 3 := by
     rw [SimpleGraph.neighborFinset, Set.toFinset_card, SimpleGraph.card_neighborSet_eq_degree, hdeg]
@@ -147,7 +149,7 @@ theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {
   obtain ⟨z', hz'⟩ := Finset.card_eq_one.mp hsd
   have hmem : z' ∈ (({x, y, z} : Finset T.V) \ {T.leaf a, T.leaf b}) := by
     rw [hz']; exact Finset.mem_singleton_self z'
-  refine ⟨z', ?_, ?_, ?_⟩
+  refine ⟨z', ?_, ?_, ?_, ?_⟩
   · have hzw : z' ∈ T.graph.neighborFinset w := by
       rw [hset]; exact (Finset.mem_sdiff.mp hmem).1
     rwa [SimpleGraph.mem_neighborFinset] at hzw
@@ -156,6 +158,19 @@ theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {
   · intro h
     exact (Finset.mem_sdiff.mp hmem).2
       (by rw [h]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _))
+  · intro v hv
+    have hv' : v ∈ ({x, y, z} : Finset T.V) := by
+      rw [← hset, SimpleGraph.mem_neighborFinset]; exact hv
+    by_cases hvv : v ∈ ({T.leaf a, T.leaf b} : Finset T.V)
+    · rw [Finset.mem_insert, Finset.mem_singleton] at hvv
+      rcases hvv with h | h
+      · exact Or.inl h
+      · exact Or.inr (Or.inl h)
+    · refine Or.inr (Or.inr ?_)
+      have hmem2 : v ∈ (({x, y, z} : Finset T.V) \ {T.leaf a, T.leaf b}) :=
+        Finset.mem_sdiff.mpr ⟨hv', hvv⟩
+      rw [hz'] at hmem2
+      exact Finset.mem_singleton.mp hmem2
 
 /-! ## A6｜收缩后的图 = 诱导子图 ＋ 一条 `leaf a — z` -/
 
