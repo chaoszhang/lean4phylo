@@ -97,6 +97,35 @@ import Phylo.Stat.CASTERNJStep
 的 `p.IsPath ∧ s(u,v) ∉ p.edges` 剥，且需要 `edges`（边）侧的 API —— 本文件目前全是**顶点**侧器械，
 所以这条路**不建议**。
 
+## ★★★ 更好的路：`IsAcyclic.sup_edge_of_not_reachable`（第 27 轮探到，**从这里继续**）
+
+原本以为 A6g 只能走「边数记账」（要新建 `Sym2` 边侧地基，60–100 行）。**不必** ——
+Mathlib 有两条现成引理，把 A6g 压成约 40 行：
+
+```lean
+@SimpleGraph.IsAcyclic.induce : G.IsAcyclic → ∀ (s : Set V), (induce s G).IsAcyclic
+@SimpleGraph.IsAcyclic.sup_edge_of_not_reachable :
+    ¬G.Reachable u v → G.IsAcyclic → (G ⊔ edge u v).IsAcyclic
+```
+
+**路线**（`shrinkGraph` 的结构从出生就是为它准备的：诱导 ＋ 一条边）：
+
+1. `T.graph.induce {v | v ≠ leaf b ∧ v ≠ w}` 无环 —— `IsAcyclic.induce`（`T.toCladogram.isTree.isAcyclic`）；
+2. `shrinkGraph = 上者 ⊔ edge ⟨leaf a⟩ ⟨z⟩` —— 逐点 `ext`，`sup_adj` / `induce_adj` / `edge_adj` 三件套；
+3. `⟨leaf a⟩` 在诱导子图里是**孤点**（唯一 `T`-邻居 `w` 已删，`leaf_a_adj_eq_midpoint`）⇒ 与 `⟨z⟩` **不连通**；
+4. ⇒ `IsAcyclic.sup_edge_of_not_reachable` 收口。
+
+⇒ **边数记账可以整个跳过**（`card_shrinkV` 仍有用：`dist` 记账要用顶点数）。
+
+⚠️ 试写时的三个坑（第 27 轮实测，本轮因上下文耗尽未收口，已 `git checkout` 回滚）：
+* `ext u v` 后 `Subtype.ext_iff` 会把 `u = ⟨leaf a,·⟩` 化成 `u.1 = leaf a`，三支 `Or` 的
+  `⟨h1,h2⟩` 配对会错位 ⇒ 建议 `simp only [...]` 之后直接 `tauto`，**别手写** `constructor/rintro`；
+* 「孤点 ⇒ 不连通」要对走法 `cases p`（**不能** `induction p`，会报
+  「Index in target's type is not a variable」）；
+* `sup_edge_of_not_reachable` 是 **`IsAcyclic` 的字段**，写法
+  `SimpleGraph.IsAcyclic.sup_edge_of_not_reachable hnr hacyc _`（`hnr` 在前）。
+
+
 
 -/
 
