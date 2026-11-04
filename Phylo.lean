@@ -93,6 +93,7 @@ import Phylo.Stat.CASTERJC69
 import Phylo.Stat.CASTERLM1
 import Phylo.Stat.CASTERNJ
 import Phylo.Stat.CASTERNJStep
+import Phylo.Stat.NJShrink
 import Phylo.Stat.CASTERD
 import Phylo.Stat.CASTERFourPointN
 import Phylo.Stat.CASTERtL1
