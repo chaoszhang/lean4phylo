@@ -202,4 +202,29 @@ theorem shrinkGraph_adj_new {a b : X} (hab : a ≠ b) {w z : T.V}
       ⟨z, ⟨hzb, fun h => (T.graph.loopless.irrefl z) (h ▸ hwz)⟩⟩ :=
   Or.inr (Or.inl ⟨rfl, rfl⟩)
 
+/-- ★★★ **A6e｜走法转移（连通性的引擎）**：若 `T` 里一条走法 `p : x → y` 的**所有顶点**都
+避开 `T.leaf b` 与 `w`，则它整条落进收缩图，给出 `⟨x,·⟩ → ⟨y,·⟩` 的走法。
+
+按走法结构归纳（`Walk.nil` / `Walk.cons`）；每个旧边用 `shrinkGraph_adj_of_adj`（`Or.inl`）搬过来。 -/
+theorem exists_walk_shrink (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) {x y : T.V}
+    (p : T.graph.Walk x y) :
+    (∀ v ∈ p.support, v ≠ T.leaf b ∧ v ≠ w) →
+      ∀ (hx : x ≠ T.leaf b ∧ x ≠ w) (hy : y ≠ T.leaf b ∧ y ≠ w),
+        Nonempty ((shrinkGraph T a b w z hza).Walk ⟨x, hx⟩ ⟨y, hy⟩) := by
+  induction p with
+  | nil => intro _ hx _; exact ⟨SimpleGraph.Walk.nil⟩
+  | @cons u v w' h q ih =>
+      intro hsupp hx hy
+      have hsub : ∀ t ∈ q.support, t ≠ T.leaf b ∧ t ≠ w := by
+        intro t ht
+        exact hsupp t (by
+          rw [SimpleGraph.Walk.support_cons]
+          exact List.mem_cons_of_mem _ ht)
+      have hv : v ≠ T.leaf b ∧ v ≠ w := by
+        exact hsupp v (by
+          rw [SimpleGraph.Walk.support_cons]
+          exact List.mem_cons_of_mem _ (SimpleGraph.Walk.start_mem_support q))
+      obtain ⟨q'⟩ := ih hsub hv hy
+      exact ⟨SimpleGraph.Walk.cons (shrinkGraph_adj_of_adj T a b w z hza h) q'⟩
+
 end Phylo.Stat.NJShrink
