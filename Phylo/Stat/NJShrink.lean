@@ -647,4 +647,42 @@ theorem card_shrinkV {b : X} {w : T.V} (hne : T.leaf b ≠ w) :
     omega
   omega
 
+/-! ## A6g｜收缩图**无环**（`sup_edge_of_not_reachable` 路线） -/
+
+/-- ★★★ **A6g `IsAcyclic`**：收缩图无环。
+
+`shrinkGraph` 的定义正是「诱导 ＋ 一条边」，于是：
+* `IsAcyclic.induce`：诱导子图继承 `T` 的无环性；
+* `⟨T.leaf a, ·⟩` 在诱导子图里是**孤点**（唯一的 `T`-邻居 `w` 已被删）⇒ 与 `⟨z, ·⟩` 不连通
+  （对走法 `cases`：`nil` 要求两端相等（与 `z ≠ leaf a` 矛盾），`cons` 要求 `⟨leaf a⟩` 有邻居（与孤点矛盾））；
+* `IsAcyclic.sup_edge_of_not_reachable`：往无环图里加一条「两端不连通」的边仍无环。 -/
+theorem shrinkGraph_isAcyclic (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w) :
+    (shrinkGraph T a b w z hza).IsAcyclic := by
+  have hza_mem : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+  have hz_mem : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
+  have hEq : shrinkGraph T a b w z hza
+      = (T.graph.induce {v : T.V | v ≠ T.leaf b ∧ v ≠ w})
+        ⊔ SimpleGraph.edge ⟨T.leaf a, hza_mem⟩ ⟨z, hz_mem⟩ := by
+    ext u v
+    simp only [shrinkGraph, SimpleGraph.sup_adj, SimpleGraph.induce_adj, SimpleGraph.edge_adj,
+      Subtype.ext_iff]
+    aesop
+  have hiso : ∀ v : ShrinkV T b w,
+      ¬ (T.graph.induce {v : T.V | v ≠ T.leaf b ∧ v ≠ w}).Adj ⟨T.leaf a, hza_mem⟩ v := by
+    intro v hv
+    rw [SimpleGraph.induce_adj] at hv
+    exact v.2.2 (leaf_a_adj_eq_midpoint T haw v.1 hv)
+  have hnr : ¬ (T.graph.induce {v : T.V | v ≠ T.leaf b ∧ v ≠ w}).Reachable
+      ⟨T.leaf a, hza_mem⟩ ⟨z, hz_mem⟩ := by
+    rintro ⟨p⟩
+    cases p with
+    | nil => exact absurd rfl hza
+    | cons h _ => exact hiso _ h
+  rw [hEq]
+  exact SimpleGraph.IsAcyclic.sup_edge_of_not_reachable hnr
+    (T.toCladogram.isTree.isAcyclic.induce _)
+
 end Phylo.Stat.NJShrink
