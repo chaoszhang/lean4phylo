@@ -173,4 +173,58 @@ omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
 @[simp] theorem relabelCladogram_graph (T : Cladogram X) (e : X ≃ Y) :
     (relabelCladogram T e).graph = T.graph := rfl
 
+/-! ## B-1d｜`graft_shrink_iso` 需要的三条**度事实**
+
+（B-3 的 9 类邻接情形全靠它们；与 `NJShrink.shrinkGraph` 的显示式定义配着用。） -/
+
+variable {T : Phylogram.{0, 0} X} {a b : X} {w z : T.V}
+
+/-- ★★ **樱桃中点的邻居恰是 `{T.leaf a, T.leaf b, z}`**。
+
+`deg w = 3`（★★★ `NJShrink.degree_eq_three`，用 `IsBinary`），且三个点是**已知**的邻点、
+两两互异 ⇒ 邻居集 `⊆ {…}` 且同为三元 ⇒ 相等。 -/
+theorem midpoint_neighborFinset (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) :
+    T.graph.neighborFinset w = ({T.leaf a, T.leaf b, z} : Finset T.V) := by
+  have h3 : T.graph.degree w = 3 := NJShrink.degree_eq_three T hbin hab haw hbw
+  have hcard : (T.graph.neighborFinset w).card = 3 := by
+    rw [SimpleGraph.card_neighborFinset_eq_degree]
+    exact h3
+  have hdist : ({T.leaf a, T.leaf b, z} : Finset T.V).card = 3 := by
+    have hab' : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+    have h1 : T.leaf a ∉ ({T.leaf b, z} : Finset T.V) := by
+      simp only [Finset.mem_insert, Finset.mem_singleton, not_or]
+      exact ⟨hab', Ne.symm hza⟩
+    have h2 : T.leaf b ∉ ({z} : Finset T.V) := by
+      simp only [Finset.mem_singleton]
+      exact Ne.symm hzb
+    rw [Finset.card_insert_of_notMem h1, Finset.card_insert_of_notMem h2,
+      Finset.card_singleton]
+  have hsub : ({T.leaf a, T.leaf b, z} : Finset T.V) ⊆ T.graph.neighborFinset w := by
+    intro v hv
+    simp only [Finset.mem_insert, Finset.mem_singleton] at hv
+    rcases hv with hv1 | hv2 | hv3
+    · rw [hv1]; exact (SimpleGraph.mem_neighborFinset T.graph w (T.leaf a)).mpr haw.symm
+    · rw [hv2]; exact (SimpleGraph.mem_neighborFinset T.graph w (T.leaf b)).mpr hbw.symm
+    · rw [hv3]; exact (SimpleGraph.mem_neighborFinset T.graph w z).mpr hwz
+  exact (Finset.eq_of_subset_of_card_le hsub (by omega)).symm
+
+/-- ★★★ **`w` 的邻接刻画**：`Adj w v ↔ v ∈ {leaf a, leaf b, z}`。 -/
+theorem midpoint_adj_iff (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (v : T.V) :
+    T.graph.Adj w v ↔ (v = T.leaf a ∨ v = T.leaf b ∨ v = z) := by
+  rw [← SimpleGraph.mem_neighborFinset,
+    midpoint_neighborFinset hab hbin haw hbw hwz hza hzb]
+  simp only [Finset.mem_insert, Finset.mem_singleton]
+
+/-- ★★ **樱桃的两片叶不相邻**（否则 `leaf b` 的唯一邻居 `w` 就成了叶，与 `deg w = 3` 矛盾）。 -/
+theorem not_adj_cherry_leaves (hab : a ≠ b) (_hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
+    ¬ T.graph.Adj (T.leaf a) (T.leaf b) := by
+  intro h
+  have hbw' : T.leaf b = w := NJShrink.leaf_a_adj_eq_midpoint T haw (T.leaf b) h
+  exact NJShrink.not_isLeaf_of_two_adj T hab haw hbw ⟨b, hbw'⟩
+
 end Phylo.Stat.NJRun
