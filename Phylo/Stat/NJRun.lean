@@ -264,4 +264,59 @@ B-3 的 `leaf_compat` 与全部邻接情形都靠这两条把 `⟨·, ·⟩` 的
     {w : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (u : Unit) :
     (NJShrink.leafShrink T hbin hab haw hbw (Sum.inr u)).1 = T.leaf a := rfl
 
+/-! ### B-3 的 **inl–inl** 情形
+
+`shrinkGraph` 的邻接是**显示式**析取
+`T.Adj u.1 v.1 ∨ (u.1 = leaf a ∧ v.1 = z) ∨ (u.1 = z ∧ v.1 = leaf a)`；
+换名 `u.1 ↦ (if u.1 = leaf a then w else u.1)` 之后，「假边」`leaf a — z` 恰变成真边 `w — z`。
+四个子情形分别用 `leaf_a_adj_eq_midpoint`（`leaf a` 的唯一邻居是 `w`）与
+★ `midpoint_adj_iff`（`w` 的邻居恰是三点）。 -/
+theorem shrinkGraph_adj_rename (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (u v : NJShrink.ShrinkV T b w) :
+    (NJShrink.shrinkGraph T a b w z hza).Adj u v ↔
+      T.graph.Adj (if u.1 = T.leaf a then w else u.1)
+        (if v.1 = T.leaf a then w else v.1) := by
+  classical
+  rcases Classical.em (u.1 = T.leaf a) with hu | hu <;>
+    rcases Classical.em (v.1 = T.leaf a) with hv | hv
+  · have huv : u = v := Subtype.ext (hu.trans hv.symm)
+    subst huv
+    have hw : (if u.1 = T.leaf a then w else u.1) = w := ite_eq_left hu
+    rw [hw]
+    exact ⟨fun h => absurd h ((NJShrink.shrinkGraph T a b w z hza).loopless.irrefl u),
+           fun h => absurd h (T.graph.loopless.irrefl w)⟩
+  · rw [ite_eq_left hu, ite_eq_right hv]
+    have hL : (NJShrink.shrinkGraph T a b w z hza).Adj u v ↔ v.1 = z := by
+      constructor
+      · rintro (h1 | ⟨h2, h3⟩ | ⟨h2, h3⟩)
+        · exact absurd (NJShrink.leaf_a_adj_eq_midpoint T haw v.1 (hu ▸ h1)) v.2.2
+        · exact h3
+        · exact absurd (hu ▸ h2) (fun h => hza h.symm)
+      · intro hz; exact Or.inr (Or.inl ⟨hu, hz⟩)
+    have hR : T.graph.Adj w v.1 ↔ v.1 = z := by
+      rw [midpoint_adj_iff hab hbin haw hbw hwz hza hzb]
+      simp [hv, v.2.1]
+    exact hL.trans hR.symm
+  · rw [ite_eq_right hu, ite_eq_left hv]
+    have hL : (NJShrink.shrinkGraph T a b w z hza).Adj u v ↔ u.1 = z := by
+      constructor
+      · rintro (h1 | ⟨h2, h3⟩ | ⟨h2, h3⟩)
+        · exact absurd (NJShrink.leaf_a_adj_eq_midpoint T haw u.1 (hv ▸ h1.symm)) u.2.2
+        · exact absurd (hv ▸ h3) (fun h => hza h.symm)
+        · exact h2
+      · intro hz; exact Or.inr (Or.inr ⟨hz, hv⟩)
+    have hR : T.graph.Adj u.1 w ↔ u.1 = z := by
+      rw [SimpleGraph.adj_comm, midpoint_adj_iff hab hbin haw hbw hwz hza hzb]
+      simp [hu, u.2.1]
+    exact hL.trans hR.symm
+  · rw [ite_eq_right hu, ite_eq_right hv]
+    constructor
+    · rintro (h1 | h2 | h3)
+      · exact h1
+      · exact absurd h2.1 hu
+      · exact absurd h3.2 hv
+    · exact Or.inl
+
 end Phylo.Stat.NJRun
