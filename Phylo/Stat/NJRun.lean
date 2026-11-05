@@ -95,7 +95,7 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
 | B-3 | ★ **`graft_shrink_iso`**：`Iso (graft (shrink T)) T`（本步最难） | 200 | **✅ W47**（实测 ≈240 行） |
 | B-4 | `njRun`（`Nat` 结构化递降）＋ `njRun_correct_additive` | 120 | **✅ W47**（实测 ≈210 行） |
 
-**W47 实测合计 ≈ 500 行**（本文件现 852 行，含方案头与文档）。派单未给预算；
+**W47 实测合计 ≈ 500 行**（含方案头与文档）。派单未给预算；
 W46 估的 80–120 行**明显偏低**，因为当时没算
 `graft_shrink_iso` —— 它是「`isotopic` 的逆手术」在 `Cladogram` 层的显式同构）。
 
@@ -106,6 +106,31 @@ W46 估的 80–120 行**明显偏低**，因为当时没算
 `φ (inl ⟨v, _⟩) = if v = T.leaf a then w else v`、`φ (inr 0) = T.leaf a`、`φ (inr 1) = T.leaf b`。
 邻接的三类情形各用一条度事实：`deg (leaf a) = 1`（唯一邻居 `w`）、`deg w = 3`
 （邻居恰是 `leaf a`、`leaf b`、`z`，★★★ `NJShrink.degree_eq_three`）。
+
+## 5′ 引用口径（★ 每一行号都经协调侧 `sed -n` 现场核对，2026-11-05 W47 补）
+
+本文件的主定理是 **NJ 对可加矩阵的正确性**，出处必须按下面写，**不许含糊**：
+
+* **主定理** `njRun_correct_additive` ＝ **Studier & Keppler 1988**
+  （`references/md/StudierKeppler1988_NoteNeighborJoiningAlgorithm.md`）
+  · **`:20-22`** 定理陈述：「NJ method, for estimating an additive tree from a distance matrix D.
+    If D is treelike …, then the NJ method correctly reconstructs」；
+  · **`:321-329`** 证明骨架：「The theorem is easily verified for any tree in which N ≤ 4, so let N ≥ 5」。
+  **原假设 = 「all branches are positive」＋ 二叉** ⇒ 正是本文件的 `hw`（边权全正）与 `hbin`（`IsBinary`）。
+  ⚠️ 这也是为什么 `njRun_correct_additive` 带 `hbin`：**不是**我们的额外要求，是文献的原假设。
+* **单步**（`Q` 的最小对是樱桃）＝ **Mihaescu–Levy–Pachter 2006**
+  （`references/md/MihaescuLevyPachter2006_WhyNeighborJoiningWorks.md`）**`:135-139` Theorem 1**
+  —— 原文把这条同时归于 Saitou–Nei [24] 与 Studier–Keppler [28]。
+  库内同一句的无条件形态是 ★★★ `maxZCherryCore`（`Phylo/Algorithm/NJHardCore.lean:308`）；
+  本文件经 ★★★ `NJShrink.isCherry_of_njStep` 使用它。
+* **归约**（θ = ½）＝ MLP2006 **`:141-148`**：「replace the putative cherry a and b with a leaf j_ab,
+  and construct a new dissimilarity map where δ(i, j_ab) = ½(δ(i,a) + δ(i,b))」＝ `mergeStep`。
+* **基例的差异要说清**：SK1988 的基例是 `N ≤ 4`，**本实现用 `card = 3`**（`njBase`：二叉树上三叶
+  拓扑唯一），`card = 4` 仍走递归（归约到 3）。比文献多走一轮，但基例的「拓扑唯一」是免费的
+  （★★ `Cladogram.iso_of_card_eq_three`）。这是**实现选择**，不是与文献的分歧。
+* ⚠️ **不许把 Saitou–Nei 1987 当证明出处**：SK1988 **`:46`** 逐字说 SN 的证明
+  「is incorrect. We describe the error and supply a correct proof below」，**`:315`** 说它
+  「misapply the induction」⇒ SN1987 只引**算法本身**（「SN1987 提出 NJ」），不引证明。
 
 ## 6 忠实性边界（★ 写在这里，别误传）
 

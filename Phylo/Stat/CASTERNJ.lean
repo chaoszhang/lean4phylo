@@ -40,7 +40,7 @@ def njAdditiveGap : Prop := ∀ (T : Cladogram X) (w : …), (∀ e, 0 < w e) �
 ## 引用口径（派单 §3.8，★ 必须照此写）
 
 * **定理本体**（NJ 对可加矩阵正确）：**Studier & Keppler 1988**
-  （`references/pdf/StudierKeppler1988_NoteNeighborJoiningAlgorithm.md` `:20-22`），
+  （`references/md/StudierKeppler1988_NoteNeighborJoiningAlgorithm.md` `:20-22`），
   假设「all branches are positive」= 本文件的 `HasPositiveRealization`。
 * **单步**（Q 的最小对是樱桃）：**Mihaescu–Levy–Pachter 2006** `:135-139` **Theorem 1**；
   与库内 ★★★ `maxZCherryCore`（`Phylo/Algorithm/NJHardCore.lean:308`，**无条件**）同一句。
