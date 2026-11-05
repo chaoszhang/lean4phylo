@@ -226,11 +226,11 @@ def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.
 `w` 的度是 3（A3），其邻域是三元集；`T.leaf a`、`T.leaf b` 已占两个不同位置
 ⇒ 三元集减去这两点后恰剩**一个**元素 `z`。结论同时给出**穷尽性**
 （`w` 的每个邻居必是 `leaf a`、`leaf b`、`z` 之一）—— 连通性与无环性都要用它。 -/
-theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+theorem exists_third_of_degree {a b : X} (hab : a ≠ b) {w : T.V}
+    (hdeg : T.graph.degree w = 3)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
     ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b ∧
       (∀ v : T.V, T.graph.Adj w v → v = T.leaf a ∨ v = T.leaf b ∨ v = z) := by
-  have hdeg : T.graph.degree w = 3 := degree_eq_three T hbin hab haw hbw
   have hcard : (T.graph.neighborFinset w).card = 3 := by
     rw [SimpleGraph.neighborFinset, Set.toFinset_card, SimpleGraph.card_neighborSet_eq_degree, hdeg]
   obtain ⟨x, y, z, hxy, hxz, hyz, hset⟩ := Finset.card_eq_three.mp hcard
@@ -273,6 +273,12 @@ theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {
         Finset.mem_sdiff.mpr ⟨hv', hvv⟩
       rw [hz'] at hmem2
       exact Finset.mem_singleton.mp hmem2
+
+theorem exists_third (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
+    ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b ∧
+      (∀ v : T.V, T.graph.Adj w v → v = T.leaf a ∨ v = T.leaf b ∨ v = z) :=
+  exists_third_of_degree T hab (degree_eq_three T hbin hab haw hbw) haw hbw
 
 /-! ## A6｜收缩后的图 = 诱导子图 ＋ 一条 `leaf a — z` -/
 
