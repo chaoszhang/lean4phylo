@@ -878,4 +878,53 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
       = njRunAux (Fintype.card X) X δ (two_le_of_three hcard) hcard le_rfl := rfl
   rwa [hval]
 
+/-! ## C｜★★ **非二叉 NJ 的终点命题**（W48 新登记 · 显式缺口）
+
+★★★ `njRun_correct_additive` 的结论是 `Nonempty (Iso (njRun δ hcard) T.toCladogram)`。
+**`T` 非二叉时这个命题是假的**：`njRun` 的输出必然是二叉的（`graftCladogram` 每轮挂两片新叶，
+基例 `ofCompatibleSplits ∅` 也二叉），二叉与非二叉不可能同构。
+所以「非二叉 NJ 正确性」**不能用 `Iso` 陈述**；正确形态是 **split 包含（输出是 `T` 的精化）**。
+
+★ **与派单的差别（`★D` 条款）**：本 `def` 的陈述**逐字照抄派单**（未改一字）；
+但派单说「二叉情形由 `iso_of_isSplitOf_iff` 直接推出」——**方向反了**：
+`iso_of_isSplitOf_iff` 是「split 系统相同 ⇒ 同构」（`SplitsDetermineTree.lean:652`），
+这里要的是「同构 ⇒ split 系统相同」，即 ★ `Phylo.SBD.iso_preserves_splits_gap`
+（`SupertreeLimits.lean:573`，`Iso T T' → ∀ s, T.IsSplitOf s ↔ T'.IsSplitOf s`）。
+
+**非空转（定性）**：`3 ≤ card X` 时 `njRun δ hcard` 是真树，由
+★ `Cladogram.exists_isSplitOf_singleton`（`Split.lean:842`）它在**每个叶**上展示一条平凡 split
+⇒ 前提 `(njRun δ hcard).IsSplitOf s` 可满足（见 `njRun_isSplitOf_exists`）。 -/
+def njRunRefinesGap : Prop :=
+  ∀ (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X) (T : Phylogram.{0, 0} X),
+    (∀ e : Edge T.toCladogram, 0 < T.w e) →
+      (∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) →
+        ∀ s : Split X, (njRun δ hcard).IsSplitOf s → T.toCladogram.IsSplitOf s
+
+/-- ★ **C 的前提不空转**：`njRun δ hcard` 的 split 系统非空 —— 每个叶 `x` 都给出一条
+平凡 split `s`（`s.sideA = {x}`）。
+
+（这把 `njRunRefinesGap` 的**结论侧量词**钉在非空集合上；不是「所有 `s` 都被前提排除」那种空转。） -/
+theorem njRun_isSplitOf_exists (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X)
+    (x : X) : ∃ s : Split X, (njRun δ hcard).IsSplitOf s := by
+  haveI : Nontrivial X := by
+    have h1 : 1 < (Finset.univ : Finset X).card := by
+      rw [Finset.card_univ]; omega
+    obtain ⟨a, -, b, -, hab⟩ := Finset.one_lt_card.mp h1
+    exact ⟨a, b, hab⟩
+  obtain ⟨s, hs, -⟩ := (njRun δ hcard).exists_isSplitOf_singleton x
+  exact ⟨s, hs⟩
+
+/-- ★★ **C 的二叉半（免费）**：`T` 二叉时，`njRun_correct_additive` 给出 `Iso`，
+再由 ★ `SBD.iso_preserves_splits_gap`（同构 ⇒ 同 split 系统）得到 split 包含。
+
+这条**不算收口 C**（非二叉半才是缺口），但把 C 的缺口面缩到「非二叉」一支。 -/
+theorem njRunRefinesGap_of_binary (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X)
+    (T : Phylogram.{0, 0} X) (hw : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hbin : T.toCladogram.IsBinary)
+    (hreal : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    ∀ s : Split X, (njRun δ hcard).IsSplitOf s → T.toCladogram.IsSplitOf s := by
+  intro s hs
+  obtain ⟨e⟩ := njRun_correct_additive δ hcard T hw hbin hreal
+  exact (SBD.iso_preserves_splits_gap (njRun δ hcard) T.toCladogram e s).mp hs
+
 end Phylo.Stat.NJRun
