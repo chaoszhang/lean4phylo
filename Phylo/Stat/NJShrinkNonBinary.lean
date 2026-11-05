@@ -490,4 +490,13 @@ theorem shrinkPhylogramNB_dist_self {b : X} {w : T.V} (δ : NJ.Dissimilarity X) 
   rw [Phylogram.dist_self]
   exact ((Phylo.Stat.CASTERNJStep.mergeStep δ a b).diag u).symm
 
+/-- ★ **唯一边 `{leaf a, w}` 的权就是 `½(w_a + w_b)`**（`shrinkWNB` 的 `if_pos` 支；
+G6c「新–旧」支要用它）。 -/
+theorem shrinkWNB_new {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b) :
+    shrinkWNB (T := T) hab hwb
+        s((⟨T.leaf a, fun h => hab (T.leaf.injective h)⟩ : ShrinkVNB T b), ⟨w, hwb⟩)
+      = shrinkNewWNB (T := T) a b w := by
+  unfold shrinkWNB
+  rw [if_pos rfl]
+
 end Phylo.Stat.NJShrinkNonBinary
