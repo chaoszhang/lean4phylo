@@ -227,4 +227,19 @@ theorem not_adj_cherry_leaves (hab : a ≠ b) (_hbin : T.toCladogram.IsBinary)
   have hbw' : T.leaf b = w := NJShrink.leaf_a_adj_eq_midpoint T haw (T.leaf b) h
   exact NJShrink.not_isLeaf_of_two_adj T hab haw hbw ⟨b, hbw'⟩
 
+/-! ### B-3 的显示式求值件
+
+收缩树的 `leaf`（★★ `NJShrink.leafShrink`）是**逐构造子**定义的，故 `Subtype.val` 直接归约。
+B-3 的 `leaf_compat` 与全部邻接情形都靠这两条把 `⟨·, ·⟩` 的证明成分抹掉（`rfl` 即可，
+这正是「显示式归约」层要钉死的第一件事）。 -/
+
+@[simp] theorem leafShrink_val_inl (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    {x : NJ.Dissimilarity.MergeOld X a b} :
+    (NJShrink.leafShrink T hbin hab haw hbw (Sum.inl x)).1 = T.leaf x.1 := rfl
+
+@[simp] theorem leafShrink_val_inr (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (u : Unit) :
+    (NJShrink.leafShrink T hbin hab haw hbw (Sum.inr u)).1 = T.leaf a := rfl
+
 end Phylo.Stat.NJRun
