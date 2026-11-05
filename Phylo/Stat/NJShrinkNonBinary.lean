@@ -116,7 +116,7 @@ graph' := T.graph.induce (fun v => v ≠ T.leaf b)      -- `SimpleGraph.induce`
 | **G2** | 无环（`IsCycle.map` 沿 `Subtype.val` 搬回 `T`）＋ 连通（走法提升 `exists_walk_nb`，枢纽 `w`，路径避 `leaf b` 用 `NJShrink.not_mem_support_of_degree_one`） | 150–220 | **✅ 已落**（实测 75 行） |
 | **G3** | 度数（`w` 减 1、其余不变）：`degree_nb_of_ne`（`Finset.card_bij`，关键：`leaf b` 的唯一邻居是 `w` ⇒ `¬Adj v (leaf b)`）／`degree_nb_midpoint`（`neighborFinset w`.erase `leaf b` 的双射） | 100–140 | **✅ 已落**（实测 62 行） |
 | **G4** | `no_degree_two` ＋ `leaf_iff_degree_one` ＋ ★★★ `shrinkCladogramNB : Cladogram (MergeIdx X a b)` | 60–90 | **✅ 已落**（实测 100 行） |
-| **G5** | 边权 `w'`（旧边不变、`(leaf a, w)` 改 `½(w_a+w_b)`）＋ 正性 | 50–70 | 待做 |
+| **G5** | 边权 `shrinkWNB`（唯一边 `{leaf a, w}` 改 `½(w_a+w_b)`，其余 `T.wExt`）＋ 非负性 ＋ ★★★ `shrinkPhylogramNB : Phylogram (MergeIdx X a b)` | 50–70 | **✅ 已落**（实测 75 行） |
 | **G6** | `dist` 三支 | 120–180 | 待做 |
 | **G7** | 装配 `HasPosReal (mergeStep δ a b)`（`degree w` 分情形，`= 3` 支用 G0） | 40 | 待做 |
 | | **合计** | **600–820** | G0–G3 已落（实测 125 行） |
@@ -407,5 +407,72 @@ noncomputable def shrinkCladogramNB {b : X} {w : T.V} (hab : a ≠ b)
   leaf := leafNB T hab
   leaf_iff_degree_one := fun v => leaf_iff_degree_one_nb hab hbw hwb hdeg v
   no_degree_two := fun v => no_degree_two_nb hbw hwb hdeg v
+
+/-! ## G5｜边权：旧边不变，唯一边 `{leaf a, w}` 改 `½(w_a + w_b)` -/
+
+/-- ★★ **合并后的垂枝** `½(w_a + w_b)`。
+
+★ 与二叉支的 `NJShrink.shrinkNewW` 的差别：那边还要**加上** `d(w,z)`（因为中点 `w` 被抑制、
+新叶改挂到第三邻居 `z` 上）；这里 `w` **保留**，故**不加**任何东西。 -/
+noncomputable def shrinkNewWNB (a b : X) (w : T.V) : ℝ :=
+  (1 / 2) * (T.dist (T.leaf a) w + T.dist (T.leaf b) w)
+
+/-- ★★ **新垂枝严格正**：`d(a,w)`、`d(b,w)` 两条边权都正。 -/
+theorem shrinkNewWNB_pos {a b : X} {w : T.V} (haw : T.graph.Adj (T.leaf a) w)
+    (hbw : T.graph.Adj (T.leaf b) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    0 < shrinkNewWNB (T := T) a b w := by
+  have h1 : 0 < T.dist (T.leaf a) w := by
+    rw [Phylo.TreeDist.dist_eq_w_of_adj T haw]; exact hpos _
+  have h2 : 0 < T.dist (T.leaf b) w := by
+    rw [Phylo.TreeDist.dist_eq_w_of_adj T hbw]; exact hpos _
+  unfold shrinkNewWNB
+  linarith
+
+/-- ★★ **非二叉归约的边权**（作用在 `Sym2 (ShrinkVNB)` 上）：
+唯一边 `{leaf a, w}` 取 ★★ `shrinkNewWNB`，其余旧边取原树的 `T.wExt`。 -/
+noncomputable def shrinkWNB {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b)
+    (e : Sym2 (ShrinkVNB T b)) : ℝ :=
+  if e = s((⟨T.leaf a, fun h => hab (T.leaf.injective h)⟩ : ShrinkVNB T b), ⟨w, hwb⟩) then
+    shrinkNewWNB (T := T) a b w
+  else T.wExt (e.map (Function.Embedding.subtype (fun v : T.V => v ≠ T.leaf b)))
+
+/-- ★★★ **旧边的权就是原树的边权**（`{u,v} ≠ {leaf a, w}` 时）。 -/
+theorem shrinkWNB_old {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b)
+    {u v : T.V} (huv : T.graph.Adj u v)
+    (hu : u ≠ T.leaf b) (hv : v ≠ T.leaf b)
+    (hne : s((⟨u, hu⟩ : ShrinkVNB T b), ⟨v, hv⟩)
+      ≠ s((⟨T.leaf a, fun h => hab (T.leaf.injective h)⟩ : ShrinkVNB T b), ⟨w, hwb⟩)) :
+    shrinkWNB (T := T) hab hwb s((⟨u, hu⟩ : ShrinkVNB T b), ⟨v, hv⟩) = T.wExt s(u, v) := by
+  unfold shrinkWNB
+  rw [if_neg hne, Sym2.map_mk]
+  rfl
+
+/-- ★★ **非二叉归约的权非负**。 -/
+theorem shrinkWNB_nonneg {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (e : Sym2 (ShrinkVNB T b)) :
+    0 ≤ shrinkWNB (T := T) hab hwb e := by
+  unfold shrinkWNB
+  split
+  · exact le_of_lt (shrinkNewWNB_pos haw hbw hpos)
+  · exact Phylo.TreeDist.wExt_nonneg T _
+
+/-! ## G5′｜★★★ 非二叉归约的 `Phylogram` -/
+
+/-- ★★★ **非二叉归约的 `Phylogram`**（拓扑 `shrinkCladogramNB`，边权 `shrinkWNB`）。
+
+`dist` 对齐（`mergeStep`）留到 G6；本定义**只**要求 `w` 与 `w_nonneg`。 -/
+noncomputable def shrinkPhylogramNB {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    Phylogram (NJ.Dissimilarity.MergeIdx X a b) where
+  toCladogram := shrinkCladogramNB (T := T) hab hbw hwb hdeg
+  w := fun e => shrinkWNB (T := T) hab hwb e.1
+  w_nonneg := fun e => shrinkWNB_nonneg (T := T) hab hwb haw hbw hpos e.1
+
+-- 与 `Phylo.BunemanGraft`／`Phylo.NJShrink` 对 `graftCladogram`／`shrinkPhylogram` 的处理一致：
+-- `V`／`graph` 投影要能在 `reducible` 透明层归约（G6／G7 的显示式装配要用）。
+attribute [reducible] shrinkCladogramNB shrinkPhylogramNB
 
 end Phylo.Stat.NJShrinkNonBinary
