@@ -173,6 +173,28 @@ omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
 @[simp] theorem relabelCladogram_graph (T : Cladogram X) (e : X ≃ Y) :
     (relabelCladogram T e).graph = T.graph := rfl
 
+omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
+/-- ★★ **`relabelCladogram` 在「老标号」处取值**：`(relabel C e).leaf (e x) = C.leaf x`
+（B-3 的 `leaf_compat` 与「收缩树的中心」两处都要用它把 `relabel` 剥掉）。 -/
+@[simp] theorem relabelCladogram_leaf_apply (T : Cladogram X) (e : X ≃ Y) (x : X) :
+    (relabelCladogram T e).leaf (e x) = T.leaf x := by
+  rw [relabelCladogram_leaf, Equiv.symm_apply_apply]
+
+/-- ★★ **`mergeIdxEquiv` 在合并标签上不动**（两边都是 `Sum.inr u`）。 -/
+@[simp] theorem mergeIdxEquiv_inr (a b : X) (u : Unit) :
+    mergeIdxEquiv a b (Sum.inr u) = Sum.inr u := rfl
+
+/-- ★★ **`mergeIdxEquiv.symm` 在合并标签上不动**（B-3 里「收缩树的中心」用它）。 -/
+@[simp] theorem mergeIdxEquiv_symm_inr (a b : X) (u : Unit) :
+    (mergeIdxEquiv a b).symm (Sum.inr u) = Sum.inr u := rfl
+
+/-- ★★ **`mergeOldEquiv` 不动分量**（两边子类型的 `.1` 相同）。 -/
+@[simp] theorem mergeOldEquiv_val (a b : X) (x : NJ.Dissimilarity.MergeOld X a b) :
+    ((mergeOldEquiv a b) x).1 = x.1 := rfl
+
+@[simp] theorem mergeOldEquiv_symm_val (a b : X)
+    (x : {y : X // y ≠ a ∧ y ≠ b}) : ((mergeOldEquiv a b).symm x).1 = x.1 := rfl
+
 /-! ## B-1d｜`graft_shrink_iso` 需要的三条**度事实**
 
 （B-3 的 9 类邻接情形全靠它们；与 `NJShrink.shrinkGraph` 的显示式定义配着用。） -/
