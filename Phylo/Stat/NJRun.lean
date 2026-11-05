@@ -116,4 +116,61 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
 
 namespace Phylo.Stat.NJRun
 
+open Phylo NJ
+
+variable {X : Type} [Fintype X] [DecidableEq X]
+
+/-! ## B-1a｜标签集的搬运：`MergeIdx X a b ≃ BunemanShrink X a b`
+
+`MergeIdx X a b = ↥(univ \ {a,b}) ⊕ Unit`（`AttesonRadius.lean:1256`，子类型由 **Finset 归属**给出）
+与 `BunemanShrink X a b = {x // x ≠ a ∧ x ≠ b} ⊕ Unit`（`Buneman.lean:369`，子类型由**命题**给出）
+只差子类型的写法。`graftCladogram`（`BunemanGraft.lean:613`）只吃后者，故补这一条等价
+＋ `Cladogram.relabel`（叶子重标号，顶点集与图**不动**）把递归结果搬过去。 -/
+
+/-- ★★ **`MergeOld X a b ≃ {x // x ≠ a ∧ x ≠ b}`**（Finset 归属 ↔ 命题，恒等映射）。 -/
+def mergeOldEquiv (a b : X) :
+    NJ.Dissimilarity.MergeOld X a b ≃ {x : X // x ≠ a ∧ x ≠ b} where
+  toFun x := ⟨x.1, by
+    have h := x.2
+    rw [Finset.mem_sdiff, Finset.mem_insert, Finset.mem_singleton, not_or] at h
+    exact h.2⟩
+  invFun x := ⟨x.1, by
+    rw [Finset.mem_sdiff, Finset.mem_insert, Finset.mem_singleton, not_or]
+    exact ⟨Finset.mem_univ _, x.2⟩⟩
+  left_inv x := by rfl
+  right_inv x := by rfl
+
+/-- ★★ **`MergeIdx X a b ≃ BunemanShrink X a b`**（两边都是 `_ ⊕ Unit`）。 -/
+def mergeIdxEquiv (a b : X) :
+    NJ.Dissimilarity.MergeIdx X a b ≃ NJ.Dissimilarity.BunemanShrink a b :=
+  Equiv.sumCongr (mergeOldEquiv a b) (Equiv.refl Unit)
+
+variable {Y : Type} [Fintype Y] [DecidableEq Y]
+
+/-- ★★ **叶子重标号**：`Cladogram X ≃ Cladogram Y` 沿标签等价（顶点集、图、树性**全不动**，
+只有 `leaf` 换掉）。这是 `graftCladogram` 之前必须的一层搬运。 -/
+def relabelCladogram (T : Cladogram X) (e : X ≃ Y) : Cladogram Y where
+  V := T.V
+  fintypeV := T.fintypeV
+  decEqV := T.decEqV
+  graph := T.graph
+  decAdj := T.decAdj
+  isTree := T.isTree
+  leaf := e.symm.toEmbedding.trans T.leaf
+  leaf_iff_degree_one := by
+    intro v
+    show (∃ y : Y, T.leaf (e.symm y) = v) ↔ _
+    rw [show (∃ y : Y, T.leaf (e.symm y) = v) ↔ (∃ x : X, T.leaf x = v) from
+      ⟨fun ⟨y, h⟩ => ⟨e.symm y, h⟩, fun ⟨x, h⟩ => ⟨e x, by simpa using h⟩⟩]
+    exact T.leaf_iff_degree_one v
+  no_degree_two := T.no_degree_two
+
+omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
+@[simp] theorem relabelCladogram_leaf (T : Cladogram X) (e : X ≃ Y) (y : Y) :
+    (relabelCladogram T e).leaf y = T.leaf (e.symm y) := rfl
+
+omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
+@[simp] theorem relabelCladogram_graph (T : Cladogram X) (e : X ≃ Y) :
+    (relabelCladogram T e).graph = T.graph := rfl
+
 end Phylo.Stat.NJRun
