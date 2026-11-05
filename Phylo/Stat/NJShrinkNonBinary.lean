@@ -113,7 +113,7 @@ graph' := T.graph.induce (fun v => v ≠ T.leaf b)      -- `SimpleGraph.induce`
 |---|---|---|---|
 | **G0** | 把 `exists_third` 的 `hbin : IsBinary` 换成 `degree w = 3`（`NJShrink.exists_third_of_degree`，旧引理由它派生） | 20 | **✅ 已落**（实测 8 行；`hbin` 在证明里**只**经 `degree_eq_three` 用了一次，纯接口改造） |
 | **G1** | `ShrinkVNB`／`shrinkGraphNB`／`leafNB` ＋ 三条求值引理 | 60 | **✅ 已落**（实测 55 行） |
-| **G2** | 图 ＋ **无环** ＋ **连通** | 150–220 | 待做 |
+| **G2** | 无环（`IsCycle.map` 沿 `Subtype.val` 搬回 `T`）＋ 连通（走法提升 `exists_walk_nb`，枢纽 `w`，路径避 `leaf b` 用 `NJShrink.not_mem_support_of_degree_one`） | 150–220 | **✅ 已落**（实测 75 行） |
 | **G3** | 度数（`w` 减 1、其余不变）：`degree_nb_of_ne`（`Finset.card_bij`，关键：`leaf b` 的唯一邻居是 `w` ⇒ `¬Adj v (leaf b)`）／`degree_nb_midpoint`（`neighborFinset w`.erase `leaf b` 的双射） | 100–140 | **✅ 已落**（实测 62 行） |
 | **G4** | `no_degree_two` ＋ `leaf_iff_degree_one`（`Cladogram` 打包） | 60–90 | 待做 |
 | **G5** | 边权 `w'`（旧边不变、`(leaf a, w)` 改 `½(w_a+w_b)`）＋ 正性 | 50–70 | 待做 |
@@ -266,5 +266,61 @@ theorem degree_nb_midpoint {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w)
       exact hy.2
   change ((shrinkGraphNB T b).neighborFinset ⟨w, hwb⟩).card = T.graph.degree w - 1
   rw [hcard, SimpleGraph.card_neighborFinset_eq_degree]
+
+/-! ## G2｜树性两半：**无环**（子图）＋ **连通**（删叶不断） -/
+
+/-- ★★ **无环**：`T.graph` 的环沿 `Subtype.val` 搬回去仍是环（`Subtype.val` 单射），矛盾。
+
+（`IsCycle.map`：单射图同态把环搬成环；同态就是 `Subtype.val`，`map_rel' := id`。） -/
+theorem isAcyclic_nb {b : X} (hac : T.graph.IsAcyclic) :
+    (shrinkGraphNB T b).IsAcyclic := by
+  intro v c hc
+  let f : (shrinkGraphNB T b) →g T.graph :=
+    { toFun := Subtype.val, map_rel' := fun h => h }
+  exact hac (c.map f) (hc.map (f := f) Subtype.val_injective)
+
+/-- ★★ **走法提升**：`T`-走法若**支撑集不含** `leaf b`，则整段落在新图里
+（每一步都是 `T`-边，且两端都不被删）。 -/
+theorem exists_walk_nb {b : X} {u v : T.V} (p : T.graph.Walk u v)
+    (hu : u ≠ T.leaf b) (hv : v ≠ T.leaf b)
+    (hp : ∀ z ∈ p.support, z ≠ T.leaf b) :
+    Nonempty ((shrinkGraphNB T b).Walk ⟨u, hu⟩ ⟨v, hv⟩) := by
+  induction p with
+  | nil => exact ⟨SimpleGraph.Walk.nil⟩
+  | @cons a c d hadj q ih =>
+      have hc : c ≠ T.leaf b := by
+        refine hp c ?_
+        rw [SimpleGraph.Walk.support_cons hadj q]
+        exact List.mem_cons_of_mem a (SimpleGraph.Walk.start_mem_support q)
+      have hp' : ∀ z ∈ q.support, z ≠ T.leaf b := by
+        intro z hz
+        refine hp z ?_
+        rw [SimpleGraph.Walk.support_cons hadj q]
+        exact List.mem_cons_of_mem a hz
+      obtain ⟨r⟩ := ih hc hv hp'
+      exact ⟨SimpleGraph.Walk.cons
+        (show (shrinkGraphNB T b).Adj ⟨a, hu⟩ ⟨c, hc⟩ from hadj) r⟩
+
+/-- ★★★ **连通**：删**叶**不破坏连通。
+
+取 `w` 作枢纽：任一点 `u` 到 `w` 的 `T`-路**不含** `leaf b`
+（`leaf b` 度为 1、而两端都不是它 ⇒ `not_mem_support_of_degree_one`），故整段可提升到新图。 -/
+theorem connected_nb {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b)
+    (hconn : T.graph.Connected) : (shrinkGraphNB T b).Connected := by
+  have hdb : T.graph.degree (T.leaf b) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+  have hhub : ∀ u : ShrinkVNB T b,
+      Nonempty ((shrinkGraphNB T b).Walk u ⟨w, hwb⟩) := by
+    intro u
+    obtain ⟨p, hp, -⟩ := T.toCladogram.existsUnique_path u.1 w
+    have hlb : T.leaf b ∉ p.support :=
+      NJShrink.not_mem_support_of_degree_one T hdb p hp u.2 hwb
+    exact exists_walk_nb p u.2 hwb (fun z hz h => hlb (h ▸ hz))
+  rw [SimpleGraph.connected_iff]
+  refine ⟨?_, ⟨⟨w, hwb⟩⟩⟩
+  intro u v
+  obtain ⟨q1⟩ := hhub u
+  obtain ⟨q2⟩ := hhub v
+  exact ⟨q1.append q2.reverse⟩
 
 end Phylo.Stat.NJShrinkNonBinary
