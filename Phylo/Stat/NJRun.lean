@@ -90,12 +90,13 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
 | 步 | 内容 | 估 | 状态 |
 |---|---|---|---|
 | B-0 | 本方案 commit | — | ✅ W47 |
-| B-1 | `Cladogram.relabel` ＋ `Cladogram.iso_of_card_le_three` | 90 | 待做 |
-| B-2 | `graftCladogram_iso_congr`（iso 沿 graft 抬升） | 80 | 待做 |
-| B-3 | ★ **`graft_shrink_iso`**：`Iso (graft (shrink T)) T`（本步最难） | 200 | 待做 |
-| B-4 | `njRun`（良基递归）＋ `njRun_correct_additive` | 120 | 待做 |
+| B-1 | `Cladogram.relabel` ＋ `Cladogram.iso_of_card_eq_three`（★ 实测：`relabelCladogram` ＋ 搬运件 ＋ B-1d 的三条度事实） | 90 | **✅ W47** |
+| B-2 | `graftCladogram_iso_congr`（iso 沿 graft 抬升） | 80 | **✅ W47**（实测 55 行） |
+| B-3 | ★ **`graft_shrink_iso`**：`Iso (graft (shrink T)) T`（本步最难） | 200 | **✅ W47**（实测 ≈240 行） |
+| B-4 | `njRun`（`Nat` 结构化递降）＋ `njRun_correct_additive` | 120 | **✅ W47**（实测 ≈210 行） |
 
-**合计 ≈ 490 行**（派单未给预算；W46 估的 80–120 行**明显偏低**，因为当时没算
+**W47 实测合计 ≈ 500 行**（本文件现 852 行，含方案头与文档）。派单未给预算；
+W46 估的 80–120 行**明显偏低**，因为当时没算
 `graft_shrink_iso` —— 它是「`isotopic` 的逆手术」在 `Cladogram` 层的显式同构）。
 
 **`graft_shrink_iso` 的关键观测**（B-3 的全部难度都在这里）：
@@ -114,6 +115,9 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
 * 结论里的 `njRun` 是**真递归**（每轮 `njStep` 取 `Q` 最小对并合并），
   **不是**「存在性抽取」：graft 用的 `graftCladogram` 是**无条件的树手术**，
   与「是否存在实现树」无关。
+* **W47 落地状态**：`njRun` 与 ★★★ `njRun_correct_additive` **均已证**（本文件 §B-4a/B-4b），
+  零 `sorry`/`axiom`/`opaque`；公理依赖 `Classical.choice, Quot.sound, propext`
+  （与库内其余 68 条收口定理同一标准集）。
 -/
 
 namespace Phylo.Stat.NJRun
