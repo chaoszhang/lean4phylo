@@ -678,6 +678,23 @@ theorem exDiss_isCherry_01 : exDiss.IsCherry 0 1 := by
   rcases hk with rfl | rfl <;> rcases hl with rfl | rfl <;>
     (simp only [exDiss, exVal]; constructor <;> norm_num)
 
+/-- ★ **反空转见证（W47 M3）**：`exDiss` 上 `(0,2)` **不是**樱桃。
+
+`d(0,2)+d(1,3) = 9+11 = 20 > 10 = d(0,1)+d(2,3)`，故第一条四点不等式不成立。
+
+**为什么这条重要**：★★★ `IsCherrySeparated` 的前提是「`¬ δ.IsCherry k l`」。
+若它在 `|X| = 4` 上**永不成立**，那么 `njSeparationBound` 在小基数上就是**空真**的。
+本定理（配 ★★★ `exDiss_isCherrySeparated_five`，其中 8 个交叉对都走这条分支）
+把「`n = 4` 时前提非空」落成**机器可查**的事实 —— 这正是派单 M3 要求的★反空转试金石。
+
+★ 机械复跑：`grep -n "exDiss_not_isCherry_02" Phylo/AttesonRadius.lean` 可定位本定理；
+`lake env lean` 对 `exDiss.IsCherry 0 2` 做 `decide` 亦得 `false`。 -/
+theorem exDiss_not_isCherry_02 : ¬ exDiss.IsCherry 0 2 := by
+  intro h
+  have h1 := (h.2 1 3 (by decide) (by decide) (by decide) (by decide)).1
+  simp only [exDiss, exVal] at h1
+  norm_num at h1
+
 /-- ★C：真距离矩阵上 `Q` 的六个值 —— 两颗樱桃 `(0,1)、(2,3)` 取 `−40`，
 四个交叉对取 `−30`（`Q(i,j) = 2·d_ij − S(i) − S(j)`）。 -/
 theorem exDiss_Q_01 : exDiss.Q 0 1 = -40 := by

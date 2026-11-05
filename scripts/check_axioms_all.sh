@@ -4,8 +4,8 @@
 #
 #  ★ 与 `axioms_snapshot.sh` 的分工：
 #    · `axioms_snapshot.sh`：**人工挑的 10 条**关键定理，`#print axioms` 逐字比对 —— 精度高、覆盖窄；
-#    · 本脚本：**全部 62 条收口定理**（`_holds` / `_proved` / `_proof` / 含 `_vacuous_`），
-#      由 `scripts/axioms_all.lean` 在 Lean 里遍历环境自动枚举 —— 覆盖全、粗粒度。
+#    · 本脚本：**全部收口定理**（`_holds` / `_proved` / `_proof` / `_additive` / 含 `_vacuous_`；
+#      W47 起 **68 条**），由 `scripts/axioms_all.lean` 在 Lean 里遍历环境自动枚举 —— 覆盖全、粗粒度。
 #    两者互补：抽样那份盯住头条定理，这份保证**没有任何一条收口定理偷偷引入信任公理**。
 #
 #  ★ 判据（两条，都要过）：

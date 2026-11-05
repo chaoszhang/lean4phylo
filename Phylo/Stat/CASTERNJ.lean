@@ -5,6 +5,7 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.CASTERNJStep
 import Phylo.Stat.NJShrink
+import Phylo.Stat.NJRecovers
 
 /-!
 # `Phylo.Stat.CASTERNJ` —— CASTER-NJ 的两条**登记缺口**（W44 · L5a / L5b）
@@ -299,6 +300,151 @@ def njNoiseStep : Prop :=
 theorem njNoiseStep_holds : njNoiseStep (X := X) :=
   fun δ Dtil δmin ε hsep hnear hcard a b h => njConsistencyStep δ Dtil hsep hnear hcard h
 
+/-! ## 2‴. L5b 的第 ① 条 **已证**：`njSeparationBound`
+
+**路线**（与 ★★★ `atteson_lemma11_gap_order_form_holds` 同一套，但把「`Q` 最小点是樱桃」
+的来源从**度量假设** `FourPoint` 换成**实现树**）：
+
+1. ★★ `NJRecovers.exists_njStep`：有限对集上 `Q` 取到最小值 ⇒ 存在 `njStep δ a b`；
+2. ★★★ `NJShrink.isCherry_of_njStep`（树层）＋ 本节 ★★ `isCherry_of_tree_isCherry`（桥）
+   ⇒ **度量层** `δ.IsCherry a b` —— **不需要** `δ.FourPoint`；
+3. 若某非樱桃对 `(k,l)` 也取到 `Q` 的最小值，则它满足 `njStep` ⇒ 同样推出 `δ.IsCherry k l`，矛盾
+   ⇒ 非樱桃对的 `Q` **严格**更大；
+4. 取 `δmin := (min_{非樱桃 (k,l)} (Q(k,l) − Q(a,b))) / (3n) > 0`，
+   系数比较 `3(n−4) ≤ 3n`、`2(n−3) ≤ 3n`；`n = 4` 时 `3(n−4) = 0` 自动成立；
+5. 同一个固定樱桃 `(a,b)` 为**所有**非樱桃对作证（★★★ `disjointPairs_or_sharesOneLabel_of_isCherry`）。
+
+**为什么不需要「度量层的严格四点引理」**（派单 M3 的担忧）：严格性在这里**不是**从四点不等式来的，
+而是从「`Q` 的最小点唯一到樱桃层」来的 —— 实值函数在有限集上的最小值若在两处取到，
+那两处都是最小点，于是**都是**樱桃。⇒ 无需 `strictCherry_of_isBinary_pos_gap_holds`（它是树层的）。
+
+**`|X| = 4` 是否空转**（派单的★反空转试金石）：**不空转**。`4 ≤ |X|` 时
+`δ.IsCherry k l` 要求 `k,l` 之外的每一对都满足四点不等式，**不是**恒真 ——
+库内已有机器证据：★★★ `exDiss_isCherrySeparated_five` 的证明里 8 个交叉对走的是
+`¬ IsCherry` 分支（`Fin 4`、树 `((0,1),(2,3))`）；本文件另给了
+★ `exDiss_not_isCherry_02` 一条显式`¬ IsCherry` 定理。（`|X| ≤ 3` 时量词**才**空转，
+那一支由 ★★ `isCherry_of_card_le_three` 直接处理。） -/
+
+/-- ★★ **`|X| ≤ 3` 时 `IsCherry` 恒成立**（量词空转）：`k ≠ i`、`k ≠ j`、`i ≠ j`
+已经是三个互异点 ⇒ `3 ≤ |X|`，与 `|X| ≤ 2` 矛盾。 -/
+theorem isCherry_of_card_le_two {δ : NJ.Dissimilarity X} (h2 : Fintype.card X ≤ 2)
+    {i j : X} (hij : i ≠ j) : δ.IsCherry i j := by
+  refine ⟨hij, ?_⟩
+  intro k l hki hkj _hl
+  exfalso
+  have h3 : 3 ≤ Fintype.card X := by
+    have h : ({i, j, k} : Finset X).card = 3 :=
+      NJ.Dissimilarity.card_three_elems i j k hij hki.symm hkj.symm
+    calc 3 = ({i, j, k} : Finset X).card := h.symm
+      _ ≤ Fintype.card X := Finset.card_le_card (Finset.subset_univ _)
+  omega
+
+/-- ★★ **桥**：树层的樱桃（`T.IsCherry a b`）在**度量层**也是樱桃（`δ.IsCherry a b`）。
+
+`k ≠ l` 时用 ★★★ `Cladogram.dist_add_le_of_isCherry`（它把两条四点不等式化归成
+樱桃中点 `w` 处的三角不等式）；`k = l` 时两条不等式都退化成 `d(a,b) ≤ d(a,k) + d(b,k)`，
+即 ★★ `Phylogram.dist_triangle`。（`IsCherry` 的 `k,l` **不要求互异**，故这一支不可省。） -/
+theorem isCherry_of_tree_isCherry {T : Phylogram.{0, 0} X} {δ : NJ.Dissimilarity X}
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
+    {a b : X} (hc : T.IsCherry a b) : δ.IsCherry a b := by
+  have hckeep : T.IsCherry a b := hc
+  obtain ⟨hab, -⟩ := hc
+  refine ⟨hab, ?_⟩
+  intro k l hka hkb hla hlb
+  by_cases hkl : k = l
+  · subst hkl
+    have htri : T.dist (T.leaf a) (T.leaf b)
+        ≤ T.dist (T.leaf a) (T.leaf k) + T.dist (T.leaf b) (T.leaf k) := by
+      have h1 := T.dist_triangle (T.leaf a) (T.leaf k) (T.leaf b)
+      rwa [Phylo.TreeDist.dist_comm T (T.leaf k) (T.leaf b)] at h1
+    have hzero : T.dist (T.leaf k) (T.leaf k) = 0 := Phylogram.dist_self T (T.leaf k)
+    constructor
+    · rw [← hT a b, ← hT k k, ← hT a k, ← hT b k, hzero]; linarith
+    · rw [← hT a b, ← hT k k, ← hT a k, ← hT b k, hzero]; linarith
+  · have h := Cladogram.dist_add_le_of_isCherry hckeep hka hkb hla hlb hkl
+    constructor
+    · rw [← hT a b, ← hT k l, ← hT a k, ← hT b l]; exact h.1
+    · rw [← hT a b, ← hT k l, ← hT a l, ← hT b k]; exact h.2
+
+/-- ★★★ **L5b 的第 ① 条已证**：正权实现 ⇒ **存在正的樱桃分离界** `δmin`。
+
+`njSeparationBound` 由 `def … : Prop` 变成**定理**（台账【已收口】）。
+证明路线与「为什么不需要度量层严格四点引理」见本节抬头。 -/
+theorem njSeparationBound_holds : njSeparationBound (X := X) := by
+  classical
+  intro δ hpos
+  obtain ⟨T, hwpos, hT⟩ := hpos
+  by_cases h3 : 3 ≤ Fintype.card X
+  · -- ① `Q` 的全局最小点（有限集上取最小）
+    obtain ⟨a, b, hstep⟩ := NJRecovers.exists_njStep δ (by omega)
+    have hab : a ≠ b := hstep.1
+    have hmin : ∀ i j : X, i ≠ j → δ.Q a b ≤ δ.Q i j := fun i j hij => hstep.2 i j hij
+    -- ② 最小点是**度量层**樱桃（树层 ← `isCherry_of_njStep`，桥 ← `isCherry_of_tree_isCherry`）
+    have hch : δ.IsCherry a b :=
+      isCherry_of_tree_isCherry hT (NJShrink.isCherry_of_njStep δ hwpos hT h3 hstep)
+    -- ③ 非樱桃对的 `Q` **严格**更大（否则它也满足 `njStep` ⇒ 也是樱桃）
+    have hstrict : ∀ k l : X, k ≠ l → ¬ δ.IsCherry k l → δ.Q a b < δ.Q k l := by
+      intro k l hkl hnc
+      rcases lt_or_eq_of_le (hmin k l hkl) with h | h
+      · exact h
+      · exfalso
+        exact hnc (isCherry_of_tree_isCherry hT (NJShrink.isCherry_of_njStep δ hwpos hT h3
+          ⟨hkl, fun i j hij => by rw [← h]; exact hmin i j hij⟩))
+    -- ④ 非樱桃对的集合与最小间隙
+    set P : Finset (X × X) :=
+      (Finset.univ : Finset (X × X)).filter (fun p => p.1 ≠ p.2 ∧ ¬ δ.IsCherry p.1 p.2) with hP
+    by_cases hPne : P.Nonempty
+    · obtain ⟨w, hw⟩ := hPne
+      set G : Finset ℝ := P.image (fun p : X × X => δ.Q p.1 p.2 - δ.Q a b) with hG
+      have hGne : G.Nonempty := by
+        rw [hG]
+        exact ⟨_, Finset.mem_image.mpr ⟨w, hw, rfl⟩⟩
+      set gap : ℝ := G.min' hGne with hgap
+      have hgappos : 0 < gap := by
+        have hmem : gap ∈ G := by rw [hgap]; exact Finset.min'_mem G hGne
+        rw [hG] at hmem
+        obtain ⟨p, hp, hpv⟩ := Finset.mem_image.mp hmem
+        have hpne : p.1 ≠ p.2 := (Finset.mem_filter.mp hp).2.1
+        have hpnc : ¬ δ.IsCherry p.1 p.2 := (Finset.mem_filter.mp hp).2.2
+        have hs := hstrict p.1 p.2 hpne hpnc
+        linarith [hpv, hgap]
+      have hnpos : (0 : ℝ) < (Fintype.card X : ℝ) := by
+        have h3' : (3 : ℝ) ≤ (Fintype.card X : ℝ) := by exact_mod_cast h3
+        linarith
+      set δmin : ℝ := gap / (3 * (Fintype.card X : ℝ)) with hδmin
+      have hδminpos : 0 < δmin := by
+        rw [hδmin]; exact div_pos hgappos (by linarith)
+      have hgapdiv : 3 * (Fintype.card X : ℝ) * δmin = gap := by
+        rw [hδmin]; field_simp
+      refine ⟨δmin, hδminpos, ?_⟩
+      intro k l hkl hnc
+      have hmemP : (k, l) ∈ P := by
+        rw [hP]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hkl, hnc⟩
+      have hmemG : δ.Q k l - δ.Q a b ∈ G := by
+        rw [hG]; exact Finset.mem_image.mpr ⟨(k, l), hmemP, rfl⟩
+      have hgaple : gap ≤ δ.Q k l - δ.Q a b := by
+        rw [hgap]; exact Finset.min'_le G _ hmemG
+      refine ⟨a, b, hch, ?_⟩
+      rcases NJ.Dissimilarity.disjointPairs_or_sharesOneLabel_of_isCherry (k := k) (l := l) hch hnc with
+        hdis | hsh
+      · refine Or.inl ⟨hdis, ?_⟩
+        have hcoef : 3 * ((Fintype.card X : ℝ) - 4) ≤ 3 * (Fintype.card X : ℝ) := by linarith
+        have hmul := mul_le_mul_of_nonneg_right hcoef (le_of_lt hδminpos)
+        linarith [hmul, hgapdiv, hgaple]
+      · refine Or.inr ⟨hsh, ?_⟩
+        have hcoef : 2 * ((Fintype.card X : ℝ) - 3) ≤ 3 * (Fintype.card X : ℝ) := by linarith
+        have hmul := mul_le_mul_of_nonneg_right hcoef (le_of_lt hδminpos)
+        linarith [hmul, hgapdiv, hgaple]
+    · -- ⑤ 空真情形：所有互异对都是樱桃
+      refine ⟨1, one_pos, ?_⟩
+      intro k l hkl hnc
+      exact absurd ⟨(k, l), by
+        rw [hP]; exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, hkl, hnc⟩⟩ hPne
+  · -- `|X| ≤ 2`：量词空转
+    have h2 : Fintype.card X ≤ 2 := by omega
+    exact ⟨1, one_pos, fun k l hkl hnc =>
+      absurd (isCherry_of_card_le_two h2 hkl) hnc⟩
+
 /-! ## 3. L5b：CASTER 的 `D̃` 上、含噪版（三条具名义务的合取） -/
 
 /-- ★★★ **L5b 的缺口（CASTER 的 `D̃` 上、含噪版）**：三条具名义务的**合取**。
@@ -324,5 +470,19 @@ theorem njNoiseStep_holds : njNoiseStep (X := X) :=
 **不在**本 `def` 里。 -/
 def njConsistencyGap : Prop :=
   njSeparationBound (X := X) ∧ njNoiseStep (X := X) ∧ njAdditiveGap (X := X)
+
+/-- ★★★ **L5b 的登记缺口 `njConsistencyGap` **已收口**（纯装配，无新数学）**。
+
+三条具名义务**全部**已是定理（W45／W46／W47）：
+★★★ `njSeparationBound_holds` · ★★ `njNoiseStep_holds` · ★★★ `njAdditiveGap_holds`
+⇒ 合取自然成立。
+
+⚠️ **它证明的到底是什么**（★ 别误传）：本 `def` 是「三条义务的合取」这一**字面形态**，
+所以「合取成立」不含任何新数学。**它不**建立「CASTER 的 `D̃` 满足这三条前提」这件事 ——
+`D̃` 是 quartet 统计量的加权和、**不是距离度量**，把 `D̃` 归约到 `δ` 上仍需建模论证
+（`njAdditiveGap` 覆盖的是**可加**情形，见 ★★ `njAdditiveGapUnrestricted` 与文件头 §3′）。
+⇒ 台账口径上记【已收口】；**科学口径**上「CASTER-NJ 一致」仍欠那一步建模。 -/
+theorem njConsistencyGap_holds : njConsistencyGap (X := X) :=
+  ⟨njSeparationBound_holds, njNoiseStep_holds, njAdditiveGap_holds⟩
 
 end Phylo.Stat.CASTERNJ

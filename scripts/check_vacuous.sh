@@ -6,7 +6,7 @@
 #    「『空转』判定我接受，但它必须有机械护栏 —— 因为『证不出 ⇒ 说它空转』
 #      是一条极容易走的逃逸路线。」
 #
-#  ★ 本脚本回答两个问题，共 **46 行**（= 台账【已收口】**38** ＋【追溯】里那条空转 legacy
+#  ★ 本脚本回答两个问题，共 **47 行**（= 台账【已收口】**41** ＋【追溯】里那条空转 legacy
 #    ＋【判定收档】里 2026-10-28 降级的 **5** 条空转 —— 它们仍是空转，只是不再算「已收口」）：
 #
 #    (1) 每条**登记为空转**的缺口，依据必须是**一条可复跑的定理**。判定类型三选一：
@@ -92,7 +92,8 @@ check "msc_split_probability_object_gap" "自由槽" "theorem msc_split_probabil
       "取 σ := Unit、P r = if IsTrivialSplit r then 1 else (if r = r₀ then 2n−6 else 0) 即满足账目 2n+(2n−6)=2(2n−3)"
 
 # ══════════════════════════════════════════════════════════════════════════
-#  二、已收口 40 条（含 W46 收口的 njAdditiveGap 与 strictCherry_of_isBinary_pos_gap）＋ 追溯 1 条 ＋ 判定收档 5 条 = 46 条：逐条归类（W39-3 覆盖 7 → 44；W40 降级后重算）
+#  二、已收口 41 条（含 W46 收口的 njAdditiveGap 与 strictCherry_of_isBinary_pos_gap、
+#      W47 收口的 njConsistencyGap）＋ 追溯 1 条 ＋ 判定收档 5 条 = 47 条：逐条归类（W39-3 覆盖 7 → 44；W40 降级后重算）
 # ══════════════════════════════════════════════════════════════════════════
 # ── ① 有非退化实例（25 条）────────────────────────────────────────────────
 check "nniDistance_min_gap" "实例" "theorem tree_nniDist₁₂_eq_one" \
@@ -180,10 +181,12 @@ check "njAdditiveGap" "实例" "theorem njAdditiveGap_holds" \
       "★W46 长程 L5a 步骤 A：树层樱桃收缩（Phylo/Stat/NJShrink.lean）把归约后的**实现树**显式造出（顶点/图/边权/`dist` 逐点对齐），结论是**一般 ∀ 定理**；⚠️ 仅覆盖二叉实现（`HasPosRealBinary`），非二叉（`deg w ≥ 4`）那支**未做**"
 check "strictCherry_of_isBinary_pos_gap" "实例" "theorem strictCherry_of_isBinary_pos_gap_holds" \
       "★W46 长程：Phylo/Stat/StrictCherryProved.lean 把它**证成** —— 新观察：樱桃中点的第三邻居 `z` 是到任何非樱桃叶的必经点，故 `d(w,p)+d(w,q) = d(z,p)+d(z,q)+2·d(w,z) ≥ d(p,q)+2·d(w,z) > d(p,q)`（正边权）；再拼三条可加性即得严格四点不等式"
+check "njConsistencyGap" "实例" "theorem njConsistencyGap_holds" \
+      "★W47：**纯装配** —— 三条具名义务全部已是定理（njSeparationBound_holds / njNoiseStep_holds / njAdditiveGap_holds）⇒ 合取成立，无新数学。⚠️ 不声称 CASTER 的 D̃ 满足这三条前提（那要建模论证，见 docstring）"
 
 printf '%s\n' "----------------------------------------------------------------------------------------------------------------------"
 echo "合计 ${rows} 行 · 有机械依据 ${ok}（＝实例 ${n_inst} ＋ 自由槽 ${n_free}）· 无机械依据 ${n_noevid}（＝无实例，仅人工原因）· 依据缺失 ${bad}"
-echo "归类：实例 ${n_inst} · 自由槽 ${n_free} · 无实例 ${n_none}（= $((n_inst+n_free+n_none))，应为 46）"
+echo "归类：实例 ${n_inst} · 自由槽 ${n_free} · 无实例 ${n_none}（= $((n_inst+n_free+n_none))，应为 47）"
 
 # ── 台账一致性 ①：VACUOUS 里的键必须都在上面出现 ──────────────────────────
 echo
