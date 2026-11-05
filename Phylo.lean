@@ -163,6 +163,7 @@ import Phylo.Stat.StrictCherry
 import Phylo.Stat.StrictCherryProved
 import Phylo.Stat.NJRecovers
 import Phylo.Stat.NJRun
+import Phylo.Stat.NJShrinkNonBinary
 import Phylo.Stat.SVDQuartets
 import Phylo.Stat.TKF91
 import Phylo.Stat.ToricIdeals
