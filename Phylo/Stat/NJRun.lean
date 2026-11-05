@@ -5,6 +5,8 @@ Authors: ASTER LAB
 -/
 import Phylo.Stat.NJRecovers
 import Phylo.BunemanGraft
+import Phylo.CladogramBuild
+import Phylo.Stat.CASTERNJ
 
 /-!
 # `Phylo.Stat.NJRun` —— L5a 步骤 B：**让 `nj_recovers_topology_additive` 名副其实**
@@ -116,7 +118,7 @@ theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.
 
 namespace Phylo.Stat.NJRun
 
-open Phylo NJ
+open Phylo NJ Phylo.Stat.CASTERNJStep Phylo.Stat.CASTERNJ Phylo.Stat.NJRecovers
 
 variable {X : Type} [Fintype X] [DecidableEq X]
 
@@ -617,5 +619,90 @@ theorem graftCladogram_iso_congr {Y : Type} [Fintype Y] [DecidableEq Y] {p q : Y
       · rw [Phylo.graftLeafFun_eq_inl C hyp hyq, Phylo.graftLeafFun_eq_inl D hyp hyq]
         simp only [hf_inl, hgleaf]
   exact ⟨{ gIso := RelIso.mk f hadj', leaf_compat := hleaf }⟩
+
+/-! ## B-4a｜★★★ **`njRun`**：真递归的 NJ 重建（**定义**）
+
+派单 M2 的三个反例试金石：
+
+1. 结论里**字面出现** `njRun` —— B-4b 的 `njRun_correct_additive` 满足；
+2. 返回类型是 **`Cladogram X`**（原标签集，而不是 `Σ Y, Cladogram Y`）—— 本节的签名满足；
+3. 定义里**真的用 `njStep`**（每轮取 `Q` 全局最小对并合并），**不是**
+   `Classical.choose (存在某棵树实现 δ)` 这种「把目标当前提」的抽取。
+
+**递归尺度**：`n := Fintype.card Y` 对 `Nat` 结构化递降
+（每轮由 ★★★ `mergeStep_card` 得 `card (MergeIdx Y a b) + 1 = card Y`）。
+
+**基例 `card = 3`**：三标签上没有非凡 split 可产出，返回
+★ `Cladogram.ofCompatibleSplits ∅ ρ`（`CladogramBuild.lean:189`；相容族取空集，
+三条前提全空）。这是**纯组合**的存在性（与 `δ` 无关，只用到 `3 ≤ card Y`），
+正确性由 ★★ `Cladogram.iso_of_card_eq_three` 保证（三标签拓扑唯一）。 -/
+
+/-- ★ **`Q` 最小对的存在性**（打包成 `X × X` 上的 `∃`，便于 `Classical.choose` 一次取完）。 -/
+theorem exists_njStep_pair (δ : NJ.Dissimilarity X) (h : 2 ≤ Fintype.card X) :
+    ∃ p : X × X, njStep δ p.1 p.2 := by
+  obtain ⟨a, b, hab⟩ := exists_njStep δ h
+  exact ⟨(a, b), hab⟩
+
+/-- ★ **NJ 第一步的选点**：`Q_δ` 的**全局最小对**（`njStep` 的见证）。
+
+★ 它是 `δ` 的函数（只依赖 `δ` 的类型层面的数据与 `2 ≤ card` 这一**证明**），
+B-4b 的正确性证明里对**同一个** `h2` 展开，因此定义与证明用的是**同一对**。 -/
+noncomputable def njPick (δ : NJ.Dissimilarity X) (h : 2 ≤ Fintype.card X) : X × X :=
+  Classical.choose (exists_njStep_pair δ h)
+
+/-- ★★ **`njPick` 的规格**：选出来的对确实满足 `njStep`（互异 ＋ `Q` 全局最小）。 -/
+theorem njPick_spec (δ : NJ.Dissimilarity X) (h : 2 ≤ Fintype.card X) :
+    njStep δ (njPick δ h).1 (njPick δ h).2 :=
+  Classical.choose_spec (exists_njStep_pair δ h)
+
+/-- ★★ **三标签的基例树**：空相容族 ⇒ ★ `ofCompatibleSplits` 给一棵**具体的**树。
+与 `δ` **无关**（这正是它不构成「把目标当前提」的理由）。 -/
+noncomputable def njBase (Y : Type) [Fintype Y] [DecidableEq Y]
+    (h3 : 3 ≤ Fintype.card Y) : Cladogram Y :=
+  Cladogram.ofCompatibleSplits (X := Y) (fam := ∅)
+    (Classical.choice (Fintype.card_pos_iff.mp (by omega)))
+    (by intro s hs; simp at hs) (by intro s hs; simp at hs)
+    (by intro s hs; simp at hs) h3
+
+/-- `3 ≤ m ⇒ 2 ≤ m`（`njRun` 的内部接口：把 `hcard` 转成 `njPick` 需要的 `h2`）。 -/
+theorem two_le_of_three {m : Nat} (h : 3 ≤ m) : 2 ≤ m := by omega
+
+set_option linter.unusedVariables false in
+/-- ★★★ **`njRun` 的递归核**（对 `n` 结构化递降；`hle : card Y ≤ n` 就是递降尺度）。
+
+* `h2`／`h3` 显式传入，正确性证明里对**同一组** `h2 h3` 展开
+  （否则 `njPick` 的证明参数不可复现，`Classical.choose` 不尊重证明无关性）；
+* 步进：★ `njPick δ h2` 取 `Q` 最小对，`graftCladogram` 把两片新叶挂回
+  `njRunAux n (MergeIdx Y a b) (mergeStep δ a b) …` 的结果上。 -/
+noncomputable def njRunAux : (n : Nat) → (Y : Type) → [Fintype Y] → [DecidableEq Y] →
+    (δ : NJ.Dissimilarity Y) → (h2 : 2 ≤ Fintype.card Y) → (h3 : 3 ≤ Fintype.card Y) →
+    (hle : Fintype.card Y ≤ n) → Cladogram Y
+  | 0, Y, _, _, _, h2, _, hle => by
+      exact absurd hle (by omega)
+  | n + 1, Y, _, _, δ, h2, h3, hle => by
+      classical
+      by_cases hcard : Fintype.card Y = 3
+      · exact njBase Y h3
+      · have h4 : 4 ≤ Fintype.card Y := by omega
+        let p : Y × Y := njPick δ h2
+        have hstep : njStep δ p.1 p.2 := njPick_spec δ h2
+        have hcard' : Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) + 1
+            = Fintype.card Y := mergeStep_card hstep.1
+        have h3' : 3 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) := by omega
+        have h2' : 2 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) := by omega
+        have hle' : Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) ≤ n := by omega
+        exact graftCladogram (p := p.1) (q := p.2) hstep.1
+          (relabelCladogram
+            (njRunAux n (NJ.Dissimilarity.MergeIdx Y p.1 p.2) (mergeStep δ p.1 p.2)
+              h2' h3' hle')
+            (mergeIdxEquiv p.1 p.2))
+
+/-- ★★★ **`njRun`**：NJ 算法在 `δ` 上的**真递归重建**（返回原标签集上的 `Cladogram X`）。
+
+* `3 ≤ card X` 才进入递归；`card X = 3` 时返回 ★★ `njBase`（三标签拓扑唯一）；
+* `card X ≥ 4` 时取 ★ `njPick δ` 的 `Q` 最小对，`mergeStep` 归约后**递归**，
+  再用 ★★★ `graftCladogram` 把两片新叶挂回去 —— 每轮真用 `njStep`。 -/
+noncomputable def njRun (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X) : Cladogram X :=
+  njRunAux (Fintype.card X) X δ (two_le_of_three hcard) hcard le_rfl
 
 end Phylo.Stat.NJRun
