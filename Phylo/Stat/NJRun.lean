@@ -319,4 +319,57 @@ theorem shrinkGraph_adj_rename (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
       · exact absurd h3.2 hv
     · exact Or.inl
 
+/-! ### B-3 的 **inl–inr** 与 **inr–inr** 情形
+
+`graftGraph` 把它们写成显示式：`Adj (inl x) (inr i) ↔ x = t`（`t` 是挂叶的锚点）、
+`¬ Adj (inr i) (inr j)`。故左侧只与「`u` 是不是锚点」有关，右侧用
+`midpoint_adj_iff`（锚点 `t` 的换名像是 `w`，邻居恰是 `leaf a, leaf b, z`）判。 -/
+
+theorem graftGraph_adj_rename_inl_inr (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (t : NJShrink.ShrinkV T b w) (ht : t.1 = T.leaf a) (u : NJShrink.ShrinkV T b w)
+    (j : Fin 2) :
+    (Phylo.graftGraph (NJShrink.shrinkGraph T a b w z hza) t).Adj (Sum.inl u) (Sum.inr j) ↔
+      T.graph.Adj (if u.1 = T.leaf a then w else u.1)
+        (if j = (0 : Fin 2) then T.leaf a else T.leaf b) := by
+  classical
+  rw [Phylo.graftGraph_adj_inl_inr]
+  constructor
+  · rintro rfl
+    rcases Classical.em (j = (0 : Fin 2)) with hj | hj
+    · rw [ite_eq_left hj, ite_eq_left ht]; exact haw.symm
+    · rw [ite_eq_right hj, ite_eq_left ht]; exact hbw.symm
+  · intro h
+    by_contra hne
+    have hne' : u.1 ≠ T.leaf a := fun h1 => hne (Subtype.ext (h1.trans ht.symm))
+    rw [ite_eq_right hne'] at h
+    rcases Classical.em (j = (0 : Fin 2)) with hj | hj
+    · rw [ite_eq_left hj] at h
+      exact absurd (NJShrink.leaf_a_adj_eq_midpoint T haw u.1 h.symm).symm (Ne.symm u.2.2)
+    · rw [ite_eq_right hj] at h
+      exact absurd (NJShrink.leaf_b_adj_eq_midpoint T hbw u.1 h.symm).symm (Ne.symm u.2.2)
+
+theorem graftGraph_adj_rename_inr_inr (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (t : NJShrink.ShrinkV T b w) (i j : Fin 2) :
+    (Phylo.graftGraph (NJShrink.shrinkGraph T a b w z hza) t).Adj (Sum.inr i) (Sum.inr j) ↔
+      T.graph.Adj (if i = (0 : Fin 2) then T.leaf a else T.leaf b)
+        (if j = (0 : Fin 2) then T.leaf a else T.leaf b) := by
+  classical
+  refine ⟨fun h => absurd h (Phylo.graftGraph_adj_not_inr_inr
+    (G := NJShrink.shrinkGraph T a b w z hza) (t := t)), ?_⟩
+  intro h
+  rcases Classical.em (i = (0 : Fin 2)) with hi | hi <;>
+    rcases Classical.em (j = (0 : Fin 2)) with hj | hj
+  · rw [ite_eq_left hi, ite_eq_left hj] at h
+    exact absurd h (T.graph.loopless.irrefl (T.leaf a))
+  · rw [ite_eq_left hi, ite_eq_right hj] at h
+    exact absurd h (not_adj_cherry_leaves hab hbin haw hbw)
+  · rw [ite_eq_right hi, ite_eq_left hj] at h
+    exact absurd h.symm (not_adj_cherry_leaves hab hbin haw hbw)
+  · rw [ite_eq_right hi, ite_eq_right hj] at h
+    exact absurd h (T.graph.loopless.irrefl (T.leaf b))
+
 end Phylo.Stat.NJRun
