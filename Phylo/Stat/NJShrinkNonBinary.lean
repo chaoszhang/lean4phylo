@@ -475,4 +475,19 @@ noncomputable def shrinkPhylogramNB {b : X} {w : T.V} (hab : a ≠ b)
 -- `V`／`graph` 投影要能在 `reducible` 透明层归约（G6／G7 的显示式装配要用）。
 attribute [reducible] shrinkCladogramNB shrinkPhylogramNB
 
+/-! ## G6｜`dist` 对齐（三支）—— 本步先落**新–新（对角）**支 -/
+
+/-- ★ **新–新（对角）**：合并标签只有一处，`d'(u,u) = 0` ＝ `mergeStep` 的对角。 -/
+theorem shrinkPhylogramNB_dist_self {b : X} {w : T.V} (δ : NJ.Dissimilarity X) (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (u : NJ.Dissimilarity.MergeIdx X a b) :
+    (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+        ((shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).leaf u)
+        ((shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).leaf u)
+      = (Phylo.Stat.CASTERNJStep.mergeStep δ a b).val u u := by
+  rw [Phylogram.dist_self]
+  exact ((Phylo.Stat.CASTERNJStep.mergeStep δ a b).diag u).symm
+
 end Phylo.Stat.NJShrinkNonBinary
