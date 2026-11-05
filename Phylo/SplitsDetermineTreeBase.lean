@@ -233,4 +233,226 @@ theorem iso_of_card_le_two {T T' : Cladogram.{u, v} X}
   · exact (T.false_of_card_eq_one h1).elim
   · exact T.iso_of_card_eq_two T' h2
 
+/-! ## 情形 `|X| = 3`（W47：`Phylo/Stat/NJRun.lean` 的基例）
+
+`|X| = 3` 时**任意** cladogram 都是三叉星：`|V| = 4`、恰有一个内部点 `c`、且
+`Adj a b ↔ a = c ∨ b = c`。⇒ 三标签拓扑**唯一**。 -/
+
+/-- ★★ **`|X| = 3` ⇒ `|V| = 4`**。上界用 `card_V_le_two_mul_card`；
+`|V| = 3` 被排除：那样叶集穷尽顶点集 ⇒ 所有点度 `1` ⇒ 度数和 `3 ≠ 4 = 2(|V|−1)`。 -/
+theorem card_V_eq_four_of_card_eq_three (T : Cladogram.{u, v} X) (hX : Fintype.card X = 3) :
+    Fintype.card T.V = 4 := by
+  classical
+  have h3 : 3 ≤ Fintype.card T.V := by
+    have h := Fintype.card_le_of_injective T.leaf T.leaf.injective
+    omega
+  have hle : Fintype.card T.V ≤ 4 := by
+    have h := T.card_V_le_two_mul_card (by omega)
+    omega
+  have hne : Fintype.card T.V ≠ 3 := by
+    intro hV3
+    have huniv : T.leafFinset = Finset.univ := by
+      refine Finset.eq_univ_of_card _ ?_
+      rw [T.card_leafFinset, hX, hV3]
+    have hleaf : ∀ v : T.V, T.IsLeaf v := fun v =>
+      (mem_leafFinset T).mp (by rw [huniv]; exact Finset.mem_univ v)
+    have hsum : ∑ v, T.graph.degree v = 3 := by
+      rw [show (∑ v, T.graph.degree v) = ∑ _v : T.V, 1 from
+        Finset.sum_congr rfl fun v _ => (hleaf v).degree_eq_one]
+      simp [hV3]
+    have hdeg : ∑ v, T.graph.degree v = 2 * T.graph.edgeFinset.card :=
+      T.graph.sum_degrees_eq_twice_card_edges
+    have hE : T.graph.edgeFinset.card = Fintype.card T.V - 1 := by
+      have h := T.isTree.card_edgeFinset
+      omega
+    omega
+  omega
+
+/-- ★★ **`|X| = 3` ⇒ 恰有一个内部顶点**。 -/
+theorem existsUnique_not_isLeaf_of_card_eq_three (T : Cladogram.{u, v} X)
+    (hX : Fintype.card X = 3) : ∃! c : T.V, ¬ T.IsLeaf c := by
+  classical
+  have hV := T.card_V_eq_four_of_card_eq_three hX
+  have hI : T.internalFinset.card = 1 := by
+    have h := T.leafFinset_card_add_internalFinset_card
+    rw [T.card_leafFinset, hX] at h
+    omega
+  obtain ⟨c, hc⟩ := Finset.card_eq_one.mp hI
+  refine ⟨c, (mem_internalFinset T).mp (by rw [hc]; exact Finset.mem_singleton_self c), ?_⟩
+  intro v hv
+  have hmem : v ∈ T.internalFinset := (mem_internalFinset T).mpr hv
+  rw [hc] at hmem
+  exact Finset.mem_singleton.mp hmem
+
+/-- ★★★ **`|X| = 3` 时的邻接刻画**：`Adj a b ↔ a ≠ b ∧ (a = c ∨ b = c)`。
+
+（`c` 的度：度数和 `6 = 3·1 + deg c` ⇒ `deg c = 3`；于是 `neighborFinset c` 与 `univ.erase c`
+都是三元且前者含于后者 ⇒ 相等。反过来，若边两端都不是 `c`，则它们都是叶、各有度 `1`，
+而 `c` 又与之相邻 ⇒ `deg a ≥ 2`，矛盾。★ 互异前提 `a ≠ b` **不可省**：
+`a = b = c` 时右端真而左端假。） -/
+theorem adj_iff_eq_center_of_card_eq_three (T : Cladogram.{u, v} X)
+    (hX : Fintype.card X = 3) {c : T.V} (hc : ¬ T.IsLeaf c) :
+    ∀ a b : T.V, T.graph.Adj a b ↔ (a ≠ b ∧ (a = c ∨ b = c)) := by
+  classical
+  have hV := T.card_V_eq_four_of_card_eq_three hX
+  have hun : ∀ y : T.V, ¬ T.IsLeaf y → y = c := by
+    intro y hy
+    obtain ⟨d, _hd, huniq⟩ := T.existsUnique_not_isLeaf_of_card_eq_three hX
+    rw [huniq y hy, huniq c hc]
+  have hsum : ∑ v, T.graph.degree v = 2 * T.graph.edgeFinset.card :=
+    T.graph.sum_degrees_eq_twice_card_edges
+  have hE : T.graph.edgeFinset.card = Fintype.card T.V - 1 := by
+    have h := T.isTree.card_edgeFinset
+    omega
+  have hsplit : T.leafFinset.sum (fun v => T.graph.degree v)
+      + T.internalFinset.sum (fun v => T.graph.degree v) = ∑ v, T.graph.degree v := by
+    simpa [leafFinset, internalFinset] using
+      (Finset.sum_filter_add_sum_filter_not (Finset.univ : Finset T.V) T.IsLeaf
+        (fun v => T.graph.degree v))
+  have hL : T.leafFinset.sum (fun v => T.graph.degree v) = T.leafFinset.card := by
+    rw [show T.leafFinset.sum (fun v => T.graph.degree v)
+        = T.leafFinset.sum (fun _ => 1) from
+      Finset.sum_congr rfl fun v hv => ((mem_leafFinset T).mp hv).degree_eq_one]
+    simp
+  have hcardL : T.leafFinset.card = 3 := by rw [T.card_leafFinset, hX]
+  have hIeq : T.internalFinset = {c} := by
+    refine Finset.eq_singleton_iff_unique_mem.mpr
+      ⟨(mem_internalFinset T).mpr hc, ?_⟩
+    intro v hv
+    by_contra hvc
+    exact hvc (hun v ((mem_internalFinset T).mp hv))
+  have hdegc : T.graph.degree c = 3 := by
+    have hI : T.internalFinset.sum (fun v => T.graph.degree v) = T.graph.degree c := by
+      rw [hIeq, Finset.sum_singleton]
+    have htot : ∑ v, T.graph.degree v = 6 := by
+      rw [hsum, hE, hV]
+    have hl3 : T.leafFinset.sum (fun v => T.graph.degree v) = 3 := by
+      rw [hL, hcardL]
+    omega
+  have hnb : T.graph.neighborFinset c = Finset.univ.erase c := by
+    refine Finset.eq_of_subset_of_card_le ?_ ?_
+    · intro v hv
+      have hadj := (mem_neighborFinset T.graph c v).mp hv
+      exact Finset.mem_erase.mpr ⟨hadj.ne.symm, Finset.mem_univ v⟩
+    · rw [Finset.card_erase_of_mem (Finset.mem_univ c), Finset.card_univ, hV,
+        card_neighborFinset_eq_degree T.graph c, hdegc]
+  intro a b
+  constructor
+  · rintro hab
+    refine ⟨hab.ne, ?_⟩
+    by_cases ha : a = c
+    · exact Or.inl ha
+    by_cases hb : b = c
+    · exact Or.inr hb
+    exfalso
+    have haleaf : T.IsLeaf a := by
+      by_contra hcon
+      exact ha (hun a hcon)
+    have hca : T.graph.Adj c a := by
+      rw [← mem_neighborFinset, hnb]
+      exact Finset.mem_erase.mpr ⟨ha, Finset.mem_univ a⟩
+    have hsub : ({b, c} : Finset T.V) ⊆ T.graph.neighborFinset a := by
+      intro v hv
+      rw [Finset.mem_insert, Finset.mem_singleton] at hv
+      rcases hv with hv1 | hv2
+      · rw [hv1]; exact (mem_neighborFinset T.graph a b).mpr hab
+      · rw [hv2]; exact (mem_neighborFinset T.graph a c).mpr hca.symm
+    have h2 : 2 ≤ (T.graph.neighborFinset a).card := by
+      have h := Finset.card_le_card hsub
+      rwa [Finset.card_pair hb] at h
+    have h1 : T.graph.degree a = 1 := haleaf.degree_eq_one
+    rw [card_neighborFinset_eq_degree] at h2
+    omega
+  · rintro ⟨hne, h | h⟩
+    · rw [h]
+      rw [← mem_neighborFinset, hnb]
+      exact Finset.mem_erase.mpr ⟨fun hbc => hne (h.trans hbc.symm), Finset.mem_univ b⟩
+    · rw [h]
+      rw [SimpleGraph.adj_comm, ← mem_neighborFinset, hnb]
+      exact Finset.mem_erase.mpr ⟨fun hac => hne (hac.trans h.symm), Finset.mem_univ a⟩
+
+/-- ★★★ **`|X| = 3` 时任意两棵 cladogram 同构**（三叶树 = 三叉星 ⇒ 拓扑唯一）。 -/
+theorem iso_of_card_eq_three (T T' : Cladogram.{u, v} X) (hX : Fintype.card X = 3) :
+    Nonempty (Iso T T') := by
+  classical
+  obtain ⟨c, hc, hunT⟩ := T.existsUnique_not_isLeaf_of_card_eq_three hX
+  obtain ⟨c', hc', hunT'⟩ := T'.existsUnique_not_isLeaf_of_card_eq_three hX
+  have hadjT := T.adj_iff_eq_center_of_card_eq_three hX hc
+  have hadjT' := T'.adj_iff_eq_center_of_card_eq_three hX hc'
+  have hleafT : ∀ v : T.V, v ≠ c → T.IsLeaf v := fun v hv =>
+    Classical.byContradiction fun hcon => hv (hunT v hcon)
+  have hleafT' : ∀ w : T'.V, w ≠ c' → T'.IsLeaf w := fun w hw =>
+    Classical.byContradiction fun hcon => hw (hunT' w hcon)
+  -- 顶点映射：`c ↦ c'`，叶按标号
+  let g : T.V → T'.V := fun v =>
+    if hv : v = c then c' else T'.leaf (Classical.choose (hleafT v hv))
+  have hgc : g c = c' := by
+    show (if hv : c = c then c' else _) = c'
+    rw [dite_eq_left rfl]
+  have hgne : ∀ (v : T.V) (hv : v ≠ c),
+      g v = T'.leaf (Classical.choose (hleafT v hv)) := by
+    intro v hv
+    show (if hv' : v = c then c' else _) = _
+    rw [dite_eq_right hv]
+  have hcleaf : ∀ (y : X), T'.leaf y ≠ c' := fun y h => hc' ⟨y, h⟩
+  have hinj : Function.Injective g := by
+    intro a b hab
+    by_cases ha : a = c
+    · rw [ha] at hab ⊢
+      rw [hgc] at hab
+      by_cases hb : b = c
+      · exact hb.symm
+      · rw [hgne b hb] at hab
+        exact absurd hab.symm (hcleaf _)
+    · by_cases hb : b = c
+      · rw [hb] at hab ⊢
+        rw [hgne a ha, hgc] at hab
+        exact absurd hab (hcleaf _)
+      · rw [hgne a ha, hgne b hb] at hab
+        have hy : Classical.choose (hleafT a ha) = Classical.choose (hleafT b hb) :=
+          T'.leaf.injective hab
+        have h1 : T.leaf (Classical.choose (hleafT a ha)) = a :=
+          Classical.choose_spec (hleafT a ha)
+        have h2 : T.leaf (Classical.choose (hleafT b hb)) = b :=
+          Classical.choose_spec (hleafT b hb)
+        rw [← h1, ← h2, hy]
+  have hsurj : Function.Surjective g := by
+    intro w
+    by_cases hw : w = c'
+    · exact ⟨c, by rw [hw]; exact hgc⟩
+    · obtain ⟨y, hy⟩ := hleafT' w hw
+      have hcy : T.leaf y ≠ c := by
+        intro h
+        exact hc (h ▸ ⟨y, rfl⟩)
+      refine ⟨T.leaf y, ?_⟩
+      rw [hgne (T.leaf y) hcy]
+      have hspec : Classical.choose (hleafT (T.leaf y) hcy) = y :=
+        T.leaf.injective (Classical.choose_spec (hleafT (T.leaf y) hcy))
+      rw [hspec]
+      exact hy
+  let f : T.V ≃ T'.V := Equiv.ofBijective g ⟨hinj, hsurj⟩
+  have hf : ∀ v : T.V, f v = g v := fun _ => rfl
+  have hkey : ∀ v : T.V, f v = c' ↔ v = c := by
+    intro v
+    rw [hf]
+    constructor
+    · intro h
+      by_contra hv
+      rw [hgne v hv] at h
+      exact hcleaf _ h
+    · intro h
+      rw [h]; exact hgc
+  refine ⟨{ gIso := RelIso.mk f (fun {a b} => ?_), leaf_compat := ?_ }⟩
+  · show T'.graph.Adj (f a) (f b) ↔ T.graph.Adj a b
+    rw [hadjT' (f a) (f b), hadjT a b, hkey a, hkey b]
+    exact ⟨fun h => ⟨fun hab => h.1 (by rw [hab]), h.2⟩,
+           fun h => ⟨fun hab => h.1 (f.injective hab), h.2⟩⟩
+  · intro x
+    have hcx : T.leaf x ≠ c := fun h => hc (h ▸ ⟨x, rfl⟩)
+    show f (T.leaf x) = T'.leaf x
+    rw [hf, hgne (T.leaf x) hcx]
+    have hspec : Classical.choose (hleafT (T.leaf x) hcx) = x :=
+      T.leaf.injective (Classical.choose_spec (hleafT (T.leaf x) hcx))
+    rw [hspec]
+
 end Cladogram
