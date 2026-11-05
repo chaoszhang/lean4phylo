@@ -1,4 +1,4 @@
-# 65 条收口定理（Phylo.* 模块）
+# 66 条收口定理（Phylo.* 模块）
 BinaryConnectedEqualsSideGap_holds | 3 | Classical.choice,Quot.sound,propext
 Fitch.QuartetBridgeGap_holds | 3 | Classical.choice,Quot.sound,propext
 MultiStatePairwiseInsufficiencyGap_holds | 3 | Classical.choice,Quot.sound,propext
@@ -33,6 +33,7 @@ Phylo.Stat.HadamardTransform.evansSpeed_general_gap_proved | 3 | Classical.choic
 Phylo.Stat.HookLength.rankedFiberCount_gap_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.InvariantsRank.treeMarkovFactorGap_holds | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.MSCBayes.MultiLocusPosteriorConcentrationGap_holds | 3 | Classical.choice,Quot.sound,propext
+Phylo.Stat.NJRecovers.iso_of_realizes_binary_additive | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.RankedGeneTree.ranked4_probability_gap_proved | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.RankedGeneTree.sd2012_eq4_uniform_rates_gap_proved | 3 | Classical.choice,Quot.sound,propext
 Phylo.Stat.RankedTreeClanLaw.blockInterCount_holds | 3 | Classical.choice,Quot.sound,propext

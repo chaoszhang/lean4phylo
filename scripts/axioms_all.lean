@@ -4,7 +4,12 @@
   ★ 为什么需要它：`axioms_snapshot.sh` 只抽查 10 条（人工挑的），而「没有偷偷引入信任公理」
     这件事应当**对全部收口定理**成立，不能靠抽样。
     本文件在 Lean 里遍历环境，把 **`Phylo.*` 模块里所有收口定理**（`_holds` / `_proved` /
-    `_proof` / 含 `_vacuous_`）的公理依赖逐条打印出来，供 `scripts/check_axioms_all.sh` 逐字 diff。
+    `_proof` / `_additive` / 含 `_vacuous_`）的公理依赖逐条打印出来，供 `scripts/check_axioms_all.sh` 逐字 diff。
+
+  ★ 2026-11-05（W47）：后缀表里加了 `_additive` —— 起因是 M1-② 把
+    `nj_recovers_topology_additive` 改名为内容名 `iso_of_realizes_binary_additive`，
+    而旧后缀表只认 `_holds/_proved/_proof` ⇒ 这条★★★定理**从没进过公理快照**（W47 之前没人发现）。
+    加 `_additive` 后它（以及 W47 的 `njRun_correct_additive`）自动纳入扫描。
 
   ★ 判据：每行 `全限定名 | 公理个数 | 公理名（逗号分隔，已排序）`。
     正常应当全是 `propext,Classical.choice,Quot.sound`（或子集）。
@@ -31,6 +36,7 @@ run_cmd do
           || s.contains "._cproof_"
         if !isInternal &&
            (s.endsWith "_holds" || s.endsWith "_proved" || s.endsWith "_proof"
+            || s.endsWith "_additive"
             || s.contains "_vacuous_") then
           acc.modify (·.push n)
     | none => pure ()

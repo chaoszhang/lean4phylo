@@ -7,22 +7,37 @@ import Phylo.Algorithm.NJHardCore
 import Phylo.AttesonRadius
 
 /-!
-# `Phylo.Stat.CASTERNJStep` —— L5a 的**脚手架**与**方案**（W46）
+# `Phylo.Stat.CASTERNJStep` —— L5a 的 **NJ-步接口层**（W46 建，W47 状态校准）
 
-派单：`W44_TO_DSH_prompt.txt` §3.6 / §3.7 / §3.8（L5a `nj_recovers_topology_additive`）。
-本文件**不**关闭 `Phylo.Stat.CASTERNJ.njAdditiveGap`（台账仍 74）；它做两件事：
+派单：`W44_TO_DSH_prompt.txt` §3.6 / §3.7 / §3.8。
 
-1. 把「NJ 的一步」在库里**第一次命名**（`njStep`），并把库内**已有**的三条结论
-   重述成 NJ-步语言（`njStep_isCherry` / `njStep_quartet` / `mergeStep_*`）；
-2. 把 L5a 剩下的工作写成**可执行的方案**（下面 §3），并说明**卡在哪一行**。
+## 本文件做什么（★ W47 校准：原文写的「台账仍 74」「L5a 的缺口在这里」已过时）
+
+本文件**不证新数学**：它只把「NJ 的一步」在库里**第一次命名**（`njStep`），
+并把库内**已有**的结论重述成 NJ-步语言（`njStep_isCherry` / `njStep_quartet` / `mergeStep_*`）。
+
+**L5a 的 A/B/C 三步的去向**（★ 三件都已完成，不再是本文件 §3 的「方案」）：
+
+| 步骤 | 内容 | 落在哪个文件 | 状态 |
+|---|---|---|---|
+| A | 树层樱桃收缩（`shrinkPhylogram`） | `Phylo/Stat/NJShrink.lean`（1569 行） | ★★★ 已证（W46） |
+| B | 算法本体（`njRun` ＋ 归约归纳） | `Phylo/Stat/NJRun.lean` | W47 施工中 |
+| C | 装配（`δ` 唯一决定拓扑） | `Phylo/Stat/NJRecovers.lean` | ★★★ 已证（W46） |
+
+⇒ `Phylo.Stat.CASTERNJ.njAdditiveGap` **已由 `njAdditiveGap_holds` 收口**
+（`CASTERNJ.lean`，台账【已收口】）；A 步的**算术核** `mergeStep_val_eq` 也早证
+（`Phylo/Stat/StrictCherry.lean`）。
+**本文件不含 A/B/C 的任何实现**，也不含任何「未证」的断言 —— 它只是接口层。
 
 ## 0 口径更正（派单 §3.6 的「库内没有 NJ 算法本体」）
 
 派单的 grep 是 `^(noncomputable )?def (nj|neighborJoining|njTree|neighborJoin)`，故判「0 命中」。
 实读结果更细：**度量侧的 `Q` 判据、`z`、`mergeDissim`、`mergeQ`、`card_mergeIdx` 全都有**
 （`Phylo/Algorithm/NJ.lean`、`Phylo/AttesonRadius.lean:1260–1420`），
-**缺的只有「把 n−3 轮跑完并返回一棵树」的那一层**（以及它需要的树层收缩）。
-所以 L5a 的真实缺口 = **算法粘合层 ＋ 树层收缩 ＋ 归纳**，与派单判断一致。
+当时**缺的只有「把 n−3 轮跑完并返回一棵树」的那一层**（以及它需要的树层收缩）。
+⇒ 当时判定的「L5a 的缺口 = 算法粘合层 ＋ 树层收缩 ＋ 归纳」**已按此拆解做完两步**
+（树层收缩 = `NJShrink`，归纳＋装配 = `NJRecovers`）；只剩「把 n−3 轮跑完」这一层
+（W47 的 `Phylo/Stat/NJRun.lean`）。
 
 ## 1 本文件已证（全部是既有定理的 NJ-步重述，不新增假设）
 
@@ -35,13 +50,18 @@ import Phylo.AttesonRadius
 | `mergeStep_fourPoint` | 归约保持四点条件 | ★★★ `mergeDissim_fourPoint` |
 | `mergeStep_card` | 归约后基数 `+1 =` 原基数（递降尺度） | ★★★ `card_mergeIdx` |
 
-## 2 卡在哪一步（一句话）
+## 2 曾经卡在哪一步（★ 已不卡：W46 已把它做完）
 
-> **`δ.HasPositiveRealization → δ.IsCherry x y → (mergeStep δ x y).HasPositiveRealization`**
-> —— 即「**树层樱桃收缩**」：把 `{x,y}` 换成挂在樱桃中点 `w` 上的单叶 `u`（边权 `½(w_x+w_y)`），
-> 并把它与原树的距离矩阵对齐。库内**没有**这条引理（度量侧有 `mergeDissim`，树侧没有对应物）。
+> ~~`δ.HasPositiveRealization → δ.IsCherry x y → (mergeStep δ x y).HasPositiveRealization`~~
+> —— 即「**树层樱桃收缩**」。（W46 当时）库内**没有**这条引理（度量侧有 `mergeDissim`，树侧没有对应物）。
 
-## 3 方案（三步；工作量按 W46 实读源码估）
+⇒ **W46 已补上**：`Phylo/Stat/NJShrink.lean` 的 ★★★ `shrinkPhylogram` 就是那条引理
+（顶点 `ShrinkV`、诱导子图 ＋ 新边 `leaf a—z`、边权 `shrinkW`），
+并附带 `dist` 与 `mergeStep` 的**逐点对齐**（★★★ `shrinkPhylogram_dist`）、
+正权（★★★ `shrinkPhylogram_w_pos`）与**二叉性**（★★★ `shrinkPhylogram_isBinary`）。
+本文件 §3 保留为**历史方案记录**（W46 的施工顺序与工量估计），不再代表当前状态。
+
+## 3 方案（历史记录；三步已全部落地，见 §1 的表）
 
 ### 步骤 A｜树层收缩（**200–350 行**，L5a 的唯一实质工作）
 
@@ -91,13 +111,25 @@ import Phylo.AttesonRadius
   **SN1987 只引算法本体**（SK1988 `:46` 明说其证明有误）。
 
 **合计 360–590 行**（★ 上调：步骤 A 漏了 `no_degree_two`，见上）。派单预算 100–250 行，
-但**协调侧 2026-11-05 01:0x 已明确「超预算不是问题」** ⇒ 不再走「允许出口」，
-`njAdditiveGap` 按**真陈述**保留（已重写为「归约保持正权实现」，见 `CASTERNJ.lean`）。
-⏳ 本文件仍**不**含步骤 A/B/C 的实现（本轮只证了其中的算术核 `mergeStep_val_eq`）。
+但**协调侧 2026-11-05 01:0x 已明确「超预算不是问题」** ⇒ 未走「允许出口」。
+★ 实测收尾：步骤 A 落在 `NJShrink.lean` **1569 行**、步骤 C 落在 `NJRecovers.lean` **642 行**，
+均**超出**上面的估计（估计偏低，记录在此）。
+**本文件不含步骤 A/B/C 的实现** —— 它只在上面那张表里指路。
 
-## 4 诚实边界
+## 4 诚实边界（★ W47 逐句校准：这里的每一句都必须是**当前真值**）
 
-* 本文件**没有**证明 `nj_recovers_topology_additive`；`CASTERNJ.njAdditiveGap` 仍是 `def … : Prop`。
+* **本文件不关闭任何缺口**：`njStep` / `njStep_isCherry` / `njStep_quartet` / `mergeStep*`
+  全是接口重述，无新数学。缺口的状态在 `CASTERNJ.lean` 的 `def` 上，不在本文件。
+* **本库已证**（W46，台账【已收口】）：★★★ `CASTERNJ.njAdditiveGap_holds`（树层樱桃收缩）、
+  ★★★ `CASTERNJ.njReductionStep`（归约保持「正权 ∧ 二叉 ∧ 实现」）、
+  ★★★ `StrictCherryProved.strictCherry_of_isBinary_pos_gap_holds`、
+  ★★★ `NJRecovers.iso_of_realizes_binary_additive`（★ W47 改名，原名 `nj_recovers_topology_additive`）。
+* **本库未证**（W47 已落成**显式缺口**，不再只写在散文里）：
+  `CASTERNJ.njAdditiveGapUnrestricted` —— 非二叉实现（`deg w ≥ 4`）的树层收缩。
+  它与 `njAdditiveGap` 的差别**只有「二叉」二字**（`HasPosReal` vs `HasPosRealBinary`）。
+* **`nj_recovers_topology_additive` 这个名字已让位**（W47 M1-②）：原定理的结论里**不含 NJ**，
+  故改名为内容名 `iso_of_realizes_binary_additive`；`nj_` 系列的名字留给真正含 `njStep` 的定理
+  （`Phylo/Stat/NJRun.lean` 的 `njRun_correct_additive`）。
 * `njStep_quartet` 需要 `4 ≤ Fintype.card X`（`max_z_gives_split_of_hasPositiveRealization` 的签名），
   这在 `n ≤ 3` 时结论本身无意义（没有 4 个互异点）。
 * L5a 的前提是**可加**（`HasPositiveRealization`）；CASTER 的 `D̃` **不满足**，

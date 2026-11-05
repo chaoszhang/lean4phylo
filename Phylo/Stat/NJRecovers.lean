@@ -7,11 +7,22 @@ import Phylo.Stat.NJShrink
 import Phylo.SplitsDetermineTreeBase
 
 /-!
-# `Phylo.Stat.NJRecovers` —— L5a 装配层（进行中）
+# `Phylo.Stat.NJRecovers` —— L5a 装配层：**拓扑唯一性**
 
-`nj_recovers_topology_additive` 走**拓扑唯一性**路线：
+本文件的结论是 ★★★ `iso_of_realizes_binary_additive`（**内容名**）：
 
 > 两个「正权 ＋ 二叉」的实现树，若实现**同一个** `δ`，则同构。
+
+⚠️ **名字与内容**（W47 整改，协调侧 M1-②）：这条原先叫 `nj_recovers_topology_additive`，
+但它的结论 `Nonempty (Iso T.toCladogram T'.toCladogram)` 里**完全没有 NJ**
+（不含 `njStep`、不含算法本体）。按本库的命名纪律（W35 的 7b/7c 先例），
+弱陈述不得占用「NJ 恢复拓扑」这个名字 ⇒ 改名为内容名，把 `nj_…` 系列的名字留给
+真正含 `njStep` 的定理（`Phylo/Stat/NJRun.lean` 的 `njRun_correct_additive`）。
+
+**为什么它仍是 L5a 的核心数学**：NJ 每轮选的 `Q`-最小对**必是真樱桃**
+（★★★ `NJShrink.isCherry_of_njStep`，W46），而「正权 ＋ 二叉 ＋ 实现」在归约下保持
+（★★★ `CASTERNJ.njReductionStep`）⇒ NJ 的递归输出与真树实现同一个 `δ` ⇒ 同构。
+本文件把最后这一步（同构）证掉；把「NJ 真的跑起来」留给 `NJRun.lean`。
 
 归纳（对 `|Y|` 递降）：
 1. `|Y| ≤ 2`：★★ `Cladogram.iso_of_card_le_two`（库内已有）；
@@ -533,9 +544,9 @@ theorem iso_of_shrink_equiv {T T' : Phylogram.{u, v} X} {a b : X} {w z : T.V} {w
 两棵树都把它当樱桃（★★★ `isCherry_of_njStep`），各自收缩（★★★ `shrinkPhylogram`），
 归纳假设给收缩树的同构，最后由 ★★★ `iso_of_shrink_equiv` 提升回 `T ≅ T'`。 -/
 
-/-- ★★★ **拓扑唯一性**：`δ` 的两个「正权 ＋ 二叉」实现树必同构。
+/-- ★★★ **拓扑唯一性**（**内容名**）：`δ` 的两个「正权 ＋ 二叉」实现树必同构。
 
-这正是 `nj_recovers_topology_additive` 的数学内容：NJ 每轮选的 `Q`-最小对**必是真樱桃**
+这正是 NJ 恢复拓扑所需的全部数学：NJ 每轮选的 `Q`-最小对**必是真樱桃**
 （★★★ `isCherry_of_njStep`），而「正权 ＋ 二叉 ＋ 实现」在归约下保持（★★★ `njReductionStep`），
 故 NJ 的递归输出与真树实现同一个 `δ`，从而同构。 -/
 theorem iso_of_realizes_binary : ∀ (n : ℕ),
@@ -625,11 +636,16 @@ theorem iso_of_realizes_binary : ∀ (n : ℕ),
         exact iso_of_shrink_equiv hbinT hbinT' hab haw hbw hwz hza hzb haw' hbw' hwz' hza' hzb'
           φ hwbT hwbT' hlaT hlaT' hφa hzmT hzmT' hφz hφadj hφleaf
 
-/-- ★★★ **L5a｜`nj_recovers_topology_additive`**：可加（正权 binary 实现）情形下，
-`δ` **唯一决定**系统发生树的拓扑 —— 即任何一致算法（含 NJ）都只能给出同一个拓扑。
+/-- ★★★ **L5a｜`iso_of_realizes_binary_additive`**：可加（正权 binary 实现）情形下，
+`δ` **唯一决定**系统发生树的拓扑 —— 即任何一致算法都只能给出同一个拓扑。
+
+⚠️ **本定理不含 NJ**（W47 整改，协调侧 M1-②）：结论 `Nonempty (Iso T T')` 里没有 `njStep`、
+也没有算法本体；它说的是「两个正权二叉实现同一 `δ` ⇒ 同构」。原名
+`nj_recovers_topology_additive` 与内容不符（名字大于内容），已改为内容名；
+含 NJ 的版本见 `Phylo/Stat/NJRun.lean` 的 ★★★ `njRun_correct_additive`。
 
 `n := Fintype.card Y` 处取 ★★★ `iso_of_realizes_binary`。 -/
-theorem nj_recovers_topology_additive {Y : Type u} [Fintype Y] [DecidableEq Y]
+theorem iso_of_realizes_binary_additive {Y : Type u} [Fintype Y] [DecidableEq Y]
     (δ : NJ.Dissimilarity Y) (T T' : Phylogram.{u, v} Y)
     (hwT : ∀ e : Edge T.toCladogram, 0 < T.w e) (hbinT : T.toCladogram.IsBinary)
     (hrealT : ∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y)

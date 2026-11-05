@@ -12,7 +12,10 @@ import Phylo.Stat.NJShrink
 ## 定位
 
 **CASTER-NJ**（对归一化 `D̃` 跑 NJ）与库内既有的 CASTER 定理 1/2（贪心放置）是**不同下游**。
-本文件不证新数学，只把「CASTER-NJ 还缺什么」按本库纪律落成 `def … : Prop`。
+本文件登记「CASTER-NJ 还缺什么」，**并且**证明其中可证的部分（W46/W47）：
+★★★ `njAdditiveGap_holds`、★★★ `njReductionStep`、★★★ `njNoiseStep_holds`、
+★★ `not_cladogram_of_subsingleton` / `not_hasPosReal_of_subsingleton`。
+⚠️ **W47 校准**：本节原文写的「本文件不证新数学，只把缺口落成 `def … : Prop`」**已不成立**（上面这些是定理）。
 
 ## ★ 2026-11-05 01:0x 重写（协调侧 W46 复核第 ② 条：两条 `def` 曾是**恒真命题**）
 
@@ -79,8 +82,9 @@ def HasPosReal (δ : NJ.Dissimilarity X) : Prop :=
 图取诱导子图、`w—a` 的权改成 `½(w_a+w_b)`；距离对齐用
 `Phylogram.dist_eq_add_of_adj_leaf_dist`（`Phylo/CherryQuartet.lean:79`）。
 
-**诚实边界**：本命题**未被本库证明**。它的**单步正确性**（哪一对被选中）已由
-★★★ `njStep_isCherry`（`CASTERNJStep.lean`）证出 —— 缺的是**树层收缩**。
+★ **W47 校准：本节「诚实边界」已过时 —— 本命题**已由 ★★★ `njAdditiveGap_holds`（本文件下方）证出**，
+机制见 `Phylo/Stat/NJShrink.lean`。**唯一仍未做**的是**非二叉**那一支（`deg w ≥ 4`），
+已另立显式缺口 ★★ `njAdditiveGapUnrestricted`（本文件 §1′）。
 
 ## ★★ 2026-11-05（W46 长程第 32 轮）：**加上了 `3 ≤ |X|`** —— 原陈述在 `|X| = 2` 时**为假**
 
@@ -121,6 +125,32 @@ def HasPosRealBinary (δ : NJ.Dissimilarity X) : Prop :=
 **归约保持「存在正权实现树**」**。 -/
 def njAdditiveGap : Prop :=
   ∀ (δ : NJ.Dissimilarity X), HasPosRealBinary δ → 3 ≤ Fintype.card X →
+    ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
+
+/-- ★★ **L5a 的**非二叉**支 —— 显式缺口**（W47 M1-③ 新立，台账 75 → 76）。
+
+与 ★★ `njAdditiveGap` 的差别**只有「二叉」二字**：
+
+* `njAdditiveGap` 的前提是 `HasPosRealBinary`（= SK1988 `:20-22` 的原假设：二叉 ＋ 全边正），
+  **已由 ★★★ `njAdditiveGap_holds` 收口**；
+* 本命题的前提是 `HasPosReal`（只要求边权全正，**允许** `deg ≥ 4`）—— **本库未证**。
+
+**为什么它不是 `njAdditiveGap` 的推论**：树层收缩（★★★ `NJShrink.shrinkPhylogram`）用到了
+樱桃中点 `w` 的**第三邻居** `z`，而 `z` 的存在 ＋ 唯一只在 `deg w = 3` 时成立
+（★★★ `NJShrink.exists_third`）。
+
+**为什么它是真的（估 400–600 行可证）**：非二叉（`deg w ≥ 4`）时**反而更简单** ——
+删叶 `b` 后 `deg w ≥ 3`，**不需要**抑制度 2 顶点，故
+「删叶 `b`、把新叶 `u` 以权 `½(w_a+w_b)` **挂回** `w`」就直接是合法 `Phylogram`；
+`dist` 对齐在那支也更容易（`a`、`b` 都是 `w` 的叶邻居 ⇒ 到任何旧叶的路径必过 `w`，
+故 `d(a,x) = w_a + d(w,x)`、`d(b,x) = w_b + d(w,x)`，两边一平均即得 `mergeStep` 的取值）。
+代价是**与 `NJShrink` 平行的一套顶点层构造**（连通性 / 无环 / 度数 / 叶判别 / `dist` 对齐）。
+
+**登记理由**：W46 那批只在 `njAdditiveGap` 的 docstring 里用**散文**承认「本库未做」，
+`list_gaps.sh` 看不见（0 行）。按本库纪律「未做的命题必须落成显式缺口」，故立此 `def`。
+★ 它**不是**已知为假、**不是**判不忠实，而是**真开放**。 -/
+def njAdditiveGapUnrestricted : Prop :=
+  ∀ (δ : NJ.Dissimilarity X), HasPosReal δ → 3 ≤ Fintype.card X →
     ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
 
 /-! ## 1′. 陈述更正的**形式化核**：单标签集上不存在 `Cladogram`
@@ -175,7 +205,8 @@ theorem not_hasPosReal_of_subsingleton {Y : Type} [Fintype Y] [DecidableEq Y]
 
 ⚠️ **诚实边界**：本定理只覆盖**二叉**实现（`HasPosRealBinary`）。非二叉实现
 （`deg w ≥ 4`）需要**另一支**构造 —— 只删叶 `b`、把新叶 `u` 以权 `½(w_a+w_b)` 挂回 `w`，
-**本库未做**；`dist` 对齐在那支更容易（路径必过 `w`）。 -/
+**本库未做**；★ **W47 M1-③ 起它不再只写在散文里**，而是显式缺口
+★★ `njAdditiveGapUnrestricted`（本文件 §1）。 -/
 theorem njAdditiveGap_holds : njAdditiveGap (X := X) := by
   intro δ hpos hcard a b hstep
   obtain ⟨T, hwpos, hbin, hT⟩ := hpos
@@ -244,10 +275,13 @@ theorem njConsistencyStep (δ Dtil : NJ.Dissimilarity X) {δmin ε : ℝ}
     (hcard : 5 ≤ Fintype.card X) {a b : X} (h : njStep Dtil a b) : δ.IsCherry a b :=
   NJ.Dissimilarity.njCriterion_minimizer_is_cherry δ Dtil hnear hcard hsep h.1 h.2
 
-/-! ## 3. L5b：CASTER 的 `D̃` 上、含噪版（三条具名义务的合取） -/
+/-! ## 2′. L5b 的三条具名义务（`njSeparationBound` / `njNoiseStep` / `njAdditiveGap`）
+
+★ W47 校准：本节的 `## 3.` 标题原与下面 §3 的标题**重复**（两个 `## 3`），已改为 `## 2′`。 -/
 
 /-- **L5b 的第 ① 条**：正权实现的度量**存在正的樱桃分离界** `δmin`。
-（库内 `IsCherrySeparated` 只有假设形态 `Phylo/AttesonRadius.lean:132`，**没有**从实现树推出它的定理。） -/
+（库内 `IsCherrySeparated` 只有假设形态 `Phylo/AttesonRadius.lean:132`，
+**没有**从实现树推出它的定理 —— 这句在 W47 已过时，见 ★★★ `njSeparationBound_holds`。） -/
 def njSeparationBound : Prop :=
   ∀ (δ : NJ.Dissimilarity X), HasPosReal δ →
     ∃ δmin : ℝ, 0 < δmin ∧ NJ.Dissimilarity.IsCherrySeparated δ δmin
@@ -275,16 +309,19 @@ theorem njNoiseStep_holds : njNoiseStep (X := X) :=
 **三条具名子义务**（派单 §3.7，缺一不可）：
 
 1. `njSeparationBound`（**近似加性 / 分离界**，统计层）：正权实现 ⇒ `∃ δmin > 0`，
-   `IsCherrySeparated δ δmin`。⇒ **开放**（库内只有假设形态）。
+   `IsCherrySeparated δ δmin`。⇒ ★★★ **W47 已证**：`njSeparationBound_holds`（本文件 §3′）。
 2. `njNoiseStep`（**噪声传播**）：Atteson 半径内的扰动不改变 NJ 的**每一轮**选择。
-   ⇒ ★ **已证**：★★ `njNoiseStep_holds`。
-3. `njAdditiveGap`（**算法层**：树层收缩 ＋ 算法本体 ＋ 归纳）⇒ **开放**。
+   ⇒ ★★ **已证**：★★ `njNoiseStep_holds`（W45）。
+3. `njAdditiveGap`（**算法层**：树层收缩 ＋ 算法本体 ＋ 归纳）⇒ ★★★ **W46 已证**：
+   `njAdditiveGap_holds`；含 `njStep` 的**算法本体版**见 `Phylo/Stat/NJRun.lean` 的
+   `njRun_correct_additive`。
 
 ⚠️ **数值备注只是证据，不是定理**：`n ≤ 16`、85 350 个 quartet、0 错误（文档 §7.1）。
-本 `def` **不**声称它在任何参数下成立。
+本 `def` 的真假由上面三条**分别**决定，不由数值实验决定。
 
 ⚠️ 端到端形态（「末态 split 集 = 真树 split 集」）需要把 n−3 轮写成 Lean 递归
-（`MergeIdx` 每轮换类型），本文件**不**假装有它 —— 那是 L5a 步骤 B 的内容。 -/
+（`MergeIdx` 每轮换类型）—— 那是 L5a 步骤 B（W47 的 `Phylo/Stat/NJRun.lean`）的内容，
+**不在**本 `def` 里。 -/
 def njConsistencyGap : Prop :=
   njSeparationBound (X := X) ∧ njNoiseStep (X := X) ∧ njAdditiveGap (X := X)
 
