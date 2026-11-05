@@ -173,6 +173,11 @@ omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
 @[simp] theorem relabelCladogram_graph (T : Cladogram X) (e : X ≃ Y) :
     (relabelCladogram T e).graph = T.graph := rfl
 
+-- 与 `Phylo.BunemanGraft` 对 `graftCladogram`、`Phylo.NJShrink` 对 `shrinkCladogram` 的处理一致：
+-- `V`／`graph` 投影要能在 `reducible` 透明层归约，B-3 的显示式装配才能把
+-- `(graft … (relabel … (shrink …))).V` 与 `ShrinkV T b w ⊕ Fin 2` 认成同一个类型。
+attribute [reducible] relabelCladogram
+
 omit [Fintype X] [DecidableEq X] [Fintype Y] [DecidableEq Y] in
 /-- ★★ **`relabelCladogram` 在「老标号」处取值**：`(relabel C e).leaf (e x) = C.leaf x`
 （B-3 的 `leaf_compat` 与「收缩树的中心」两处都要用它把 `relabel` 剥掉）。 -/
@@ -371,5 +376,192 @@ theorem graftGraph_adj_rename_inr_inr (hab : a ≠ b) (hbin : T.toCladogram.IsBi
     exact absurd h.symm (not_adj_cherry_leaves hab hbin haw hbw)
   · rw [ite_eq_right hi, ite_eq_right hj] at h
     exact absurd h (T.graph.loopless.irrefl (T.leaf b))
+
+/-! ### B-3 的 **inr–inl** 情形
+
+由 `SimpleGraph.adj_comm` 在**两边**同时换向，归约到已证的 **inl–inr**（`φ` 的求值形状
+在换向后恰好对上）；这样九类邻接情形就都齐了，装配交给下面的 `graft_shrink_iso`。 -/
+
+theorem graftGraph_adj_rename_inr_inl (hab : a ≠ b) (hbin : T.toCladogram.IsBinary)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (t : NJShrink.ShrinkV T b w) (ht : t.1 = T.leaf a) (i : Fin 2)
+    (u : NJShrink.ShrinkV T b w) :
+    (Phylo.graftGraph (NJShrink.shrinkGraph T a b w z hza) t).Adj (Sum.inr i) (Sum.inl u) ↔
+      T.graph.Adj (if i = (0 : Fin 2) then T.leaf a else T.leaf b)
+        (if u.1 = T.leaf a then w else u.1) :=
+  (SimpleGraph.adj_comm _ (Sum.inr i) (Sum.inl u)).trans
+    ((graftGraph_adj_rename_inl_inr hab hbin haw hbw hwz hza hzb t ht u i).trans
+      (SimpleGraph.adj_comm _ (if u.1 = T.leaf a then w else u.1)
+        (if i = (0 : Fin 2) then T.leaf a else T.leaf b)))
+
+/-! ## B-3｜★★★ **`graft_shrink_iso`**：`Iso (graft (shrink T)) T`
+
+收缩树删掉了叶 `T.leaf b` 与樱桃中点 `w`，并把 `T.leaf a` 直接接到 `z` 上；
+故 graft 回来时，收缩树里**名为 `T.leaf a` 的那个顶点实际上站在中点 `w` 的位置**（度 3）。
+同构取
+
+　`φ (inl ⟨v,·⟩) = if v = T.leaf a then w else v`、`φ (inr 0) = T.leaf a`、`φ (inr 1) = T.leaf b`。
+
+* 邻接：九类情形归到上面三条（★★★ `shrinkGraph_adj_rename`、★★ `…_inl_inr`、★★ `…_inr_inr`），
+  inr–inl 由 ★ `graftGraph_adj_rename_inr_inl`；
+* **单射**：`w` 只由 `inl ⟨T.leaf a,·⟩` 取到（`ShrinkV` 的成员**排除了 `w`**），
+  两片新叶分别是 `T.leaf a`、`T.leaf b`（`T.leaf a ≠ T.leaf b`，`w` 与二者都相邻故不等），
+  `Fin 2` 那一片靠 `hg`（`i ↦ if i = 0 then a else b` 单射）；
+* **满射**：`T.V` 的每点 `v` 分四类 —— `v = w`（取 `inl ⟨T.leaf a,·⟩`）、
+  `v = T.leaf a`（取 `inr 0`）、`v = T.leaf b`（取 `inr 1`）、其余（取 `inl v`，
+  因为 `v ∉ {T.leaf b, w}` 正是 `ShrinkV` 的成员条件）。 -/
+theorem graft_shrink_iso (hbin : T.toCladogram.IsBinary) (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
+    Nonempty (Iso (graftCladogram (p := a) (q := b) hab
+      (relabelCladogram (NJShrink.shrinkCladogram T hbin hab haw hbw hza hzb hwz)
+        (mergeIdxEquiv a b))) T.toCladogram) := by
+  classical
+  -- 收缩树的中心：`relabelCladogram` 之后它就是 `T.leaf a` 那个顶点
+  let ta : NJShrink.ShrinkV T b w :=
+    ⟨T.leaf a, fun h => hab (T.leaf.injective h), haw.ne⟩
+  let C : Cladogram (NJ.Dissimilarity.MergeIdx X a b) :=
+    NJShrink.shrinkCladogram T hbin hab haw hbw hza hzb hwz
+  let C' : Cladogram (NJ.Dissimilarity.BunemanShrink a b) := relabelCladogram C (mergeIdxEquiv a b)
+  let φ : (NJShrink.ShrinkV T b w ⊕ Fin 2) → T.V := fun u =>
+    match u with
+    | Sum.inl v => if v.1 = T.leaf a then w else v.1
+    | Sum.inr i => if i = (0 : Fin 2) then T.leaf a else T.leaf b
+  have hφ_inl : ∀ v : NJShrink.ShrinkV T b w,
+      φ (Sum.inl v) = if v.1 = T.leaf a then w else v.1 := fun _ => rfl
+  have hφ_inr : ∀ i : Fin 2,
+      φ (Sum.inr i) = if i = (0 : Fin 2) then T.leaf a else T.leaf b := fun _ => rfl
+  have hla : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+  -- 收缩树的中心就是 `ta`
+  have hcenter : C'.leaf (Sum.inr ()) = ta := by
+    show C.leaf ((mergeIdxEquiv a b).symm (Sum.inr ())) = ta
+    rw [mergeIdxEquiv_symm_inr]
+    exact Subtype.ext rfl
+  -- graft 回去的图 = `shrinkGraph` 挂在 `ta` 上
+  have hgraph : (graftCladogram (p := a) (q := b) hab C').graph
+      = graftGraph (NJShrink.shrinkGraph T a b w z hza) ta := by
+    show graftGraph (NJShrink.shrinkGraph T a b w z hza) (C'.leaf (Sum.inr ()))
+      = graftGraph (NJShrink.shrinkGraph T a b w z hza) ta
+    rw [hcenter]
+  -- `C'.leaf` 在**非**樱桃标签处的取值（`relabelCladogram` 与 `leafShrink` 两层都剥掉）
+  have hC'leaf : ∀ (y : X) (hy : y ≠ a) (hq : y ≠ b),
+      (C'.leaf ((Sum.inl ⟨y, hy, hq⟩ : NJ.Dissimilarity.BunemanShrink a b))).1 = T.leaf y := by
+    intro y hy hq
+    show (NJShrink.leafShrink T hbin hab haw hbw
+      (Sum.inl ((mergeOldEquiv a b).symm ⟨y, hy, hq⟩))).1 = T.leaf y
+    rw [leafShrink_val_inl, mergeOldEquiv_symm_val]
+  -- `Fin 2` 那一片的单射
+  have hg : ∀ i j : Fin 2,
+      (if i = (0 : Fin 2) then T.leaf a else T.leaf b)
+        = (if j = (0 : Fin 2) then T.leaf a else T.leaf b) → i = j := by
+    intro i j hij
+    by_cases hi : i = 0
+    · by_cases hj : j = 0
+      · rw [hi, hj]
+      · rw [ite_eq_left hi, ite_eq_right hj] at hij
+        exact absurd hij hla
+    · by_cases hj : j = 0
+      · rw [ite_eq_right hi, ite_eq_left hj] at hij
+        exact absurd hij.symm hla
+      · refine Fin.ext ?_
+        have hi0 : (i : Nat) ≠ 0 := fun h => hi (Fin.ext h)
+        have hj0 : (j : Nat) ≠ 0 := fun h => hj (Fin.ext h)
+        have hi2 : (i : Nat) < 2 := i.isLt
+        have hj2 : (j : Nat) < 2 := j.isLt
+        omega
+  have hinj : Function.Injective φ := by
+    rintro (u | i) (v | j) h
+    · simp only [hφ_inl] at h
+      by_cases hua : u.1 = T.leaf a <;> by_cases hva : v.1 = T.leaf a
+      · exact congrArg Sum.inl (Subtype.ext (hua.trans hva.symm))
+      · rw [ite_eq_left hua, ite_eq_right hva] at h
+        exact absurd h.symm v.2.2
+      · rw [ite_eq_right hua, ite_eq_left hva] at h
+        exact absurd h u.2.2
+      · rw [ite_eq_right hua, ite_eq_right hva] at h
+        exact congrArg Sum.inl (Subtype.ext h)
+    · simp only [hφ_inl, hφ_inr] at h
+      by_cases hua : u.1 = T.leaf a <;> by_cases hj : j = (0 : Fin 2)
+      · rw [ite_eq_left hua, ite_eq_left hj] at h
+        exact absurd h haw.ne.symm
+      · rw [ite_eq_left hua, ite_eq_right hj] at h
+        exact absurd h hbw.ne.symm
+      · rw [ite_eq_right hua, ite_eq_left hj] at h
+        exact absurd h hua
+      · rw [ite_eq_right hua, ite_eq_right hj] at h
+        exact absurd h u.2.1
+    · simp only [hφ_inr, hφ_inl] at h
+      by_cases hi : i = (0 : Fin 2) <;> by_cases hva : v.1 = T.leaf a
+      · rw [ite_eq_left hi, ite_eq_left hva] at h
+        exact absurd h haw.ne
+      · rw [ite_eq_left hi, ite_eq_right hva] at h
+        exact absurd h.symm hva
+      · rw [ite_eq_right hi, ite_eq_left hva] at h
+        exact absurd h hbw.ne
+      · rw [ite_eq_right hi, ite_eq_right hva] at h
+        exact absurd h.symm v.2.1
+    · simp only [hφ_inr] at h
+      exact congrArg Sum.inr (hg i j h)
+  have hsurj : Function.Surjective φ := by
+    intro v
+    by_cases hv_w : v = w
+    · refine ⟨Sum.inl ⟨T.leaf a, hla, haw.ne⟩, ?_⟩
+      rw [hφ_inl]
+      show (if T.leaf a = T.leaf a then w else T.leaf a) = v
+      rw [ite_eq_left rfl, hv_w]
+    · by_cases hv_a : v = T.leaf a
+      · refine ⟨Sum.inr 0, ?_⟩
+        rw [hφ_inr]
+        show (if (0 : Fin 2) = 0 then T.leaf a else T.leaf b) = v
+        rw [ite_eq_left rfl, hv_a]
+      · by_cases hv_b : v = T.leaf b
+        · refine ⟨Sum.inr 1, ?_⟩
+          rw [hφ_inr]
+          have h1 : ¬ ((1 : Fin 2) = 0) := by decide
+          rw [ite_eq_right h1, hv_b]
+        · refine ⟨Sum.inl ⟨v, hv_b, hv_w⟩, ?_⟩
+          show φ (Sum.inl (⟨v, hv_b, hv_w⟩ : NJShrink.ShrinkV T b w)) = v
+          rw [hφ_inl, ite_eq_right hv_a]
+  -- 九类邻接情形
+  have hadj : ∀ u v : NJShrink.ShrinkV T b w ⊕ Fin 2,
+      (graftGraph (NJShrink.shrinkGraph T a b w z hza) ta).Adj u v
+        ↔ T.graph.Adj (φ u) (φ v) := by
+    intro u v
+    rcases u with u | i
+    · rcases v with v | j
+      · rw [graftGraph_adj_inl_inl]
+        exact shrinkGraph_adj_rename hab hbin haw hbw hwz hza hzb u v
+      · exact graftGraph_adj_rename_inl_inr hab hbin haw hbw hwz hza hzb ta rfl u j
+    · rcases v with v | j
+      · exact graftGraph_adj_rename_inr_inl hab hbin haw hbw hwz hza hzb ta rfl i v
+      · exact graftGraph_adj_rename_inr_inr hab hbin haw hbw hwz hza hzb ta i j
+  -- 装配
+  let e : (NJShrink.ShrinkV T b w ⊕ Fin 2) ≃ T.V := Equiv.ofBijective φ ⟨hinj, hsurj⟩
+  have hadj' : ∀ {a' b' : (graftCladogram (p := a) (q := b) hab C').V},
+      T.graph.Adj (e a') (e b')
+        ↔ (graftCladogram (p := a) (q := b) hab C').graph.Adj a' b' := by
+    intro a' b'
+    rw [hgraph]
+    exact (hadj a' b').symm
+  have hleaf : ∀ x : X, e ((graftCladogram (p := a) (q := b) hab C').leaf x) = T.leaf x := by
+    intro x
+    show φ (Phylo.graftLeafFun C' x) = T.leaf x
+    by_cases hxa : x = a
+    · rw [Phylo.graftLeafFun_eq_inr_zero C' hxa, hφ_inr]
+      show (if (0 : Fin 2) = 0 then T.leaf a else T.leaf b) = T.leaf x
+      rw [ite_eq_left rfl, hxa]
+    · by_cases hxb : x = b
+      · rw [Phylo.graftLeafFun_eq_inr_one C' hxa hxb, hφ_inr]
+        have h1 : ¬ ((1 : Fin 2) = 0) := by decide
+        rw [ite_eq_right h1, hxb]
+      · rw [Phylo.graftLeafFun_eq_inl C' hxa hxb, hφ_inl]
+        rw [hC'leaf x hxa hxb]
+        rw [ite_eq_right (fun h => hxa (T.leaf.injective h))]
+  exact ⟨{ gIso := (RelIso.mk e (fun {a' b'} => by
+             rw [hgraph]
+             exact (hadj a' b').symm) : (graftCladogram (p := a) (q := b) hab C').graph
+               ≃g T.toCladogram.graph),
+           leaf_compat := hleaf }⟩
 
 end Phylo.Stat.NJRun
