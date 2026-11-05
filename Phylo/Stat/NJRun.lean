@@ -655,6 +655,37 @@ theorem njPick_spec (δ : NJ.Dissimilarity X) (h : 2 ≤ Fintype.card X) :
     njStep δ (njPick δ h).1 (njPick δ h).2 :=
   Classical.choose_spec (exists_njStep_pair δ h)
 
+/-! ### B-4a′｜递降尺度的**可复现**接口
+
+★ 这三条**只依赖显式参数**（不靠 `by omega` 现推），因此
+`njRunAux` 的定义体与 B-4b 的正确性证明里写出来是**同一个项**
+（`njRunAux` 的递归调用要传证明，若现推 `by omega` 则定义与证明失配，
+因为 `Classical.choose` 不尊重证明无关性）。 -/
+
+/-- ★ `MergeIdx` 的基数（`njPick` 选出的那对）。 -/
+theorem njPick_card (δ : NJ.Dissimilarity X) (h2 : 2 ≤ Fintype.card X) :
+    Fintype.card (NJ.Dissimilarity.MergeIdx X (njPick δ h2).1 (njPick δ h2).2) + 1
+      = Fintype.card X :=
+  mergeStep_card (njPick_spec δ h2).1
+
+theorem njPick_three_le {δ : NJ.Dissimilarity X} {h2 : 2 ≤ Fintype.card X}
+    (h3 : 3 ≤ Fintype.card X) (hne : Fintype.card X ≠ 3) :
+    3 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx X (njPick δ h2).1 (njPick δ h2).2) := by
+  have h := njPick_card δ h2
+  omega
+
+theorem njPick_two_le {δ : NJ.Dissimilarity X} {h2 : 2 ≤ Fintype.card X}
+    (h3 : 3 ≤ Fintype.card X) (hne : Fintype.card X ≠ 3) :
+    2 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx X (njPick δ h2).1 (njPick δ h2).2) := by
+  have h := njPick_card δ h2
+  omega
+
+theorem njPick_le_pred {δ : NJ.Dissimilarity X} {h2 : 2 ≤ Fintype.card X} {m : Nat}
+    (hle : Fintype.card X ≤ m + 1) :
+    Fintype.card (NJ.Dissimilarity.MergeIdx X (njPick δ h2).1 (njPick δ h2).2) ≤ m := by
+  have h := njPick_card δ h2
+  omega
+
 /-- ★★ **三标签的基例树**：空相容族 ⇒ ★ `ofCompatibleSplits` 给一棵**具体的**树。
 与 `δ` **无关**（这正是它不构成「把目标当前提」的理由）。 -/
 noncomputable def njBase (Y : Type) [Fintype Y] [DecidableEq Y]
@@ -673,7 +704,8 @@ set_option linter.unusedVariables false in
 * `h2`／`h3` 显式传入，正确性证明里对**同一组** `h2 h3` 展开
   （否则 `njPick` 的证明参数不可复现，`Classical.choose` 不尊重证明无关性）；
 * 步进：★ `njPick δ h2` 取 `Q` 最小对，`graftCladogram` 把两片新叶挂回
-  `njRunAux n (MergeIdx Y a b) (mergeStep δ a b) …` 的结果上。 -/
+  `njRunAux n (MergeIdx Y a b) (mergeStep δ a b) …` 的结果上；
+* 三个递降尺度用 **B-4a′ 的可复现接口**（`njPick_two_le`／`njPick_three_le`／`njPick_le_pred`）。 -/
 noncomputable def njRunAux : (n : Nat) → (Y : Type) → [Fintype Y] → [DecidableEq Y] →
     (δ : NJ.Dissimilarity Y) → (h2 : 2 ≤ Fintype.card Y) → (h3 : 3 ≤ Fintype.card Y) →
     (hle : Fintype.card Y ≤ n) → Cladogram Y
@@ -683,19 +715,13 @@ noncomputable def njRunAux : (n : Nat) → (Y : Type) → [Fintype Y] → [Decid
       classical
       by_cases hcard : Fintype.card Y = 3
       · exact njBase Y h3
-      · have h4 : 4 ≤ Fintype.card Y := by omega
-        let p : Y × Y := njPick δ h2
-        have hstep : njStep δ p.1 p.2 := njPick_spec δ h2
-        have hcard' : Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) + 1
-            = Fintype.card Y := mergeStep_card hstep.1
-        have h3' : 3 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) := by omega
-        have h2' : 2 ≤ Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) := by omega
-        have hle' : Fintype.card (NJ.Dissimilarity.MergeIdx Y p.1 p.2) ≤ n := by omega
-        exact graftCladogram (p := p.1) (q := p.2) hstep.1
+      · exact graftCladogram (p := (njPick δ h2).1) (q := (njPick δ h2).2)
+          (njPick_spec δ h2).1
           (relabelCladogram
-            (njRunAux n (NJ.Dissimilarity.MergeIdx Y p.1 p.2) (mergeStep δ p.1 p.2)
-              h2' h3' hle')
-            (mergeIdxEquiv p.1 p.2))
+            (njRunAux n (NJ.Dissimilarity.MergeIdx Y (njPick δ h2).1 (njPick δ h2).2)
+              (mergeStep δ (njPick δ h2).1 (njPick δ h2).2)
+              (njPick_two_le h3 hcard) (njPick_three_le h3 hcard) (njPick_le_pred hle))
+            (mergeIdxEquiv (njPick δ h2).1 (njPick δ h2).2))
 
 /-- ★★★ **`njRun`**：NJ 算法在 `δ` 上的**真递归重建**（返回原标签集上的 `Cladogram X`）。
 
@@ -704,5 +730,123 @@ noncomputable def njRunAux : (n : Nat) → (Y : Type) → [Fintype Y] → [Decid
   再用 ★★★ `graftCladogram` 把两片新叶挂回去 —— 每轮真用 `njStep`。 -/
 noncomputable def njRun (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X) : Cladogram X :=
   njRunAux (Fintype.card X) X δ (two_le_of_three hcard) hcard le_rfl
+
+/-! ## B-4b｜★★★ **`njRun_correct_additive`**：`njRun` 确给出 `δ` 的拓扑
+
+**证明骨架**（对 `n` 归纳，与 `njRunAux` 的递降同构）：
+
+* **基例 `card Y = 3`**：`njRunAux` 取值 `njBase Y h3`；两棵三标签树同构
+  （★★ `Cladogram.iso_of_card_eq_three`）。
+* **步进 `card Y ≥ 4`**：`njPick δ h2 =: (a,b)`，
+  ★★★ `NJShrink.isCherry_of_njStep` 给出 `T.IsCherry a b`（**这正是 `njStep` 真的被用到的位置**：
+  `Q` 最小 ⇒ 真樱桃），于是
+  1. ★★★ `NJShrink.shrinkPhylogram` 是 `mergeStep δ a b` 的**正权二叉实现**
+     （三条不变式逐条搬自 ★★★ `njReductionStep` 的证明）；
+  2. **归纳假设**给出 `Iso (njRunAux n (MergeIdx Y a b) (mergeStep δ a b) …) (shrink …).toCladogram`；
+  3. ★ `relabelCladogram_iso` ＋ ★★ `graftCladogram_iso_congr` 把它抬成 graft 后的同构；
+  4. ★★★ `graft_shrink_iso` 把「graft 回去的收缩树」拼回 `T.toCladogram`。 -/
+
+/-- ★ `relabelCladogram` 保同构（顶点集与图都不动，只有标签换名）。 -/
+theorem relabelCladogram_iso {Y : Type} [Fintype Y] [DecidableEq Y] (e : X ≃ Y)
+    {C D : Cladogram X} (h : Iso C D) :
+    Nonempty (Iso (relabelCladogram C e) (relabelCladogram D e)) := by
+  refine ⟨{ gIso := h.gIso, leaf_compat := ?_ }⟩
+  intro y
+  show h.gIso ((relabelCladogram C e).leaf y) = (relabelCladogram D e).leaf y
+  rw [relabelCladogram_leaf, relabelCladogram_leaf]
+  exact h.leaf_compat (e.symm y)
+
+set_option linter.unusedVariables false in
+theorem njRunAux_correct : ∀ (n : Nat) (Y : Type) [Fintype Y] [DecidableEq Y]
+    (δ : NJ.Dissimilarity Y) (h2 : 2 ≤ Fintype.card Y) (h3 : 3 ≤ Fintype.card Y)
+    (hle : Fintype.card Y ≤ n)
+    (T : Phylogram.{0, 0} Y) (hw : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hbin : T.toCladogram.IsBinary)
+    (hreal : ∀ x y : Y, T.dist (T.leaf x) (T.leaf y) = δ.val x y),
+    Nonempty (Iso (njRunAux n Y δ h2 h3 hle) T.toCladogram) := by
+  intro n
+  induction n with
+  | zero =>
+      intro Y _ _ δ h2 h3 hle T hw hbin hreal
+      exact absurd hle (by omega)
+  | succ n ih =>
+      intro Y _ _ δ h2 h3 hle T hw hbin hreal
+      classical
+      by_cases hcard : Fintype.card Y = 3
+      · -- 基例：三标签，拓扑唯一
+        have hval : njRunAux (n + 1) Y δ h2 h3 hle = njBase Y h3 := by
+          simp only [njRunAux]
+          rw [dif_pos hcard]
+        rw [hval]
+        exact Cladogram.iso_of_card_eq_three (njBase Y h3) T.toCladogram hcard
+      · -- 步进：`card Y ≥ 4`
+        have hval : njRunAux (n + 1) Y δ h2 h3 hle
+            = graftCladogram (p := (njPick δ h2).1) (q := (njPick δ h2).2)
+                (njPick_spec δ h2).1
+                (relabelCladogram
+                  (njRunAux n (NJ.Dissimilarity.MergeIdx Y (njPick δ h2).1 (njPick δ h2).2)
+                    (mergeStep δ (njPick δ h2).1 (njPick δ h2).2)
+                    (njPick_two_le h3 hcard) (njPick_three_le h3 hcard) (njPick_le_pred hle))
+                  (mergeIdxEquiv (njPick δ h2).1 (njPick δ h2).2)) := by
+          simp only [njRunAux]
+          rw [dif_neg hcard]
+        rw [hval]
+        -- 1. `njStep` 给出真樱桃（★ `Q` 最小 ⇒ 樱桃：`isCherry_of_njStep`）
+        have hstep : njStep δ (njPick δ h2).1 (njPick δ h2).2 := njPick_spec δ h2
+        have hc : T.IsCherry (njPick δ h2).1 (njPick δ h2).2 :=
+          NJShrink.isCherry_of_njStep δ hw hreal h3 hstep
+        have hckeep := hc
+        obtain ⟨hab, w, haw, hbw⟩ := hc
+        obtain ⟨z, hwz, hza, hzb, -⟩ := NJShrink.exists_third T hbin hab haw hbw
+        have hla : T.leaf (njPick δ h2).1 ≠ T.leaf (njPick δ h2).2 ∧
+            T.leaf (njPick δ h2).1 ≠ w :=
+          ⟨fun h => hab (T.leaf.injective h),
+           NJShrink.leaf_ne_midpoint T hbin hab haw hbw (njPick δ h2).1⟩
+        have hzm : z ≠ T.leaf (njPick δ h2).2 ∧ z ≠ w :=
+          ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+        -- 2. 收缩树是 `mergeStep δ a b` 的正权二叉实现（三条不变式）
+        let T' : Phylogram (NJ.Dissimilarity.MergeIdx Y (njPick δ h2).1 (njPick δ h2).2) :=
+          NJShrink.shrinkPhylogram T hbin hab haw hbw hza hzb hwz hw
+        have hw' : ∀ e : Edge T'.toCladogram, 0 < T'.w e := by
+          intro e
+          have key : ∀ e' : Sym2 (NJShrink.ShrinkV T (njPick δ h2).2 w),
+              e' ∈ (NJShrink.shrinkGraph T (njPick δ h2).1 (njPick δ h2).2 w z hza).edgeSet →
+              0 < NJShrink.shrinkW T (njPick δ h2).1 (njPick δ h2).2 w z hza hla hzm e' :=
+            Sym2.ind (fun u v he => NJShrink.shrinkW_pos T hbin hab haw hbw hza hzb hwz hw
+              hla hzm ((SimpleGraph.mem_edgeSet _).mp he))
+          exact key e.1 e.2
+        have hbin' : T'.toCladogram.IsBinary :=
+          NJShrink.shrinkPhylogram_isBinary T hbin hab haw hbw hza hzb hwz hw
+        have hreal' : ∀ u v, T'.dist (T'.leaf u) (T'.leaf v)
+            = (mergeStep δ (njPick δ h2).1 (njPick δ h2).2).val u v :=
+          fun u v => NJShrink.shrinkPhylogram_dist T δ hbin hab haw hbw hza hzb hwz hw hckeep hreal u v
+        -- 3. 归纳假设
+        have hIH := ih (NJ.Dissimilarity.MergeIdx Y (njPick δ h2).1 (njPick δ h2).2)
+          (mergeStep δ (njPick δ h2).1 (njPick δ h2).2)
+          (njPick_two_le h3 hcard) (njPick_three_le h3 hcard) (njPick_le_pred hle)
+          T' hw' hbin' hreal'
+        -- 4. 抬升：`relabel` → `graft`，再用 `graft_shrink_iso` 拼回 `T`
+        obtain ⟨e1⟩ := hIH
+        obtain ⟨e2⟩ := relabelCladogram_iso (mergeIdxEquiv (njPick δ h2).1 (njPick δ h2).2) e1
+        obtain ⟨e3⟩ := graftCladogram_iso_congr hstep.1 e2
+        obtain ⟨e4⟩ := graft_shrink_iso (T := T) (a := (njPick δ h2).1) (b := (njPick δ h2).2)
+          (w := w) (z := z) hbin hab haw hbw hza hzb hwz
+        exact ⟨e3.trans e4⟩
+
+/-- ★★★ **`njRun_correct_additive`**（M2 的交付定理）：若 `δ` 有**边权全正**的
+**二叉**实现树 `T`，则 `njRun δ` 与 `T` 的拓扑同构。
+
+结论里**字面出现 `njRun`**（试金石 ①），`njRun` 返回 `Cladogram X`（②），
+其定义每轮真用 `njStep`（③）。 -/
+theorem njRun_correct_additive (δ : NJ.Dissimilarity X) (hcard : 3 ≤ Fintype.card X)
+    (T : Phylogram.{0, 0} X) (hw : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hbin : T.toCladogram.IsBinary)
+    (hreal : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    Nonempty (Iso (njRun δ hcard) T.toCladogram) := by
+  have h := njRunAux_correct (Fintype.card X) X δ (two_le_of_three hcard) hcard le_rfl
+    T hw hbin hreal
+  have hval : njRun δ hcard
+      = njRunAux (Fintype.card X) X δ (two_le_of_three hcard) hcard le_rfl := rfl
+  rwa [hval]
 
 end Phylo.Stat.NJRun
