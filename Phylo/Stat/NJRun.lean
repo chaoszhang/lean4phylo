@@ -564,4 +564,58 @@ theorem graft_shrink_iso (hbin : T.toCladogram.IsBinary) (hab : a ≠ b)
                ≃g T.toCladogram.graph),
            leaf_compat := hleaf }⟩
 
+/-! ## B-2｜★★ **`graftCladogram_iso_congr`**：同构沿 graft 抬升
+
+`graftCladogram` 是**无条件的树手术**（把两片新叶挂到 `C.leaf (Sum.inr ())` 上），
+所以 `Iso C D` 可以直接抬成 `Iso (graft C) (graft D)`：
+
+* 顶点等价取 `f := Equiv.sumCongr e.gIso.toEquiv (Equiv.refl (Fin 2))`；
+* 旧–旧邻接用 `e.gIso`；挂边用 `e.leaf_compat`（`D.leaf (inr ()) = g (C.leaf (inr ()))`）
+  化到 `g u = g tC ↔ u = tC`（`g` 单射）；新–新两边都假；
+* 标签嵌入逐 `graftLeafFun` 的三分支对齐（`p ↦ inr 0`、`q ↦ inr 1`、其余走 `Sum.inl ∘ leaf`）。 -/
+theorem graftCladogram_iso_congr {Y : Type} [Fintype Y] [DecidableEq Y] {p q : Y} (hpq : p ≠ q)
+    {C D : Cladogram (NJ.Dissimilarity.BunemanShrink p q)} (e : Iso C D) :
+    Nonempty (Iso (graftCladogram (p := p) (q := q) hpq C)
+      (graftCladogram (p := p) (q := q) hpq D)) := by
+  classical
+  let g : C.V ≃ D.V := e.gIso.toEquiv
+  let f : C.V ⊕ Fin 2 ≃ D.V ⊕ Fin 2 := Equiv.sumCongr g (Equiv.refl (Fin 2))
+  have hf_inl : ∀ u : C.V, f (Sum.inl u) = Sum.inl (g u) := fun _ => rfl
+  have hf_inr : ∀ i : Fin 2, f (Sum.inr i) = Sum.inr i := fun _ => rfl
+  have hgleaf : ∀ u : NJ.Dissimilarity.BunemanShrink p q, g (C.leaf u) = D.leaf u :=
+    fun u => e.leaf_compat u
+  have hadj : ∀ {u v : C.V}, C.graph.Adj u v ↔ D.graph.Adj (g u) (g v) :=
+    fun {u v} => e.gIso.map_rel_iff'.symm
+  have hkey : ∀ u : C.V, (g u = D.leaf (Sum.inr ())) ↔ (u = C.leaf (Sum.inr ())) := by
+    intro u
+    have h0 : g u = g (C.leaf (Sum.inr ())) ↔ (u = C.leaf (Sum.inr ())) := g.injective.eq_iff
+    rwa [hgleaf (Sum.inr ())] at h0
+  have hadj' : ∀ {a b : C.V ⊕ Fin 2},
+      (graftGraph D.graph (D.leaf (Sum.inr ()))).Adj (f a) (f b)
+        ↔ (graftGraph C.graph (C.leaf (Sum.inr ()))).Adj a b := by
+    intro a b
+    rcases a with u | i <;> rcases b with v | j
+    · simp only [hf_inl, graftGraph_adj_inl_inl]
+      exact (hadj (u := u) (v := v)).symm
+    · simp only [hf_inl, hf_inr, graftGraph_adj_inl_inr]
+      exact hkey u
+    · simp only [hf_inl, hf_inr, graftGraph_adj_inr_inl]
+      exact hkey v
+    · simp only [hf_inr]
+      exact ⟨fun h => absurd h
+                (graftGraph_adj_not_inr_inr (G := D.graph) (t := D.leaf (Sum.inr ()))),
+             fun h => absurd h
+                (graftGraph_adj_not_inr_inr (G := C.graph) (t := C.leaf (Sum.inr ())))⟩
+  have hleaf : ∀ y : Y, f (Phylo.graftLeafFun C y) = Phylo.graftLeafFun D y := by
+    intro y
+    by_cases hyp : y = p
+    · rw [Phylo.graftLeafFun_eq_inr_zero C hyp, Phylo.graftLeafFun_eq_inr_zero D hyp]
+      simp only [hf_inr]
+    · by_cases hyq : y = q
+      · rw [Phylo.graftLeafFun_eq_inr_one C hyp hyq, Phylo.graftLeafFun_eq_inr_one D hyp hyq]
+        simp only [hf_inr]
+      · rw [Phylo.graftLeafFun_eq_inl C hyp hyq, Phylo.graftLeafFun_eq_inl D hyp hyq]
+        simp only [hf_inl, hgleaf]
+  exact ⟨{ gIso := RelIso.mk f hadj', leaf_compat := hleaf }⟩
+
 end Phylo.Stat.NJRun
