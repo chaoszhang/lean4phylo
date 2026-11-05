@@ -115,7 +115,7 @@ graph' := T.graph.induce (fun v => v ≠ T.leaf b)      -- `SimpleGraph.induce`
 | **G1** | `ShrinkVNB`／`shrinkGraphNB`／`leafNB` ＋ 三条求值引理 | 60 | **✅ 已落**（实测 55 行） |
 | **G2** | 无环（`IsCycle.map` 沿 `Subtype.val` 搬回 `T`）＋ 连通（走法提升 `exists_walk_nb`，枢纽 `w`，路径避 `leaf b` 用 `NJShrink.not_mem_support_of_degree_one`） | 150–220 | **✅ 已落**（实测 75 行） |
 | **G3** | 度数（`w` 减 1、其余不变）：`degree_nb_of_ne`（`Finset.card_bij`，关键：`leaf b` 的唯一邻居是 `w` ⇒ `¬Adj v (leaf b)`）／`degree_nb_midpoint`（`neighborFinset w`.erase `leaf b` 的双射） | 100–140 | **✅ 已落**（实测 62 行） |
-| **G4** | `no_degree_two` ＋ `leaf_iff_degree_one`（`Cladogram` 打包） | 60–90 | 待做 |
+| **G4** | `no_degree_two` ＋ `leaf_iff_degree_one` ＋ ★★★ `shrinkCladogramNB : Cladogram (MergeIdx X a b)` | 60–90 | **✅ 已落**（实测 100 行） |
 | **G5** | 边权 `w'`（旧边不变、`(leaf a, w)` 改 `½(w_a+w_b)`）＋ 正性 | 50–70 | 待做 |
 | **G6** | `dist` 三支 | 120–180 | 待做 |
 | **G7** | 装配 `HasPosReal (mergeStep δ a b)`（`degree w` 分情形，`= 3` 支用 G0） | 40 | 待做 |
@@ -322,5 +322,90 @@ theorem connected_nb {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w) (hwb : w
   obtain ⟨q1⟩ := hhub u
   obtain ⟨q2⟩ := hhub v
   exact ⟨q1.append q2.reverse⟩
+
+/-! ## G4｜`Cladogram` 的两个度字段 ＋ 打包 -/
+
+noncomputable def shrinkGraphNB_decidableRel (T : Phylogram.{0, 0} X) (b : X) :
+    DecidableRel (shrinkGraphNB T b).Adj := fun _ _ => Classical.propDecidable _
+
+/-- ★★ **无度 2**：`w` 支靠情形假设 `3 < degree w`，其余支搬 `T` 的 `no_degree_two`。 -/
+theorem no_degree_two_nb {b : X} {w : T.V} (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b)
+    (hdeg : 3 < T.graph.degree w) (v : ShrinkVNB T b) :
+    (shrinkGraphNB T b).degree v ≠ 2 := by
+  by_cases hvw : v.1 = w
+  · have hv : v = ⟨w, hwb⟩ := Subtype.ext hvw
+    rw [hv, degree_nb_midpoint hbw hwb]
+    omega
+  · rw [degree_nb_of_ne hbw hvw v.2]
+    exact T.toCladogram.no_degree_two v.1
+
+/-- ★★★ **叶 ⟺ 度 1**（`Cladogram.leaf_iff_degree_one` 字段）。
+
+* `⟹`：`leafNB` 的像要么是 `⟨T.leaf x,·⟩`（`x ≠ b`，且 `T.leaf x ≠ w`，故度 = `T` 里的度 = 1），
+  要么是 `⟨T.leaf a,·⟩`；
+* `⟸`：`deg' v = 1` ⇒ `v.1 ≠ w`（那边 `deg' w = degree w − 1 ≥ 3`）⇒ `deg_T v.1 = 1`
+  ⇒ `v.1 = T.leaf x`；`x ≠ b`（`v.2`）；`x = a` 时是 `inr ()`，否则 `x ∈ MergeOld` 给 `inl`。 -/
+theorem leaf_iff_degree_one_nb {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (v : ShrinkVNB T b) :
+    (∃ u : NJ.Dissimilarity.MergeIdx X a b, leafNB T hab u = v)
+      ↔ (shrinkGraphNB T b).degree v = 1 := by
+  have hw_notleaf : ¬ T.toCladogram.IsLeaf w := by
+    intro hl
+    have h1 : T.graph.degree w = 1 := (T.isLeaf_iff_degree_eq_one w).mp hl
+    omega
+  have hleaf_ne_w : ∀ x : X, T.leaf x ≠ w := fun x h => hw_notleaf ⟨x, h⟩
+  constructor
+  · rintro ⟨u, rfl⟩
+    cases u with
+    | inl x =>
+        have hx : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
+        have h := degree_nb_of_ne (b := b) (v := T.leaf x.1) (w := w) hbw
+          (hleaf_ne_w x.1) hx
+        rw [show leafNB T hab (Sum.inl x) = ⟨T.leaf x.1, hx⟩ from rfl, h]
+        exact (T.isLeaf_iff_degree_eq_one (T.leaf x.1)).mp ⟨x.1, rfl⟩
+    | inr u =>
+        cases u
+        have ha : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+        have h := degree_nb_of_ne (b := b) (v := T.leaf a) (w := w) hbw (hleaf_ne_w a) ha
+        rw [show leafNB T hab (Sum.inr ()) = ⟨T.leaf a, ha⟩ from rfl, h]
+        exact (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+  · intro h
+    have hvne : v.1 ≠ w := by
+      intro hvw
+      have hv : v = ⟨w, hwb⟩ := Subtype.ext hvw
+      rw [hv, degree_nb_midpoint hbw hwb] at h
+      omega
+    have hT1 : T.graph.degree v.1 = 1 := by
+      rw [degree_nb_of_ne hbw hvne v.2] at h
+      exact h
+    obtain ⟨x, hx⟩ := (T.isLeaf_iff_degree_eq_one v.1).mpr hT1
+    have hxb : x ≠ b := by
+      intro h'
+      exact v.2 (by rw [← hx, h'])
+    by_cases hxa : x = a
+    · refine ⟨Sum.inr (), ?_⟩
+      apply Subtype.ext
+      show T.leaf a = v.1
+      rw [hxa] at hx
+      exact hx
+    · refine ⟨Sum.inl ⟨x, by simp [Finset.mem_sdiff, hxa, hxb]⟩, ?_⟩
+      apply Subtype.ext
+      show T.leaf x = v.1
+      exact hx
+
+/-- ★★★ **非二叉归约的 `Cladogram`**（顶点 `ShrinkVNB`、图 `shrinkGraphNB`、叶 `leafNB`）。 -/
+noncomputable def shrinkCladogramNB {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w) :
+    Cladogram (NJ.Dissimilarity.MergeIdx X a b) where
+  V := ShrinkVNB T b
+  fintypeV := inferInstance
+  decEqV := inferInstance
+  graph := shrinkGraphNB T b
+  decAdj := shrinkGraphNB_decidableRel T b
+  isTree := ⟨connected_nb hbw hwb T.toCladogram.isTree.1, isAcyclic_nb T.toCladogram.isTree.2⟩
+  leaf := leafNB T hab
+  leaf_iff_degree_one := fun v => leaf_iff_degree_one_nb hab hbw hwb hdeg v
+  no_degree_two := fun v => no_degree_two_nb hbw hwb hdeg v
 
 end Phylo.Stat.NJShrinkNonBinary
