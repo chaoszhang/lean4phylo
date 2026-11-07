@@ -2675,3 +2675,375 @@ theorem attesonW_sub_nonneg_of_all (T : Cladogram X) {a b c d : T.V}
 
 end Cladogram
 
+
+/-! ## 22. ★★★ W50-A-#6：`cherry_in_component` —— `e*` 的 `k` 一侧必有樱桃
+
+`W49_A_PLAN.md` §4 的第 6 项。派单验收标准 #4 对它的要求是「**不许**变成假设且**单独一个
+commit**」—— 因为 §21 的三条引理都以 `hCin`（樱桃取在 `C` 里）为前提，而 `hCin` 正是本节的
+**输出**。
+
+**数学**。设 `e* = s(c,d)`，`U := T − e*` 中含 `k` 的那一侧（`k,l` 同在 `U` 里）。设 `ℓ`、`i`
+分别是 `U` 中「`T`-叶」与「非叶」顶点的个数。则
+
+* **`ℓ ≤ i`（若无樱桃）**：「叶 ↦ 其唯一邻居」是**单射**（两片叶共邻居就是樱桃），
+  落点是 `U` 中的**非叶**点（`not_isLeaf_of_adj_of_isLeaf`），且仍在 `U` 内 —— 否则那条边
+  跨越 `U`，只能是 `e*` 自己，于是该叶只能是端点 `c`，与「`c` 非叶」冲突
+  （`c` 若是叶则 `U = {c}`，与 `k,l ∈ U` 互异矛盾）；
+* **`i + 1 ≤ ℓ`（**无条件**）**：`U` 的诱导子图是树（`isTree_induce_sideVertices`）、
+  握手引理 `Σ deg = 2·#边`、`#边 = |U| − 1`（`card_edgeFinset_induce_sideVertices`）、
+  「非 `c` 的非叶点在 `T[U]` 里度 = `T` 中的度 ≥ 3」、「`c` 在 `T[U]` 里度 ≥ 2」
+  ⇒ `ℓ + 3(i−1) + 2 ≤ 2(ℓ+i−1)` ⇒ `ℓ ≥ i + 1`。
+
+两者矛盾 ⇒ `U` 必有樱桃，且樱桃的两片叶与中心都在 `U` 里。∎
+
+★ 第二块与 `Phylo/InternalEdge.lean` 的 `two_le_card_degree_one_of_side` **共用全部器材**，
+只是把结论从「`≥ 2` 片叶」收紧成「非叶数 + 1 ≤ 叶数」—— 后者才是与「无樱桃 ⇒ 叶数 ≤ 非叶数」
+相撞的那一半（`W50_A_MATH.md` §6 的计数路线，直径路线已评估否决：需要 ℕ 值路径长度与
+「路径过某点」的分解，成本高且依赖多）。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-! ### 22.1 侧顶点集与侧叶集、孤立叶 -/
+
+/-- 侧**顶点**集与侧**叶**集一致（两者展开后都是 `(T − e).Reachable (leaf x) u`）。 -/
+theorem mem_sideVertices_leaf_iff (T : Cladogram X) (e : Sym2 T.V) (u : T.V) (x : X) :
+    T.leaf x ∈ T.sideVertices e u ↔ x ∈ T.sideLeaves e u := by
+  rw [T.mem_sideVertices, T.mem_sideLeaves]
+
+open scoped Classical in
+/-- ★ **侧叶数 = 侧顶点集中叶顶点的个数**（沿 `x ↦ T.leaf x` 的一一对应）。 -/
+theorem card_sideLeaves_eq_card_filter_isLeaf (T : Cladogram X) (e : Sym2 T.V) (u : T.V) :
+    (T.sideLeaves e u).card = ((T.sideVertices e u).filter T.IsLeaf).card := by
+  classical
+  refine (Finset.card_bij (fun x (_ : x ∈ T.sideLeaves e u) => T.leaf x) ?_ ?_ ?_)
+  · intro x hx
+    rw [Finset.mem_filter]
+    exact ⟨(T.mem_sideVertices_leaf_iff e u x).mpr hx, ⟨x, rfl⟩⟩
+  · intro a _ b _ h
+    exact T.leaf.injective h
+  · intro z hz
+    rw [Finset.mem_filter] at hz
+    obtain ⟨hzU, ⟨x, hx⟩⟩ := hz
+    exact ⟨x, (T.mem_sideVertices_leaf_iff e u x).mp (hx ▸ hzU), hx⟩
+
+/-- ★★ **度为 1 的顶点的侧集是单点集**：叶 `u` 的唯一关联边 `s(u,v)` 删掉后 `u` 在
+`T − s(u,v)` 中孤立，故 `u` 一侧只有 `u` 自己。 -/
+theorem eq_of_degree_eq_one_of_inSide (T : Cladogram X) {u v w : T.V}
+    (huv : T.graph.Adj u v) (h1 : T.graph.degree u = 1)
+    (h : T.inSide s(u, v) u w) : w = u := by
+  classical
+  obtain ⟨w₀, -, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp h1
+  have hzero : (T.graph.deleteEdges {s(u, v)}).degree u = 0 := by
+    rw [← SimpleGraph.card_neighborFinset_eq_degree, Finset.card_eq_zero,
+      Finset.eq_empty_iff_forall_notMem]
+    intro y hy
+    rw [SimpleGraph.mem_neighborFinset, SimpleGraph.deleteEdges_adj] at hy
+    obtain ⟨hyadj, hydel⟩ := hy
+    have hyv : y = v := (huniq y hyadj).trans (huniq v huv).symm
+    exact hydel (by rw [hyv]; simp)
+  by_contra hne
+  exact SimpleGraph.not_reachable_of_left_degree_zero (fun h => hne h.symm) hzero h
+
+/-! ### 22.2 计数：`非叶数 + 1 ≤ 叶数` -/
+
+open scoped Classical in
+/-- ★★★ **侧顶点集中「非叶数 + 1 ≤ 叶数」**。
+
+`U` 是被割边 `s(u,v)` 分出的一侧：`hcross` 编码「只有 `e` 跨越 `U`」、`hE` 编码
+「`#E(T[U]) + 1 = |U|`」（`T[U]` 是树）、`hnd` 说明 `u` 不是叶。
+
+与 `Phylo/InternalEdge.lean` 的 `two_le_card_degree_one_of_side` 是**同一个论证**，只把结论
+收紧成 `叶数 ≥ 非叶数 + 1`（那里的 `2 ≤ 叶数` 只是它的弱推论：`u` 自己就是非叶点）。 -/
+theorem internal_card_add_one_le_leaf_card (T : Cladogram X) (U : Finset T.V) {u v : T.V}
+    (huv : T.graph.Adj u v) (hu : u ∈ U) (hv : v ∉ U)
+    (hcross : ∀ x ∈ U, ∀ y, T.graph.Adj x y → y ∉ U → s(x, y) = s(u, v))
+    (hE : (T.graph.induce (↑U : Set T.V)).edgeFinset.card + 1 = U.card)
+    (hnd : T.graph.degree u ≠ 1) :
+    (U.filter (fun x => ¬ T.IsLeaf x)).card + 1 ≤ (U.filter T.IsLeaf).card := by
+  classical
+  have hnl : ¬ T.IsLeaf u := fun h => hnd ((T.isLeaf_iff_degree_eq_one u).mp h)
+  -- ### 1. 非 `u` 顶点的邻居全在 `U` 内
+  have hnb : ∀ x ∈ U, x ≠ u → T.graph.neighborSet x ⊆ (↑U : Set T.V) := by
+    intro x hx hxu y hy
+    by_contra hyn
+    have hpair : s(x, y) = s(u, v) := hcross x hx y hy hyn
+    have hmem : x ∈ s(u, v) := hpair ▸ (Sym2.mem_iff.mpr (Or.inl rfl) : x ∈ s(x, y))
+    rcases Sym2.mem_iff.mp hmem with h | h
+    · exact hxu h
+    · exact hv (h ▸ hx)
+  -- ### 2. `x ≠ u` 时诱导子图的度 = `T` 中的度
+  have hdeg : ∀ x (hx : x ∈ U), x ≠ u →
+      (T.graph.induce (↑U : Set T.V)).degree ⟨x, hx⟩ = T.graph.degree x := by
+    intro x hx hxu
+    rw [T.degree_induce_eq_card_inter U x hx]
+    have hsub : T.graph.neighborFinset x ⊆ U := fun y hy =>
+      hnb x hx hxu ((SimpleGraph.mem_neighborFinset T.graph x y).mp hy)
+    rw [Finset.inter_eq_left.mpr hsub, SimpleGraph.card_neighborFinset_eq_degree]
+  -- ### 3. `u` 在诱导子图中的度 ≥ 2
+  have hNsub : T.graph.neighborFinset u ⊆ insert v U := by
+    intro y hy
+    rw [SimpleGraph.mem_neighborFinset] at hy
+    by_cases hyU : y ∈ U
+    · exact Finset.mem_insert.mpr (Or.inr hyU)
+    · have hpair : s(u, y) = s(u, v) := hcross u hu y hy hyU
+      have hmem : y ∈ s(u, v) := hpair ▸ (Sym2.mem_iff.mpr (Or.inr rfl) : y ∈ s(u, y))
+      rcases Sym2.mem_iff.mp hmem with h | h
+      · exact absurd h hy.ne'
+      · exact Finset.mem_insert.mpr (Or.inl h)
+  have hdu : 2 ≤ (T.graph.induce (↑U : Set T.V)).degree ⟨u, hu⟩ := by
+    rw [T.degree_induce_eq_card_inter U u hu]
+    have hsp := Finset.card_inter_add_card_sdiff (T.graph.neighborFinset u) U
+    have hle1 : (T.graph.neighborFinset u \ U).card ≤ 1 := by
+      calc (T.graph.neighborFinset u \ U).card ≤ ({v} : Finset T.V).card :=
+            Finset.card_le_card (fun y hy => by
+              rw [Finset.mem_sdiff] at hy
+              rcases Finset.mem_insert.mp (hNsub hy.1) with h | h
+              · exact Finset.mem_singleton.mpr h
+              · exact absurd h hy.2)
+        _ = 1 := Finset.card_singleton v
+    have h3 : 3 ≤ T.graph.degree u :=
+      T.three_le_degree_of_not_isLeaf (T.two_le_card_of_adj huv) hnl
+    have hdegc : T.graph.degree u = (T.graph.neighborFinset u).card :=
+      (SimpleGraph.card_neighborFinset_eq_degree T.graph u).symm
+    omega
+  -- ### 4. 把 `∑ deg_{T[U]}` 按「叶 / 非叶」分块
+  set Ls : Finset ↥(↑U : Set T.V) :=
+    (Finset.univ : Finset ↥(↑U : Set T.V)).filter (fun x => T.graph.degree (x : T.V) = 1)
+    with hLs
+  set Is : Finset ↥(↑U : Set T.V) :=
+    (Finset.univ : Finset ↥(↑U : Set T.V)).filter (fun x => ¬ T.graph.degree (x : T.V) = 1)
+    with hIs
+  have huIs : (⟨u, hu⟩ : ↥(↑U : Set T.V)) ∈ Is := by
+    rw [hIs, Finset.mem_filter]
+    exact ⟨Finset.mem_univ _, hnd⟩
+  have hsum := SimpleGraph.sum_degrees_eq_twice_card_edges (T.graph.induce (↑U : Set T.V))
+  have hsplit : (∑ x ∈ Ls, (T.graph.induce (↑U : Set T.V)).degree x)
+      + (∑ x ∈ Is, (T.graph.induce (↑U : Set T.V)).degree x)
+      = ∑ x : ↥(↑U : Set T.V), (T.graph.induce (↑U : Set T.V)).degree x := by
+    rw [hLs, hIs, Finset.sum_filter_add_sum_filter_not]
+  have hLsum : (∑ x ∈ Ls, (T.graph.induce (↑U : Set T.V)).degree x) = Ls.card := by
+    have h : ∀ x ∈ Ls, (T.graph.induce (↑U : Set T.V)).degree x = 1 := by
+      intro x hx
+      rw [hLs, Finset.mem_filter] at hx
+      have hxu : (x : T.V) ≠ u := fun h => hnd (h ▸ hx.2)
+      rw [hdeg x x.2 hxu]
+      exact hx.2
+    rw [Finset.sum_congr rfl h]
+    simp
+  have hIsum : (T.graph.induce (↑U : Set T.V)).degree ⟨u, hu⟩
+      + 3 * (Is.erase ⟨u, hu⟩).card
+      ≤ ∑ x ∈ Is, (T.graph.induce (↑U : Set T.V)).degree x := by
+    have h1 : 3 * (Is.erase ⟨u, hu⟩).card
+        ≤ ∑ x ∈ Is.erase ⟨u, hu⟩, (T.graph.induce (↑U : Set T.V)).degree x := by
+      rw [mul_comm]
+      refine Finset.card_nsmul_le_sum _ _ 3 (fun x hx => ?_)
+      rw [Finset.mem_erase, hIs, Finset.mem_filter] at hx
+      have hxu : (x : T.V) ≠ u := fun h => hx.1 (Subtype.ext h)
+      rw [hdeg x x.2 hxu]
+      exact T.three_le_degree_of_not_isLeaf (T.two_le_card_of_adj huv)
+        (fun h => hx.2.2 ((T.isLeaf_iff_degree_eq_one (x : T.V)).mp h))
+    have h2 := Finset.sum_erase_add Is
+      (fun x => (T.graph.induce (↑U : Set T.V)).degree x) huIs
+    omega
+  -- ### 5. 把子类型上的计数搬回 `U`
+  have hcardLs : (U.filter T.IsLeaf).card = Ls.card := by
+    rw [hLs]
+    have h1 : (U.filter T.IsLeaf)
+        = U.filter (fun x => T.graph.degree x = 1) := by
+      refine Finset.filter_congr ?_
+      intro x _
+      exact T.isLeaf_iff_degree_eq_one x
+    rw [h1]
+    refine (Finset.card_bij (fun (x : ↥(↑U : Set T.V)) _ => (x : T.V)) ?_ ?_ ?_).symm
+    · intro a ha
+      rw [Finset.mem_filter] at ha ⊢
+      exact ⟨a.2, ha.2⟩
+    · intro a₁ _ a₂ _ h
+      exact Subtype.ext h
+    · intro b hb
+      rw [Finset.mem_filter] at hb
+      exact ⟨⟨b, hb.1⟩, by rw [Finset.mem_filter]; exact ⟨Finset.mem_univ _, hb.2⟩, rfl⟩
+  have hcardIs : (U.filter (fun x => ¬ T.IsLeaf x)).card = Is.card := by
+    rw [hIs]
+    have h1 : (U.filter (fun x => ¬ T.IsLeaf x))
+        = U.filter (fun x => ¬ T.graph.degree x = 1) := by
+      refine Finset.filter_congr ?_
+      intro x _
+      rw [T.isLeaf_iff_degree_eq_one x]
+    rw [h1]
+    refine (Finset.card_bij (fun (x : ↥(↑U : Set T.V)) _ => (x : T.V)) ?_ ?_ ?_).symm
+    · intro a ha
+      rw [Finset.mem_filter] at ha ⊢
+      exact ⟨a.2, ha.2⟩
+    · intro a₁ _ a₂ _ h
+      exact Subtype.ext h
+    · intro b hb
+      rw [Finset.mem_filter] at hb
+      exact ⟨⟨b, hb.1⟩, by rw [Finset.mem_filter]; exact ⟨Finset.mem_univ _, hb.2⟩, rfl⟩
+  have hcardU :=
+    Finset.card_filter_add_card_filter_not (s := U) (p := T.IsLeaf)
+  have hErase : Is.card = (Is.erase ⟨u, hu⟩).card + 1 :=
+    (Finset.card_erase_add_one huIs).symm
+  rw [hcardLs, hcardIs]
+  omega
+
+/-! ### 22.3 计数：无樱桃 ⇒ `叶数 ≤ 非叶数` -/
+
+open scoped Classical in
+/-- ★★★ **无樱桃 ⇒ 侧内的叶数 ≤ 非叶数**。
+
+`叶 ↦ 其唯一邻居`（`Cladogram.leafNb`）在侧的叶集上是**单射**且落进**非叶**点：
+* 落点在侧内：否则那条边跨越侧，只能是 `s(u,v)` 自己，于是该叶只能是 `u`，与 `u` 非叶冲突；
+* 落点非叶：`not_isLeaf_of_adj_of_isLeaf`；
+* 单射：两片叶共邻居即樱桃，与 `hnocherry` 冲突。 -/
+theorem leaf_card_le_internal_card_of_no_cherry (T : Cladogram X) (U : Finset T.V) {u v : T.V}
+    (huv : T.graph.Adj u v) (hu : u ∈ U) (hv : v ∉ U)
+    (hcross : ∀ x ∈ U, ∀ y, T.graph.Adj x y → y ∉ U → s(x, y) = s(u, v))
+    (hnd : T.graph.degree u ≠ 1)
+    (hnocherry : ∀ x y : X, x ≠ y → T.leaf x ∈ U → T.leaf y ∈ U →
+      ¬ ∃ w ∈ U, T.graph.Adj (T.leaf x) w ∧ T.graph.Adj (T.leaf y) w) :
+    (U.filter T.IsLeaf).card ≤ (U.filter (fun x => ¬ T.IsLeaf x)).card := by
+  classical
+  have hnl : ¬ T.IsLeaf u := fun h => hnd ((T.isLeaf_iff_degree_eq_one u).mp h)
+  have hV3 : 3 ≤ Fintype.card T.V := by
+    have h3 := T.three_le_degree_of_not_isLeaf (T.two_le_card_of_adj huv) hnl
+    have hlt := SimpleGraph.degree_lt_card_verts (G := T.graph) u
+    omega
+  -- ### 叶的唯一邻居仍在侧内
+  have hnbU : ∀ z ∈ U, T.IsLeaf z → T.leafNb z ∈ U := by
+    intro z hzU hzl
+    by_contra hnot
+    have hzdeg : T.graph.degree z = 1 := (T.isLeaf_iff_degree_eq_one z).mp hzl
+    have hadj : T.graph.Adj z (T.leafNb z) := T.adj_leafNb hzdeg
+    have hp : s(z, T.leafNb z) = s(u, v) := hcross z hzU _ hadj hnot
+    have hzmem : z ∈ s(u, v) := hp ▸ (Sym2.mem_iff.mpr (Or.inl rfl) : z ∈ s(z, T.leafNb z))
+    rcases Sym2.mem_iff.mp hzmem with h | h
+    · exact hnl (h ▸ hzl)
+    · exact hv (h ▸ hzU)
+  refine Finset.card_le_card_of_injOn (fun z : T.V => T.leafNb z) ?_ ?_
+  · intro z hz
+    simp only [Finset.mem_coe, Finset.mem_filter] at hz ⊢
+    obtain ⟨hzU, hzl⟩ := hz
+    have hzdeg : T.graph.degree z = 1 := (T.isLeaf_iff_degree_eq_one z).mp hzl
+    exact ⟨hnbU z hzU hzl, T.not_isLeaf_of_adj_of_isLeaf hV3 hzl (T.adj_leafNb hzdeg)⟩
+  · intro z hz z' hz' heq
+    simp only [Finset.mem_coe, Finset.mem_filter] at hz hz'
+    obtain ⟨hzU, hzl⟩ := hz
+    obtain ⟨hz'U, hz'l⟩ := hz'
+    have heq' : T.leafNb z = T.leafNb z' := heq
+    by_contra hne
+    obtain ⟨x, hx⟩ := hzl
+    obtain ⟨x', hx'⟩ := hz'l
+    have hxx' : x ≠ x' := fun h => hne (by rw [← hx, ← hx', h])
+    have hzdeg : T.graph.degree z = 1 := (T.isLeaf_iff_degree_eq_one z).mp ⟨x, hx⟩
+    refine hnocherry x x' hxx' (by rw [hx]; exact hzU) (by rw [hx']; exact hz'U)
+      ⟨T.leafNb z, hnbU z hzU ⟨x, hx⟩, ?_, ?_⟩
+    · rw [hx]; exact T.adj_leafNb hzdeg
+    · rw [hx', heq']
+      exact T.adj_leafNb ((T.isLeaf_iff_degree_eq_one z').mp ⟨x', hx'⟩)
+
+/-! ### 22.4 收口：侧内有 ≥ 2 叶 ⇒ 侧内有樱桃 -/
+
+open scoped Classical in
+/-- ★★★ **侧内有 ≥ 2 片叶 ⇒ 侧内有樱桃**（两片叶共邻居，中心也在侧内）。
+
+`22.2`（`非叶数 + 1 ≤ 叶数`）与 `22.3`（`无樱桃 ⇒ 叶数 ≤ 非叶数`）**相撞**即得。 -/
+theorem exists_cherry_of_side (T : Cladogram X) (U : Finset T.V) {u v : T.V}
+    (huv : T.graph.Adj u v) (hu : u ∈ U) (hv : v ∉ U)
+    (hcross : ∀ x ∈ U, ∀ y, T.graph.Adj x y → y ∉ U → s(x, y) = s(u, v))
+    (hE : (T.graph.induce (↑U : Set T.V)).edgeFinset.card + 1 = U.card)
+    (hnd : T.graph.degree u ≠ 1)
+    (h2 : 2 ≤ (U.filter T.IsLeaf).card) :
+    ∃ x y : X, ∃ w : T.V, x ≠ y ∧ T.leaf x ∈ U ∧ T.leaf y ∈ U ∧ w ∈ U ∧
+      T.graph.Adj (T.leaf x) w ∧ T.graph.Adj (T.leaf y) w := by
+  classical
+  by_contra hcon
+  push_neg at hcon
+  have hno : ∀ x y : X, x ≠ y → T.leaf x ∈ U → T.leaf y ∈ U →
+      ¬ ∃ w ∈ U, T.graph.Adj (T.leaf x) w ∧ T.graph.Adj (T.leaf y) w := by
+    intro x y hxy hx hy hex
+    obtain ⟨w, hwU, ha, hb⟩ := hex
+    exact hcon x y w hxy hx hy hwU ha hb
+  have h1 := T.leaf_card_le_internal_card_of_no_cherry U huv hu hv hcross hnd hno
+  have h2' := T.internal_card_add_one_le_leaf_card U huv hu hv hcross hE hnd
+  omega
+
+/-! ### 22.5 ★★★ `cherry_in_component` -/
+
+open scoped Classical in
+/-- ★★ **侧内有樱桃（基准点显式版）**：`u` 是割边 `s(u,v)` 的**本侧**端点、`u` 非叶、
+`k,l` 都在本侧 ⇒ 本侧有樱桃，且两片叶与中心都在本侧。 -/
+theorem cherry_in_side (T : Cladogram X) {u v : T.V} (huv : T.graph.Adj u v) {k l : X}
+    (hklne : k ≠ l) (hk : T.inSide s(u, v) (T.leaf k) u)
+    (hl : T.inSide s(u, v) (T.leaf k) (T.leaf l)) :
+    ∃ i j : X, ∃ w : T.V, i ≠ j ∧ T.graph.Adj (T.leaf i) w ∧ T.graph.Adj (T.leaf j) w ∧
+      T.inSide s(u, v) (T.leaf k) w ∧
+      T.inSide s(u, v) (T.leaf k) (T.leaf i) ∧ T.inSide s(u, v) (T.leaf k) (T.leaf j) := by
+  classical
+  set U := T.sideVertices s(u, v) (T.leaf k) with hU
+  have hE : (T.graph.induce (↑U : Set T.V)).edgeFinset.card + 1 = U.card := by
+    rw [T.card_edgeFinset_induce_sideVertices, ← Set.toFinset_card]
+    congr 1
+    ext x
+    rw [hU]
+    simp
+  have hcross : ∀ x ∈ U, ∀ y, T.graph.Adj x y → y ∉ U → s(x, y) = s(u, v) :=
+    fun x hx y hy hyU => T.eq_edge_of_adj_of_mem_sideVertices_of_notMem hy hx hyU
+  have huU : u ∈ U := by
+    rw [hU]
+    exact (T.mem_sideVertices).mpr hk.symm
+  have hvU : v ∉ U := by
+    rw [hU, T.mem_sideVertices]
+    intro hd
+    exact T.not_reachable_deleteEdges_of_adj huv (hk.symm.trans hd.symm)
+  -- `u` 非叶：否则本侧只剩 `u` 自己，而 `k,l` 都在本侧且互异
+  have hnd : T.graph.degree u ≠ 1 := by
+    intro h1
+    have huk : T.leaf k = u := T.eq_of_degree_eq_one_of_inSide huv h1 hk.symm
+    have hul : T.leaf l = u :=
+      T.eq_of_degree_eq_one_of_inSide huv h1 (hk.symm.trans hl)
+    exact hklne (T.leaf.injective (huk.trans hul.symm))
+  -- 本侧有 ≥ 2 片叶（`k,l`）
+  have h2 : 2 ≤ (U.filter T.IsLeaf).card := by
+    have hsub : ({k, l} : Finset X) ⊆ T.sideLeaves s(u, v) (T.leaf k) := by
+      intro x hx
+      rw [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with rfl | rfl
+      · exact (T.mem_sideLeaves_iff_inSide).mpr (T.inSide_self _ _)
+      · exact (T.mem_sideLeaves_iff_inSide).mpr hl
+    have h3 : 2 ≤ (T.sideLeaves s(u, v) (T.leaf k)).card := by
+      have hc := Finset.card_le_card hsub
+      rwa [Finset.card_pair hklne] at hc
+    calc 2 ≤ (T.sideLeaves s(u, v) (T.leaf k)).card := h3
+      _ = ((T.sideVertices s(u, v) (T.leaf k)).filter T.IsLeaf).card :=
+          T.card_sideLeaves_eq_card_filter_isLeaf (e := s(u, v)) (u := T.leaf k)
+      _ = (U.filter T.IsLeaf).card := by rw [hU]
+  obtain ⟨i, j, w, hij, hiU, hjU, hwU, hadj_i, hadj_j⟩ :=
+    T.exists_cherry_of_side U huv huU hvU hcross hE hnd h2
+  rw [hU, T.mem_sideVertices] at hwU hiU hjU
+  exact ⟨i, j, w, hij, hadj_i, hadj_j, hwU.symm, hiU.symm, hjU.symm⟩
+
+/-- ★★★ **`cherry_in_component`**（`W49_A_PLAN.md` §4 第 6 项 / 验收标准 #4）：
+`e* = s(c,d)` 的 `k` 一侧（`k,l` 同在的那一侧）**必含一颗樱桃**，且两片叶与中心都留在那一侧。
+
+这就是 §21 三条引理里 `hCin` / `hCjn` 的**来源** —— 它把「樱桃取在 `C` 里」从**假设**变成
+**结论**（派单验收标准 #4 点名要求的那一条）。 -/
+theorem cherry_in_component (T : Cladogram X) {c d : T.V} (hcd : T.graph.Adj c d) {k l : X}
+    (hklne : k ≠ l) (hkl : T.inSide s(c, d) (T.leaf k) (T.leaf l)) :
+    ∃ i j : X, ∃ w : T.V, i ≠ j ∧ T.graph.Adj (T.leaf i) w ∧ T.graph.Adj (T.leaf j) w ∧
+      T.inSide s(c, d) (T.leaf k) w ∧
+      T.inSide s(c, d) (T.leaf k) (T.leaf i) ∧ T.inSide s(c, d) (T.leaf k) (T.leaf j) := by
+  classical
+  rcases T.inSide_or_inSide hcd (x := T.leaf k) with hk | hk
+  · exact T.cherry_in_side hcd hklne hk hkl
+  · have h := T.cherry_in_side hcd.symm hklne (by rw [Sym2.eq_swap]; exact hk)
+      (by rw [Sym2.eq_swap]; exact hkl)
+    rw [Sym2.eq_swap] at h
+    exact h
+
+end Cladogram
+
