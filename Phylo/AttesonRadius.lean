@@ -4765,5 +4765,78 @@ theorem attesonQ_gap_of_cherry_deep_l (T : Cladogram X) (l : Sym2 T.V → ℝ) {
   rw [T.attesonQ_comm (l := l) (T.leaf m) (T.leaf k)] at h
   exact h
 
+/-! ## §34 生产 §33 的几何前提（第一批：三个基础事实）
+
+`W50_A_MATH.md` §7.15.4 的出处表。装配时 `§33` 的每条 `inSide` 前提要么是**一条边之差**
+（叶边 `s(leaf x, a)` 不等于被删的边），要么是 §27.8 换位，要么是「`w` 与 `z` 分居
+`s(v,c)` 两侧」；本节把这三种原子事实各自包成一条定理，装配处只做 `exact`。 -/
+
+/-- ★★ **叶与自己邻居在任一其它邻边下同侧**：`leaf x — a` 且 `c ≠ leaf x` ⇒
+`inSide s(a,c) a (leaf x)`。**一行**：删的边不是 `s(leaf x, a)` 本身。 -/
+theorem inSide_branch_of_leaf_adj (T : Cladogram X) {x : X} {a c : T.V}
+    (h : T.graph.Adj (T.leaf x) a) (hc : c ≠ T.leaf x) :
+    T.inSide s(a, c) a (T.leaf x) := by
+  refine (SimpleGraph.deleteEdges_adj.mpr ⟨h.symm, ?_⟩).reachable
+  intro hmem
+  rw [Set.mem_singleton_iff] at hmem
+  have hm : T.leaf x ∈ s(a, T.leaf x) := Sym2.mem_iff.mpr (Or.inr rfl)
+  rw [hmem] at hm
+  rcases Sym2.mem_iff.mp hm with h1 | h1
+  · exact h.ne h1
+  · exact hc h1.symm
+
+omit [Fintype X] [DecidableEq X] in
+/-- ★★★ **樱桃中心的度是 3**：`w` 有两个互异叶邻居 ⇒ `degree w ≥ 2` ⇒ `w` 不是叶 ⇒
+`hbin` 给 `degree w = 3`。**这是全文件唯一使用 `IsBinary` 的几何处**（定理级假设，
+缺口 `def` 未动）。 -/
+theorem degree_eq_three_of_cherry (T : Cladogram X) (hbin : T.IsBinary) {i j : X} {w : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j) :
+    T.graph.degree w = 3 := by
+  classical
+  have hne : T.leaf i ≠ T.leaf j := fun h => hij (T.leaf.injective h)
+  have hsub : ({T.leaf i, T.leaf j} : Finset T.V) ⊆ T.graph.neighborFinset w := by
+    intro y hy
+    rw [Finset.mem_insert, Finset.mem_singleton] at hy
+    rcases hy with h | h
+    · rw [h]; exact (SimpleGraph.mem_neighborFinset _ w (T.leaf i)).mpr hi.symm
+    · rw [h]; exact (SimpleGraph.mem_neighborFinset _ w (T.leaf j)).mpr hj.symm
+  have h2 : 2 ≤ T.graph.degree w := by
+    have hc := Finset.card_le_card hsub
+    rw [Finset.card_pair hne, SimpleGraph.card_neighborFinset_eq_degree] at hc
+    exact hc
+  have hnleaf : ¬ T.IsLeaf w := by
+    intro h
+    have h1 := (T.isLeaf_iff_degree_eq_one w).mp h
+    omega
+  exact hbin w hnleaf
+
+/-- ★★★ **附着边与中间边不同**：樱桃中心 `w` 在 `s(v,c)` 的 `c` 侧、`z` 在 `v` 侧
+⇒ `s(w,u) ≠ s(v,z)`（否则 `{w,u} = {v,z}`，`w` 与 `z`／`v` 同侧炸掉 `not_inSide_both`）。
+
+这是 §33 里唯一剩下的「附着边不在路径上」条件，只需几何、不需计数。 -/
+theorem attach_edge_ne_middle (T : Cladogram X) {v c z w u : T.V}
+    (hvc : T.graph.Adj v c) (hvz : T.graph.Adj v z) (hzc : z ≠ c)
+    (hwc : T.inSide s(v, c) c w) :
+    s(w, u) ≠ s(v, z) := by
+  have hvz_side : T.inSide s(v, c) v z := by
+    refine (SimpleGraph.deleteEdges_adj.mpr ⟨hvz, ?_⟩).reachable
+    intro hmem
+    rw [Set.mem_singleton_iff] at hmem
+    rcases Sym2.eq_iff.mp hmem with ⟨_, h⟩ | ⟨h, _⟩
+    · exact hzc h
+    · exact hvc.ne h
+  have hwv : w ≠ v := by
+    intro hw
+    rw [hw] at hwc
+    exact T.not_inSide_both hvc ⟨T.inSide_self s(v, c) v, hwc⟩
+  have hwz : w ≠ z := by
+    intro hw
+    rw [hw] at hwc
+    exact T.not_inSide_both hvc ⟨hvz_side, hwc⟩
+  intro hEq
+  rcases Sym2.eq_iff.mp hEq with ⟨h1, _⟩ | ⟨h1, _⟩
+  · exact hwv h1
+  · exact hwz h1
+
 end Cladogram
 
