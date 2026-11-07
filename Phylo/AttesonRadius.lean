@@ -5705,4 +5705,44 @@ end Dissimilarity
 end NJ
 
 
+/-! ## 49. ★★★★ W50-A-#48：`l` 端的配对项（§40 的镜像，覆盖 §7.27 的边界情形）
+
+§7.27 指出：§40 的配对估计只在 **`k` 端**（`e' = s(leaf k, v₁)`）成立。当 `e* = s(v₁,c)`
+（`c` 支恰是最大的离路径子树）时，Atteson 的樱桃可挂在 **`l` 端**的分支上，此时需要镜像版：
+`e' = s(leaf l, v')`、`e'' = s(v', z')`。
+
+不必重做几何：把 §40 的角色 `k,l` 互换（`attesonW` 关于顶点对对称，`attesonW_comm`）即得。
+于是「两端任取一端」都能给出 `n − 4`，**§7.27 的边界情形在数学上被覆盖**。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **`l` 端的配对项**：`leaf l — v — z` 是 `P_{k,l}` 的**末两段**、`v` 的第三支是 `c`、
+樱桃 `(i,j)` 在 `c` 支内 ⇒ `c_{s(leaf l, v)} + c_{s(v, z)} ≥ n − 4`。 -/
+theorem attesonW_sub_pair_end_ge (T : Cladogram X) {i j k l : X} {v z c : T.V}
+    (hvl : T.graph.Adj (T.leaf l) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hzc : z ≠ c) (hzl : z ≠ T.leaf l) (hlk : l ≠ k) (hil : i ≠ l) (hjl : j ≠ l)
+    (hic : T.inSide s(v, c) c (T.leaf i)) (hjc : T.inSide s(v, c) c (T.leaf j))
+    (hklz : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l))
+    (hnb : T.graph.neighborFinset v = {T.leaf l, z, c})
+    (hdeg : T.graph.degree v ≠ 1)
+    (hS : 2 * T.sideLeafCount s(v, c) c ≤ Fintype.card X) :
+    (Fintype.card X : ℝ) - 4
+      ≤ ((T.attesonW (T.leaf k) (T.leaf l) s(T.leaf l, v) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(T.leaf l, v) : ℝ))
+        + ((T.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(v, z) : ℝ)) := by
+  have hlkz : ¬ T.inSide s(v, z) (T.leaf l) (T.leaf k) :=
+    fun h' => hklz ((T.inSide_comm s(v, z) (T.leaf k) (T.leaf l)).mpr h')
+  have h := T.attesonW_sub_pair_start_ge (k := l) (l := k) hvl hvz hvc hzc hzl hlk.symm hil hjl hic hjc
+    hlkz hnb hdeg hS
+  rwa [attesonW_comm T (T.leaf l) (T.leaf k) s(T.leaf l, v),
+    attesonW_comm T (T.leaf l) (T.leaf k) s(v, z)] at h
+
+end Cladogram
+
+
 
