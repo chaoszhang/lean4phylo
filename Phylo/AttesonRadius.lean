@@ -920,6 +920,78 @@ def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
   4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
 
 
+/-! ### 8.1.0′ ★★★ W49-A-(i)：`minEdgeWeight` 的 `sInf → min` 桥
+
+`minEdgeWeight T` 定义为 `sInf (Set.range T.w)`（`:891`）。★ 现场复核：`grep -rn 'sInf' Phylo/`
+在**全库只命中两处** —— 本 `def` 与 `Phylo/SplitWeak.lean:92` 的一行**注释**
+（W48 报告说「只出现这一次」是漏了那条注释，结论不变：**没有任何** `sInf → min` 的桥）。
+
+为什么这层桥不是装饰：`sInf` 只给**下界**，**正性**需要「下确界真的被取到」。
+Lemma 11 的装配式 `Σ_e c_e·l(e) ≥ δmin·Σ_e c_e` 同时要这两件事
+
+* `l(e) ≥ δmin`（★ `minEdgeWeight_le`，`csInf_le`）；
+* `δmin > 0`（★★ `minEdgeWeight_pos`，**必须**知道 `sInf` 是某个 `T.w e`）。
+
+做法：`Edge T.toCladogram` 是 `Sym2 T.V` 的 `Fintype` 子类型 ⇒ `Set.range T.w` 有限非空
+⇒ `sInf` 落在 `Finset.univ.image T.w` 的 `min'` 上（★ `minEdgeWeight_eq_min'`），
+再由 `Finset.min'_mem` 取出那条边。 -/
+
+/-- ★ **边集非空**：任取一片叶，它的度是 1（★★ `Cladogram.isLeaf_iff_degree_eq_one`），
+故它有**唯一**邻居 `c`，于是 `s(T.leaf x, c)` 是一条边。 -/
+theorem edge_nonempty (T : Phylogram X) (x : X) : Nonempty (Edge T.toCladogram) := by
+  have hleaf : T.toCladogram.IsLeaf (T.leaf x) := ⟨x, rfl⟩
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.toCladogram.isLeaf_iff_degree_eq_one (T.leaf x)).mp hleaf
+  obtain ⟨c, hc, -⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  exact ⟨⟨s(T.leaf x, c), (SimpleGraph.mem_edgeSet T.graph).mpr hc⟩⟩
+
+/-- ★ **`min'` 版的最小边权**（`minEdgeWeight` 的可计算孪生；两者相等见 `minEdgeWeight_eq_min'`）。 -/
+noncomputable def minEdgeWeight' (T : Phylogram X) (hne : Nonempty (Edge T.toCladogram)) : ℝ := by
+  classical
+  exact (Finset.univ.image T.w).min' (by
+    haveI := hne
+    exact Finset.univ_nonempty.image T.w)
+
+/-- ★ **下界**：`minEdgeWeight T ≤ T.w e`（对**每条**边；这就是 `sInf` 是下界）。
+★ 不需要非空假设 —— 空集时 `sInf ∅ = 0` 也照样给一条（此时左边没意义，但等式仍相容）。 -/
+theorem minEdgeWeight_le (T : Phylogram X) (e : Edge T.toCladogram) :
+    minEdgeWeight T ≤ T.w e := by
+  refine csInf_le ?_ (Set.mem_range_self e)
+  exact (Set.finite_range T.w).bddBelow
+
+/-- ★★ **`sInf` 就是 `min'`**：边集有限非空 ⇒ 下确界**被取到**，且就是有限集的 `min'`。 -/
+theorem minEdgeWeight_eq_min' (T : Phylogram X) (hne : Nonempty (Edge T.toCladogram)) :
+    minEdgeWeight T = minEdgeWeight' T hne := by
+  classical
+  haveI := hne
+  have hne' : (Finset.univ : Finset (Edge T.toCladogram)).Nonempty := Finset.univ_nonempty
+  have hmin : minEdgeWeight' T hne = (Finset.univ.image T.w).min' (hne'.image T.w) := rfl
+  rw [hmin]
+  refine le_antisymm ?_ ?_
+  · obtain ⟨e, -, he⟩ :=
+      Finset.mem_image.mp (Finset.min'_mem (Finset.univ.image T.w) (hne'.image T.w))
+    exact csInf_le (Set.finite_range T.w).bddBelow (Set.mem_range.mpr ⟨e, he⟩)
+  · refine le_csInf ?_ ?_
+    · obtain ⟨e, -⟩ := hne'
+      exact ⟨T.w e, Set.mem_range_self e⟩
+    · rintro _ ⟨e, -, rfl⟩
+      exact Finset.min'_le _ _ (Finset.mem_image_of_mem T.w (Finset.mem_univ e))
+
+/-- ★★ **正性**：全边权为正 ⇒ `0 < minEdgeWeight T` —— 这是 `csInf_le` **给不出**的一半
+（要用「下确界被取到」）：`minEdgeWeight = T.w e₀` 对**某条**边 `e₀` 成立。 -/
+theorem minEdgeWeight_pos (T : Phylogram X) (hne : Nonempty (Edge T.toCladogram))
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) : 0 < minEdgeWeight T := by
+  classical
+  haveI := hne
+  rw [minEdgeWeight_eq_min' T hne]
+  have hne' : (Finset.univ : Finset (Edge T.toCladogram)).Nonempty := Finset.univ_nonempty
+  have hmem := Finset.min'_mem (Finset.univ.image T.w) (hne'.image T.w)
+  obtain ⟨e, -, he⟩ := Finset.mem_image.mp hmem
+  rw [show minEdgeWeight' T hne = (Finset.univ.image T.w).min' (hne'.image T.w) from rfl, ← he]
+  exact hpos e
+
+
+
 /-! ### 8.1 ★★★ 缺口 1 **已证成**：`atteson_lemma11_gap_order_form` 是定理（W25 泳道 b）
 
 结论 ★★★ `atteson_lemma11_gap_order_form_holds`：`atteson_lemma11_gap_order_form` **不需要任何数学假设**即成立；
