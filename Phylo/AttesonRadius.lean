@@ -5146,3 +5146,79 @@ theorem two_mul_sideLeafCount_third_of_min (T : Cladogram X) {v q c d : T.V}
 
 end Cladogram
 
+
+/-! ## 38. ★★★★ W50-A-#36：三条边 ⇒ `Σ c_e ≥ 3(n−4)`（装配的第一块）
+
+DisjointPairs 支的三块系数下界（§30.2 的 `hc0`、§26＋§37 的配对项 `n−4`、§36 的附着边项 `2n−8`）
+现在可以合成为**一条**系数和不等式：
+
+　　　`Σ_{e ∈ E} (w_e(k,l) − w_e(i,j)) ≥ (n−4) + (2n−8) = 3(n−4)`。
+
+★ 分解方式：`{e₁,e₂,e₃} ⊆ E` 上的三项和 ≤ 全边和（其余边 `≥ 0`），再用两条显式下界。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **三边合成 ⇒ `3(n−4)`**：若每边系数非负（`hc0`）、三边 `{e₁,e₂,e₃} ⊆ E` 互异、
+配对项 `c_{e₁} + c_{e₂} ≥ n−4`、附着边项 `c_{e₃} ≥ 2n−8`，则
+
+　　`3(n − 4) ≤ Σ_{e ∈ E} c_e`。
+
+（`c_e := w_e(k,m) − w_e(i,j)`；这是 Atteson `:2126–2137` 的 `(n−4) + (2n−8) = 3(n−4)`。） -/
+theorem three_mul_le_sum_coeff_of_three_edges (T : Cladogram X) {i j k m : T.V}
+    {e1 e2 e3 : Sym2 T.V}
+    (hsub : ({e1, e2, e3} : Finset (Sym2 T.V))
+      ⊆ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet))
+    (h12ne : e1 ≠ e2) (h13ne : e1 ≠ e3) (h23ne : e2 ≠ e3)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ))
+    (h12 : (Fintype.card X : ℝ) - 4
+      ≤ ((T.attesonW k m e1 : ℝ) - (T.attesonW i j e1 : ℝ))
+        + ((T.attesonW k m e2 : ℝ) - (T.attesonW i j e2 : ℝ)))
+    (h3 : 2 * (Fintype.card X : ℝ) - 8
+      ≤ (T.attesonW k m e3 : ℝ) - (T.attesonW i j e3 : ℝ)) :
+    3 * ((Fintype.card X : ℝ) - 4)
+      ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet),
+          ((T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ)) := by
+  classical
+  set c : Sym2 T.V → ℝ := fun e => (T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ) with hc
+  have hmono : ∑ e ∈ ({e1, e2, e3} : Finset (Sym2 T.V)), c e
+      ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet), c e :=
+    Finset.sum_le_sum_of_subset_of_nonneg hsub
+      (fun e he _ => hc0 e (Finset.mem_filter.mp he).2)
+  have hs3 : ∑ e ∈ ({e1, e2, e3} : Finset (Sym2 T.V)), c e = c e1 + c e2 + c e3 := by
+    rw [Finset.sum_insert (by simp [h12ne, h13ne]),
+      Finset.sum_insert (by simp [h23ne]), Finset.sum_singleton]
+    ring
+  have hid : ((Fintype.card X : ℝ) - 4) + (2 * (Fintype.card X : ℝ) - 8)
+      = 3 * ((Fintype.card X : ℝ) - 4) := by ring
+  linarith
+
+/-- ★★★★ **DisjointPairs 支的定量结论（三边版）**：把 §38 的系数和与 §30.3 的 `Q` 差粘合起来，
+
+　　`3(n − 4)·δ ≤ Q(k,m) − Q(i,j)`　（`δ ≤ l(e)` 对每条边成立、边外 `l = 0`）。
+
+于是「几何三件」——`hc0`、配对项 `n−4`、附着边项 `2n−8`——一齐给出 `DisjointPairs` 支的 `3(n−4)`。 -/
+theorem attesonQ_gap_ge_three_mul_of_three_edges (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j k m : T.V}
+    {e1 e2 e3 : Sym2 T.V} {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hsub : ({e1, e2, e3} : Finset (Sym2 T.V))
+      ⊆ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet))
+    (h12ne : e1 ≠ e2) (h13ne : e1 ≠ e3) (h23ne : e2 ≠ e3)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ))
+    (h12 : (Fintype.card X : ℝ) - 4
+      ≤ ((T.attesonW k m e1 : ℝ) - (T.attesonW i j e1 : ℝ))
+        + ((T.attesonW k m e2 : ℝ) - (T.attesonW i j e2 : ℝ)))
+    (h3 : 2 * (Fintype.card X : ℝ) - 8
+      ≤ (T.attesonW k m e3 : ℝ) - (T.attesonW i j e3 : ℝ)) :
+    3 * ((Fintype.card X : ℝ) - 4) * δ ≤ T.attesonQ l k m - T.attesonQ l i j :=
+  T.attesonQ_gap_ge_of_coeff_sum l hδ0 hl hl0 hc0
+    (T.three_mul_le_sum_coeff_of_three_edges hsub h12ne h13ne h23ne hc0 h12 h3)
+
+end Cladogram
+
