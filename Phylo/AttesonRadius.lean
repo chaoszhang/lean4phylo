@@ -4965,3 +4965,54 @@ theorem exists_deep_cherry_data (T : Cladogram X) (hbin : T.IsBinary) {k l : X} 
 
 end Cladogram
 
+
+/-! ## 35. ★★★★ W50-A-#32：`ℓ_·` 沿 `P_{k,l}` 的**单调性**（过半点路线的引擎）
+
+`W50_A_MATH.md` §7.17 的路线是「沿 `P_{k,l}` 取第一个 `ℓ_k ≥ n/2` 的**过半点**」。本节先落它的引擎：
+在 `a—b—c` 链上，`a` 侧（对边 `s(a,b)`）的叶集包含于 `b` 侧（对边 `s(b,c)`）的叶集，于是 `ℓ` 沿路径
+单调不减；反方向（`l` 端的 `ℓ_l`）由同一引理换名即得。
+
+★ 关键：§27.8 的 `inSide_of_inSide_adj_swap` 已含全部拓扑内容，本节只需把 `s(a,b)` 用
+`Sym2.eq_swap` 对齐成 `s(b,a)` 再调用一次 —— **不必再证 walk 论**。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **沿边的同侧传递**：`a—b—c` 链（`a ≠ c`）里，`a` 侧的顶点在 `s(b,c)` 下与 `b` 同侧。 -/
+theorem inSide_tail_of_inSide (T : Cladogram X) {a b c x : T.V}
+    (hab : T.graph.Adj a b) (hbc : T.graph.Adj b c) (hac : a ≠ c)
+    (h : T.inSide s(a, b) a x) : T.inSide s(b, c) b x := by
+  have h' : T.inSide s(b, a) a x := by rwa [Sym2.eq_swap]
+  exact T.inSide_of_inSide_adj_swap hab.symm hbc hac h'
+
+/-- ★★★ **叶集单调（集合版）**：`a` 侧叶集 ⊆ `b` 侧叶集。 -/
+theorem sideLeaves_subset_of_adj_chain (T : Cladogram X) {a b c : T.V}
+    (hab : T.graph.Adj a b) (hbc : T.graph.Adj b c) (hac : a ≠ c) :
+    T.sideLeaves s(a, b) a ⊆ T.sideLeaves s(b, c) b := by
+  intro y hy
+  rw [T.mem_sideLeaves_iff_inSide] at hy ⊢
+  exact T.inSide_tail_of_inSide hab hbc hac hy
+
+/-- ★★★ **`ℓ` 沿路径不减（数版）**：`ℓ_{a}(s(a,b)) ≤ ℓ_{b}(s(b,c))`。 -/
+theorem sideLeafCount_le_of_adj_chain (T : Cladogram X) {a b c : T.V}
+    (hab : T.graph.Adj a b) (hbc : T.graph.Adj b c) (hac : a ≠ c) :
+    T.sideLeafCount s(a, b) a ≤ T.sideLeafCount s(b, c) b := by
+  rw [T.sideLeafCount_eq_card_sideLeaves, T.sideLeafCount_eq_card_sideLeaves]
+  exact Finset.card_le_card (T.sideLeaves_subset_of_adj_chain hab hbc hac)
+
+/-- ★★★ **`ℓ` 沿路径不减（对侧版）**：从 `k` 端走向 `l` 端时，**远侧**叶数单调**不增**：
+
+　　`ℓ_{c}(s(c,b)) ≤ ℓ_{b}(s(b,a))`
+
+（`s(c,b) = s(b,c)`、`s(b,a) = s(a,b)` 按 `Sym2.eq_swap` 理解；这里直接按调用方碰到的边名写，
+省掉一次 Sym2 换名。） -/
+theorem sideLeafCount_far_le_of_adj_chain (T : Cladogram X) {a b c : T.V}
+    (hab : T.graph.Adj a b) (hbc : T.graph.Adj b c) (hac : a ≠ c) :
+    T.sideLeafCount s(c, b) c ≤ T.sideLeafCount s(b, a) b :=
+  T.sideLeafCount_le_of_adj_chain hbc.symm hab.symm hac.symm
+
+end Cladogram
+
