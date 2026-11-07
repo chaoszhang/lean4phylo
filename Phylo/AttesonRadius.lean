@@ -4168,3 +4168,179 @@ theorem three_mul_le_of_two_end {n m : ℕ} (hm : 3 ≤ m) (hmn : m + 1 ≤ n) {
   · left; linarith
   · right; linarith
 
+
+/-! ## 30. ★★★ W52：Case `DisjointPairs` 的**装配层**（第一段：三件纯工具）
+
+§24–§29 已把「两端各一棵樱桃 ＋ 一条中间边」的**几何**与**算术**全部落齐
+（`W50_A_MATH.md` §7.11.5 的施工清单）。本节开始装配，先落三件与几何无关的工具：
+
+1. **樱桃的附着顶点 `u`**：§27.6／§22 只给「樱桃中心 `w`」，而 §24 的附着边系数公式
+   `attesonW_sub_cherry_edge_of_disjoint` 还需要 `w` 的**第三个**邻居 `u` 与
+   「`w` 的邻居恰为 `leaf i`、`leaf j`、`u`」（`hdeg : degree w = 3` 是 §27 已给的）；
+2. **§21′ 的全边版**：把逐边非负性打包成 `∀ e ∈ E, 0 ≤ c_e` —— 装配时「其余边丢弃」
+   （§25 `le_sum_of_three_mem` 的 `h0`）的唯一依据；
+3. **系数和 ⇒ `Q` 差**（本节真正的桥）：`K ≤ Σ_e c_e` ＋ 每条边 `δ ≤ l(e)` ＋ 边外 `l = 0`
+   ⇒ `K·δ ≤ Q(k,l) − Q(i,j)`。这是 `attesonQ_sub`（§14）＋ `minEdgeWeight_le`（§8.1.0′）
+   的最后一步粘合，`DisjointPairs` 与 `SharesOneLabel` 两支**都要用**。
+
+★ 为什么桥里要写 `l(e) = 0`（边外）：`attesonQ` 的求和跑遍**全部** `Sym2 T.V`
+（`attesonQ_sub` 的右端是 `∑ e : Sym2 T.V`），而 `Phylogram.w` 的定义域是 `Edge T`
+（`Core.lean:158`）；装配时喂给 `attesonQ` 的必须是延拓 `T.wExt`（边外取 `0`，
+`Phylo.TreeDist.wExt_eq_zero`）。边外项因此**恒为零**，其符号**不需要**知道 ——
+这正是 §21′ 只需在边集上引用的原因。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-! ### 30.1 樱桃的第三个邻居（§24 的附着顶点） -/
+
+/-- ★★★ **樱桃中心的第三个邻居 `u`**：`w` 邻 `leaf i`、`leaf j` 且 `degree w = 3`
+⇒ 存在唯一的第三个邻居 `u`，并且 **`w` 的邻居只有这三个**。
+
+§24.2 `attesonW_sub_cherry_edge_of_disjoint` 的 `hne` 参数就是末一条
+（它把「附着边 `s(w,u)` 的 `w` 侧只有两片叶」交给 `sideLeafCount_cherry_side_eq_two`）。 -/
+theorem exists_cherry_attach_vertex (T : Cladogram X) {i j : X} {w : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j)
+    (hdeg : T.graph.degree w = 3) :
+    ∃ u : T.V, u ≠ T.leaf i ∧ u ≠ T.leaf j ∧ T.graph.Adj w u ∧
+      (∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u) := by
+  classical
+  have hne : T.leaf i ≠ T.leaf j := fun h => hij (T.leaf.injective h)
+  have hcard : (T.graph.neighborFinset w).card = 3 := by
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hdeg]
+  have hmi : T.leaf i ∈ T.graph.neighborFinset w :=
+    (SimpleGraph.mem_neighborFinset _ w (T.leaf i)).mpr hi.symm
+  have hmj : T.leaf j ∈ T.graph.neighborFinset w :=
+    (SimpleGraph.mem_neighborFinset _ w (T.leaf j)).mpr hj.symm
+  have hc1 : ((T.graph.neighborFinset w).erase (T.leaf i)).card = 2 := by
+    rw [Finset.card_erase_of_mem hmi, hcard]
+  have hmj' : T.leaf j ∈ (T.graph.neighborFinset w).erase (T.leaf i) :=
+    Finset.mem_erase.mpr ⟨hne.symm, hmj⟩
+  have hc2 : (((T.graph.neighborFinset w).erase (T.leaf i)).erase (T.leaf j)).card = 1 := by
+    rw [Finset.card_erase_of_mem hmj', hc1]
+  obtain ⟨u, hu⟩ := Finset.card_eq_one.mp hc2
+  have humem : u ∈ ((T.graph.neighborFinset w).erase (T.leaf i)).erase (T.leaf j) := by
+    rw [hu]; exact Finset.mem_singleton_self u
+  rw [Finset.mem_erase, Finset.mem_erase] at humem
+  obtain ⟨huj, hui, hnb⟩ := humem
+  have hwu : T.graph.Adj w u := (SimpleGraph.mem_neighborFinset _ w u).mp hnb
+  refine ⟨u, hui, huj, hwu, fun y hy => ?_⟩
+  have hynb : y ∈ T.graph.neighborFinset w := (SimpleGraph.mem_neighborFinset _ w y).mpr hy
+  by_cases h1 : y = T.leaf i
+  · exact Or.inl h1
+  by_cases h2 : y = T.leaf j
+  · exact Or.inr (Or.inl h2)
+  · refine Or.inr (Or.inr ?_)
+    have hymem : y ∈ ((T.graph.neighborFinset w).erase (T.leaf i)).erase (T.leaf j) :=
+      Finset.mem_erase.mpr ⟨h2, Finset.mem_erase.mpr ⟨h1, hynb⟩⟩
+    rw [hu, Finset.mem_singleton] at hymem
+    exact hymem
+
+/-! ### 30.2 §21′ 的全边版：`c_e ≥ 0` 对**每条边**成立 -/
+
+/-- ★★★ **§21′ 的打包版**：`e* = s(c,d)` 是「离路径边中 `ℓ_k` 最小者」（§20′
+`exists_min_sideLeafCount_offPath`），樱桃 `(i,j)` 在 `k` 一侧 ⇒
+**每条边**的系数差 `c_e = w_e(k,l) − w_e(i,j) ≥ 0`。
+
+装配时「其余边全部丢弃」只需要这一条（`Finset.sum_le_sum_of_subset_of_nonneg` 的 `h0`）。
+
+★ 为什么 §21′ 只能逐边引用、不能整体引用：它的两个 `inSide` 假设
+（`hCin : i ~ k`、`hCjn : j ~ l` 相对 `e*`）在 `e*` **离路径**时才有解 ——
+`e*` 两侧恰好是「`k,l` 同侧」，而樱桃两叶都在 `k` 那侧，故 `i ~ k`、`j ~ k ~ l`。 -/
+theorem attesonW_sub_nonneg_all_of_min (T : Cladogram X) {c d : T.V}
+    (hcd : T.graph.Adj c d) {i j k l : X}
+    (hcher : T.IsCherry i j) (hklne : k ≠ l)
+    (heStarI : T.inSide s(c, d) (T.leaf k) (T.leaf l))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf l))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf l) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ) := by
+  intro e he
+  induction e using Sym2.ind with
+  | h a b =>
+    exact T.attesonW_sub_nonneg_of_all ((SimpleGraph.mem_edgeSet T.graph).mp he) hcd hcher hklne
+      heStarI hCin hCjn hmin
+
+/-! ### 30.3 系数和 ⇒ `Q` 差（`attesonQ_sub` ＋ `minEdgeWeight_le` 的粘合） -/
+
+/-- ★★★★ **装配桥**：若
+
+* `K ≤ Σ_{e ∈ E} c_e`（`E` = 边集，`c_e = w_e(k,m) − w_e(i,j)`）；
+* 每条边 `δ ≤ l(e)`（`δ = minEdgeWeight T` 时由 `minEdgeWeight_le` 供给）；
+* 边外 `l = 0`（`l = T.wExt` 时由 `wExt` 的定义供给）；
+* 每条边 `0 ≤ c_e`（§30.2 供给）；
+* `0 ≤ δ`（`minEdgeWeight_pos` 的一半，非负性由 `w_nonneg` 直接给）；
+
+则
+
+　　　`K · δ ≤ Q(k,m) − Q(i,j)`。
+
+★ 这是两个分支的**共同**收尾：把 §25 的**系数和**翻译成 §14 的 **`Q` 差**，
+再乘出 `minEdgeWeight`（验收标准 #3：必须是真正的 `min`，不许弱化成 `∃ δ`）。
+★ 边外项 `c_e · l(e)` 恒为 `0`（`hl0`），故边外的 `c_e` **不需要**非负 ——
+求和从 `univ` 收缩到 `E`（`Finset.sum_subset`）正是为此。 -/
+theorem attesonQ_gap_ge_of_coeff_sum (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j k m : T.V}
+    {K δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ))
+    (hK : K ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet),
+      ((T.attesonW k m e : ℝ) - (T.attesonW i j e : ℝ))) :
+    K * δ ≤ T.attesonQ l k m - T.attesonQ l i j := by
+  classical
+  set E : Finset (Sym2 T.V) := Finset.univ.filter (fun e => e ∈ T.graph.edgeSet) with hEdef
+  have hEmem : ∀ e : Sym2 T.V, e ∈ E ↔ e ∈ T.graph.edgeSet := by
+    intro e; rw [hEdef]; simp
+  -- ### 边外的项为零 ⇒ 全和 = `E` 上的和
+  have hzero : ∀ x ∈ (Finset.univ : Finset (Sym2 T.V)), x ∉ E →
+      ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * l x = 0 := by
+    intro x _ hx
+    rw [hl0 x (fun h => hx ((hEmem x).mpr h)), mul_zero]
+  have hsum_univ : (∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * l x)
+      = ∑ x : Sym2 T.V, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * l x :=
+    Finset.sum_subset (Finset.subset_univ E) hzero
+  -- ### 逐项：`c_x · δ ≤ c_x · l(x)`（`c_x ≥ 0`、`δ ≤ l(x)`）
+  have hstep1 : ∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * δ
+      ≤ ∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * l x := by
+    refine Finset.sum_le_sum fun x hx => ?_
+    exact mul_le_mul_of_nonneg_left (hl x ((hEmem x).mp hx)) (hc0 x ((hEmem x).mp hx))
+  have hstep2 : ∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ)) * δ
+      = (∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ))) * δ :=
+    (Finset.sum_mul ..).symm
+  have hstep3 : K * δ
+      ≤ (∑ x ∈ E, ((T.attesonW k m x : ℝ) - (T.attesonW i j x : ℝ))) * δ :=
+    mul_le_mul_of_nonneg_right hK hδ0
+  rw [attesonQ_sub]
+  rw [← hsum_univ]
+  linarith
+
+/-- ★★★ **求和层（两条边版）**：两条**互异**边的函数值之和 `≥ K` ⇒ 整个 `Finset` 上的和 `≥ K`
+（前提：集合内每项非负）。§25 `le_sum_of_three_mem` 的二元素版 —— 装配时每端只需
+「附着边 ＋ 中间边」两条边。 -/
+theorem le_sum_of_two_mem {α : Type*} [DecidableEq α] (f : α → ℝ) (s : Finset α) {K : ℝ}
+    {e1 e2 : α} (h1 : e1 ∈ s) (h2 : e2 ∈ s) (h12 : e1 ≠ e2)
+    (h0 : ∀ e ∈ s, 0 ≤ f e) (hb : K ≤ f e1 + f e2) :
+    K ≤ ∑ e ∈ s, f e := by
+  classical
+  have hsub : ({e1, e2} : Finset α) ⊆ s := by
+    intro x hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with h | h
+    · rw [h]; exact h1
+    · rw [h]; exact h2
+  have hsum2 : ∑ e ∈ ({e1, e2} : Finset α), f e = f e1 + f e2 := by
+    rw [Finset.sum_insert (by simp [h12]), Finset.sum_singleton]
+  have hmono := Finset.sum_le_sum_of_subset_of_nonneg hsub (fun x hx _ => h0 x hx)
+  calc K ≤ f e1 + f e2 := hb
+    _ = ∑ e ∈ ({e1, e2} : Finset α), f e := hsum2.symm
+    _ ≤ ∑ e ∈ s, f e := hmono
+
+end Cladogram
+
