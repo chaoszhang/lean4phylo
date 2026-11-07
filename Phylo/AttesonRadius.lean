@@ -4765,6 +4765,62 @@ theorem attesonQ_gap_of_cherry_deep_l (T : Cladogram X) (l : Sym2 T.V → ℝ) {
   rw [T.attesonQ_comm (l := l) (T.leaf m) (T.leaf k)] at h
   exact h
 
+/-- ★★★★ **Case D｜一端的 `Q` 层下界（两支解耦版）**：**附着边所在的分支边** `s(vb,cb)` 与
+**中间边** `s(a,b)` 可以是**不同**的两条边 —— 这是两端共用**同一条**中间边、从而把
+`2(n−ℓ_k)−2` 与 `2(n−ℓ_l)−2` 合成 `2n−4` 的**必要条件**。
+
+§33.3／§33.4 是它的特例（`(a,b) := (v,z)`，即中间边恰过分支顶点）。
+★ 数学上为什么必须解耦：`m > 3` 时 `k` 端与 `l` 端的中间边不是同一条，
+而两条**不同**边的 `2(n−ℓ)−2` 无法相加成 `2n−4`（只有同一条边才有 `ℓ_k + ℓ_l = n`）。 -/
+theorem attesonQ_gap_of_cherry_deep_gen (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j x y : X}
+    {vb cb a b w u : T.V} {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf x) (T.leaf y) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ))
+    (hab : T.graph.Adj a b)
+    (hix : T.inSide s(a, b) (T.leaf x) (T.leaf i))
+    (hjx : T.inSide s(a, b) (T.leaf x) (T.leaf j))
+    (hxy : ¬ T.inSide s(a, b) (T.leaf x) (T.leaf y))
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j)
+    (hdeg : T.graph.degree w = 3) (hu : T.graph.Adj w u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hne : ∀ yv, T.graph.Adj w yv → yv = T.leaf i ∨ yv = T.leaf j ∨ yv = u)
+    (hvb : T.graph.Adj vb cb)
+    (hic : T.inSide s(vb, cb) cb (T.leaf i)) (hjc : T.inSide s(vb, cb) cb (T.leaf j))
+    (hxv : T.inSide s(vb, cb) vb (T.leaf x)) (hyv : T.inSide s(vb, cb) vb (T.leaf y))
+    (hne2 : s(w, u) ≠ s(a, b)) :
+    (2 * ((Fintype.card X : ℝ) - 4)
+      + (2 * ((Fintype.card X : ℝ) - (T.sideLeafCount s(a, b) (T.leaf x) : ℝ)) - 2)) * δ
+      ≤ T.attesonQ l (T.leaf x) (T.leaf y) - T.attesonQ l (T.leaf i) (T.leaf j) := by
+  classical
+  have hxa : T.inSide s(w, u) u (T.leaf x) :=
+    T.inSide_attach_of_cherry_branch (u := u) hi hj hij hu hdeg hne hui huj hvb hic hjc hxv
+  have hya : T.inSide s(w, u) u (T.leaf y) :=
+    T.inSide_attach_of_cherry_branch (u := u) hi hj hij hu hdeg hne hui huj hvb hic hjc hyv
+  have hca : (T.attesonW (T.leaf x) (T.leaf y) s(w, u) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) = 2 * ((Fintype.card X : ℝ) - 4) :=
+    T.attesonW_sub_cherry_edge_of_disjoint (k := x) (l := y)
+      hi hj hij hu hdeg hne hui huj hxa hya
+  have hijab : T.inSide s(a, b) (T.leaf i) (T.leaf j) := hix.symm.trans hjx
+  have hcb : (T.attesonW (T.leaf x) (T.leaf y) s(a, b) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(a, b) : ℝ)
+      = 2 * ((Fintype.card X : ℝ) - (T.sideLeafCount s(a, b) (T.leaf x) : ℝ)) - 2 :=
+    T.attesonW_sub_path_eq_near_k (e := s(a, b)) (k := T.leaf x) (l := T.leaf y) hxy hijab hix
+  have ha : s(w, u) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hu
+  have hb : s(a, b) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hab
+  exact T.attesonQ_gap_of_two_edge_coeffs (l := l) (i := i) (j := j) (k := x) (m := y)
+    (a := s(w, u)) (b := s(a, b)) (ℓ := (T.sideLeafCount s(a, b) (T.leaf x) : ℝ))
+    hδ0 hl hl0 hc0 ha hb hne2 hca hcb
+
+/-- ★★ **边集成员 ⇒ 端点形式**：`e ∈ edgeSet` 分解成 `e = s(a,b)` 且 `Adj a b`
+（装配里 §20′ 的 `e*` 是 `Sym2`，§30.2 要端点）。 -/
+theorem exists_adj_of_mem_edgeSet (T : Cladogram X) {e : Sym2 T.V}
+    (he : e ∈ T.graph.edgeSet) : ∃ a b : T.V, T.graph.Adj a b ∧ e = s(a, b) := by
+  induction e using Sym2.ind with
+  | h a b => exact ⟨a, b, (SimpleGraph.mem_edgeSet T.graph).mp he, rfl⟩
+
 /-! ## §34 生产 §33 的几何前提（第一批：三个基础事实）
 
 `W50_A_MATH.md` §7.15.4 的出处表。装配时 `§33` 的每条 `inSide` 前提要么是**一条边之差**
