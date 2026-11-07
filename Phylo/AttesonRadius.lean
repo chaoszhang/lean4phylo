@@ -5583,6 +5583,22 @@ theorem sharesOneLabel_branch (T : Phylogram X) {i j k l : X}
           ≤ (toDissimilarity T).Q k l - (toDissimilarity T).Q i j) :=
   ⟨isCherry_toDissimilarity T hcher, ⟨hs, toDissimilarity_gap T hgap⟩⟩
 
+/-- ★★★★ **`minEdgeWeight` 非负**（收口时 §41 的 `hδ0` 就靠它）
+
+★ 注意本库的 `Phylogram` 只要求 `w_nonneg : ∀ e, 0 ≤ w e`（`Phylo/Core.lean:159`），
+**没有严格正性** ⇒ `0 < minEdgeWeight` **一般不可得**（零边权合法），
+`minEdgeWeight_pos` 也因此带 `hpos : ∀ e, 0 < T.w e` 前提。
+但这不影响定理：§41／§42 只用到 `0 ≤ δ`。 -/
+theorem minEdgeWeight_nonneg (T : Phylogram X) [Nonempty X] :
+    0 ≤ NJ.Dissimilarity.minEdgeWeight T := by
+  classical
+  obtain ⟨x⟩ := ‹Nonempty X›
+  refine le_csInf ?_ ?_
+  · obtain ⟨e⟩ := edge_nonempty T x
+    exact ⟨T.w e, Set.mem_range_self e⟩
+  · rintro _ ⟨e, rfl⟩
+    exact T.w_nonneg e
+
 end Dissimilarity
 
 end NJ
