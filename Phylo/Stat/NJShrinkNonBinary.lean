@@ -21,7 +21,7 @@ def njAdditiveGapUnrestricted : Prop :=
 `w` 的第三邻居 `z` 上，边权 `w_a + w_b`）；它的每一步都吃了 `deg w = 3`
 （★★ `NJShrink.exists_third` 的 `hbin` 只用来推 `degree w = 3`）。
 
-**本文件 = 方案 ＋ G1 落地**（W48）。实现进度见 §7 的勾选列。
+**本文件 = 方案 ＋ G1–G6 落地**（W48 起，W49 续）。实现进度见 §7 的勾选列。
 
 ## 0 ★D 更正①：非二叉**不等于** `deg w ≥ 4`
 
@@ -117,9 +117,31 @@ graph' := T.graph.induce (fun v => v ≠ T.leaf b)      -- `SimpleGraph.induce`
 | **G3** | 度数（`w` 减 1、其余不变）：`degree_nb_of_ne`（`Finset.card_bij`，关键：`leaf b` 的唯一邻居是 `w` ⇒ `¬Adj v (leaf b)`）／`degree_nb_midpoint`（`neighborFinset w`.erase `leaf b` 的双射） | 100–140 | **✅ 已落**（实测 62 行） |
 | **G4** | `no_degree_two` ＋ `leaf_iff_degree_one` ＋ ★★★ `shrinkCladogramNB : Cladogram (MergeIdx X a b)` | 60–90 | **✅ 已落**（实测 100 行） |
 | **G5** | 边权 `shrinkWNB`（唯一边 `{leaf a, w}` 改 `½(w_a+w_b)`，其余 `T.wExt`）＋ 非负性 ＋ ★★★ `shrinkPhylogramNB : Phylogram (MergeIdx X a b)` | 50–70 | **✅ 已落**（实测 75 行） |
-| **G6** | `dist` 三支 | 120–180 | 待做 |
-| **G7** | 装配 `HasPosReal (mergeStep δ a b)`（`degree w` 分情形，`= 3` 支用 G0） | 40 | 待做 |
-| | **合计** | **600–820** | G0–G3 已落（实测 125 行） |
+| **G6** | `dist` 三支：**G6a** 对角／**G6b¹** 唯一边权值／**G6b²** 两条走法搬移＋权和（`exists_walk_nb_sum`／`exists_walk_of_nb_sum`／`shrinkPhylogramNB_walkDist_eq`）／**G6b** 旧–旧两方向夹／**G6c** 新–旧／`w_pos`／三支合流 | 120–180 | **✅ 已落**（W49 实测 344 行，含文档） |
+| **G7** | 装配 `HasPosReal (mergeStep δ a b)`（`degree w` 分情形） | 40 | **进行中** — ★D 见 §10 |
+| | **合计** | **600–820** | G0–G6 已落（实测 125 ＋ 344 行） |
+
+## 10 ★D 更正③（W49）：`degree w = 3` 支**不能**直接复用 `NJShrink.shrinkPhylogram`
+
+派单 G7 说「`degree w = 3` 支：用 G0 的 `exists_third_of_degree` 复用二叉机器」。
+**方向对，但接口不通**：`NJShrink.shrinkPhylogram` 的前提里带着
+`hbin : T.toCladogram.IsBinary`（**整棵树**二叉），而「`degree w = 3`」只是**局部**条件 ——
+一棵「只在远处分支点呈 polytomy」的树满足局部条件却**不**满足 `hbin`（与 §0 ★D① 是同一个坑）。
+`exists_third` 只是 `hbin` 的**一个**消费者；把它换成 `exists_third_of_degree`
+并不改变 `shrinkPhylogram` 的签名。
+
+**但实核后是好消息**：`grep -n 'hbin [a-zA-Z_(]' Phylo/Stat/NJShrink.lean` 显示
+`hbin` 在整个 A6–A8 链条里**只有一处语义使用** —— `degree_eq_three`（`:184`）内部的
+`hbin w (not_isLeaf_of_two_adj …)`；其余三十余处**全是原样透传**
+（`midpoint_not_mem_support T hbin …`、`degree_shrinkGraph T hbin …` 等），
+另有 `leaf_ne_midpoint` 里的一次（也只需 `degree w = 3`）。
+
+⇒ 正确施工法（下一批）：把 A6–A8 链条的前提从
+`(hbin : T.toCladogram.IsBinary)` **机械改写**为 `(hdeg : T.graph.degree w = 3)`；
+`degree_eq_three`／`exists_third`／`shrinkPhylogram_isBinary` 三处保留 `hbin`；
+`njAdditiveGap_holds`／`njReductionStep` 的调用点补一个
+`degree_eq_three T hbin hab haw hbw` 即可。这样 G7 两支都落在同一套机器上，
+且库内多出一批更一般的引理（不是为派单打的补丁）。
 
 **★ 施工记录（复用价值高）**：本文件的定理一用 `SimpleGraph.degree`／`neighborFinset`，
 就要求 `Fintype ↥(neighborSet)`，而它要 `DecidableRel` —— 对**抽象的** `shrinkGraphNB` 拿不到。
