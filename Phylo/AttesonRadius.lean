@@ -4487,5 +4487,64 @@ theorem attesonQ_gap_of_cherry_start (T : Cladogram X) (l : Sym2 T.V → ℝ) {k
   exact T.attesonQ_gap_ge_of_coeff_sum (l := l) (i := T.leaf k) (j := T.leaf x)
     (k := T.leaf k) (m := T.leaf m) hδ0 hl hl0 hc0 hK
 
+/-! ### 31.3 `l` 端镜像（Case S 的另一半）：`(l,y)` 在樱桃里
+
+§31.1／§31.2 关于 `k ↔ l` 完全对称：把 `attesonW_sub_nonneg_of_cherry_start` 以
+`(k,l,x) := (l,k,y)` 实例化，再用 `attesonW_comm` 把 `w(l,·)` 翻回 `w(·,l)`。
+★ 注意两端的**结论形状不同**：`k` 端给 `Q(k,m) − Q(k,x)`，`l` 端给 `Q(k,m) − Q(y,m)`
+—— 装配时按「谁在樱桃里」分派，**不能**互换。 -/
+
+/-- ★★★★ **Case S（`l` 端）的逐边非负**：`(y,l)` 是中心 `v` 的樱桃 ⇒ 每条边
+`w_e(k,m) − w_e(y,m) ≥ 0`。 -/
+theorem attesonW_sub_nonneg_of_cherry_start_l (T : Cladogram X) {k m y : X} {v : T.V}
+    (hkm : k ≠ m) (hmv : T.graph.Adj (T.leaf m) v) (hyv : T.graph.Adj (T.leaf y) v) :
+    ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf y) (T.leaf m) e : ℝ) := by
+  intro e he
+  have h := T.attesonW_sub_nonneg_of_cherry_start (k := m) (l := k) (x := y) hkm.symm hmv hyv e he
+  rw [T.attesonW_comm (T.leaf k) (T.leaf m) e,
+    T.attesonW_comm (T.leaf y) (T.leaf m) e]
+  exact h
+
+/-- ★★★★ **Case S（`l` 端）的 `Q` 层下界**：`S_c = 1` 且 `leaf y = c` ⇒
+`2(n−3)·δ ≤ Q(k,m) − Q(y,m)`。 -/
+theorem attesonQ_gap_of_cherry_start_l (T : Cladogram X) (l : Sym2 T.V → ℝ) {k m y : X}
+    {v z c : T.V} {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hkm : k ≠ m) (hmv : T.graph.Adj (T.leaf m) v) (hvz : T.graph.Adj v z)
+    (hvc : T.graph.Adj v c) (hnb : T.graph.neighborFinset v = {T.leaf m, z, c})
+    (hdeg : T.graph.degree v ≠ 1) (hzm : z ≠ T.leaf m) (hzc : z ≠ c)
+    (hx : T.leaf y = c) (hS : T.sideLeafCount s(v, c) c = 1)
+    (hpath : ¬ T.inSide s(v, z) (T.leaf m) (T.leaf k)) :
+    2 * ((Fintype.card X : ℝ) - 3) * δ
+      ≤ T.attesonQ l (T.leaf k) (T.leaf m) - T.attesonQ l (T.leaf y) (T.leaf m) := by
+  classical
+  have hyv : T.graph.Adj (T.leaf y) v := by rw [hx]; exact hvc.symm
+  have hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf y) (T.leaf m) e : ℝ) :=
+    T.attesonW_sub_nonneg_of_cherry_start_l (k := k) (m := m) (y := y) hkm hmv hyv
+  have hstart : 2 * ((Fintype.card X : ℝ) - 3)
+      ≤ (T.attesonW (T.leaf k) (T.leaf m) s(v, z) : ℝ)
+        - (T.attesonW (T.leaf y) (T.leaf m) s(v, z) : ℝ) :=
+    T.attesonW_sub_start_of_side_card_one_l (k := k) (l := m) (y := y)
+      hmv hvz hvc hnb hdeg hzm hzc hx hS hpath
+  have hmem : s(v, z) ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact (SimpleGraph.mem_edgeSet T.graph).mpr hvz
+  have hK : 2 * ((Fintype.card X : ℝ) - 3)
+      ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet),
+          ((T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+            - (T.attesonW (T.leaf y) (T.leaf m) e : ℝ)) := by
+    refine le_trans hstart (Finset.single_le_sum (f := fun e : Sym2 T.V =>
+      (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf y) (T.leaf m) e : ℝ)) ?_ hmem)
+    intro e he
+    exact hc0 e (Finset.mem_filter.mp he).2
+  exact T.attesonQ_gap_ge_of_coeff_sum (l := l) (i := T.leaf y) (j := T.leaf m)
+    (k := T.leaf k) (m := T.leaf m) hδ0 hl hl0 hc0 hK
+
 end Cladogram
 
