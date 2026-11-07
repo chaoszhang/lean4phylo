@@ -3966,6 +3966,30 @@ theorem attesonW_sub_path_eq_zero_of_sideLeafCount_one (T : Cladogram X) {a b : 
   push_cast
   ring
 
+/-- ★★★★ **Case D｜两端中间和相加 ⇒ 只看边数**：若 `s` 里每条边都分离 `k,l`
+（等价地 `ℓ_k(e) + ℓ_l(e) = n`），则两端的逐边贡献之和恒为 `|s|·(2n − 4)`，
+**与 `s` 里究竟是哪些边无关**。
+
+★ 关键是**两端各用自己那侧的 `n − ℓ`**（＝对侧叶数）：`k` 端 `2(n − ℓ_k) − 2 = 2ℓ_l − 2`，
+`l` 端 `2(n − ℓ_l) − 2 = 2ℓ_k − 2`，逐边相加 `= 2n − 2(ℓ_k + ℓ_l) + ... = 2n − 4`。
+⚠️ 若两端都写 `2ℓ_· − 2`（即都用 `_near_k'` 那一形），逐边和会变成 `4ℓ_l − 4`，**不是常数**。
+
+★ 于是 §7.9.2 的 `A + B = 2(m−2)(n−2)` 退化成一条**基数**事实 `|s| = m − 2`
+（路径边去掉首末两条）；这正是 §29 `three_mul_le_of_two_end` 的 `hAB` 的唯一来源。 -/
+theorem sum_path_coeff_eq (T : Cladogram X) (s : Finset (Sym2 T.V)) (k l : T.V)
+    (hsep : ∀ e ∈ s, T.sideLeafCount e k + T.sideLeafCount e l = Fintype.card X) :
+    ∑ e ∈ s, ((2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e k : ℝ)) - 2)
+        + (2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e l : ℝ)) - 2))
+      = (s.card : ℝ) * (2 * (Fintype.card X : ℝ) - 4) := by
+  have hterm : ∀ e ∈ s, ((2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e k : ℝ)) - 2)
+      + (2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e l : ℝ)) - 2))
+      = 2 * (Fintype.card X : ℝ) - 4 := by
+    intro e he
+    have h : (T.sideLeafCount e k : ℝ) + (T.sideLeafCount e l : ℝ) = (Fintype.card X : ℝ) := by
+      exact_mod_cast hsep e he
+    linarith
+  rw [Finset.sum_congr rfl hterm, Finset.sum_const, nsmul_eq_mul]
+
 end Cladogram
 
 /-! ## 29. ★★★ W50-A-#19：Case D 的**两端算术**（纯数值，与树结构完全无关）
