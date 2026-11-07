@@ -3721,5 +3721,89 @@ theorem sideLeafCount_start_le (T : Cladogram X) {k : X} {v z c : T.V}
   show (T.sideLeaves s(v, z) v).card ≤ 1 + (T.sideLeaves s(v, c) c).card
   omega
 
+/-! ### 27.4 起点的第二支：`c` 侧只有一片叶 ⇒ 樱桃 `(k, x)`
+
+`W50_A_MATH.md` §7.6.3 的 ②B 支。`S_c = 1` 时 `c` 必须是叶（`two_le_sideLeafCount` 的
+**逆否**：非叶点的每侧至少两片叶），于是 `c = leaf x`，而 `(k,x)` 就是挂在 `v` 上的樱桃 ——
+它与目标对 `(k,l)` **恰交一个标签**（`SharesOneLabel k x k l` 由 `k = k` 立即成立）。
+
+★ 为什么这条能把 `c` 一侧「一片叶」的坏情形变好：`v` 的第三条边 `s(v,c)` **不再是路径边**
+（它是挂边），于是 `S_k(s(v,z)) = 1 + |B_c| = 2` 达到 §23 覆盖界的最小值，起点边 `s(v,z)`
+单独就能给出整整 `2(n−3)`。 -/
+
+/-- ★★★ **`S_c = 1` ⇒ `c` 是叶且 `(k, x)` 是挂在 `v` 上的樱桃**（`x ≠ k`、`x ≠ l`）。
+
+`x ≠ l` 是**非樱桃假设**的关键用处：否则 `v` 同时邻接 `leaf k` 与 `leaf l`，`(k,l)` 本身就是
+樱桃，与本支的前提矛盾。 -/
+theorem exists_cherry_of_start_side_card_one (T : Cladogram X) {k l : X} (hklne : k ≠ l)
+    (hncher : ¬ T.IsCherry k l) {v c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvc : T.graph.Adj v c) (hck : c ≠ T.leaf k)
+    (hS : T.sideLeafCount s(v, c) c = 1) :
+    ∃ x : X, T.leaf x = c ∧ x ≠ k ∧ x ≠ l ∧ T.IsCherry k x ∧ T.graph.Adj (T.leaf x) v := by
+  classical
+  -- ### `c` 是叶：非叶点的每侧 ≥ 2 片叶
+  have hdc1 : T.graph.degree c = 1 := by
+    by_contra hd
+    have h2 := T.two_le_sideLeafCount hvc.symm hd
+    rw [Sym2.eq_swap] at h2
+    omega
+  obtain ⟨x, hx⟩ := (T.isLeaf_iff_degree_eq_one c).mpr hdc1
+  have hxk : x ≠ k := by
+    intro h
+    exact hck (by rw [← h, hx])
+  have hxl : x ≠ l := by
+    intro h
+    exact hncher ⟨hklne, v, hkv, by rw [← h, hx]; exact hvc.symm⟩
+  exact ⟨x, hx, hxk, hxl, ⟨hxk.symm, v, hkv, by rw [hx]; exact hvc.symm⟩,
+    by rw [hx]; exact hvc.symm⟩
+
+/-- ★★★ **第二支的系数下界**：`S_c = 1` 时起点边 `s(v,z)` 给出 `c_e ≥ 2(n−3)`。
+
+`leaf k → v → c = leaf x` 是 `T − s(v,z)` 中的一条 **2-步 walk**（其余两条边都不是 `e`），
+故 `e` **分离** `(k,x)` 而**不分离** `(k,l)` ⇒ `c_e = 2(n − S_k) − 2`，而 §27.3 ＋ `S_c = 1`
+给 `S_k ≤ 2`，于是 `c_e ≥ 2(n−2) − 2 = 2(n−3)`。 -/
+theorem attesonW_sub_start_of_side_card_one (T : Cladogram X) {k l x : X} {v z c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hnb : T.graph.neighborFinset v = {T.leaf k, z, c}) (hdeg : T.graph.degree v ≠ 1)
+    (hzk : z ≠ T.leaf k) (hcz : z ≠ c) (hx : T.leaf x = c)
+    (hS : T.sideLeafCount s(v, c) c = 1)
+    (hpath : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l)) :
+    2 * ((Fintype.card X : ℝ) - 3)
+      ≤ (T.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+        - (T.attesonW (T.leaf k) (T.leaf x) s(v, z) : ℝ) := by
+  classical
+  -- ### 两条边都不等于 `e = s(v,z)`
+  have hne1 : s(T.leaf k, v) ≠ s(v, z) := by
+    intro h
+    rw [Sym2.eq_iff] at h
+    rcases h with ⟨-, h2⟩ | ⟨h1, -⟩
+    · exact hvz.ne h2
+    · exact hzk h1.symm
+  have hne2 : s(v, c) ≠ s(v, z) := by
+    intro h
+    rw [Sym2.eq_iff] at h
+    rcases h with ⟨-, h2⟩ | ⟨h1, -⟩
+    · exact hcz h2.symm
+    · exact hvz.ne h1
+  -- ### `T − e` 中的 2-步 walk `leaf k → v → c`
+  have a1 : (T.graph.deleteEdges {s(v, z)}).Adj (T.leaf k) v :=
+    deleteEdges_adj.mpr ⟨hkv, hne1⟩
+  have a2 : (T.graph.deleteEdges {s(v, z)}).Adj v c :=
+    deleteEdges_adj.mpr ⟨hvc, hne2⟩
+  have hkv' : T.inSide s(v, z) (T.leaf k) v := a1.reachable
+  have hxside : T.inSide s(v, z) (T.leaf k) (T.leaf x) := by
+    rw [hx]
+    exact hkv'.trans a2.reachable
+  -- ### `S_k ≤ 2`：§27.3 ＋ `S_c = 1`
+  have hSv : T.sideLeafCount s(v, z) v ≤ 1 + T.sideLeafCount s(v, c) c :=
+    T.sideLeafCount_start_le hkv hvz hvc hnb hdeg
+  have hS2 : T.sideLeafCount s(v, z) (T.leaf k) ≤ 2 := by
+    rw [T.sideLeafCount_eq_of_inSide hkv']
+    omega
+  -- ### `c_e = 2(n − S_k) − 2`
+  rw [T.attesonW_sub_of_not_inSide_inSide (i := T.leaf k) (j := T.leaf x) hpath hxside]
+  have hS2' : (T.sideLeafCount s(v, z) (T.leaf k) : ℝ) ≤ 2 := by exact_mod_cast hS2
+  linarith
+
 end Cladogram
 
