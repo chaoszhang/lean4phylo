@@ -5541,4 +5541,51 @@ end Dissimilarity
 end NJ
 
 
+/-! ## 44. ★★★★ W50-A-#42：把 §42 的间隙**打包成 `IsCherrySeparated` 的第一支**
+
+§42 给的是树层 `attesonQ` 上的 `3(n−4)·δ`，而 `IsCherrySeparated` 要的是
+
+　　`δ.IsCherry i j ∧ (DisjointPairs i j k l ∧ 3(n−4)·δ ≤ δ.Q k l − δ.Q i j)`。
+
+本节把三件事一次装好（樱桃的度量层化用 §43 的 `isCherry_toDissimilarity`，
+间隙的度量层化用 §43 的 `toDissimilarity_gap`），于是 DisjointPairs 支**只差几何数据的生产**。 -/
+
+namespace NJ
+
+namespace Dissimilarity
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **`DisjointPairs` 支的成品**（`IsCherrySeparated` 第一个析取项的完整形状）。 -/
+theorem disjointPairs_branch (T : Phylogram X) {i j k l : X}
+    (hcher : T.IsCherry i j)
+    (hik : i ≠ k) (hil : i ≠ l) (hjk : j ≠ k) (hjl : j ≠ l)
+    (hgap : 3 * ((Fintype.card X : ℝ) - 4) * minEdgeWeight T
+      ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf l)
+        - T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j)) :
+    (toDissimilarity T).IsCherry i j ∧
+      (DisjointPairs i j k l ∧
+        3 * ((Fintype.card X : ℝ) - 4) * minEdgeWeight T
+          ≤ (toDissimilarity T).Q k l - (toDissimilarity T).Q i j) :=
+  ⟨isCherry_toDissimilarity T hcher,
+    ⟨⟨hik, hil, hjk, hjl⟩, toDissimilarity_gap T hgap⟩⟩
+
+/-- ★★★★ **`SharesOneLabel` 支的成品**（`IsCherrySeparated` 第二个析取项的完整形状），
+与 `disjointPairs_branch` 对称：间隙常数 `2(n−3)`（Atteson `:2141–2157`）。 -/
+theorem sharesOneLabel_branch (T : Phylogram X) {i j k l : X}
+    (hcher : T.IsCherry i j) (hs : SharesOneLabel i j k l)
+    (hgap : 2 * ((Fintype.card X : ℝ) - 3) * minEdgeWeight T
+      ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf l)
+        - T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j)) :
+    (toDissimilarity T).IsCherry i j ∧
+      (SharesOneLabel i j k l ∧
+        2 * ((Fintype.card X : ℝ) - 3) * minEdgeWeight T
+          ≤ (toDissimilarity T).Q k l - (toDissimilarity T).Q i j) :=
+  ⟨isCherry_toDissimilarity T hcher, ⟨hs, toDissimilarity_gap T hgap⟩⟩
+
+end Dissimilarity
+
+end NJ
+
+
 
