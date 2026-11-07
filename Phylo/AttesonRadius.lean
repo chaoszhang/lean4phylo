@@ -3832,5 +3832,34 @@ theorem disjointPairs_or_sharesOneLabel_of_tree_isCherry (T : Cladogram X) {i j 
   · exact Or.inr (Or.inr (Or.inr (Or.inr ⟨hjl, hik, hil⟩)))
   exact Or.inl ⟨hik, hil, hjk, hjl⟩
 
+/-! ### 27.6 起点的第一支：`2 ≤ S_c` ⇒ `c` 侧有樱桃
+
+`W50_A_MATH.md` §7.6.3 的 ②A 支。**不必**重做 §22.4 的枚举：c 侧若有两片叶，§22 的
+★★★ `cherry_in_component` 直接给出侧内樱桃（它自带「侧内叶数 ≥ 2 ⇒ 侧内有樱桃」的计数相撞）。
+
+★ 本支真正的算术难点不在几何，而在 **`2|B_c| ≤ n`**：起点边 `s(v,z)` 的 `k` 一侧恰是
+`{k} ∪ B_c`，故 `S_k = 1 + |B_c|`，于是 `c_e = 2(n − 1 − |B_c|) − 2 ≥ n − 4` **⟺ `2|B_c| ≤ n`**。
+后者要用 §21／§26 的 `e*` 最小性（`two_mul_sideLeafCount_le_card_of_branch`），故留到 §28
+与 `e*` 同在的作用域里；本节只落**几何**（樱桃 ＋ 两片叶都在 c 侧 ＋ 叶数相等）。 -/
+theorem exists_cherry_of_start_side_two_le (T : Cladogram X) {v c : T.V}
+    (hvc : T.graph.Adj v c) (h2 : 2 ≤ T.sideLeafCount s(v, c) c) :
+    ∃ i j : X, ∃ w : T.V, i ≠ j ∧ T.IsCherry i j ∧
+      T.sideLeafCount s(v, c) (T.leaf i) = T.sideLeafCount s(v, c) c ∧
+      T.inSide s(v, c) c (T.leaf i) ∧ T.inSide s(v, c) c (T.leaf j) ∧
+      T.inSide s(v, c) c w := by
+  classical
+  have hlt : 1 < (T.sideLeaves s(v, c) c).card := by
+    have h := h2
+    rw [T.sideLeafCount_eq_card_sideLeaves] at h
+    omega
+  obtain ⟨i₀, hi₀, j₀, hj₀, hij₀⟩ := Finset.one_lt_card.mp hlt
+  have hi' : T.inSide s(v, c) c (T.leaf i₀) := (T.mem_sideLeaves_iff_inSide).mp hi₀
+  have hj' : T.inSide s(v, c) c (T.leaf j₀) := (T.mem_sideLeaves_iff_inSide).mp hj₀
+  obtain ⟨i, j, w, hij, hwi, hwj, hw, hii, hjj⟩ :=
+    T.cherry_in_component (c := v) (d := c) (k := i₀) (l := j₀) hvc hij₀ (hi'.symm.trans hj')
+  exact ⟨i, j, w, hij, ⟨hij, w, hwi, hwj⟩,
+    (T.sideLeafCount_eq_of_inSide (hi'.trans hii)).symm, hi'.trans hii, hi'.trans hjj,
+    hi'.trans hw⟩
+
 end Cladogram
 
