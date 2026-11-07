@@ -5630,6 +5630,46 @@ theorem exists_cherry_offpath_data (T : Cladogram X) {k l : X} (hkl : k ≠ l)
   · exact (T.inSide_comm s(c₀, d₀) (T.leaf k) (T.leaf i)).mp hik
   · exact (T.inSide_comm s(c₀, d₀) (T.leaf k) (T.leaf j)).mp hjk
 
+/-- ★★★★ **起点组数据的生产（§27.1 ＋ §27.2）**：`4 ≤ n` 时，`P_{k,l}` 的头两段
+`leaf k — v — z` 与第三支 `c` 一次给全，含装配所需的**全部侧信息**：
+
+* `neighborFinset v = {leaf k, z, c}`（§27.2）、`degree v ≠ 1`（`= 3`）；
+* `¬inSide s(v,z) k l`（`s(v,z)` 是路径边）、`inSide s(v,c) k l`（`k,l` 都在 `v` 侧）、
+  `inSide s(v,c) v (leaf k)`。 -/
+theorem exists_start_data (T : Cladogram X) (hbin : T.IsBinary) {k l : X} (hklne : k ≠ l)
+    (h4 : 4 ≤ Fintype.card X) :
+    ∃ v z c : T.V, T.graph.Adj (T.leaf k) v ∧ T.graph.Adj v z ∧ T.graph.Adj v c ∧
+      z ≠ c ∧ z ≠ T.leaf k ∧ c ≠ T.leaf k ∧
+      T.graph.neighborFinset v = {T.leaf k, z, c} ∧ T.graph.degree v ≠ 1 ∧
+      ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l) ∧
+      T.inSide s(v, c) (T.leaf k) (T.leaf l) ∧
+      T.inSide s(v, c) v (T.leaf k) := by
+  classical
+  obtain ⟨v, z, c, hkv, hvz, hvc, hdeg3, -, hzk, hck, hcz, hklz⟩ :=
+    T.exists_first_three_of_path hbin hklne h4
+  have hnb := T.neighborFinset_eq_three hkv hvz hvc hdeg3 hzk hck hcz.symm
+  have hdeg : T.graph.degree v ≠ 1 := by rw [hdeg3]; norm_num
+  -- `leaf k` 在 `s(v,c)` 的 `v` 侧
+  have hkvc : T.inSide s(v, c) v (T.leaf k) := T.inSide_branch_of_leaf_adj hkv hck
+  -- `leaf l` 在 `s(v,z)` 的 `z` 侧 ⇒ 在 `s(v,c)` 的 `v` 侧
+  have hlvz : T.inSide s(v, z) z (T.leaf l) :=
+    T.inSide_far_side hvz (T.inSide_branch_of_leaf_adj hkv hzk) hklz
+  have hlvc : T.inSide s(v, c) v (T.leaf l) :=
+    T.inSide_of_inSide_adj_swap hvz hvc hcz hlvz
+  exact ⟨v, z, c, hkv, hvz, hvc, hcz, hzk, hck, hnb, hdeg, hklz,
+    hkvc.symm.trans hlvc, hkvc⟩
+
+/-- ★★★★ **附着边组数据的生产（§30.1 ＋ §32）**：樱桃 `(i,j)` 中心 `w` 的第三邻居 `u`
+一次给全，且 `s(w,u)` 的 `w` 侧叶集**恰为** `{i,j}`（这正是 §39 要喂的形式）。 -/
+theorem exists_attach_data (T : Cladogram X) (hbin : T.IsBinary) {i j : X} {w : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j) :
+    ∃ u : T.V, T.graph.Adj w u ∧ u ≠ T.leaf i ∧ u ≠ T.leaf j ∧
+      T.sideLeaves s(w, u) w = {i, j} := by
+  classical
+  have hdeg : T.graph.degree w = 3 := T.degree_eq_three_of_cherry hbin hi hj hij
+  obtain ⟨u, hui, huj, hwu, hne⟩ := T.exists_cherry_attach_vertex hi hj hij hdeg
+  exact ⟨u, hwu, hui, huj, T.sideLeaves_cherry_side_eq_pair hi hj hij hwu hdeg hne hui huj⟩
+
 end Cladogram
 
 end Dissimilarity
