@@ -4838,5 +4838,74 @@ theorem attach_edge_ne_middle (T : Cladogram X) {v c z w u : T.V}
   · exact hwv h1
   · exact hwz h1
 
+/-- ★★ **`k` 在 `s(v,z)` 的 `v` 侧 ⇒ 另一端 `l` 在 `z` 侧**（`inSide_or_inSide` ＋ `not_inSide`）。 -/
+theorem inSide_far_side (T : Cladogram X) {v z : T.V} (hvz : T.graph.Adj v z) {k l : X}
+    (hk : T.inSide s(v, z) v (T.leaf k)) (hkl : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l)) :
+    T.inSide s(v, z) z (T.leaf l) := by
+  rcases T.inSide_or_inSide (x := T.leaf l) hvz with h | h
+  · exact absurd ((h.trans hk).symm) hkl
+  · exact h.symm
+
+/-! ### 34.4 一端的「深樱桃」整套数据（§33 的全部几何前提一次生产） -/
+
+/-- ★★★★ **Case D 一端的几何包**：`(k,l)` 非樱桃、`k` 端的路径前两步是 `v`、`z`，
+`c` 是 `v` 的第三支、该分支 ≥ 2 片叶 ⇒ 存在樱桃 `(i,j)`（中心 `w`、第三邻居 `u`），使
+
+* `deg w = 3`（`IsBinary` 只用在这里）、`u` 是第三邻居（§30.1）；
+* 樱桃两叶在 `c` 侧、`l` 在 `v` 侧（§27.6 ＋ `inSide_far_side` ＋ §27.8）；
+* 两叶与 `leaf k` 同在中间边 `s(v,z)` 的**同侧**（§27.8 换位 ＋ 传递）；
+* `s(w,u) ≠ s(v,z)`（§34.3）。
+
+于是 §33 的两条定理可直接以本包产出的假设调用，**不需要再做任何几何推理**。 -/
+theorem exists_deep_cherry_data (T : Cladogram X) (hbin : T.IsBinary) {k l : X} {v z c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hzk : z ≠ T.leaf k) (hzc : z ≠ c)
+    (hkl : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l))
+    (h2 : 2 ≤ T.sideLeafCount s(v, c) c) :
+    ∃ i j : X, ∃ w u : T.V, i ≠ j ∧ T.IsCherry i j ∧
+      T.graph.Adj (T.leaf i) w ∧ T.graph.Adj (T.leaf j) w ∧
+      T.graph.degree w = 3 ∧ T.graph.Adj w u ∧
+      u ≠ T.leaf i ∧ u ≠ T.leaf j ∧
+      (∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u) ∧
+      T.inSide s(v, c) c (T.leaf i) ∧ T.inSide s(v, c) c (T.leaf j) ∧
+      T.inSide s(v, z) (T.leaf k) (T.leaf i) ∧ T.inSide s(v, z) (T.leaf k) (T.leaf j) ∧
+      T.inSide s(v, c) v (T.leaf l) ∧ s(w, u) ≠ s(v, z) := by
+  classical
+  obtain ⟨i, j, w₀, hij, hcher, -, hic, hjc, -⟩ :=
+    T.exists_cherry_of_start_side_two_le (c := c) hvc h2
+  obtain ⟨hij', w, hwi, hwj⟩ := hcher
+  -- ### 樱桃中心 `w` 在 `c` 侧（从 `leaf i` 走一步；边 `s(leaf i, w)` 不可能是 `s(v,c)`）
+  have hedge : s(T.leaf i, w) ≠ s(v, c) := by
+    intro hEq
+    rcases Sym2.eq_iff.mp hEq with ⟨h1, h2'⟩ | ⟨h1, h2'⟩
+    · rw [h1] at hic
+      exact T.not_inSide_both hvc ⟨T.inSide_self s(v, c) v, hic⟩
+    · have hcnt : T.sideLeafCount s(v, c) c = 1 := by
+        rw [← h1, ← h2', Sym2.eq_swap]
+        exact T.sideLeafCount_leaf_edge hwi
+      omega
+  have hwc : T.inSide s(v, c) c w := by
+    refine hic.trans ?_
+    refine (SimpleGraph.deleteEdges_adj.mpr ⟨hwi.symm, ?_⟩).reachable.symm
+    intro hmem
+    rw [Set.mem_singleton_iff] at hmem
+    exact hedge (by simpa [Sym2.eq_swap] using hmem)
+  -- ### `deg w = 3`、第三邻居 `u`
+  have hdeg : T.graph.degree w = 3 := T.degree_eq_three_of_cherry hbin hwi hwj hij'
+  obtain ⟨u, hui, huj, hwu, hune⟩ := T.exists_cherry_attach_vertex hwi hwj hij' hdeg
+  -- ### `leaf k` 在 `s(v,z)` 的 `v` 侧；樱桃叶与它同侧
+  have hk_side : T.inSide s(v, z) v (T.leaf k) := T.inSide_branch_of_leaf_adj hkv hzk
+  have hi_side : T.inSide s(v, z) v (T.leaf i) :=
+    T.inSide_of_inSide_adj_swap (c := z) hvc hvz hzc.symm hic
+  have hj_side : T.inSide s(v, z) v (T.leaf j) :=
+    T.inSide_of_inSide_adj_swap (c := z) hvc hvz hzc.symm hjc
+  -- ### `l` 在 `s(v,z)` 的 `z` 侧 ⇒ 在 `s(v,c)` 的 `v` 侧
+  have hl_z : T.inSide s(v, z) z (T.leaf l) := T.inSide_far_side hvz hk_side hkl
+  have hl_v : T.inSide s(v, c) v (T.leaf l) :=
+    T.inSide_of_inSide_adj_swap (c := c) hvz hvc hzc hl_z
+  exact ⟨i, j, w, u, hij, ⟨hij, w, hwi, hwj⟩, hwi, hwj, hdeg, hwu, hui, huj, hune, hic, hjc,
+    hk_side.symm.trans hi_side, hk_side.symm.trans hj_side, hl_v,
+    T.attach_edge_ne_middle hvc hvz hzc hwc⟩
+
 end Cladogram
 
