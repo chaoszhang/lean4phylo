@@ -2531,5 +2531,147 @@ theorem attesonW_sub_nonneg_of_sep_ik_of_eStar (T : Cladogram X) {a b c d : T.V}
   have h := T.card_le_two_mul_sideLeafCount_of_sep_ik hab hcd hkl hik hCin hmin
   exact_mod_cast h
 
+/-! ### 21′｜`w_e` 的对称性 ＋ **四情形逐边非负的无条件版**
+
+`attesonW i j e` 的「否则」分支里出现的是 `S_i`（**第一**个顶点那侧），所以
+`w_e(i,j) = w_e(j,i)` **不是**定义式 —— 但 `e ∉ P_{i,j}` 时 `i,j` 同侧，
+`S_i = S_j`（`sideLeafCount_eq_of_inSide`），故仍对称。这条对称性使「情形 3（`e ∈ P_{j,l}`）」
+成为情形 2 的**镜像**（不必重写一遍证明）。 -/
+
+/-- 唯一路径**反向**（`pathOf` 的无序性；`Phylo.PauplinFormula` 有同名结论但不在本文件 import 锥内）。 -/
+theorem pathOf_eq_reverse (T : Cladogram X) (a b : T.V) :
+    T.pathOf a b = (T.pathOf b a).reverse :=
+  ((T.existsUnique_path a b).choose_spec.2 _ (T.pathOf_isPath b a).reverse).symm
+
+/-- `e` 在 `P_{a,b}` 上 ⟺ 在 `P_{b,a}` 上。 -/
+theorem mem_pathOf_edges_comm (T : Cladogram X) (e : Sym2 T.V) (a b : T.V) :
+    e ∈ (T.pathOf a b).edges ↔ e ∈ (T.pathOf b a).edges := by
+  rw [T.pathOf_eq_reverse, SimpleGraph.Walk.edges_reverse, List.mem_reverse]
+
+/-- ★★ **`w_e` 关于顶点对对称**：`w_e(i,j) = w_e(j,i)`。 -/
+theorem attesonW_comm (T : Cladogram X) (i j : T.V) (e : Sym2 T.V) :
+    T.attesonW i j e = T.attesonW j i e := by
+  have hmem := T.mem_pathOf_edges_comm e i j
+  by_cases h : e ∈ (T.pathOf i j).edges
+  · rw [attesonW, ite_eq_left h, attesonW, ite_eq_left (hmem.mp h)]
+  · -- `e ∉ P_{i,j} ⇒ i,j` 同侧 ⇒ `S_i = S_j`
+    have hin : T.inSide e i j := by
+      by_contra hc
+      exact h ((T.mem_pathOf_edges_iff_not_inSide e i j).mpr hc)
+    rw [attesonW, ite_eq_right h, attesonW, ite_eq_right (fun hc => h (hmem.mpr hc)),
+      T.sideLeafCount_eq_of_inSide hin]
+
+/-- ★★★ **（A）四情形**逐边非负，**无条件版**（`Atteson :2008–2070` 的 case 1–4 全集）：
+
+对**任意**真边 `e = s(a,b)`，只要 `e* = s(c,d)` 是离路径边中 `ℓ_k` 最小者（`hmin`）且
+樱桃 `(i,j)` 取在 `C` 里（`hCin`、`hCjn`），就有
+
+　　　`c_e = w_e(k,l) − w_e(i,j) ≥ 0`。
+
+分情形（穷尽且互斥）：`e ∈ P_{k,l}`（W49 ★★ `attesonW_sub_nonneg_of_not_inSide`）／
+`e ∈ P_{i,j}`（§19 ③）／`e ∈ P_{i,k} − P_{k,l}`（§21 情形 ②）／
+`e ∈ P_{j,l} − P_{k,l}`（§21 的**镜像**，靠 `attesonW_comm`）／其余（§20 `c_e = 0`）。
+★ 本定理**没有**任何数值假设（`hbig` 已由 §21 供给）。 -/
+theorem attesonW_sub_nonneg_of_all (T : Cladogram X) {a b c d : T.V}
+    (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {i j k l : X}
+    (hcher : T.IsCherry i j) (hklne : k ≠ l)
+    (hkl : T.inSide s(a, b) (T.leaf k) (T.leaf l))
+    (heStarI : T.inSide s(c, d) (T.leaf k) (T.leaf l))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf l))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    0 ≤ (T.attesonW (T.leaf k) (T.leaf l) s(a, b) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(a, b) : ℝ) := by
+  classical
+  -- `e*` 离路径 ⇒ `k,l` 在 `e*` 同侧 ⇒ 用 `ℓ_l` 写的镜像最小性也一样（供情形 ③ 用）
+  have hmin' : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf l) (T.leaf k) →
+      T.sideLeafCount s(c, d) (T.leaf l) ≤ T.sideLeafCount e (T.leaf l) := by
+    intro e he H
+    have H' : T.inSide e (T.leaf k) (T.leaf l) :=
+      (T.inSide_comm e (T.leaf l) (T.leaf k)).mp H
+    have h := hmin e he H'
+    rw [(T.sideLeafCount_eq_of_inSide heStarI).symm, (T.sideLeafCount_eq_of_inSide H').symm]
+    exact h
+  by_cases h1 : T.inSide s(a, b) (T.leaf k) (T.leaf l)
+  · by_cases h2 : T.inSide s(a, b) (T.leaf i) (T.leaf j)
+    · by_cases h3 : T.inSide s(a, b) (T.leaf i) (T.leaf k)
+      · by_cases h4 : T.inSide s(a, b) (T.leaf j) (T.leaf l)
+        · -- 情形 ④：四叶同在 `e` 一侧 ⇒ `c_e = 0`
+          have hz := T.attesonW_sub_eq_zero_of_far (e := s(a, b)) h1 h3 h4
+          rw [hz]
+        · -- 情形 ③：`e ∈ P_{j,l} − P_{k,l}`（情形 ② 的镜像）
+          have hm := T.attesonW_sub_nonneg_of_sep_ik_of_eStar (a := a) (b := b)
+            (c := c) (d := d) (i := j) (j := i) (k := l) (l := k) hab hcd
+            ((T.inSide_comm s(a, b) (T.leaf k) (T.leaf l)).mp h1)
+            ((T.inSide_comm s(a, b) (T.leaf i) (T.leaf j)).mp h2) h4 hCjn hmin'
+          rw [attesonW_comm T (T.leaf l) (T.leaf k) s(a, b),
+            attesonW_comm T (T.leaf j) (T.leaf i) s(a, b)] at hm
+          exact hm
+      · -- 情形 ②：`e ∈ P_{i,k} − P_{k,l}`
+        exact T.attesonW_sub_nonneg_of_sep_ik_of_eStar hab hcd h1 h2 h3 hCin hmin
+    · -- `e ∈ P_{i,j}`：`(i,j)` 是樱桃 ⇒ `e` 必是其一条**悬挂边** ⇒ `c_e = 0`
+      obtain ⟨v, hvi, hvj⟩ := hcher.2
+      have hother : ∀ x : X, x ≠ i → T.inSide s(T.leaf i, v) v (T.leaf x) := by
+        intro x hx
+        rcases T.inSide_or_inSide hvi (x := T.leaf x) with hc | hc
+        · exfalso
+          have hxi : x = i := by
+            have hmem : x ∈ T.sideLeaves s(T.leaf i, v) (T.leaf i) :=
+              (T.mem_sideLeaves_iff_inSide).mpr hc.symm
+            rw [T.sideLeaves_leaf_edge hvi] at hmem
+            simpa using hmem
+          exact hx hxi
+        · exact hc.symm
+      have hother' : ∀ x : X, x ≠ j → T.inSide s(T.leaf j, v) v (T.leaf x) := by
+        intro x hx
+        rcases T.inSide_or_inSide hvj (x := T.leaf x) with hc | hc
+        · exfalso
+          have hxj : x = j := by
+            have hmem : x ∈ T.sideLeaves s(T.leaf j, v) (T.leaf j) :=
+              (T.mem_sideLeaves_iff_inSide).mpr hc.symm
+            rw [T.sideLeaves_leaf_edge hvj] at hmem
+            simpa using hmem
+          exact hx hxj
+        · exact hc.symm
+      have hwalk : s(a, b) ∈ (SimpleGraph.Walk.cons hvi
+          (SimpleGraph.Walk.cons hvj.symm SimpleGraph.Walk.nil) :
+            T.graph.Walk (T.leaf i) (T.leaf j)).edges :=
+        T.forall_mem_edges_of_not_inSide h2 _
+      simp only [SimpleGraph.Walk.edges_cons, SimpleGraph.Walk.edges_nil, List.mem_cons,
+        List.not_mem_nil, or_false] at hwalk
+      rw [T.attesonW_sub_of_inSide_not_inSide (e := s(a, b)) h1 h2]
+      have hcard : 1 ≤ Fintype.card X := Fintype.card_pos_iff.mpr ⟨k⟩
+      rcases hwalk with h | h
+      · -- `e = s(leaf i, v)`：除 `leaf i` 外的叶都在 `v` 一侧
+        have hki : k ≠ i := by
+          intro hc
+          have h1' : T.inSide s(T.leaf i, v) (T.leaf i) (T.leaf l) := h ▸ (hc ▸ h1)
+          exact T.not_inSide_both hvi ⟨h1', hother l (fun hl => hklne (hc.trans hl.symm))⟩
+        rw [h]
+        have hSR : (T.sideLeafCount s(T.leaf i, v) (T.leaf k) : ℝ)
+            = (Fintype.card X : ℝ) - 1 := by
+          rw [(T.sideLeafCount_eq_of_inSide (hother k hki)).symm, T.sideLeafCount_compl hvi,
+            T.sideLeafCount_leaf_edge hvi, Nat.cast_sub hcard]
+          norm_num
+        rw [hSR]
+        ring_nf
+        norm_num
+      · -- `e = s(v, leaf j)`（对称支）
+        rw [h, Sym2.eq_swap] at h1 ⊢
+        have hkj : k ≠ j := by
+          intro hc
+          exact T.not_inSide_both hvj ⟨hc ▸ h1, hother' l (fun hl => hklne (hc.trans hl.symm))⟩
+        have hSR : (T.sideLeafCount s(T.leaf j, v) (T.leaf k) : ℝ)
+            = (Fintype.card X : ℝ) - 1 := by
+          rw [(T.sideLeafCount_eq_of_inSide (hother' k hkj)).symm, T.sideLeafCount_compl hvj,
+            T.sideLeafCount_leaf_edge hvj, Nat.cast_sub hcard]
+          norm_num
+        rw [hSR]
+        ring_nf
+        norm_num
+  · -- `e ∈ P_{k,l}`：W49 的无条件非负
+    exact T.attesonW_sub_nonneg_of_not_inSide hab h1
+
 end Cladogram
 
