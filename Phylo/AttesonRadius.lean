@@ -5016,3 +5016,58 @@ theorem sideLeafCount_far_le_of_adj_chain (T : Cladogram X) {a b c : T.V}
 
 end Cladogram
 
+
+/-! ## 36. ★★★★ W50-A-#33：Atteson Lemma 11 的**附着边项** `2n − 8`（原文 case 2）
+
+`Atteson1999 :2044–2067`（case 2）里，樱桃 `(i,j)` 的**附着边** `e‴` 是「把 `{i,j}` 与其余类群
+分开」的那条边（`far(e‴) = {i,j}`，故 `ℓ_i(e‴) = 2`）。原文给
+
+　　`w_{e‴}(i,j) = −2(n−2)`，`w_{e‴}(k,l) = −4`　⇒　差 `= 2n − 8 = 2(n−4)`。
+
+本节把这条**纯系数计算**落成一般形式（不需要任何樱桃/最小性假设，只需「`a` 侧恰 2 片叶，
+`i,j` 在 `a` 侧，`k,l` 在 `b` 侧」）。它是主不等式的第二块：
+
+　　`(n − 4) [配对项 §26] + (2n − 8) [附着边项 本节] = 3(n − 4)`。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **Atteson case 2 的附着边项**：`s(a,b)` 的 `a` 侧恰 2 片叶、`i,j` 在 `a` 侧、
+`k,l` 在 `b` 侧 ⇒ 系数差 `= 2n − 8`。
+
+两端都落在 `attesonW` 的**同侧**分支（`e‴ ∉ P_{i,j}`、`e‴ ∉ P_{k,l}`）：
+`w = −2(n − ℓ)`，于是差 `= 2(ℓ_k − ℓ_i) − ... ` 用 `ℓ_k + ℓ_i = n`、`ℓ_i = 2` 收成 `2n − 8`。 -/
+theorem attesonW_sub_eq_two_n_sub_eight (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hi : T.inSide s(a, b) a i) (hj : T.inSide s(a, b) a j)
+    (hk : T.inSide s(a, b) b k) (hl : T.inSide s(a, b) b l)
+    (ha : T.sideLeafCount s(a, b) a = 2) :
+    (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ)
+      = 2 * (Fintype.card X : ℝ) - 8 := by
+  have hkl' : T.inSide s(a, b) k l := hk.symm.trans hl
+  have hij' : T.inSide s(a, b) i j := hi.symm.trans hj
+  have hik : ¬ T.inSide s(a, b) k i := by
+    intro h
+    exact T.not_inSide_both hab (y := i) ⟨hi, hk.trans h⟩
+  have hi2 : T.sideLeafCount s(a, b) i = 2 := by
+    have h := T.sideLeafCount_eq_of_inSide (u := a) (a := i) hi
+    first
+      | exact h.trans ha
+      | exact h.symm.trans ha
+  have hsum := T.sideLeafCount_add_of_sep hab hik
+  have hn2 : 2 ≤ Fintype.card X := by omega
+  have hk2 : T.sideLeafCount s(a, b) k = Fintype.card X - 2 := by omega
+  rw [T.attesonW_eq_sideCount_of_inSide hkl', T.attesonW_eq_sideCount_of_inSide hij']
+  push_cast
+  have h1 : (T.sideLeafCount s(a, b) k : ℝ) = (Fintype.card X : ℝ) - 2 := by
+    rw [hk2, Nat.cast_sub hn2]
+    norm_num
+  have h2' : (T.sideLeafCount s(a, b) i : ℝ) = 2 := by
+    rw [hi2]; norm_num
+  rw [h1, h2']
+  ring
+
+end Cladogram
+
