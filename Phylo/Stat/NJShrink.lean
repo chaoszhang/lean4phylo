@@ -7,7 +7,7 @@ import Phylo.Stat.CASTERNJStep
 import Phylo.Stat.StrictCherry
 
 /-!
-# `Phylo.Stat.NJShrink` —— L5a 步骤 A：树层樱桃收缩（W46 长程，**进行中**）
+# `Phylo.Stat.NJShrink` —— L5a 步骤 A：树层樱桃收缩（W46 长程，**A5–A9 已收口**）
 
 派单：`W44_TO_DSH_prompt.txt` §3.7 步骤 A；方案见 `Phylo/Stat/CASTERNJStep.lean` 文件头 §3。
 
@@ -21,6 +21,7 @@ import Phylo.Stat.StrictCherry
 ```
 
 从而 `HasPosReal δ → HasPosReal (mergeStep δ a b)`（= `CASTERNJ.njAdditiveGap`）。
+★ W49 起前提放宽为「`w` 的度是 3」（`hdeg`），不再要求整棵树二叉；`IsBinary` 版见文末 §A9。
 
 ## 构造（★ 已更正 —— 见 `CASTERNJStep.lean` §3 的 ★D）
 
@@ -39,16 +40,34 @@ import Phylo.Stat.StrictCherry
 | A1 | `ShrinkV`（收缩后的顶点类型） | ✅ |
 | A2 | 两个不同邻居 ⇒ `w` 不是叶 | ✅ |
 | A3 | `IsBinary` ⇒ `degree w = 3` | ✅ |
-| A5 | `leafShrink : MergeIdx X a b ↪ ShrinkV T b w` ＋ 单射 | ✅ |
+| A5 | `leafShrink_of_degree : MergeIdx X a b ↪ ShrinkV T b w` ＋ 单射 | ✅ |
 | A4 | 第三邻居 `z` 的存在 ＋ **穷尽性** | ✅ |
 | A6 | 图（诱导 ＋ 一条边）、`Connected`、`IsAcyclic` ⇒ **`IsTree` 两半** | ✅ |
 | A7 | **`deg_G v = deg_T v.1`**（三支：合并叶 / `z` / 其余） | ✅ |
 | A7′ | `leaf_iff_degree_one` / `no_degree_two` 从 `T` 搬过来 | ✅ |
 | A8-0 | 一般化中点避开引理（两端都 ∉ `{leaf a, leaf b, w}`） | ✅ |
 | A8-1 | `njStep` ⇒ 树层 `T.IsCherry a b`（`Q = −2z` → Weller eq (3) → Thm 2） | ✅ |
-| A8-2 | 边权 `shrinkW` ＋ `dist` 对齐 ＋ `HasPosReal` 收口 | ⏳ 下一步 |
+| A8-2 | 边权 `shrinkW` ＋ `dist` 对齐 ＋ `HasPosReal` 收口（`njAdditiveGap_holds`） | ✅ W48/W49 |
+| **A9** | **`hdeg` 化 ＋ `IsBinary` 兼容层**（W49，见文末 §A9） | ✅ W49 |
 
 **纪律**：零 sorry / axiom / opaque。本文件只加新声明，不动任何既有定理。
+
+## A9 前史（W49）：A5–A8 链条的前提从「整棵树二叉」放宽到「中点度 3」
+
+W49 做 `njAdditiveGapUnrestricted`（非二叉实现）时发现，二叉机器的每一步其实**只用**
+「`w` 的度是 3」，而**不是**整棵树的二叉性 —— 一棵「只在远处分支点呈 polytomy」的树
+照样满足樱桃中点的局部条件（★D③，见 `Phylo/Stat/NJShrinkNonBinary.lean` §10）。
+实核：`hbin` 在 A5–A8 链条里**只有一处语义使用**（`degree_eq_three`），其余三十余处全是透传。
+
+⇒ 本文件 W49 把 A5–A8 的前提机械改写为 `hdeg : T.graph.degree w = 3`，名字统一加
+`_of_degree`（如 ★★★ `shrinkPhylogram_of_degree`）。三处保留 `hbin`：
+★★★ `degree_eq_three`（它就是桥梁）、★★ `exists_third`（旧入口）、
+★★★ `shrinkPhylogram_isBinary`（结论就是二叉性，必须假设它）。
+
+文末 **§A9** 把这批「`IsBinary` 版」保留为薄包装，故 `CASTERNJ`／`NJRecovers`／`NJRun`／
+`StrictCherryProved` 四个文件**零改动**；`njAdditiveGapUnrestricted` 的 `degree w = 3`
+支则直接用 `_of_degree` 一族。★ 这不是为派单打的补丁：库内因此多出**一批更一般的引理**
+（前提更弱、结论不变）。
 
 ## A7b 的做法（第 31 轮）：度数**不变**，不必重建
 
@@ -58,7 +77,7 @@ import Phylo.Stat.StrictCherry
 ∀ v : ShrinkV, (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1
 ```
 
-（★★★ `degree_shrinkGraph`，三支：合并叶 `⟨T.leaf a, ·⟩` / `z` / 其余）。
+（★★★ `degree_shrinkGraph_of_degree`，三支：合并叶 `⟨T.leaf a, ·⟩` / `z` / 其余）。
 ⇒ `Cladogram` 的两个度字段（`leaf_iff_degree_one`、`no_degree_two`）可以**整体**从 `T` 搬过来。
 
 ★ 三支都用 `Finset.card_bij`（显式双射），**不用** `Finset.attach/map/∩` 的运算链 ——
@@ -85,7 +104,7 @@ import Phylo.Stat.StrictCherry
 ## ⏭️ 下一步（A6g 边数记账）的完整方案
 
 `IsTree` 走 `isTree_iff_connected_and_card`（`G.IsTree ↔ G.Connected ∧ Nat.card ↑G.edgeSet + 1 = Nat.card V`），
-`Connected` 已在手（`shrinkGraph_connected`），只差**边数**。
+`Connected` 已在手（`shrinkGraph_connected_of_degree`），只差**边数**。
 
 **目标**：`Nat.card ↑(shrinkGraph …).edgeSet = Fintype.card T.V - 3`
 （配合本文件已证的 `card_shrinkV`：`Fintype.card (ShrinkV) + 2 = Fintype.card T.V`，
@@ -187,27 +206,27 @@ theorem degree_eq_three (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b
   hbin w (not_isLeaf_of_two_adj T hab haw hbw)
 
 /-- 樱桃中点**不是任何叶的像**（否则它的度会是 1，与度 3 矛盾）。 -/
-theorem leaf_ne_midpoint (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+theorem leaf_ne_midpoint_of_degree {w : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (x : X) :
     T.leaf x ≠ w := by
   intro h
   have hleaf : T.toCladogram.IsLeaf w := ⟨x, h⟩
   have hd1 : T.graph.degree w = 1 := (T.isLeaf_iff_degree_eq_one w).mp hleaf
-  have hd3 := degree_eq_three T hbin hab haw hbw
+  have hd3 : T.graph.degree w = 3 := hdeg
   omega
 
 /-- ★★ **A5｜收缩后的叶嵌入** `MergeIdx X a b ↪ ShrinkV T b w`：
 旧标签 `x` 映到 `⟨T.leaf x.1, ·⟩`，合并标签 `u` 映到 `⟨T.leaf a, ·⟩`。 -/
-def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+def leafShrink_of_degree {w : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
     MergeIdx X a b ↪ ShrinkV T b w where
   toFun
     | Sum.inl x => ⟨T.leaf x.1, by
-        refine ⟨?_, leaf_ne_midpoint T hbin hab haw hbw x.1⟩
+        refine ⟨?_, leaf_ne_midpoint_of_degree T hdeg hab haw hbw x.1⟩
         intro h
         exact mergeOld_ne_right x (T.leaf.injective h)⟩
     | Sum.inr _ => ⟨T.leaf a, by
-        refine ⟨?_, leaf_ne_midpoint T hbin hab haw hbw a⟩
+        refine ⟨?_, leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
         intro h
         exact hab (T.leaf.injective h)⟩
   inj' := by
@@ -226,8 +245,8 @@ def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.
 `w` 的度是 3（A3），其邻域是三元集；`T.leaf a`、`T.leaf b` 已占两个不同位置
 ⇒ 三元集减去这两点后恰剩**一个**元素 `z`。结论同时给出**穷尽性**
 （`w` 的每个邻居必是 `leaf a`、`leaf b`、`z` 之一）—— 连通性与无环性都要用它。 -/
-theorem exists_third_of_degree {a b : X} (hab : a ≠ b) {w : T.V}
-    (hdeg : T.graph.degree w = 3)
+theorem exists_third_of_degree {a b : X} (hab : a ≠ b)
+    {w : T.V} (hdeg : T.graph.degree w = 3)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
     ∃ z : T.V, T.graph.Adj w z ∧ z ≠ T.leaf a ∧ z ≠ T.leaf b ∧
       (∀ v : T.V, T.graph.Adj w v → v = T.leaf a ∨ v = T.leaf b ∨ v = z) := by
@@ -316,12 +335,12 @@ theorem shrinkGraph_adj_cases (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
 
 （两个端点都在 `ShrinkV` 里：`T.leaf a ≠ T.leaf b`（`a ≠ b`）、`T.leaf a ≠ w`、`z ≠ T.leaf b`、
 `z ≠ w`（`z` 与 `w` 相邻故不等）。） -/
-theorem shrinkGraph_adj_new {a b : X} (hab : a ≠ b) {w z : T.V}
-    (hbin : T.toCladogram.IsBinary) (haw : T.graph.Adj (T.leaf a) w)
+theorem shrinkGraph_adj_new_of_degree {a b : X} (hab : a ≠ b)
+    {w z : T.V} (hdeg : T.graph.degree w = 3) (haw : T.graph.Adj (T.leaf a) w)
     (hbw : T.graph.Adj (T.leaf b) w) (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a)
     (hzb : z ≠ T.leaf b) :
     (shrinkGraph T a b w z hza).Adj
-      ⟨T.leaf a, ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩⟩
+      ⟨T.leaf a, ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩⟩
       ⟨z, ⟨hzb, fun h => (T.graph.loopless.irrefl z) (h ▸ hwz)⟩⟩ :=
   Or.inr (Or.inl ⟨rfl, rfl⟩)
 
@@ -513,13 +532,13 @@ theorem mergeStep_val_merged_pos (δ : Dissimilarity X)
   都 `≠ leaf a, leaf b`；
 * 由 A4′ 的**穷尽性** ⇒ 二者都 `= z`；
 * 于是 `p.getVert (i-1) = p.getVert (i+1)`，由 `IsPath.getVert_injOn` 得 `i-1 = i+1` —— 矛盾。 -/
-theorem midpoint_not_mem_support (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem midpoint_not_mem_support_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w)
     {x : T.V} (hxa : x ≠ T.leaf a) (hxb : x ≠ T.leaf b) (hxw : x ≠ w)
     (p : T.graph.Walk x z) (hp : p.IsPath) : w ∉ p.support := by
   intro hw
-  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third T hbin hab haw hbw
+  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third_of_degree T hab hdeg haw hbw
   have hzz₀ : z = z₀ := by
     rcases hexh z hwz with h | h | h
     · exact absurd h hza
@@ -579,16 +598,16 @@ theorem midpoint_not_mem_support (hbin : T.toCladogram.IsBinary) {a b : X} (hab 
 
 路线：**每个顶点都能走到合并叶 `⟨T.leaf a, ·⟩`** ——
 * `u = ⟨T.leaf a, ·⟩`：平凡；
-* 否则取 `T` 里 `u.1 → z` 的**唯一**简单路径 `p`：`w ∉ p.support`（★★★ `midpoint_not_mem_support`）、
+* 否则取 `T` 里 `u.1 → z` 的**唯一**简单路径 `p`：`w ∉ p.support`（★★★ `midpoint_not_mem_support_of_degree`）、
   `T.leaf b ∉ p.support`（★★ `not_mem_support_of_degree_one`）⇒ 由 ★★★ `exists_walk_shrink`
   得 `u → ⟨z, ·⟩` 的走法，再走新边 `⟨z, ·⟩ — ⟨T.leaf a, ·⟩`。
 最后 `Preconnected` 由「两段接到同一个汇点」拼出。 -/
-theorem shrinkGraph_connected (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkGraph_connected_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w) :
     (shrinkGraph T a b w z hza).Connected := by
   have hza_mem : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
   have hz_mem : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
   have hedge : (shrinkGraph T a b w z hza).Adj ⟨z, hz_mem⟩ ⟨T.leaf a, hza_mem⟩ :=
     Or.inr (Or.inr ⟨rfl, rfl⟩)
@@ -605,7 +624,7 @@ theorem shrinkGraph_connected (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a
     · obtain ⟨p, hp, _⟩ := T.toCladogram.existsUnique_path u.1 z
       have hlb : T.leaf b ∉ p.support := not_mem_support_of_degree_one T hdb p hp u.2.1 hzb
       have hw : w ∉ p.support :=
-        midpoint_not_mem_support T hbin hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2 p hp
+        midpoint_not_mem_support_of_degree T hdeg hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2 p hp
       have hsupp : ∀ v ∈ p.support, v ≠ T.leaf b ∧ v ≠ w :=
         fun v hv => ⟨fun h => hlb (h ▸ hv), fun h => hw (h ▸ hv)⟩
       obtain ⟨q⟩ := exists_walk_shrink T a b w z hza p hsupp ⟨u.2.1, u.2.2⟩ hz_mem
@@ -681,12 +700,12 @@ theorem card_shrinkV {b : X} {w : T.V} (hne : T.leaf b ≠ w) :
 * `⟨T.leaf a, ·⟩` 在诱导子图里是**孤点**（唯一的 `T`-邻居 `w` 已被删）⇒ 与 `⟨z, ·⟩` 不连通
   （对走法 `cases`：`nil` 要求两端相等（与 `z ≠ leaf a` 矛盾），`cons` 要求 `⟨leaf a⟩` 有邻居（与孤点矛盾））；
 * `IsAcyclic.sup_edge_of_not_reachable`：往无环图里加一条「两端不连通」的边仍无环。 -/
-theorem shrinkGraph_isAcyclic (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkGraph_isAcyclic_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w) :
     (shrinkGraph T a b w z hza).IsAcyclic := by
   have hza_mem : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
   have hz_mem : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
   have hEq : shrinkGraph T a b w z hza
       = (T.graph.induce {v : T.V | v ≠ T.leaf b ∧ v ≠ w})
@@ -737,11 +756,11 @@ instance shrinkGraph_decidableRel (a b : X) (w z : T.V) (hza : z ≠ T.leaf a) :
 
 /-- ★★ **A7b-0｜中点邻居的穷尽性**（把 ★★ `exists_third` 里那个「存在」的 `z` 钉在**给定**的
 `z` 上，便于下游按 `z` 分情形）。 -/
-theorem adj_midpoint_cases (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+theorem adj_midpoint_cases_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) :
     ∀ y : T.V, T.graph.Adj w y → y = T.leaf a ∨ y = T.leaf b ∨ y = z := by
-  obtain ⟨z', _, hz'a, hz'b, hexh⟩ := exists_third T hbin hab haw hbw
+  obtain ⟨z', _, hz'a, hz'b, hexh⟩ := exists_third_of_degree T hab hdeg haw hbw
   have hzz : z' = z := by
     rcases hexh z hwz with h | h | h
     · exact absurd h hza
@@ -773,12 +792,12 @@ theorem degree_shrink_leaf_a (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
 
 双射取**恒等**：`u ↦ ⟨u, ·⟩`。两件事要证：`N_T v` 里没有 `leaf b`（叶 `b` 的唯一邻居是 `w`）、
 没有 `w`（`w` 的邻居只有 `leaf a`、`leaf b`、`z`，而 `v ∉ {leaf a, z}`）。 -/
-theorem degree_shrink_other (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+theorem degree_shrink_other_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
     (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) {v : ShrinkV T b w}
     (hva : v.1 ≠ T.leaf a) (hvz : v.1 ≠ z) :
     (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1 := by
-  have hcases := adj_midpoint_cases T hbin hab haw hbw hwz hza hzb
+  have hcases := adj_midpoint_cases_of_degree T hdeg hab haw hbw hwz hza hzb
   have hS : ∀ u : T.V, T.graph.Adj v.1 u → u ≠ T.leaf b ∧ u ≠ w := by
     intro u hu
     refine ⟨?_, ?_⟩
@@ -813,7 +832,7 @@ theorem degree_shrink_other (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a �
 双射：把 `N_T z` 里的 `w` 换成 `T.leaf a`，其余照搬。
 （注意 `z` **可以**是叶 —— 3 个 taxon 时整棵树就是「`w` 带 3 个叶」；
 此时 `deg_G z = deg_T z = 1`，所以本条**不能**写成 `deg = 3`。） -/
-theorem degree_shrink_z (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+theorem degree_shrink_z_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
     (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w) :
@@ -866,12 +885,12 @@ theorem degree_shrink_z (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b
   exact hcard.symm
 
 /-- ★★★ **A7b｜收缩图**逐顶点**度数不变**（三支合流）。 -/
-theorem degree_shrinkGraph (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+theorem degree_shrinkGraph_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
     (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
     ∀ v : ShrinkV T b w, (shrinkGraph T a b w z hza).degree v = T.graph.degree v.1 := by
   have hla : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
   have hzm : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
   intro v
   by_cases hva : v.1 = T.leaf a
@@ -880,27 +899,27 @@ theorem degree_shrinkGraph (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a �
     exact ((T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩).symm
   · by_cases hvz : v.1 = z
     · have hv : v = ⟨z, hzm⟩ := Subtype.ext hvz
-      rw [hv, degree_shrink_z T hbin hab haw hbw hza hzb hwz hla hzm]
-    · exact degree_shrink_other T hbin hab haw hbw hza hzb hwz hva hvz
+      rw [hv, degree_shrink_z_of_degree T hdeg hab haw hbw hza hzb hwz hla hzm]
+    · exact degree_shrink_other_of_degree T hdeg hab haw hbw hza hzb hwz hva hvz
 
 /-! ## A7′｜把 `Cladogram` 的两个**度字段**从 `T` 搬过来
 
-有了 ★★★ `degree_shrinkGraph`，`leaf_iff_degree_one` 与 `no_degree_two` 各只剩「翻译」：
-前者要用 `leafShrink` 的像是否就是 `T` 的叶（`MergeOld` 的成员恰好排除 `a`、`b`），
+有了 ★★★ `degree_shrinkGraph_of_degree`，`leaf_iff_degree_one` 与 `no_degree_two` 各只剩「翻译」：
+前者要用 `leafShrink_of_degree` 的像是否就是 `T` 的叶（`MergeOld` 的成员恰好排除 `a`、`b`），
 后者是 `T.toCladogram.no_degree_two` 的直接搬运。 -/
 
 /-- ★★★ **A7′a｜叶 ⟺ 度 1**（即 `Cladogram.leaf_iff_degree_one` 字段）。
 
-* `⟸`：`deg_G v = 1` ⇒ `deg_T v.1 = 1`（★ `degree_shrinkGraph`）⇒ `v.1` 是 `T` 的叶 `leaf x`；
-  `x ≠ b`（因 `v ≠ leaf b`）；若 `x = a` 则 `v = ⟨leaf a, ·⟩ = leafShrink (inr ())`，
-  否则 `x ∈ MergeOld` 且 `v = leafShrink (inl ⟨x, ·⟩)`。
+* `⟸`：`deg_G v = 1` ⇒ `deg_T v.1 = 1`（★ `degree_shrinkGraph_of_degree`）⇒ `v.1` 是 `T` 的叶 `leaf x`；
+  `x ≠ b`（因 `v ≠ leaf b`）；若 `x = a` 则 `v = ⟨leaf a, ·⟩ = leafShrink_of_degree (inr ())`，
+  否则 `x ∈ MergeOld` 且 `v = leafShrink_of_degree (inl ⟨x, ·⟩)`。
 * `⟹`：合并叶的度 `1`（★ `degree_shrink_leaf_a`），旧叶的度就是 `T` 里的 `1`。 -/
-theorem shrinkGraph_leaf_iff_degree_one (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkGraph_leaf_iff_degree_one_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) (v : ShrinkV T b w) :
-    (∃ u : MergeIdx X a b, leafShrink T hbin hab haw hbw u = v)
+    (∃ u : MergeIdx X a b, leafShrink_of_degree T hdeg hab haw hbw u = v)
       ↔ (shrinkGraph T a b w z hza).degree v = 1 := by
-  have hdeg := degree_shrinkGraph T hbin hab haw hbw hza hzb hwz
+  have hdeg := degree_shrinkGraph_of_degree T hdeg hab haw hbw hza hzb hwz
   constructor
   · rintro ⟨u, rfl⟩
     cases u with
@@ -930,27 +949,27 @@ theorem shrinkGraph_leaf_iff_degree_one (hbin : T.toCladogram.IsBinary) {a b : X
     · exact ⟨Sum.inl ⟨x, by simp [Finset.mem_sdiff, hax, hxb]⟩, Subtype.ext hx⟩
 
 /-- ★★★ **A7′b｜无度 2 顶点**（即 `Cladogram.no_degree_two` 字段）：`T` 里没有，收缩后也不会有。 -/
-theorem shrinkGraph_no_degree_two (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkGraph_no_degree_two_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) (v : ShrinkV T b w) :
     (shrinkGraph T a b w z hza).degree v ≠ 2 := by
-  rw [degree_shrinkGraph T hbin hab haw hbw hza hzb hwz v]
+  rw [degree_shrinkGraph_of_degree T hdeg hab haw hbw hza hzb hwz v]
   exact T.toCladogram.no_degree_two v.1
 
 /-! ## A8 前置 A8-0｜**一般化**的中点避开引理（第二个端点不再是 `z`）
 
-★★★ `midpoint_not_mem_support` 的第二个端点被钉死在 `z`（那是「走到 `z`」的语境）。
+★★★ `midpoint_not_mem_support_of_degree` 的第二个端点被钉死在 `z`（那是「走到 `z`」的语境）。
 A8 的**旧–旧距离**要对**任意**两片非 `{a, b}` 的叶用这条，于是把它一般化成
 「两端都 ∉ `{leaf a, leaf b, w}`」。证法是同一段 `getVert` 论证，只把
 `z ≠ w`／`z ≠ leaf a`／`z ≠ leaf b` 换成终点 `y` 的三条同类事实。 -/
-theorem midpoint_not_mem_support_gen (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem midpoint_not_mem_support_gen_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hzw : z ≠ w)
     {x y : T.V} (hxa : x ≠ T.leaf a) (hxb : x ≠ T.leaf b) (hxw : x ≠ w)
     (hya : y ≠ T.leaf a) (hyb : y ≠ T.leaf b) (hyw : y ≠ w)
     (p : T.graph.Walk x y) (hp : p.IsPath) : w ∉ p.support := by
   intro hw
-  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third T hbin hab haw hbw
+  obtain ⟨z₀, hz₀adj, hz₀a, hz₀b, hexh⟩ := exists_third_of_degree T hab hdeg haw hbw
   have hzz₀ : z = z₀ := by
     rcases hexh z hwz with h | h | h
     · exact absurd h hza
@@ -1102,11 +1121,11 @@ theorem shrinkW_nonneg (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
 
 /-! ## A8-1′｜收缩后的 `Cladogram` 与 `Phylogram` -/
 
-/-- ★★★ **A8c｜收缩后的 `Cladogram`**：顶点 `ShrinkV`、图 `shrinkGraph`、叶 `leafShrink`，
-树性用 ★★★ `shrinkGraph_connected` ＋ ★★★ `shrinkGraph_isAcyclic`，
-两个度字段用 ★★★ `shrinkGraph_leaf_iff_degree_one` ＋ ★★★ `shrinkGraph_no_degree_two`。 -/
-noncomputable def shrinkCladogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+/-- ★★★ **A8c｜收缩后的 `Cladogram`**：顶点 `ShrinkV`、图 `shrinkGraph`、叶 `leafShrink_of_degree`，
+树性用 ★★★ `shrinkGraph_connected_of_degree` ＋ ★★★ `shrinkGraph_isAcyclic_of_degree`，
+两个度字段用 ★★★ `shrinkGraph_leaf_iff_degree_one_of_degree` ＋ ★★★ `shrinkGraph_no_degree_two_of_degree`。 -/
+noncomputable def shrinkCladogram_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
     Cladogram (MergeIdx X a b) where
   V := ShrinkV T b w
@@ -1114,71 +1133,71 @@ noncomputable def shrinkCladogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab
   decEqV := inferInstance
   graph := shrinkGraph T a b w z hza
   decAdj := shrinkGraph_decidableRel T a b w z hza
-  isTree := ⟨shrinkGraph_connected T hbin hab haw hbw hwz hza hzb
+  isTree := ⟨shrinkGraph_connected_of_degree T hdeg hab haw hbw hwz hza hzb
       (fun h => T.graph.loopless.irrefl z (h ▸ hwz)),
-    shrinkGraph_isAcyclic T hbin hab haw hbw hza hzb
+    shrinkGraph_isAcyclic_of_degree T hdeg hab haw hbw hza hzb
       (fun h => T.graph.loopless.irrefl z (h ▸ hwz))⟩
-  leaf := leafShrink T hbin hab haw hbw
+  leaf := leafShrink_of_degree T hdeg hab haw hbw
   leaf_iff_degree_one := fun v =>
-    shrinkGraph_leaf_iff_degree_one T hbin hab haw hbw hza hzb hwz v
+    shrinkGraph_leaf_iff_degree_one_of_degree T hdeg hab haw hbw hza hzb hwz v
   no_degree_two := fun v =>
-    shrinkGraph_no_degree_two T hbin hab haw hbw hza hzb hwz v
+    shrinkGraph_no_degree_two_of_degree T hdeg hab haw hbw hza hzb hwz v
 
-/-- ★★★ **A8d｜收缩后的 `Phylogram`**：拓扑取 ★★★ `shrinkCladogram`，边权取 ★★ `shrinkW`。
+/-- ★★★ **A8d｜收缩后的 `Phylogram`**：拓扑取 ★★★ `shrinkCladogram_of_degree`，边权取 ★★ `shrinkW`。
 
 **它就是要交给 `HasPosReal (mergeStep δ a b)` 的那棵树** —— 只差 A8-3 的 `dist` 对齐。 -/
-noncomputable def shrinkPhylogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+noncomputable def shrinkPhylogram_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
     Phylogram (MergeIdx X a b) where
-  toCladogram := shrinkCladogram T hbin hab haw hbw hza hzb hwz
+  toCladogram := shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz
   w := fun e => shrinkW T a b w z hza
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
     ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩ e.1
   w_nonneg := fun e => shrinkW_nonneg T a b w z hza haw hbw hwz
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
     ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩ hpos e.1
 
 -- `V`／`graph` 投影要能在 `reducible` 透明层归约，才能与 `Sym2 (ShrinkV T b w)` 上的
 -- 陈述自由互转（与 `Phylo.BunemanGraft` 对 `graftCladogram`/`graftPhylogram` 的处理一致）。
-attribute [reducible] shrinkCladogram shrinkPhylogram
+attribute [reducible] shrinkCladogram_of_degree shrinkPhylogram_of_degree
 
 /-! ## A8-3 前置｜`walkDist` 的**搬移**（两个方向）
 
 A8-3 要把「`G` 里的路径」与「`T` 里的路径」的**边权和**对上。三件器械：
-① ★★ `shrinkPhylogram_wExt_eq`：`wExt` 落到 `shrinkW`；
-② ★★ `shrinkPhylogram_walkDist_eq`：走法的 `walkDist` 就是 `shrinkW` 沿边表求和；
+① ★★ `shrinkPhylogram_wExt_eq_of_degree`：`wExt` 落到 `shrinkW`；
+② ★★ `shrinkPhylogram_walkDist_eq_of_degree`：走法的 `walkDist` 就是 `shrinkW` 沿边表求和；
 ③ ★★★ 两个搬移引理（`T → G`、`G → T`），**同时**给出走法与边权和 —— 边权支点是
 ★★ `shrinkW_old`。 -/
 
 /-- ★★ **A8-3a｜`wExt` 与 `shrinkW` 的桥**（`e` 是收缩图的一条边）。 -/
-theorem shrinkPhylogram_wExt_eq (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkPhylogram_wExt_eq_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) (e : Sym2 (ShrinkV T b w))
     (he : e ∈ (shrinkGraph T a b w z hza).edgeSet) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).wExt e
+    (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).wExt e
       = shrinkW T a b w z hza ⟨fun h => hab (T.leaf.injective h),
-          leaf_ne_midpoint T hbin hab haw hbw a⟩
+          leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
         ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩ e := by
   rw [Phylogram.wExt, dif_pos he]
 
 /-- ★★ **A8-3b｜走法的 `walkDist` = `shrinkW` 沿边表求和**。 -/
-theorem shrinkPhylogram_walkDist_eq (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkPhylogram_walkDist_eq_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {U V : ShrinkV T b w}
     (q : (shrinkGraph T a b w z hza).Walk U V) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q
+    (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).walkDist q
       = (q.edges.map (shrinkW T a b w z hza ⟨fun h => hab (T.leaf.injective h),
-          leaf_ne_midpoint T hbin hab haw hbw a⟩
+          leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
         ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩)).sum := by
   rw [Phylogram.walkDist]
   congr 1
   refine List.map_congr_left ?_
   intro e he
-  exact shrinkPhylogram_wExt_eq T hbin hab haw hbw hza hzb hwz hpos e (q.edges_subset_edgeSet he)
+  exact shrinkPhylogram_wExt_eq_of_degree T hdeg hab haw hbw hza hzb hwz hpos e (q.edges_subset_edgeSet he)
 
 /-- ★★★ **A8-3c｜走法搬移 `T → G`（带边权和）**：若 `T` 里走法 `p` 的所有顶点都避开
 `T.leaf b` 与 `w`，则它整条落进收缩图，且**边权和不变**（每步用 ★★ `shrinkW_old`）。
@@ -1260,26 +1279,26 @@ theorem exists_walk_of_shrink_sum (a b : X) (w z : T.V) (hza : z ≠ T.leaf a)
   ⇒ `dist_T ≤ walkDist ≤ dist'`。
 
 这一支是 `dist` 对齐的地基：新–旧那支要用 `u = ⟨z, ·⟩`（`z` 不是叶标签的像）。 -/
-theorem shrinkPhylogram_dist_old (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+theorem shrinkPhylogram_dist_old_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
     (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) {u v : ShrinkV T b w}
     (hua : u.1 ≠ T.leaf a) (hva : v.1 ≠ T.leaf a) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v = T.dist u.1 v.1 := by
+    (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist u v = T.dist u.1 v.1 := by
   have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
   have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
   have hz : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
   by_cases huv : u.1 = v.1
   · have hsub : u = v := Subtype.ext huv
     rw [hsub]
     simp only [Phylogram.dist_self]
-  · have h1 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v
+  · have h1 : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist u v
         ≤ T.dist u.1 v.1 := by
       set P := (T.existsUnique_path u.1 v.1).choose with hPdef
       have hPpath : P.IsPath := (T.existsUnique_path u.1 v.1).choose_spec.1
       have hwP : w ∉ P.support :=
-        midpoint_not_mem_support_gen T hbin hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2
+        midpoint_not_mem_support_gen_of_degree T hdeg hab haw hbw hwz hza hzb hzw hua u.2.1 u.2.2
           hva v.2.1 v.2.2 P hPpath
       have hdb : T.graph.degree (T.leaf b) = 1 :=
         (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
@@ -1289,27 +1308,27 @@ theorem shrinkPhylogram_dist_old (hbin : T.toCladogram.IsBinary) {a b : X} (hab 
         intro t ht
         exact ⟨fun h => hbP (h ▸ ht), fun h => hwP (h ▸ ht)⟩
       obtain ⟨q, hq⟩ := exists_walk_shrink_sum T a b w z hza haw hzw ha hz P hsupp u.2 v.2
-      have hqw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q
+      have hqw : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).walkDist q
           = T.dist u.1 v.1 := by
         have hsum : (P.edges.map T.wExt).sum = T.dist u.1 v.1 := by
           have hwalk : (P.edges.map T.wExt).sum = T.walkDist P := rfl
           rw [hwalk, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath T P hPpath]
-        rw [shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q, hq]
+        rw [shrinkPhylogram_walkDist_eq_of_degree T hdeg hab haw hbw hza hzb hwz hpos q, hq]
         exact hsum
-      have hdw : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v
-          ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q :=
+      have hdw : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist u v
+          ≤ (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).walkDist q :=
         Phylo.Contract.dist_le_walkDist
-          (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) q
+          (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos) q
       linarith
-    have h2 : T.dist u.1 v.1 ≤ (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v := by
+    have h2 : T.dist u.1 v.1 ≤ (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist u v := by
       obtain ⟨q', hq'path, -⟩ :=
-        (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).existsUnique_path u v
-      have hdeg : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).graph.degree
+        (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).existsUnique_path u v
+      have hdegA : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).graph.degree
           (⟨T.leaf a, ha⟩ : ShrinkV T b w) = 1 :=
         degree_shrink_leaf_a T a b w z hza haw ha hz
       have hqa : (⟨T.leaf a, ha⟩ : ShrinkV T b w) ∉ q'.support :=
         not_mem_support_of_degree_one
-          (T := shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos) hdeg q' hq'path
+          (T := shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos) hdegA q' hq'path
           (fun h => hua (congrArg Subtype.val h))
           (fun h => hva (congrArg Subtype.val h))
       obtain ⟨p, hp⟩ := exists_walk_of_shrink_sum T a b w z hza haw hzw ha hz q'
@@ -1319,36 +1338,36 @@ theorem shrinkPhylogram_dist_old (hbin : T.toCladogram.IsBinary) {a b : X} (hab 
       have e1 : T.dist u.1 v.1 ≤ T.walkDist p := Phylo.Contract.dist_le_walkDist T p
       have e3 : T.walkDist p = (q'.edges.map (shrinkW T a b w z hza ha hz)).sum := hp.symm
       have e4 : (q'.edges.map (shrinkW T a b w z hza ha hz)).sum
-          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q' :=
-        (shrinkPhylogram_walkDist_eq T hbin hab haw hbw hza hzb hwz hpos q').symm
-      have e5 : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).walkDist q'
-          = (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist u v :=
+          = (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).walkDist q' :=
+        (shrinkPhylogram_walkDist_eq_of_degree T hdeg hab haw hbw hza hzb hwz hpos q').symm
+      have e5 : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).walkDist q'
+          = (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist u v :=
         (Phylo.TreeDist.dist_eq_walkDist_of_isPath _ q' hq'path).symm
       linarith
     exact le_antisymm h1 h2
 
 /-- ★★★ **A8-3e′｜旧–旧距离（叶标签形式）**：`x, y ∉ {a,b}` 时
-`T'.dist (leaf' x) (leaf' y) = δ(x,y)`。由 ★★★ `shrinkPhylogram_dist_old` ＋ 实现树的 `hT`。 -/
-theorem shrinkPhylogram_dist_inl_inl (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsBinary)
-    {a b : X} (hab : a ≠ b) {w z : T.V} (haw : T.graph.Adj (T.leaf a) w)
+`T'.dist (leaf' x) (leaf' y) = δ(x,y)`。由 ★★★ `shrinkPhylogram_dist_old_of_degree` ＋ 实现树的 `hT`。 -/
+theorem shrinkPhylogram_dist_inl_inl_of_degree (δ : NJ.Dissimilarity X) {w z : T.V} (hdeg : T.graph.degree w = 3)
+    {a b : X} (hab : a ≠ b) (haw : T.graph.Adj (T.leaf a) w)
     (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
     (hwz : T.graph.Adj w z) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
     (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) (x y : MergeOld X a b) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-        ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
-        ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl y))
+    (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
+        ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl x))
+        ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl y))
       = δ.val x.1 y.1 := by
   have hxa : T.leaf x.1 ≠ T.leaf a := fun h => mergeOld_ne_left x (T.leaf.injective h)
   have hya : T.leaf y.1 ≠ T.leaf a := fun h => mergeOld_ne_left y (T.leaf.injective h)
   have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
   have hyb : T.leaf y.1 ≠ T.leaf b := fun h => mergeOld_ne_right y (T.leaf.injective h)
-  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw x.1
-  have hyw : T.leaf y.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw y.1
-  have hxu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
+  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint_of_degree T hdeg hab haw hbw x.1
+  have hyw : T.leaf y.1 ≠ w := leaf_ne_midpoint_of_degree T hdeg hab haw hbw y.1
+  have hxu : ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl x))
       = (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) := Subtype.ext rfl
-  have hyu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl y))
+  have hyu : ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl y))
       = (⟨T.leaf y.1, ⟨hyb, hyw⟩⟩ : ShrinkV T b w) := Subtype.ext rfl
-  rw [hxu, hyu, shrinkPhylogram_dist_old T hbin hab haw hbw hza hzb hwz hpos hxa hya]
+  rw [hxu, hyu, shrinkPhylogram_dist_old_of_degree T hdeg hab haw hbw hza hzb hwz hpos hxa hya]
   exact hT x.1 y.1
 
 /-- ★★★ **A8-3f｜新–旧距离**：`x ∉ {a,b}` 时
@@ -1357,43 +1376,43 @@ theorem shrinkPhylogram_dist_inl_inl (δ : NJ.Dissimilarity X) (hbin : T.toClado
 三步：
 1. 在 `G` 里 `⟨leaf a, ·⟩` 的**唯一邻居**是 `⟨z, ·⟩`（★★ `shrinkGraph_adj_leaf_a_iff`）
    ⇒ 路径第一步必到 `⟨z, ·⟩` ⇒ `dist' = wExt(新边) + dist' ⟨z⟩ ⟨leaf x⟩ = shrinkNewW + …`；
-2. `dist' ⟨z⟩ ⟨leaf x⟩ = d_T(z, x)`（★★★ `shrinkPhylogram_dist_old`：两者都 ≠ `leaf a`）；
+2. `dist' ⟨z⟩ ⟨leaf x⟩ = d_T(z, x)`（★★★ `shrinkPhylogram_dist_old_of_degree`：两者都 ≠ `leaf a`）；
 3. 算术：★★★ `StrictCherry.mergeStep_val_eq` 给 `½δ(x,a)+½δ(x,b) = ½(w_a+w_b) + d(w,x)`，
    而 `d(w,x) = d(w,z) + d(z,x)`（`w` 到非樱桃叶的路径第一步必到 `z`）⇒ 与 `shrinkNewW` 相符。 -/
-theorem shrinkPhylogram_dist_inr_inl (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsBinary)
-    {a b : X} (hab : a ≠ b) {w z : T.V} (haw : T.graph.Adj (T.leaf a) w)
+theorem shrinkPhylogram_dist_inr_inl_of_degree (δ : NJ.Dissimilarity X) {w z : T.V} (hdeg : T.graph.degree w = 3)
+    {a b : X} (hab : a ≠ b) (haw : T.graph.Adj (T.leaf a) w)
     (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
     (hwz : T.graph.Adj w z) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
     (hc : T.IsCherry a b) (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
     (x : MergeOld X a b) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
-        ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inr ()))
-        ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
+    (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
+        ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inr ()))
+        ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl x))
       = (1 / 2) * δ.val a x.1 + (1 - 1 / 2) * δ.val b x.1 := by
   have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
   have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
   have hz : z ≠ T.leaf b ∧ z ≠ w := ⟨hzb, hzw⟩
   have hxa : T.leaf x.1 ≠ T.leaf a := fun h => mergeOld_ne_left x (T.leaf.injective h)
   have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
-  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint T hbin hab haw hbw x.1
+  have hxw : T.leaf x.1 ≠ w := leaf_ne_midpoint_of_degree T hdeg hab haw hbw x.1
   -- 端点的规范形式
-  have hu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inr ()))
+  have hu : ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inr ()))
       = (⟨T.leaf a, ha⟩ : ShrinkV T b w) := Subtype.ext rfl
-  have hxu : ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf (Sum.inl x))
+  have hxu : ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf (Sum.inl x))
       = (⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ : ShrinkV T b w) := Subtype.ext rfl
   rw [hu, hxu]
   -- ① 路径第一步必到 `⟨z, ·⟩`
-  have hstep : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
+  have hstep : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
       (⟨T.leaf a, ha⟩ : ShrinkV T b w) ⟨T.leaf x.1, ⟨hxb, hxw⟩⟩
       = shrinkNewW T a b w z
-        + (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
+        + (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
             (⟨z, hz⟩ : ShrinkV T b w) ⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ := by
     have hne : (⟨T.leaf a, ha⟩ : ShrinkV T b w) ≠ ⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ := by
       intro h
       exact hxa (congrArg Subtype.val h).symm
     obtain ⟨P, hPpath, -⟩ :=
-      (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).existsUnique_path
+      (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).existsUnique_path
         (⟨T.leaf a, ha⟩ : ShrinkV T b w) ⟨T.leaf x.1, ⟨hxb, hxw⟩⟩
     obtain ⟨v', hv', P', hsplit⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne hne P
     have hv'z : v' = (⟨z, hz⟩ : ShrinkV T b w) := by
@@ -1405,9 +1424,9 @@ theorem shrinkPhylogram_dist_inr_inl (δ : NJ.Dissimilarity X) (hbin : T.toClado
     have hP'path : P'.IsPath := by
       rw [hsplit] at hPpath
       exact SimpleGraph.Walk.IsPath.of_cons hPpath
-    have hnew : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).wExt
+    have hnew : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).wExt
         s((⟨T.leaf a, ha⟩ : ShrinkV T b w), ⟨z, hz⟩) = shrinkNewW T a b w z := by
-      rw [shrinkPhylogram_wExt_eq T hbin hab haw hbw hza hzb hwz hpos _
+      rw [shrinkPhylogram_wExt_eq_of_degree T hdeg hab haw hbw hza hzb hwz hpos _
         (by rw [SimpleGraph.mem_edgeSet]; exact Or.inr (Or.inl ⟨rfl, rfl⟩))]
       unfold shrinkW
       rw [if_pos rfl]
@@ -1416,17 +1435,17 @@ theorem shrinkPhylogram_dist_inr_inl (δ : NJ.Dissimilarity X) (hbin : T.toClado
       ← Phylogram.walkDist, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath _ P' hP'path]
   rw [hstep]
   -- ② `⟨z⟩ → ⟨leaf x⟩` 是旧–旧
-  have hzold : (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
+  have hzold : (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
       (⟨z, hz⟩ : ShrinkV T b w) ⟨T.leaf x.1, ⟨hxb, hxw⟩⟩ = T.dist z (T.leaf x.1) :=
-    shrinkPhylogram_dist_old T hbin hab haw hbw hza hzb hwz hpos hza hxa
+    shrinkPhylogram_dist_old_of_degree T hdeg hab haw hbw hza hzb hwz hpos hza hxa
   rw [hzold]
   -- ③ 算术：`d(w,x) = d(w,z) + d(z,x)`
-  have hbw' : T.leaf b ≠ w := leaf_ne_midpoint T hbin hab haw hbw b
+  have hbw' : T.leaf b ≠ w := leaf_ne_midpoint_of_degree T hdeg hab haw hbw b
   have hsplit2 : T.dist w (T.leaf x.1) = T.dist w z + T.dist z (T.leaf x.1) := by
     have hne : w ≠ T.leaf x.1 := hxw.symm
     obtain ⟨P, hPpath, -⟩ := T.existsUnique_path w (T.leaf x.1)
     obtain ⟨v', hv', P', hsplit⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne hne P
-    have hcases := adj_midpoint_cases T hbin hab haw hbw hwz hza hzb
+    have hcases := adj_midpoint_cases_of_degree T hdeg hab haw hbw hwz hza hzb
     have hda : T.graph.degree (T.leaf a) = 1 :=
       (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
     have hdb : T.graph.degree (T.leaf b) = 1 :=
@@ -1469,7 +1488,7 @@ theorem shrinkPhylogram_dist_inr_inl (δ : NJ.Dissimilarity X) (hbin : T.toClado
 
 新边取 ★★ `shrinkNewW`（★ `shrinkNewW_pos` 给正性）；旧边取 `T.wExt (像)`，
 ★★ `shrinkGraph_adj_cases` 保证它不是新边那两支 ⇒ 像确实是 `T`-边 ⇒ 用 `hpos`。 -/
-theorem shrinkW_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+theorem shrinkW_pos_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
     (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
     (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
     (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
@@ -1498,6 +1517,156 @@ theorem shrinkW_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w
 
 /-- ★★★ **A8-3i｜`dist` 对齐（三支合流）**：
 `∀ u v : MergeIdx X a b，T'.dist (leaf' u) (leaf' v) = (mergeStep δ a b).val u v`。 -/
+theorem shrinkPhylogram_dist_of_degree (δ : NJ.Dissimilarity X) {w z : T.V} (hdeg : T.graph.degree w = 3)
+    {a b : X} (hab : a ≠ b) (haw : T.graph.Adj (T.leaf a) w)
+    (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
+    (hwz : T.graph.Adj w z) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hc : T.IsCherry a b) (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    ∀ u v : MergeIdx X a b,
+      (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).dist
+          ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf u)
+          ((shrinkCladogram_of_degree T hdeg hab haw hbw hza hzb hwz).leaf v)
+        = (mergeStep δ a b).val u v := by
+  have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
+  intro u v
+  cases u with
+  | inl x =>
+      cases v with
+      | inl y =>
+          rw [shrinkPhylogram_dist_inl_inl_of_degree T δ hdeg hab haw hbw hza hzb hwz hpos hT x y]
+          rfl
+      | inr y =>
+          cases y
+          rw [Phylo.TreeDist.dist_comm,
+            shrinkPhylogram_dist_inr_inl_of_degree T δ hdeg hab haw hbw hza hzb hwz hpos hc hT x]
+          simp only [mergeStep, mergeDissim, mergeVal]
+  | inr x =>
+      cases x
+      cases v with
+      | inl y =>
+          rw [shrinkPhylogram_dist_inr_inl_of_degree T δ hdeg hab haw hbw hza hzb hwz hpos hc hT y]
+          simp only [mergeStep, mergeDissim, mergeVal]
+      | inr y =>
+          cases y
+          rw [Phylogram.dist_self]
+          rfl
+
+/-- ★★★ **A8-3j｜收缩后的树仍是 binary**（`HasPosRealBinary` 的**归纳不变式**要这条）。
+
+`IsBinary T := ∀ v, ¬ IsLeaf v → degree v = 3`。用 ★★★ `degree_shrinkGraph_of_degree`
+（`deg_G v = deg_T v.1`）把度数搬回 `T`；叶性判据走反证：
+若 `v.1` 是 `T` 的叶则 `deg_T = 1 ⇒ deg_G = 1`，由 ★★★ `shrinkGraph_leaf_iff_degree_one_of_degree`
+得 `v` 是收缩树的叶，与假设矛盾。 -/
+theorem shrinkPhylogram_isBinary (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    (shrinkPhylogram_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz
+      hpos).toCladogram.IsBinary := by
+  intro v hv
+  have hdeg : T.graph.degree w = 3 := degree_eq_three T hbin hab haw hbw
+  have hd := degree_shrinkGraph_of_degree T hdeg hab haw hbw hza hzb hwz v
+  have hnotleaf : ¬ T.toCladogram.IsLeaf v.1 := by
+    intro hleaf
+    have h1 : T.graph.degree v.1 = 1 := (T.isLeaf_iff_degree_eq_one v.1).mp hleaf
+    have h2 : (shrinkGraph T a b w z hza).degree v = 1 := by
+      rw [hd, h1]
+    exact hv ((shrinkGraph_leaf_iff_degree_one_of_degree T
+      (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz v).mpr h2)
+  -- `graph` 字段是 `rfl` 级投影（`shrinkPhylogram_of_degree` 是显式结构项）
+  show (shrinkGraph T a b w z hza).degree v = 3
+  rw [hd]
+  exact hbin v.1 hnotleaf
+
+/-- ★★★ **收缩后每条边权都正**（`shrinkPhylogram_of_degree` 的 `w` 字段版本，`Sym2.ind` 把边拆成端点对）。 -/
+theorem shrinkPhylogram_w_pos_of_degree {w z : T.V} (hdeg : T.graph.degree w = 3) {a b : X} (hab : a ≠ b)
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    ∀ e : Edge (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).toCladogram,
+      0 < (shrinkPhylogram_of_degree T hdeg hab haw hbw hza hzb hwz hpos).w e := by
+  have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint_of_degree T hdeg hab haw hbw a⟩
+  have hz : z ≠ T.leaf b ∧ z ≠ w :=
+    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+  have key : ∀ e' : Sym2 (ShrinkV T b w),
+      e' ∈ (shrinkGraph T a b w z hza).edgeSet → 0 < shrinkW T a b w z hza ha hz e' :=
+    Sym2.ind (fun u v he =>
+      shrinkW_pos_of_degree T hdeg hab haw hbw hza hzb hwz hpos ha hz ((SimpleGraph.mem_edgeSet _).mp he))
+  intro e
+  exact key e.1 e.2
+
+/-! ## A9｜**`IsBinary` 兼容层** —— `hdeg` 链条的 `hbin` 特化
+
+W49 起 A5–A8 链条的前提是**局部**条件 `hdeg : T.graph.degree w = 3`
+（理由见 `Phylo/Stat/NJShrinkNonBinary.lean` §10 ★D③）：非二叉树上 `njStep`
+选出的樱桃中点**也可能**度恰为 3，此时收缩手术与二叉情形**逐字相同**，
+只是不能假设整棵树二叉。
+
+SK1988 `:20-22` 的原假设是**整棵树**二叉（`HasPosRealBinary`），它与局部条件只差
+★★★ `degree_eq_three`。下面把这批「`IsBinary` 版」保留为**薄包装**
+（内部先 `degree_eq_three T hbin hab haw hbw`，再走对应的 `_of_degree` 引理），
+于是 `CASTERNJ`／`NJRecovers`／`NJRun`／`StrictCherryProved` 四个文件**零改动**；
+`njAdditiveGapUnrestricted` 的 `degree w = 3` 支则直接用 `_of_degree` 一族。 -/
+
+/-- ★★ **A5（`IsBinary` 版）**：`hdeg` 版见 ★★ `leafShrink_of_degree`。 -/
+def leafShrink (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) :
+    MergeIdx X a b ↪ ShrinkV T b w :=
+  leafShrink_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw
+
+/-- ★★★ **A8c（`IsBinary` 版）**：`hdeg` 版见 ★★★ `shrinkCladogram_of_degree`。 -/
+noncomputable def shrinkCladogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z) :
+    Cladogram (MergeIdx X a b) :=
+  shrinkCladogram_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz
+
+/-- ★★★ **A8d（`IsBinary` 版）**：`hdeg` 版见 ★★★ `shrinkPhylogram_of_degree`。 -/
+noncomputable def shrinkPhylogram (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    Phylogram (MergeIdx X a b) :=
+  shrinkPhylogram_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz hpos
+
+-- 与 `_of_degree` 一族同样要在 `reducible` 透明层归约（见 §A8-1′ 的说明）。
+attribute [reducible] leafShrink shrinkCladogram shrinkPhylogram
+
+/-- 樱桃中点不是任何叶的像（`IsBinary` 版，`hdeg` 版见 `leaf_ne_midpoint_of_degree`）。 -/
+theorem leaf_ne_midpoint (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (x : X) :
+    T.leaf x ≠ w :=
+  leaf_ne_midpoint_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw x
+
+/-- 樱桃中点邻域的穷尽性（`IsBinary` 版，`hdeg` 版见 `adj_midpoint_cases_of_degree`）。 -/
+theorem adj_midpoint_cases (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwz : T.graph.Adj w z) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) :
+    ∀ y : T.V, T.graph.Adj w y → y = T.leaf a ∨ y = T.leaf b ∨ y = z :=
+  adj_midpoint_cases_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hwz hza hzb
+
+/-- ★★ **A7（`IsBinary` 版）**：唯一边权正（`hdeg` 版见 `shrinkW_pos_of_degree`）。 -/
+theorem shrinkW_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b) {w z : T.V}
+    (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a)
+    (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w) (hz : z ≠ T.leaf b ∧ z ≠ w)
+    {u v : ShrinkV T b w} (huv : (shrinkGraph T a b w z hza).Adj u v) :
+    0 < shrinkW T a b w z hza ha hz s(u, v) :=
+  shrinkW_pos_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz hpos ha hz huv
+
+/-- ★★★ **A8-3g（`IsBinary` 版）**：边权全正（`hdeg` 版见 `shrinkPhylogram_w_pos_of_degree`）。 -/
+theorem shrinkPhylogram_w_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
+    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
+    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    ∀ e : Edge (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).toCladogram,
+      0 < (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).w e :=
+  shrinkPhylogram_w_pos_of_degree T (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz hpos
+
+/-- ★★★ **A8-3i（`IsBinary` 版）**：`dist` 逐点对齐
+（`hdeg` 版见 ★★★ `shrinkPhylogram_dist_of_degree`）。 -/
 theorem shrinkPhylogram_dist (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsBinary)
     {a b : X} (hab : a ≠ b) {w z : T.V} (haw : T.graph.Adj (T.leaf a) w)
     (hbw : T.graph.Adj (T.leaf b) w) (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b)
@@ -1507,69 +1676,8 @@ theorem shrinkPhylogram_dist (δ : NJ.Dissimilarity X) (hbin : T.toCladogram.IsB
       (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).dist
           ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf u)
           ((shrinkCladogram T hbin hab haw hbw hza hzb hwz).leaf v)
-        = (mergeStep δ a b).val u v := by
-  have hzw : z ≠ w := fun h => T.graph.loopless.irrefl z (h ▸ hwz)
-  intro u v
-  cases u with
-  | inl x =>
-      cases v with
-      | inl y =>
-          rw [shrinkPhylogram_dist_inl_inl T δ hbin hab haw hbw hza hzb hwz hpos hT x y]
-          rfl
-      | inr y =>
-          cases y
-          rw [Phylo.TreeDist.dist_comm,
-            shrinkPhylogram_dist_inr_inl T δ hbin hab haw hbw hza hzb hwz hpos hc hT x]
-          simp only [mergeStep, mergeDissim, mergeVal]
-  | inr x =>
-      cases x
-      cases v with
-      | inl y =>
-          rw [shrinkPhylogram_dist_inr_inl T δ hbin hab haw hbw hza hzb hwz hpos hc hT y]
-          simp only [mergeStep, mergeDissim, mergeVal]
-      | inr y =>
-          cases y
-          rw [Phylogram.dist_self]
-          rfl
-
-/-- ★★★ **A8-3j｜收缩后的树仍是 binary**（`HasPosRealBinary` 的**归纳不变式**要这条）。
-
-`IsBinary T := ∀ v, ¬ IsLeaf v → degree v = 3`。用 ★★★ `degree_shrinkGraph`
-（`deg_G v = deg_T v.1`）把度数搬回 `T`；叶性判据走反证：
-若 `v.1` 是 `T` 的叶则 `deg_T = 1 ⇒ deg_G = 1`，由 ★★★ `shrinkGraph_leaf_iff_degree_one`
-得 `v` 是收缩树的叶，与假设矛盾。 -/
-theorem shrinkPhylogram_isBinary (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
-    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
-    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
-    (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).toCladogram.IsBinary := by
-  intro v hv
-  have hdeg := degree_shrinkGraph T hbin hab haw hbw hza hzb hwz v
-  have hnotleaf : ¬ T.toCladogram.IsLeaf v.1 := by
-    intro hleaf
-    have h1 : T.graph.degree v.1 = 1 := (T.isLeaf_iff_degree_eq_one v.1).mp hleaf
-    have h2 : (shrinkGraph T a b w z hza).degree v = 1 := by
-      rw [hdeg, h1]
-    exact hv ((shrinkGraph_leaf_iff_degree_one T hbin hab haw hbw hza hzb hwz v).mpr h2)
-  rw [hdeg]
-  exact hbin v.1 hnotleaf
-
-/-- ★★★ **收缩后每条边权都正**（`shrinkPhylogram` 的 `w` 字段版本，`Sym2.ind` 把边拆成端点对）。 -/
-theorem shrinkPhylogram_w_pos (hbin : T.toCladogram.IsBinary) {a b : X} (hab : a ≠ b)
-    {w z : T.V} (haw : T.graph.Adj (T.leaf a) w) (hbw : T.graph.Adj (T.leaf b) w)
-    (hza : z ≠ T.leaf a) (hzb : z ≠ T.leaf b) (hwz : T.graph.Adj w z)
-    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
-    ∀ e : Edge (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).toCladogram,
-      0 < (shrinkPhylogram T hbin hab haw hbw hza hzb hwz hpos).w e := by
-  have ha : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
-    ⟨fun h => hab (T.leaf.injective h), leaf_ne_midpoint T hbin hab haw hbw a⟩
-  have hz : z ≠ T.leaf b ∧ z ≠ w :=
-    ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
-  have key : ∀ e' : Sym2 (ShrinkV T b w),
-      e' ∈ (shrinkGraph T a b w z hza).edgeSet → 0 < shrinkW T a b w z hza ha hz e' :=
-    Sym2.ind (fun u v he =>
-      shrinkW_pos T hbin hab haw hbw hza hzb hwz hpos ha hz ((SimpleGraph.mem_edgeSet _).mp he))
-  intro e
-  exact key e.1 e.2
+        = (mergeStep δ a b).val u v :=
+  shrinkPhylogram_dist_of_degree T δ (degree_eq_three T hbin hab haw hbw) hab haw hbw hza hzb hwz
+    hpos hc hT
 
 end Phylo.Stat.NJShrink
