@@ -921,7 +921,20 @@ noncomputable def toDissimilarity (T : Phylogram X) : Dissimilarity X where
      （W48 报告 §2）。⇒ **真正缺的只有「逐边单调性」**（Atteson `:2008–2070` 的 `e*` 选法 ＋
      系数和 `3(n−4)` / `2(n−3)`），即 W48 报告 §3 的 `(ii)`。W49 已落 `(i)`（`minEdgeWeight` 的
      `sInf → min` 桥，见 §8.1.0′）与 `(ii)a`（任意 `(k,l)` 的系数差四种情形 ＋「分离 ⇒ 系数非负」，
-     见 §19）；**`(ii)b`/`(ii)c`/`(iii)` 未落**，路线见项目根目录 `W49_A_PLAN.md`。 -/
+     见 §19）；**`(ii)b`/`(ii)c`/`(iii)` 未落**，路线见项目根目录 `W49_A_PLAN.md`。
+
+★ **W50 ★D（2026-11-07，机械核）：本 `def` 在「多叉」（polytomy）树上为假** ——
+`Phylogram`（`Phylo/Core.lean:157`）只要求 `no_degree_two`，**允许**内点度 ≥ 4；而 Atteson
+Lemma 11 的前提是 **binary** tree（md `:1989` “for a weighted **binary** tree”），其证明
+case 1（`:2034–2043`）显式用「每个内点恰关联 3 条边」。
+反例（`scripts/msc/w50_lemma11_polytomy_refute.py`，精确有理数）：双星 `v1`（度 4）—`v2`（度 4），
+两侧各挂 3 片叶、全边权 1（`n = 6`；合法 `Cladogram`：连通、无环、无度 2 点、叶 = 标签集）；
+取 `(k,l)` 为两侧各一片（非樱桃，`¬ IsCherry` 已核）⇒ **6 个樱桃的间隙全是 `4`**，
+而 `DisjointPairs` 支要求 `3(n−4)·δmin = 6`、`SharesOneLabel` 支要求 `2(n−3)·δmin = 6`
+⇒ 两支**全不满足**。同脚本 `m = 2`（二叉，`n = 4`）则满足（间隙 2，要求 0／2）。
+⇒ 定量版的**忠实陈述必须带 `T.toCladogram.IsBinary`**；`def` 本体**逐字未动**（引理留证）。
+建议老师裁定：把 `IsBinary` 写进 `def`，还是在定理处加前提 —— 本库取后者
+（`atteson_lemma11_gap_quantitative_holds_of_binary`，见本文件 §22）。 -/
 def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
   4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
 
@@ -2379,6 +2392,144 @@ theorem exists_min_sideLeafCount_offPath (T : Cladogram X) {k l : X} (hkl : k �
   obtain ⟨-, heStarE, heStarI⟩ := Finset.mem_filter.mp heStar
   exact ⟨eStar, heStarE, heStarI, fun e heE heI => hmin e (Finset.mem_filter.mpr
     ⟨Finset.mem_univ _, heE, heI⟩)⟩
+
+end Cladogram
+
+
+/-! ## 21. ★★★ W50-A-#2：`hbig` 的几何来源（`e*` 最小性 ⇒ `n ≤ 2·ℓ_k(e)`）
+
+§20 的三条引理把 `hbig : n ≤ 2·S_k` 当作**外部输入**。本节把它**证出来** —— 它是
+`e*`（离路径边中 `ℓ_k` 最小者，§20′ 的 `exists_min_sideLeafCount_offPath`）的**输出**，
+不是几何假设。
+
+**数学**。设 `e = s(a,b)` 分离 `i` 与 `k`（`hik`），`e* = s(c,d)` 是「不在 `P_{k,l}` 上、
+且 `k` 一侧叶数最小」的边，`C := T − e*` 中含 `k` 的那一侧（`i ∈ C`，即 `hCin`）。则
+
+* **情形 ①（`e*` 的端点都不在 `e` 的 `i` 一侧）**：`T − e` 的 `i` 侧整块落在 `C` 里
+  （`Cladogram.inSide_deleteEdges_of_inSide`，`Phylo/Split.lean:685`）⇒ `L_i(e) ⊆ L_k(e*)`
+  ⇒ `ℓ_i(e) ≤ ℓ_k(e*) ≤ ℓ_k(e)`，末步是 `e*` 的最小性（`e ∈ E − P_{k,l}`）；
+* **情形 ②（`e*` 的端点都在 `e` 的 `i` 一侧）**：对称地 `L_k(e) ⊆ L_k(e*)`，与最小性合成
+  **计数相等**，即 `L_k(e) = L_k(e*)`；但 `i ∈ L_k(e*)`（`hCin`，注意 `i ∉ L_k(e)`）—— 矛盾。
+  故情形 ② **不出现**。
+
+再由 `ℓ_i(e) + ℓ_k(e) = n`（`sideLeafCount_add_of_adj` ＋ 同侧不变性）得 `n ≤ 2·ℓ_k(e)`。
+
+★ 这里**没有**用到 `ℓ_k(e*) ≤ n − 2`（该上界是错的：`W50_A_MATH.md` §3.1 给出 412 个反例，
+`n = 5` 时 `ℓ_k(e*) = n−1` 即可发生）。走的是「`L_i(e) ⊆ L_k(e*)` ＋ 最小性」这条
+**正确且更强**的路子 —— 它只用 `e*` 的**最小性**，不碰任何 `e*` 的数值上界。
+
+★ 注意 `hCin`（`i` 与 `k` 在 `e*` 同侧）**不是**额外假设：它正是「樱桃 `(i,j)` 取在 `C` 里」
+的定义式内容（`C` = `e*` 的 `k` 一侧），由 `cherry_in_component` 的选法供给。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **（A）`#2` 主引理**：`e* = s(c,d)` 是离路径边中 `ℓ_k` 最小者、且 `i` 与 `k` 在
+`e*` 同侧（即 `i` 落在 `C` 里），则对**任意**分离 `i,k` 的真边 `e = s(a,b)` 有
+`ℓ_i(e) ≤ ℓ_k(e)`。
+
+这是 Atteson `:2042–2057` 那段的正确形态（OCR 里 `L − L_k(e*) ⊋ L_k(e)` 与
+`k ∉ L − L_k(e*)` 自相矛盾，已按「两侧叶集的包含关系 ＋ 最小性」重写）。 -/
+theorem sideLeafCount_leaf_le_of_eStar_min (T : Cladogram X) {a b c d : T.V}
+    (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {i k l : X}
+    (hkl : T.inSide s(a, b) (T.leaf k) (T.leaf l))
+    (hik : ¬ T.inSide s(a, b) (T.leaf i) (T.leaf k))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    T.sideLeafCount s(a, b) (T.leaf i) ≤ T.sideLeafCount s(a, b) (T.leaf k) := by
+  classical
+  have heE : s(a, b) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hab
+  -- `e* ≠ e`：否则 `i,k` 在 `e*` 同侧与 `hik` 冲突
+  have hne : s(c, d) ≠ s(a, b) := fun h => hik (h ▸ hCin)
+  -- `c,d` 必在 `e` 的同侧（`e* ≠ e` 且相邻）
+  have hcongr := T.inSide_congr_of_adj (u₁ := T.leaf i) hcd hne
+  by_cases hci : T.inSide s(a, b) (T.leaf i) c
+  · -- 情形 ②：`e*` 两端都在 `e` 的 `i` 一侧 ⇒ 与最小性 + `hCin` 矛盾
+    exfalso
+    have hdi : T.inSide s(a, b) (T.leaf i) d := hcongr.mp hci
+    have hck : ¬ T.inSide s(a, b) (T.leaf k) c := fun h => hik (hci.trans h.symm)
+    have hdk : ¬ T.inSide s(a, b) (T.leaf k) d := fun h => hik (hdi.trans h.symm)
+    -- `L_k(e) ⊆ L_k(e*)`
+    have hsub : T.sideLeaves s(a, b) (T.leaf k) ⊆ T.sideLeaves s(c, d) (T.leaf k) := by
+      intro x hx
+      rw [T.mem_sideLeaves_iff_inSide] at hx ⊢
+      exact T.inSide_deleteEdges_of_inSide rfl hx hck hdk
+    -- 与最小性合成计数相等 ⇒ 叶集相等 ⇒ `i ∈ L_k(e)`，与 `hik` 冲突
+    have hminE : T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount s(a, b) (T.leaf k) :=
+      hmin s(a, b) heE hkl
+    rw [sideLeafCount, sideLeafCount] at hminE
+    have heq := Finset.eq_of_subset_of_card_le hsub hminE
+    have hiMem : i ∈ T.sideLeaves s(c, d) (T.leaf k) := by
+      rw [T.mem_sideLeaves_iff_inSide]
+      exact (T.inSide_comm s(c, d) (T.leaf i) (T.leaf k)).mp hCin
+    rw [← heq] at hiMem
+    rw [T.mem_sideLeaves_iff_inSide] at hiMem
+    exact hik ((T.inSide_comm s(a, b) (T.leaf k) (T.leaf i)).mp hiMem)
+  · -- 情形 ①：`e*` 两端都不在 `e` 的 `i` 一侧 ⇒ `L_i(e) ⊆ L_k(e*)` ＋ 最小性
+    have hdi : ¬ T.inSide s(a, b) (T.leaf i) d := fun h => hci (hcongr.mpr h)
+    have hcard : T.sideLeafCount s(a, b) (T.leaf i) ≤ T.sideLeafCount s(c, d) (T.leaf k) := by
+      rw [sideLeafCount, sideLeafCount]
+      refine Finset.card_le_card ?_
+      intro x hx
+      rw [T.mem_sideLeaves_iff_inSide] at hx ⊢
+      have h1 : T.inSide s(c, d) (T.leaf i) (T.leaf x) :=
+        T.inSide_deleteEdges_of_inSide rfl hx hci hdi
+      exact (T.inSide_comm s(c, d) (T.leaf k) (T.leaf x)).mpr (h1.symm.trans hCin)
+    exact le_trans hcard (hmin s(a, b) heE hkl)
+
+/-- ★★★ **（A）`#2` 收口：`hbig`**（`n ≤ 2·ℓ_k(e)`，`e` 分离 `i,k` 且两者与 `k,l` 分居）。
+
+由主引理 `ℓ_i(e) ≤ ℓ_k(e)` 与两侧叶数之和 `ℓ_i(e) + ℓ_k(e) = n` 直接得。 -/
+theorem card_le_two_mul_sideLeafCount_of_sep_ik (T : Cladogram X) {a b c d : T.V}
+    (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {i k l : X}
+    (hkl : T.inSide s(a, b) (T.leaf k) (T.leaf l))
+    (hik : ¬ T.inSide s(a, b) (T.leaf i) (T.leaf k))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    Fintype.card X ≤ 2 * T.sideLeafCount s(a, b) (T.leaf k) := by
+  classical
+  have h1 := T.sideLeafCount_leaf_le_of_eStar_min hab hcd hkl hik hCin hmin
+  -- 分离 `i,k` ⇒ 两侧叶数之和为 `n`
+  have h2 : T.sideLeafCount s(a, b) (T.leaf i) + T.sideLeafCount s(a, b) (T.leaf k)
+      = Fintype.card X := by
+    rcases T.inSide_or_inSide (x := T.leaf k) hab with hk | hk
+    · have hi : T.inSide s(a, b) (T.leaf i) b := by
+        rcases T.inSide_or_inSide (x := T.leaf i) hab with h | h
+        · exact absurd (h.trans ((T.inSide_comm s(a, b) (T.leaf k) a).mp hk)) hik
+        · exact h
+      rw [T.sideLeafCount_eq_of_inSide hi, T.sideLeafCount_eq_of_inSide hk,
+        Nat.add_comm, T.sideLeafCount_add_of_adj hab]
+    · have hi : T.inSide s(a, b) (T.leaf i) a := by
+        rcases T.inSide_or_inSide (x := T.leaf i) hab with h | h
+        · exact h
+        · exact absurd (h.trans ((T.inSide_comm s(a, b) (T.leaf k) b).mp hk)) hik
+      rw [T.sideLeafCount_eq_of_inSide hi, T.sideLeafCount_eq_of_inSide hk,
+        T.sideLeafCount_add_of_adj hab]
+  omega
+
+/-- ★★★ **（A）`#2` 的非负版（无额外假设）**：§20 的 `attesonW_sub_nonneg_of_sep_ik` 里
+那个 `hbig` 参数，这里由 `e*` 的最小性**供给**。
+
+⇒ Atteson case 2 的逐边非负性 `w_e(k,l) − w_e(i,j) = 2(2S_k − n) ≥ 0` 现在**只**依赖
+「`e*` 离路径且 `ℓ_k` 最小」＋「`(i,j)` 取在 `C` 里」，不再有任何数值假设。 -/
+theorem attesonW_sub_nonneg_of_sep_ik_of_eStar (T : Cladogram X) {a b c d : T.V}
+    (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {i j k l : X}
+    (hkl : T.inSide s(a, b) (T.leaf k) (T.leaf l))
+    (hij : T.inSide s(a, b) (T.leaf i) (T.leaf j))
+    (hik : ¬ T.inSide s(a, b) (T.leaf i) (T.leaf k))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    0 ≤ (T.attesonW (T.leaf k) (T.leaf l) s(a, b) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(a, b) : ℝ) := by
+  refine T.attesonW_sub_nonneg_of_sep_ik hab hkl hij hik ?_
+  have h := T.card_le_two_mul_sideLeafCount_of_sep_ik hab hcd hkl hik hCin hmin
+  exact_mod_cast h
 
 end Cladogram
 
