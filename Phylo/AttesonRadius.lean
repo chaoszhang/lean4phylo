@@ -3892,6 +3892,83 @@ theorem exists_cherry_of_start_side_two_le (T : Cladogram X) {v c : T.V}
     (T.sideLeafCount_eq_of_inSide (hi'.trans hii)).symm, hi'.trans hii, hi'.trans hjj,
     hi'.trans hw⟩
 
+/-! ### 27.7 ★★★ 中间边两侧都 ≥ 2 片叶（`m ≥ 3` 的**计数形式**）
+
+`W50_A_MATH.md` §7.11。装配时两端各出 `2(n−4)`，再加上 `s(v,z)` 这条**中间边**两端的
+「同侧形」系数 `2(n − ℓ_k) − 2` 与 `2(n − ℓ_l) − 2`，合计 `2n − 4`，故
+
+　　　`gap_k + gap_l ≥ 4(n−4) + (2n−4) = 6n − 20 ≥ 6(n−4)`
+
+**这一步只需要 `s(v,z)` 两侧各 `≥ 2` 片叶**，不需要路径长度 `m` 的任何计数 ——
+上一批以为要数「`m − 2` 条中间边」，其实**一条中间边就够**（每条中间边两端合计 `2n−4`，
+而当 `m = 3` 时 `4(n−4) + (2n−4) ≥ 6(n−4)` 仍成立，`n ≥ 4`）。
+
+★ 为什么两侧都 ≥ 2：
+* `k` 侧：`v` 是内点（邻 `leaf k` 与 `z` 两点 ⇒ 度 ≠ 1）⇒ 它那一侧 ≥ 2 片叶；
+* `l` 侧：`z` 不是叶（否则 `z = leaf l`，则 `v` 同时邻 `leaf k` 与 `leaf l`，
+  `(k,l)` 成樱桃，与 `¬IsCherry k l` 矛盾）⇒ `z` 那一侧 ≥ 2 片叶，
+  而 `l` 与 `z` 同侧（`inSide_or_inSide` ＋ `¬inSide k l` 排除另一支）。 -/
+
+/-- ★★★ **中间边 `s(v,z)` 两侧各 ≥ 2 片叶**：`v` 是 `leaf k` 的邻居、`z` 是路径方向、
+`(k,l)` 不是樱桃 ⇒ `2 ≤ ℓ_k(s(v,z))` 且 `2 ≤ ℓ_l(s(v,z))`。
+
+有了这条，`s(v,z)` 既不是首边（`ℓ_k = 1`）也不是末边（`ℓ_l = 1`），于是两端都能对它用
+**同侧形**系数（§28 `attesonW_sub_path_eq_near_k`）。 -/
+theorem two_le_sideLeafCount_middle (T : Cladogram X) {k l : X} (hklne : k ≠ l)
+    (hncher : ¬ T.IsCherry k l) {v z : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hkz : z ≠ T.leaf k)
+    (hpath : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l)) :
+    2 ≤ T.sideLeafCount s(v, z) (T.leaf k) ∧ 2 ≤ T.sideLeafCount s(v, z) (T.leaf l) := by
+  classical
+  -- ### `s(leaf k, v) ≠ s(v,z)`：否则 `z = leaf k`
+  have hne1 : s(T.leaf k, v) ≠ s(v, z) := by
+    intro h
+    rw [Sym2.eq_iff] at h
+    rcases h with ⟨-, h2⟩ | ⟨h1, -⟩
+    · exact hvz.ne h2
+    · exact hkz h1.symm
+  -- ### `k` 与 `v` 同侧
+  have hkv' : T.inSide s(v, z) (T.leaf k) v :=
+    (SimpleGraph.deleteEdges_adj.mpr ⟨hkv, hne1⟩).reachable
+  -- ### `v` 非叶 ⇒ `2 ≤ ℓ_v`
+  have hndv : T.graph.degree v ≠ 1 := by
+    intro hd
+    have hsub : ({T.leaf k, z} : Finset T.V) ⊆ T.graph.neighborFinset v := by
+      intro y hy
+      rw [Finset.mem_insert, Finset.mem_singleton] at hy
+      rcases hy with h | h
+      · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v (T.leaf k)).mpr hkv.symm
+      · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v z).mpr hvz
+    have h2 : 2 ≤ (T.graph.neighborFinset v).card := by
+      have hc := Finset.card_le_card hsub
+      rwa [Finset.card_pair hkz.symm] at hc
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hd] at h2
+    omega
+  have h2v : 2 ≤ T.sideLeafCount s(v, z) v := T.two_le_sideLeafCount hvz hndv
+  constructor
+  · rwa [← T.sideLeafCount_eq_of_inSide hkv'] at h2v
+  · -- ### `l` 与 `z` 同侧
+    have hzvl : T.inSide s(v, z) z (T.leaf l) := by
+      rcases T.inSide_or_inSide (x := T.leaf l) hvz with h | h
+      · have hkl' : T.inSide s(v, z) (T.leaf k) (T.leaf l) :=
+          hkv'.trans ((T.inSide_comm s(v, z) (T.leaf l) v).mp h)
+        exact absurd hkl' hpath
+      · exact (T.inSide_comm s(v, z) (T.leaf l) z).mp h
+    -- ### `z` 不是叶：否则 `z = leaf l`，`(k,l)` 成樱桃
+    have hznl : ¬ T.IsLeaf z := by
+      intro hleaf
+      obtain ⟨x, hx⟩ := hleaf
+      have hadj : T.graph.Adj (T.leaf x) v := by rw [hx]; exact hvz.symm
+      have hset : T.sideLeaves s(v, z) z = {x} := by
+        rw [← hx, Sym2.eq_swap]; exact T.sideLeaves_leaf_edge hadj
+      have hmem : l ∈ T.sideLeaves s(v, z) z := (T.mem_sideLeaves_iff_inSide).mpr hzvl
+      rw [hset, Finset.mem_singleton] at hmem
+      exact hncher ⟨hklne, v, hkv, by rw [hmem, hx]; exact hvz.symm⟩
+    have hndz : T.graph.degree z ≠ 1 := fun hd => hznl ((T.isLeaf_iff_degree_eq_one z).mpr hd)
+    have h2z : 2 ≤ T.sideLeafCount s(z, v) z := T.two_le_sideLeafCount hvz.symm hndz
+    rw [Sym2.eq_swap] at h2z
+    rwa [T.sideLeafCount_eq_of_inSide hzvl] at h2z
+
 /-! ## 28. ★★★ W50-A-#19：Case D 的**逐边系数**（路径边上的 `c_e` 的显式值）
 
 `W50_A_MATH.md` §7.9.2 的两端求和要求：对 `P_{k,l}` 上的**每一条**边给出 `c_e` 的显式值，
