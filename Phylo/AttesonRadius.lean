@@ -4621,5 +4621,149 @@ theorem inSide_attach_of_cherry_branch (T : Cladogram X) {i j x : X} {v c w u : 
     · exact hxj (Finset.mem_singleton.mp h1)
   · exact h.symm
 
+/-! ## §33 Case D 装配：**两端各一条附着边 ＋ 同一条中间边**
+
+`W50_A_MATH.md` §7.15。Case D 里 `k` 不在任何樱桃中，故 §19 情形④的「叶数单调性」
+必须另行供给（`hc0`，由 `e*` 最小性 §30.2 给出）；但**收尾只需两条边**（§30.3 的两元素版）：
+
+* 樱桃 `(i,j)` 的**附着边** `s(w,u)`：`2(n−4)`（§24.3，靠 §32.2 把 `k`、`m` 搬到 `u` 侧）；
+* **中间边** `s(v,z)`：`k` 端 `2(n−ℓ_k)−2`（§28 同侧形），
+  `l` 端 `2(n−ℓ_l)−2`（`attesonW_comm` 后同一形），逐边相加 `= 2n−4`（§28 `sum_path_coeff_eq`）。
+
+本节先给出与几何无关的**求和层包装**，再给出 `k` 端的 `Q` 层结论。 -/
+
+/-- ★★★ **两条边的系数 ⇒ `Q` 层下界**：若边 `a` 的系数是 `2(n−4)`、边 `b` 的是
+`2(n−ℓ)−2`（`a ≠ b`），且其余边系数非负，则
+
+　　　`(2(n−4) + 2(n−ℓ) − 2) · δ ≤ Q(k,m) − Q(i,j)`。
+
+★ 参数化 `ℓ` 的目的：`l` 端把**同一条** `s(v,z)` 的代数量换成 `ℓ_l`（`= n − ℓ_k`），
+两个下界相加时 `ℓ_k + ℓ_l = n` 才把中间边的两份 `2(n−ℓ)−2` 合成 `2n−4`。 -/
+theorem attesonQ_gap_of_two_edge_coeffs (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j k m : X}
+    {a b : Sym2 T.V} {δ ℓ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ))
+    (ha : a ∈ T.graph.edgeSet) (hb : b ∈ T.graph.edgeSet) (hab : a ≠ b)
+    (hca : (T.attesonW (T.leaf k) (T.leaf m) a : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) a : ℝ) = 2 * ((Fintype.card X : ℝ) - 4))
+    (hcb : (T.attesonW (T.leaf k) (T.leaf m) b : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) b : ℝ) = 2 * ((Fintype.card X : ℝ) - ℓ) - 2) :
+    (2 * ((Fintype.card X : ℝ) - 4) + (2 * ((Fintype.card X : ℝ) - ℓ) - 2)) * δ
+      ≤ T.attesonQ l (T.leaf k) (T.leaf m) - T.attesonQ l (T.leaf i) (T.leaf j) := by
+  classical
+  have hmem_a : a ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]; exact ha
+  have hmem_b : b ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]; exact hb
+  have hK : 2 * ((Fintype.card X : ℝ) - 4) + (2 * ((Fintype.card X : ℝ) - ℓ) - 2)
+      ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet),
+          ((T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+            - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ)) := by
+    refine le_sum_of_two_mem (fun e => (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ)) _ hmem_a hmem_b hab ?_ ?_
+    · intro e he
+      exact hc0 e (Finset.mem_filter.mp he).2
+    · rw [hca, hcb]
+  exact T.attesonQ_gap_ge_of_coeff_sum (l := l) (i := T.leaf i) (j := T.leaf j)
+    (k := T.leaf k) (m := T.leaf m) hδ0 hl hl0 hc0 hK
+
+/-- ★★★ **`Q` 关于两个标签对称**（`attesonW` 的对称性直接搬到求和号里）。 -/
+theorem attesonQ_comm (T : Cladogram X) (l : Sym2 T.V → ℝ) (i j : T.V) :
+    T.attesonQ l i j = T.attesonQ l j i := by
+  rw [attesonQ, attesonQ]
+  exact Finset.sum_congr rfl fun e _ => by rw [T.attesonW_comm i j e]
+
+/-- ★★★★ **Case D｜一端的 `Q` 层下界**（`x` ＝该端的近叶、`y` ＝另一端的叶）：
+樱桃 `(i,j)` 在 `v` 的第三支（`c` 支）内、`leaf x`、`leaf y` 都在 `v` 那一侧、
+中间边 `s(v,z)` 分离 `x,y` 且樱桃叶与 `x` 同侧 ⇒
+
+　　　`(2(n−4) + 2(n−ℓ_x(s(v,z))) − 2) · δ ≤ Q(x,y) − Q(i,j)`。
+
+★ 一端只算**两条边**：附着边 `s(w,u)` 给 `2(n−4)`，中间边 `s(v,z)` 给 `2(n−ℓ_x)−2`。
+两端（`x := k` 与 `x := m`）各调一次，中间边那条的代数量按 `ℓ_k + ℓ_m = n` 合成 `2n−4`。
+
+前提 `hne2 : s(w,u) ≠ s(v,z)` 是「附着边不在路径上」的唯一残余条件
+（`w` 在 `c` 支、`z` 在 `v` 支，`s(v,c)` 两侧互斥即得）。 -/
+theorem attesonQ_gap_of_cherry_deep (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j x y : X}
+    {v z c w u : T.V} {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf x) (T.leaf y) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ))
+    (hvz : T.graph.Adj v z)
+    (hix : T.inSide s(v, z) (T.leaf x) (T.leaf i))
+    (hjx : T.inSide s(v, z) (T.leaf x) (T.leaf j))
+    (hxy : ¬ T.inSide s(v, z) (T.leaf x) (T.leaf y))
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j)
+    (hdeg : T.graph.degree w = 3) (hu : T.graph.Adj w u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hvc : T.graph.Adj v c)
+    (hic : T.inSide s(v, c) c (T.leaf i)) (hjc : T.inSide s(v, c) c (T.leaf j))
+    (hxv : T.inSide s(v, c) v (T.leaf x)) (hyv : T.inSide s(v, c) v (T.leaf y))
+    (hne2 : s(w, u) ≠ s(v, z)) :
+    (2 * ((Fintype.card X : ℝ) - 4)
+      + (2 * ((Fintype.card X : ℝ) - (T.sideLeafCount s(v, z) (T.leaf x) : ℝ)) - 2)) * δ
+      ≤ T.attesonQ l (T.leaf x) (T.leaf y) - T.attesonQ l (T.leaf i) (T.leaf j) := by
+  classical
+  have hxa : T.inSide s(w, u) u (T.leaf x) :=
+    T.inSide_attach_of_cherry_branch (u := u) hi hj hij hu hdeg hne hui huj hvc hic hjc hxv
+  have hya : T.inSide s(w, u) u (T.leaf y) :=
+    T.inSide_attach_of_cherry_branch (u := u) hi hj hij hu hdeg hne hui huj hvc hic hjc hyv
+  have hca : (T.attesonW (T.leaf x) (T.leaf y) s(w, u) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) = 2 * ((Fintype.card X : ℝ) - 4) :=
+    T.attesonW_sub_cherry_edge_of_disjoint (k := x) (l := y)
+      hi hj hij hu hdeg hne hui huj hxa hya
+  have hijz : T.inSide s(v, z) (T.leaf i) (T.leaf j) := hix.symm.trans hjx
+  have hcb : (T.attesonW (T.leaf x) (T.leaf y) s(v, z) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(v, z) : ℝ)
+      = 2 * ((Fintype.card X : ℝ) - (T.sideLeafCount s(v, z) (T.leaf x) : ℝ)) - 2 :=
+    T.attesonW_sub_path_eq_near_k (e := s(v, z)) (k := T.leaf x) (l := T.leaf y) hxy hijz hix
+  have ha : s(w, u) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hu
+  have hb : s(v, z) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hvz
+  exact T.attesonQ_gap_of_two_edge_coeffs (l := l) (i := i) (j := j) (k := x) (m := y)
+    (a := s(w, u)) (b := s(v, z)) (ℓ := (T.sideLeafCount s(v, z) (T.leaf x) : ℝ))
+    hδ0 hl hl0 hc0 ha hb hne2 hca hcb
+
+/-- ★★★★ **Case D｜`l` 端（远端）的 `Q` 层下界**：与 §33.3 同一套几何，只是「近叶」
+换成 `leaf m`、中间边的代数量换成 `ℓ_m(s(v,z))`；`Q` 的标签次序用 `attesonQ_comm` 换回来。 -/
+theorem attesonQ_gap_of_cherry_deep_l (T : Cladogram X) (l : Sym2 T.V → ℝ) {i j k m : X}
+    {v z c w u : T.V} {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ))
+    (hvz : T.graph.Adj v z)
+    (him : T.inSide s(v, z) (T.leaf m) (T.leaf i))
+    (hjm : T.inSide s(v, z) (T.leaf m) (T.leaf j))
+    (hmk : ¬ T.inSide s(v, z) (T.leaf m) (T.leaf k))
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w) (hij : i ≠ j)
+    (hdeg : T.graph.degree w = 3) (hu : T.graph.Adj w u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hvc : T.graph.Adj v c)
+    (hic : T.inSide s(v, c) c (T.leaf i)) (hjc : T.inSide s(v, c) c (T.leaf j))
+    (hmv : T.inSide s(v, c) v (T.leaf m)) (hkv : T.inSide s(v, c) v (T.leaf k))
+    (hne2 : s(w, u) ≠ s(v, z)) :
+    (2 * ((Fintype.card X : ℝ) - 4)
+      + (2 * ((Fintype.card X : ℝ) - (T.sideLeafCount s(v, z) (T.leaf m) : ℝ)) - 2)) * δ
+      ≤ T.attesonQ l (T.leaf k) (T.leaf m) - T.attesonQ l (T.leaf i) (T.leaf j) := by
+  classical
+  have hc0' : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf m) (T.leaf k) e : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) e : ℝ) := by
+    intro e he
+    rw [T.attesonW_comm (T.leaf m) (T.leaf k) e]
+    exact hc0 e he
+  have h := T.attesonQ_gap_of_cherry_deep (l := l) (i := i) (j := j) (x := m) (y := k)
+    hδ0 hl hl0 hc0' hvz him hjm hmk hi hj hij hdeg hu hui huj hne hvc hic hjc hmv hkv hne2
+  rw [T.attesonQ_comm (l := l) (T.leaf m) (T.leaf k)] at h
+  exact h
+
 end Cladogram
 
