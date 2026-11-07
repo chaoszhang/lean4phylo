@@ -3227,3 +3227,203 @@ theorem attesonW_sub_pair_ge (T : Cladogram X) {a1 b1 a2 b2 : T.V}
 
 end Cladogram
 
+
+/-! ## 24. ★★★ W50-A-#9：F 的附着边 —— `c_{e'''} = 2(n−4)`／`2(n−3)`
+
+`3(n−4)` 的另一半 `2(n−4)`（Atteson `:2058–2062`）。设 `(i,j)` 是樱桃、中心 `w`，`T` 二叉
+⇒ `deg w = 3`，第三条边 `e = s(w,u)`。关键几何事实是**樱桃那一侧恰含两片叶** `{i,j}`：
+`deg w = 3` ⇒ `w` 在 `T − e` 里的邻居只有 `leaf i`、`leaf j`，而它们度 1、走不出去
+⇒ 该分量恰是 `{w, leaf i, leaf j}`（本节 §24.1 对走法归纳）。
+
+于是 `S_i(e) = 2`、`S_k(e) = n − 2`（`k` 在 `u` 一侧），§19 情形④ 给
+`c_e = 2(S_k − S_i) = 2(n−4)`（`DisjointPairs`）；若 `l` 在樱桃一侧（`SharesOneLabel`），
+则 §19 情形② 给 `c_e = 2(n − S_i) − 2 = 2(n−3)`。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-! ### 24.1 `deg w = 3` 时删边一侧只剩 `{w, a, b}` -/
+
+/-- ★★ **走法走不出 `{w,a,b}`**：`w` 在 `T − s(w,u)` 中的邻居只有 `a`、`b`（`hne` 排掉 `u`），
+而 `a`、`b` 的度是 1（唯一邻居是 `w`）⇒ 从 `{w,a,b}` 里出发的走法整条支持集都在 `{w,a,b}` 里。 -/
+theorem support_subset_of_deleteEdges_three (T : Cladogram X) {w a b u : T.V}
+    (ha : T.graph.Adj w a) (hb : T.graph.Adj w b)
+    (hadeg : T.graph.degree a = 1) (hbdeg : T.graph.degree b = 1)
+    (hne : ∀ y, T.graph.Adj w y → y = a ∨ y = b ∨ y = u) :
+    ∀ {x z : T.V} (p : (T.graph.deleteEdges {s(w, u)}).Walk x z),
+      x = w ∨ x = a ∨ x = b → ∀ y ∈ p.support, y = w ∨ y = a ∨ y = b := by
+  intro x z p
+  induction p with
+  | nil =>
+    intro hx y hy
+    rw [SimpleGraph.Walk.support_nil, List.mem_singleton] at hy
+    exact hy ▸ hx
+  | @cons x' y' z' hadj rest ih =>
+    intro hx y hy
+    obtain ⟨hadjG, hadjne⟩ := SimpleGraph.deleteEdges_adj.mp hadj
+    have hyS : y' = w ∨ y' = a ∨ y' = b := by
+      rcases hx with hxw | hxa | hxb
+      · -- `x' = w`：`y'` 是 `w` 的邻居且不是 `u`
+        rcases hne y' (hxw ▸ hadjG) with h | h | h
+        · exact Or.inr (Or.inl h)
+        · exact Or.inr (Or.inr h)
+        · exfalso
+          rw [hxw, h] at hadjne
+          exact hadjne (by simp)
+      · -- `x' = a`：`a` 的度是 1
+        obtain ⟨w₀, -, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hadeg
+        exact Or.inl ((huniq y' (hxa ▸ hadjG)).trans (huniq w ha.symm).symm)
+      · -- `x' = b`
+        obtain ⟨w₀, -, huniq⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hbdeg
+        exact Or.inl ((huniq y' (hxb ▸ hadjG)).trans (huniq w hb.symm).symm)
+    rw [SimpleGraph.Walk.support_cons, List.mem_cons] at hy
+    rcases hy with hyx | hy
+    · rw [hyx]; exact hx
+    · exact ih hyS y hy
+
+/-! ### 24.2 樱桃那一侧恰含两片叶 -/
+
+/-- ★★★ **樱桃那一侧恰含两片叶**：`i,j` 是 `w` 的两个叶邻居、`u` 是第三条边、`deg w = 3`
+⇒ `sideLeafCount s(w,u) (leaf i) = 2`。
+
+`⊆`：`w` 一侧的任一片叶 `leaf x`，由 `support_subset_of_deleteEdges_three` 落在 `{w, leaf i, leaf j}`
+里；`w` 不是叶 ⇒ `x = i` 或 `x = j`。`⊇`：`i`（`mem_sideLeaves_self`）与 `j`（`leaf i → w → leaf j`
+两跳，都避开 `s(w,u)`）。 -/
+theorem sideLeafCount_cherry_side_eq_two (T : Cladogram X) {i j : X} {w u : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w)
+    (hij : i ≠ j) (hu : T.graph.Adj w u) (hdeg : T.graph.degree w = 3)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j) :
+    T.sideLeafCount s(w, u) (T.leaf i) = 2 := by
+  classical
+  have hdi : T.graph.degree (T.leaf i) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf i)).mp ⟨i, rfl⟩
+  have hdj : T.graph.degree (T.leaf j) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf j)).mp ⟨j, rfl⟩
+  have hnw : ¬ T.IsLeaf w := by
+    intro h
+    have h1 := (T.isLeaf_iff_degree_eq_one w).mp h
+    omega
+  -- `w` 与两个叶邻居在 `T − s(w,u)` 中同侧
+  have hwi : T.inSide s(w, u) w (T.leaf i) := by
+    refine (SimpleGraph.deleteEdges_adj.mpr ⟨hi.symm, ?_⟩).reachable
+    intro hmem
+    rw [Set.mem_singleton_iff] at hmem
+    have hmem1 : T.leaf i ∈ s(w, T.leaf i) := Sym2.mem_iff.mpr (Or.inr rfl)
+    rw [hmem] at hmem1
+    rcases Sym2.mem_iff.mp hmem1 with h | h
+    · exact hi.ne h
+    · exact hui h.symm
+  have hwj : T.inSide s(w, u) w (T.leaf j) := by
+    refine (SimpleGraph.deleteEdges_adj.mpr ⟨hj.symm, ?_⟩).reachable
+    intro hmem
+    rw [Set.mem_singleton_iff] at hmem
+    have hmem1 : T.leaf j ∈ s(w, T.leaf j) := Sym2.mem_iff.mpr (Or.inr rfl)
+    rw [hmem] at hmem1
+    rcases Sym2.mem_iff.mp hmem1 with h | h
+    · exact hj.ne h
+    · exact huj h.symm
+  have h2le : 2 ≤ (T.sideLeaves s(w, u) (T.leaf i)).card := by
+    have hsub : ({i, j} : Finset X) ⊆ T.sideLeaves s(w, u) (T.leaf i) := by
+      intro x hx
+      rw [Finset.mem_insert, Finset.mem_singleton] at hx
+      rcases hx with h | h
+      · rw [h]; exact T.mem_sideLeaves_self _ i
+      · rw [h]; exact (T.mem_sideLeaves_iff_inSide).mpr (hwi.symm.trans hwj)
+    have hc := Finset.card_le_card hsub
+    rwa [Finset.card_pair hij] at hc
+  have hle2 : (T.sideLeaves s(w, u) (T.leaf i)).card ≤ 2 := by
+    have hsub : T.sideLeaves s(w, u) (T.leaf i) ⊆ ({i, j} : Finset X) := by
+      intro x hx
+      rw [T.mem_sideLeaves_iff_inSide] at hx
+      obtain ⟨p⟩ := hwi.trans hx
+      have hsupp := support_subset_of_deleteEdges_three T hi.symm hj.symm hdi hdj hne
+        p (Or.inl rfl) (T.leaf x) (SimpleGraph.Walk.end_mem_support p)
+      rw [Finset.mem_insert, Finset.mem_singleton]
+      rcases hsupp with h | h | h
+      · exact absurd ⟨x, h⟩ hnw
+      · exact Or.inl (T.leaf.injective h)
+      · exact Or.inr (T.leaf.injective h)
+    have hc := Finset.card_le_card hsub
+    rwa [Finset.card_pair hij] at hc
+  have := T.sideLeafCount_eq_card_sideLeaves s(w, u) (T.leaf i)
+  omega
+
+/-! ### 24.3 附着边的系数：`2(n−4)`（`DisjointPairs`）／`2(n−3)`（`SharesOneLabel`） -/
+
+/-- ★ `w` 与其叶邻居 `leaf i` 在 `T − s(w,u)` 中同侧（只要 `leaf i ≠ u`）。 -/
+theorem inSide_leaf_of_adj_ne (T : Cladogram X) {w u : T.V} {i : X}
+    (hi : T.graph.Adj (T.leaf i) w) (hne : T.leaf i ≠ u) :
+    T.inSide s(w, u) w (T.leaf i) := by
+  refine (SimpleGraph.deleteEdges_adj.mpr ⟨hi.symm, ?_⟩).reachable
+  intro hmem
+  rw [Set.mem_singleton_iff] at hmem
+  have hmem1 : T.leaf i ∈ s(w, T.leaf i) := Sym2.mem_iff.mpr (Or.inr rfl)
+  rw [hmem] at hmem1
+  rcases Sym2.mem_iff.mp hmem1 with h | h
+  · exact hi.ne h
+  · exact hne h
+
+/-- ★★★ **F 的附着边（`DisjointPairs` 支）**：`k,l` 都在 `u` 一侧 ⇒ `c_{s(w,u)} = 2(n−4)`。
+
+§19 情形④ 给 `c = 2(S_k − S_i)`；`S_i = 2`（§24.2 樱桃侧恰两片叶）、`S_k = n − 2`
+（`w` 侧 2 片叶、`k` 在另一侧）⇒ `2((n−2) − 2) = 2(n−4)`。 -/
+theorem attesonW_sub_cherry_edge_of_disjoint (T : Cladogram X) {i j k l : X} {w u : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w)
+    (hij : i ≠ j) (hu : T.graph.Adj w u) (hdeg : T.graph.degree w = 3)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hk : T.inSide s(w, u) u (T.leaf k)) (hl : T.inSide s(w, u) u (T.leaf l)) :
+    (T.attesonW (T.leaf k) (T.leaf l) s(w, u) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) = 2 * ((Fintype.card X : ℝ) - 4) := by
+  classical
+  have hwi : T.inSide s(w, u) w (T.leaf i) := T.inSide_leaf_of_adj_ne (u := u) hi hui.symm
+  have hwj : T.inSide s(w, u) w (T.leaf j) := T.inSide_leaf_of_adj_ne (u := u) hj huj.symm
+  have hkl : T.inSide s(w, u) (T.leaf k) (T.leaf l) := hk.symm.trans hl
+  have hij' : T.inSide s(w, u) (T.leaf i) (T.leaf j) := hwi.symm.trans hwj
+  have hSi : T.sideLeafCount s(w, u) (T.leaf i) = 2 :=
+    T.sideLeafCount_cherry_side_eq_two hi hj hij hu hdeg hne hui huj
+  have hSw : T.sideLeafCount s(w, u) w = 2 := by
+    rw [T.sideLeafCount_eq_of_inSide hwi]; exact hSi
+  have hSk : T.sideLeafCount s(w, u) (T.leaf k) = T.sideLeafCount s(w, u) u :=
+    (T.sideLeafCount_eq_of_inSide hk).symm
+  have hsum := T.sideLeafCount_add_of_adj hu
+  have hSu : T.sideLeafCount s(w, u) u = Fintype.card X - 2 := by omega
+  have h2n : 2 ≤ Fintype.card X := by
+    have hc := Finset.card_le_card (Finset.subset_univ ({i, j} : Finset X))
+    rwa [Finset.card_pair hij, Finset.card_univ] at hc
+  rw [T.attesonW_sub_of_inSide_inSide hkl hij', hSi, hSk, hSu, Nat.cast_sub h2n]
+  push_cast
+  ring
+
+/-- ★★★ **F 的附着边（`SharesOneLabel` 支）**：`l` 在樱桃一侧 ⇒ `c_{s(w,u)} = 2(n−3)`。
+
+此时 `e` 分离 `k,l`（§19 情形②）而 `i,j` 同侧 ⇒ `c = 2(n − S_i) − 2 = 2(n−2) − 2 = 2(n−3)`。 -/
+theorem attesonW_sub_cherry_edge_of_share (T : Cladogram X) {i j k l : X} {w u : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w)
+    (hij : i ≠ j) (hu : T.graph.Adj w u) (hdeg : T.graph.degree w = 3)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hk : T.inSide s(w, u) u (T.leaf k)) (hl : T.inSide s(w, u) (T.leaf l) w) :
+    (T.attesonW (T.leaf k) (T.leaf l) s(w, u) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) = 2 * ((Fintype.card X : ℝ) - 3) := by
+  classical
+  have hwi : T.inSide s(w, u) w (T.leaf i) := T.inSide_leaf_of_adj_ne (u := u) hi hui.symm
+  have hwj : T.inSide s(w, u) w (T.leaf j) := T.inSide_leaf_of_adj_ne (u := u) hj huj.symm
+  have hij' : T.inSide s(w, u) (T.leaf i) (T.leaf j) := hwi.symm.trans hwj
+  have hSi : T.sideLeafCount s(w, u) (T.leaf i) = 2 :=
+    T.sideLeafCount_cherry_side_eq_two hi hj hij hu hdeg hne hui huj
+  -- `e` 分离 `k,l`：`k` 在 `u` 侧、`l` 在 `w` 侧
+  have hkl : ¬ T.inSide s(w, u) (T.leaf k) (T.leaf l) := by
+    intro h
+    have huw : T.inSide s(w, u) u w := hk.trans (h.trans hl)
+    exact T.not_reachable_deleteEdges_of_adj hu ((T.inSide_comm s(w, u) u w).mp huw)
+  rw [T.attesonW_sub_of_not_inSide_inSide hkl hij', hSi]
+  push_cast
+  ring
+
+end Cladogram
+
