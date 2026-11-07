@@ -3048,3 +3048,99 @@ theorem cherry_in_component (T : Cladogram X) {c d : T.V} (hcd : T.graph.Adj c d
 
 end Cladogram
 
+
+/-! ## 23. ★★★ W50-A-#7：F 的第一块 —— `deg v = 3` 的顶点**覆盖**叶集
+
+F（两条系数和）的几何核心是：在 `P_{k,l}` 的挂点 `v` 处，「三条邻边各自的叶侧」合起来盖住全部叶。
+这样 `|L_k(e')| + |L_l(e'')| ≥ n − |L_i(e_{p*})|`，再配 §21 给的 `|L_i(e_{p*})| ≤ n/2`
+（`e*` 最小性 ⇒ `ℓ_i ≤ ℓ_k`）即得 `≥ n/2`——这正是 Atteson `:2040` 那句
+`|L_k(e_{p*})| ≥ n/2`（`W50_A_MATH.md` §7.1）。
+
+★ **只要「覆盖」，不要「两两不交」**：`W50_A_MATH.md` §7.4 原计划 F1/F2 做「划分」，
+需要「路径上恰有一条边贴着终点」这类论证；而 F 的算术只需要 `|L_a| + |L_c| ≥ n − |L_b|`，
+**覆盖 ＋ `|L_b| ≤ n/2` 就够** ⇒ 省掉整套不交性论证（F1/F2 合并并弱化，见 §7.4 的修订）。
+★ 本节**不用** `IsBinary`，只需要「`v` 的邻居就是 `a,b,c`」这一个等式（二叉时由 `deg = 3` 造出）。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★ **`v` 的三条邻边侧覆盖全部叶**。
+
+取路径 `P_{v, leaf x}`：它的**第一条**边是 `s(v,y)`，`y` 是 `v` 的邻居，故 `y ∈ {a,b,c}`（`hnb`）；
+路径的其余部分 `rest` 从 `y` 到 `leaf x`，而路径边表**无重复**（`pathOf_edges_nodup`）
+⇒ `s(v,y) ∉ rest.edges` ⇒ `leaf x` 与 `y` 在 `T − s(v,y)` 中可达
+（`inSide_of_walk_edges_notMem`）⇒ `x ∈ L_y`。 -/
+theorem leaf_mem_sideLeaves_three (T : Cladogram X) {v a b c : T.V}
+    (hnb : T.graph.neighborFinset v = {a, b, c})
+    (hdeg : T.graph.degree v ≠ 1) :
+    ∀ x : X, x ∈ T.sideLeaves s(v, a) a ∨ x ∈ T.sideLeaves s(v, b) b ∨
+      x ∈ T.sideLeaves s(v, c) c := by
+  classical
+  have hnl : ¬ T.IsLeaf v := fun h => hdeg ((T.isLeaf_iff_degree_eq_one v).mp h)
+  intro x
+  have hnodup := pathOf_edges_nodup T v (T.leaf x)
+  have hne : v ≠ T.leaf x := fun h => hnl ⟨x, h.symm⟩
+  -- 路径非空 ⇒ 拆成「第一条边 `s(v,y)`」＋「其余 `rest`」（`exists_eq_cons_of_ne` 把中点显式给出）
+  obtain ⟨y, hadj, rest, hEq⟩ :=
+    SimpleGraph.Walk.exists_eq_cons_of_ne (G := T.graph) hne (T.pathOf v (T.leaf x))
+  rw [hEq, SimpleGraph.Walk.edges_cons, List.nodup_cons] at hnodup
+  obtain ⟨hnotmem, -⟩ := hnodup
+  have hmem : y ∈ T.graph.neighborFinset v := (SimpleGraph.mem_neighborFinset _ v y).mpr hadj
+  rw [hnb, Finset.mem_insert, Finset.mem_insert, Finset.mem_singleton] at hmem
+  have hside : T.inSide s(v, y) y (T.leaf x) := T.inSide_of_walk_notMem rest hnotmem
+  rcases hmem with rfl | rfl | rfl
+  · exact Or.inl ((T.mem_sideLeaves_iff_inSide).mpr hside)
+  · exact Or.inr (Or.inl ((T.mem_sideLeaves_iff_inSide).mpr hside))
+  · exact Or.inr (Or.inr ((T.mem_sideLeaves_iff_inSide).mpr hside))
+
+/-- ★★★ **三条邻边侧的叶数之和 ≥ n**（覆盖的计数形式）。 -/
+theorem card_le_sum_three_sideLeaves (T : Cladogram X) {v a b c : T.V}
+    (hnb : T.graph.neighborFinset v = {a, b, c})
+    (hdeg : T.graph.degree v ≠ 1) :
+    Fintype.card X ≤ (T.sideLeaves s(v, a) a).card + (T.sideLeaves s(v, b) b).card
+      + (T.sideLeaves s(v, c) c).card := by
+  classical
+  have hcov := T.leaf_mem_sideLeaves_three hnb hdeg
+  have hsub : (Finset.univ : Finset X)
+      ⊆ T.sideLeaves s(v, a) a ∪ T.sideLeaves s(v, b) b ∪ T.sideLeaves s(v, c) c := by
+    intro z _
+    rcases hcov z with h | h | h
+    · exact Finset.mem_union_left _ (Finset.mem_union_left _ h)
+    · exact Finset.mem_union_left _ (Finset.mem_union_right _ h)
+    · exact Finset.mem_union_right _ h
+  have h1 : Fintype.card X
+      ≤ (T.sideLeaves s(v, a) a ∪ T.sideLeaves s(v, b) b ∪ T.sideLeaves s(v, c) c).card := by
+    rw [← Finset.card_univ]
+    exact Finset.card_le_card hsub
+  have h2 := Finset.card_union_le (T.sideLeaves s(v, a) a ∪ T.sideLeaves s(v, b) b)
+    (T.sideLeaves s(v, c) c)
+  have h3 := Finset.card_union_le (T.sideLeaves s(v, a) a) (T.sideLeaves s(v, b) b)
+  omega
+
+/-- ★★★ **`deg v = 3` 版**：三条具体邻边（互异）即可，`neighborFinset` 的等式自动造出。 -/
+theorem card_le_sum_three_sideLeaves_of_degree (T : Cladogram X) {v a b c : T.V}
+    (ha : T.graph.Adj v a) (hb : T.graph.Adj v b) (hc : T.graph.Adj v c)
+    (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) (hdeg : T.graph.degree v = 3) :
+    Fintype.card X ≤ (T.sideLeaves s(v, a) a).card + (T.sideLeaves s(v, b) b).card
+      + (T.sideLeaves s(v, c) c).card := by
+  classical
+  have hsub : ({a, b, c} : Finset T.V) ⊆ T.graph.neighborFinset v := by
+    intro z hz
+    rw [Finset.mem_insert, Finset.mem_insert, Finset.mem_singleton] at hz
+    rcases hz with hza | hzb | hzc
+    · rw [hza]; exact (SimpleGraph.mem_neighborFinset _ v a).mpr ha
+    · rw [hzb]; exact (SimpleGraph.mem_neighborFinset _ v b).mpr hb
+    · rw [hzc]; exact (SimpleGraph.mem_neighborFinset _ v c).mpr hc
+  have hcard : ({a, b, c} : Finset T.V).card = 3 := by
+    rw [Finset.card_insert_of_notMem (by simp [hab, hac]),
+      Finset.card_insert_of_notMem (by simp [hbc]), Finset.card_singleton]
+  have hnb' : ({a, b, c} : Finset T.V) = T.graph.neighborFinset v := by
+    refine Finset.eq_of_subset_of_card_le hsub ?_
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hdeg, hcard]
+  exact T.card_le_sum_three_sideLeaves (by rw [hnb']) (by rw [hdeg]; norm_num)
+
+end Cladogram
+
