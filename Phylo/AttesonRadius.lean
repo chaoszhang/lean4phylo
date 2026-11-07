@@ -3667,5 +3667,59 @@ theorem exists_first_three_of_path (T : Cladogram X) (hbin : T.IsBinary) {k l : 
   exact ⟨v, z, c, hadj_kv, hadj_vz, hadj_vc, hdeg3, hvl, hzk, hck, hcz.symm,
     (T.mem_pathOf_edges_iff_not_inSide _ _ _).mp hmem⟩
 
+/-! ### 27.2 `v` 的三个邻居就是 `leaf k`、`z`、`c` -/
+
+/-- ★★ **`neighborFinset v = {leaf k, z, c}`**（三条互异邻边 ＋ 度 3）—— §23 的覆盖定理所需的形式。 -/
+theorem neighborFinset_eq_three (T : Cladogram X) {k : X} {v z c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hdeg : T.graph.degree v = 3)
+    (hzk : z ≠ T.leaf k) (hck : c ≠ T.leaf k) (hcz : c ≠ z) :
+    T.graph.neighborFinset v = {T.leaf k, z, c} := by
+  classical
+  have hsub : ({T.leaf k, z, c} : Finset T.V) ⊆ T.graph.neighborFinset v := by
+    intro y hy
+    rw [Finset.mem_insert, Finset.mem_insert, Finset.mem_singleton] at hy
+    rcases hy with h | h | h
+    · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v (T.leaf k)).mpr hkv.symm
+    · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v z).mpr hvz
+    · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v c).mpr hvc
+  have hcard : ({T.leaf k, z, c} : Finset T.V).card = 3 := by
+    rw [Finset.card_insert_of_notMem (by simp [hzk.symm, hck.symm]),
+      Finset.card_insert_of_notMem (by simp [hcz.symm]), Finset.card_singleton]
+  have hle : (T.graph.neighborFinset v).card ≤ ({T.leaf k, z, c} : Finset T.V).card := by
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hdeg, hcard]
+  exact (Finset.eq_of_subset_of_card_le hsub hle).symm
+
+/-! ### 27.3 起点处的叶数界：`S_v(s(v,z)) ≤ 1 + |B_c|` -/
+
+/-- ★★★ **`v` 一侧的叶数 `≤ 1 + |B_c|`**：`v` 的邻居是 `leaf k`、`z`、`c`，于是 `s(v,z)` 的
+`v` 一侧只可能装 `leaf k` 与 `c` 一侧的叶（覆盖 §23 ＋ 补集 `sideLeaves_compl_adj`）。
+
+这正是 `W50_A_MATH.md` §7.6 里 `S_i(s(v,z)) = 1 + |B_c|` 的「`≤`」半边 —— 配对／单边估计
+只需要这个方向。 -/
+theorem sideLeafCount_start_le (T : Cladogram X) {k : X} {v z c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hnb : T.graph.neighborFinset v = {T.leaf k, z, c})
+    (hdeg : T.graph.degree v ≠ 1) :
+    T.sideLeafCount s(v, z) v ≤ 1 + T.sideLeafCount s(v, c) c := by
+  classical
+  have hle_k : T.sideLeaves s(v, T.leaf k) (T.leaf k) = {k} := by
+    rw [Sym2.eq_swap]; exact T.sideLeaves_leaf_edge hkv
+  have hsub : T.sideLeaves s(v, z) v ⊆ insert k (T.sideLeaves s(v, c) c) := by
+    intro x hx
+    rcases T.leaf_mem_sideLeaves_three hnb hdeg x with h | h | h
+    · rw [hle_k, Finset.mem_singleton] at h
+      rw [h]; exact Finset.mem_insert_self _ _
+    · exfalso
+      rw [T.sideLeaves_compl_adj hvz, Finset.mem_compl] at h
+      exact h hx
+    · exact Finset.mem_insert_of_mem h
+  have h1 : (T.sideLeaves s(v, z) v).card ≤ (insert k (T.sideLeaves s(v, c) c)).card :=
+    Finset.card_le_card hsub
+  have h2 : (insert k (T.sideLeaves s(v, c) c)).card ≤ (T.sideLeaves s(v, c) c).card + 1 :=
+    Finset.card_insert_le _ _
+  show (T.sideLeaves s(v, z) v).card ≤ 1 + (T.sideLeaves s(v, c) c).card
+  omega
+
 end Cladogram
 
