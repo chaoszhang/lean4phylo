@@ -2565,23 +2565,28 @@ theorem attesonW_comm (T : Cladogram X) (i j : T.V) (e : Sym2 T.V) :
 /-- ★★★ **（A）四情形**逐边非负，**无条件版**（`Atteson :2008–2070` 的 case 1–4 全集）：
 
 对**任意**真边 `e = s(a,b)`，只要 `e* = s(c,d)` 是离路径边中 `ℓ_k` 最小者（`hmin`）且
-樱桃 `(i,j)` 取在 `C` 里（`hCin`、`hCjn`），就有
+樱桃 `(i,j)` **两叶都在 `C` 的 `k` 侧**（`hCin`、`hCjn`），就有
 
 　　　`c_e = w_e(k,l) − w_e(i,j) ≥ 0`。
 
 分情形（穷尽且互斥）：`e ∈ P_{k,l}`（W49 ★★ `attesonW_sub_nonneg_of_not_inSide`）／
 `e ∈ P_{i,j}`（§19 ③）／`e ∈ P_{i,k} − P_{k,l}`（§21 情形 ②）／
-`e ∈ P_{j,l} − P_{k,l}`（§21 的**镜像**，靠 `attesonW_comm`）／其余（§20 `c_e = 0`）。
+`e ∈ P_{j,k} − P_{k,l}`（§21 的**镜像**，靠 `attesonW_comm`）／其余（§20 `c_e = 0`）。
 ★ 本定理**没有**任何数值假设（`hbig` 已由 §21 供给）。
 ★ **W50-#11 修正**：原签名多带一条 `hkl : T.inSide s(a,b) (leaf k) (leaf l)`，它在证明里
 **从未被用过**（第一个 `by_cases h1` 又重新判了一次），却把 `e ∈ P_{k,l}` 的真边**排除在外** ——
-那样本定理就无法用于路径边，是**签名 bug**（不是数学错误）。已删除。 -/
+那样本定理就无法用于路径边，是**签名 bug**（不是数学错误）。已删除。
+★★ **W50-#34 修正（round 24）**：原签名写 `hCjn : inSide e* (leaf j) (leaf l)`（`j` 与 **`l`** 同侧），
+与「樱桃取在 `e*` 的 `k` 侧连通块里」（Atteson `:2024–2028`）**矛盾**：一颗樱桃的两片叶只能被
+**它自己的两条悬挂边**分开，任何其它边都不分离它们，所以 `hCin` 与旧 `hCjn` **不能同真**
+⇒ 旧定理**不可用**。已改为 `inSide e* (leaf j) (leaf k)`（两叶同在 `k` 侧），
+情形 ③ 也随之从 `P_{j,l}` 改为 `P_{j,k}`（用 `attesonW_comm` 对齐）。 -/
 theorem attesonW_sub_nonneg_of_all (T : Cladogram X) {a b c d : T.V}
     (hab : T.graph.Adj a b) (hcd : T.graph.Adj c d) {i j k l : X}
     (hcher : T.IsCherry i j) (hklne : k ≠ l)
     (heStarI : T.inSide s(c, d) (T.leaf k) (T.leaf l))
     (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
-    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf l))
+    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf k))
     (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
       T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
     0 ≤ (T.attesonW (T.leaf k) (T.leaf l) s(a, b) : ℝ)
@@ -2599,17 +2604,15 @@ theorem attesonW_sub_nonneg_of_all (T : Cladogram X) {a b c d : T.V}
   by_cases h1 : T.inSide s(a, b) (T.leaf k) (T.leaf l)
   · by_cases h2 : T.inSide s(a, b) (T.leaf i) (T.leaf j)
     · by_cases h3 : T.inSide s(a, b) (T.leaf i) (T.leaf k)
-      · by_cases h4 : T.inSide s(a, b) (T.leaf j) (T.leaf l)
-        · -- 情形 ④：四叶同在 `e` 一侧 ⇒ `c_e = 0`
-          have hz := T.attesonW_sub_eq_zero_of_far (e := s(a, b)) h1 h3 h4
+      · by_cases h4 : T.inSide s(a, b) (T.leaf j) (T.leaf k)
+        · -- 情形 ④：`i,j,k,l` 四叶同在 `e` 一侧 ⇒ `c_e = 0`
+          have h4l : T.inSide s(a, b) (T.leaf j) (T.leaf l) := h4.trans h1
+          have hz := T.attesonW_sub_eq_zero_of_far (e := s(a, b)) h1 h3 h4l
           rw [hz]
-        · -- 情形 ③：`e ∈ P_{j,l} − P_{k,l}`（情形 ② 的镜像）
+        · -- 情形 ③：`e ∈ P_{j,k} − P_{k,l}`（樱桃**另一叶**的镜像；`attesonW_comm` 对齐）
           have hm := T.attesonW_sub_nonneg_of_sep_ik_of_eStar (a := a) (b := b)
-            (c := c) (d := d) (i := j) (j := i) (k := l) (l := k) hab hcd
-            ((T.inSide_comm s(a, b) (T.leaf k) (T.leaf l)).mp h1)
-            ((T.inSide_comm s(a, b) (T.leaf i) (T.leaf j)).mp h2) h4 hCjn hmin'
-          rw [attesonW_comm T (T.leaf l) (T.leaf k) s(a, b),
-            attesonW_comm T (T.leaf j) (T.leaf i) s(a, b)] at hm
+            (c := c) (d := d) (i := j) (j := i) hab hcd h1 h2.symm h4 hCjn hmin
+          rw [attesonW_comm T (T.leaf j) (T.leaf i) s(a, b)] at hm
           exact hm
       · -- 情形 ②：`e ∈ P_{i,k} − P_{k,l}`
         exact T.attesonW_sub_nonneg_of_sep_ik_of_eStar hab hcd h1 h2 h3 hCin hmin
@@ -4248,14 +4251,18 @@ theorem exists_cherry_attach_vertex (T : Cladogram X) {i j : X} {w : T.V}
 装配时「其余边全部丢弃」只需要这一条（`Finset.sum_le_sum_of_subset_of_nonneg` 的 `h0`）。
 
 ★ 为什么 §21′ 只能逐边引用、不能整体引用：它的两个 `inSide` 假设
-（`hCin : i ~ k`、`hCjn : j ~ l` 相对 `e*`）在 `e*` **离路径**时才有解 ——
-`e*` 两侧恰好是「`k,l` 同侧」，而樱桃两叶都在 `k` 那侧，故 `i ~ k`、`j ~ k ~ l`。 -/
+（`hCin : i ~ k`、`hCjn : j ~ k` 相对 `e*`）只有在「`e*` 离路径 ⇒ `e*` 两侧恰是「`k,l` 同侧」
+＋ 樱桃两叶都在 `k` 那侧」时才有解 —— 故 `i ~ k`、`j ~ k`。
+
+★★ **W50-#34 修正（round 24）**：本定理旧签名写 `hCjn : inSide e* (leaf j) (leaf l)`，
+与它自己的这段说明（`j ~ k`）**互相矛盾**，也与 Atteson `:2024–2028` 的樱桃取法矛盾
+（樱桃花两叶不可能分居 `e*` 两侧）。旧版本**无解可用**；已改为 `j ~ k`。 -/
 theorem attesonW_sub_nonneg_all_of_min (T : Cladogram X) {c d : T.V}
     (hcd : T.graph.Adj c d) {i j k l : X}
     (hcher : T.IsCherry i j) (hklne : k ≠ l)
     (heStarI : T.inSide s(c, d) (T.leaf k) (T.leaf l))
     (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
-    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf l))
+    (hCjn : T.inSide s(c, d) (T.leaf j) (T.leaf k))
     (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
       T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
     ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
