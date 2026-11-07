@@ -5477,4 +5477,68 @@ theorem attesonQ_gap_ge_three_of_start (T : Phylogram X) {i j k l : X} {v z c c�
   exact attesonQ_gap_ge_three_mul_minEdgeWeight T hδ0 hsub h1ne2 h3ne1.symm h3ne2.symm hc0 h12 h3
 
 
+/-! ## 43. ★★★★ W50-A-#41：度量层粘合（`attesonQ wExt` ↔ `toDissimilarity.Q` ↔ 樱桃）
+
+`IsCherrySeparated` 是**度量层**命题（`δ.Q`、`δ.IsCherry`），而 §42 的结论是
+**树层** `attesonQ T.wExt` 的形式。本节落三条桥，收口时只需 `rw`：
+
+1. `toDissimilarity_Q`：`(toDissimilarity T).Q i j = attesonQ T.wExt (leaf i) (leaf j)`；
+2. `toDissimilarity_gap`：树层的间隙不等式**原样搬**到度量层；
+3. `isCherry_toDissimilarity`：树层樱桃 ⇒ 度量层樱桃（逆否即 `¬δ.IsCherry k l ⇒ ¬T.IsCherry k l`）。 -/
+
+namespace NJ
+
+namespace Dissimilarity
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **度量层的 `Q` 就是 `attesonQ wExt`**（Atteson Lemma 10 的收口形式）。 -/
+theorem toDissimilarity_Q (T : Phylogram X) (i j : X) :
+    (toDissimilarity T).Q i j
+      = T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j) := by
+  rw [Cladogram.attesonQ_wExt_eq]
+  rfl
+
+/-- ★★★★ **间隙不等式搬到度量层**：树层 `attesonQ` 上的下界可直接用到 `toDissimilarity.Q` 上。 -/
+theorem toDissimilarity_gap (T : Phylogram X) {i j k l : X} {c : ℝ}
+    (h : c ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf l)
+      - T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j)) :
+    c ≤ (toDissimilarity T).Q k l - (toDissimilarity T).Q i j := by
+  rw [toDissimilarity_Q, toDissimilarity_Q]
+  linarith
+
+/-- ★★★★ **树层樱桃 ⇒ 度量层樱桃**（`δ = toDissimilarity T`）：这就是《注释》
+里提到的 `CASTERNJ.isCherry_of_tree_isCherry` 在 `δ` 取树度量时的**就地版**
+（那份需要额外假设 `hT`，这里 `hT` 是 `rfl`）。
+
+`k = l` 时两条不等式退化为 `w` 处三角不等式；`k ≠ l` 时直接用
+`Cladogram.dist_add_le_of_isCherry`（`Phylo/CherryQuartet.lean:131`）。 -/
+theorem isCherry_toDissimilarity (T : Phylogram X) {a b : X} (hc : T.IsCherry a b) :
+    (toDissimilarity T).IsCherry a b := by
+  classical
+  have hcb : T.IsCherry a b := hc
+  obtain ⟨hab, -⟩ := hc
+  refine ⟨hab, ?_⟩
+  intro k l hka hkb hla hlb
+  by_cases hkl : k = l
+  · subst hkl
+    have htri : T.dist (T.leaf a) (T.leaf b)
+        ≤ T.dist (T.leaf a) (T.leaf k) + T.dist (T.leaf b) (T.leaf k) := by
+      have h1 := T.dist_triangle (T.leaf a) (T.leaf k) (T.leaf b)
+      rwa [Phylo.TreeDist.dist_comm T (T.leaf k) (T.leaf b)] at h1
+    have hzero : T.dist (T.leaf k) (T.leaf k) = 0 := Phylogram.dist_self T (T.leaf k)
+    constructor
+    · show T.dist (T.leaf a) (T.leaf b) + T.dist (T.leaf k) (T.leaf k)
+        ≤ T.dist (T.leaf a) (T.leaf k) + T.dist (T.leaf b) (T.leaf k)
+      rw [hzero]; linarith
+    · show T.dist (T.leaf a) (T.leaf b) + T.dist (T.leaf k) (T.leaf k)
+        ≤ T.dist (T.leaf a) (T.leaf k) + T.dist (T.leaf b) (T.leaf k)
+      rw [hzero]; linarith
+  · exact Cladogram.dist_add_le_of_isCherry hcb hka hkb hla hlb hkl
+
+end Dissimilarity
+
+end NJ
+
+
 
