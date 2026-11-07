@@ -4546,5 +4546,80 @@ theorem attesonQ_gap_of_cherry_start_l (T : Cladogram X) (l : Sym2 T.V → ℝ) 
   exact T.attesonQ_gap_ge_of_coeff_sum (l := l) (i := T.leaf y) (j := T.leaf m)
     (k := T.leaf k) (m := T.leaf m) hδ0 hl hl0 hc0 hK
 
+/-! ## §32 Case D 装配工具：樱桃侧的**叶集恰为两叶**与「另一端同侧」
+
+`W50_A_MATH.md` §7.15。§33 要用 §24.3 的附着边系数 `c_{s(w,u)} = 2(n−4)`，它的前提是
+`k`（以及另一端的中转叶 `m`）都落在 `u` 那一侧。可 `k` 与樱桃两叶 `i,j` 分居
+`s(v,c)` 两侧，故必须先证「`leaf k` 不在 `w` 那一侧」——**§32.1 把 `w` 那一侧的叶集
+算清楚（恰是 `{i,j}`）**，再用 `inSide_or_inSide` 的两支二分把 `k` 逼到 `u` 侧。 -/
+
+/-- ★★★ **樱桃侧叶集恰为 `{i,j}`**：`i,j` 是 `w` 的叶邻居、`u` 是第三条边、`deg w = 3`
+⇒ `sideLeaves s(w,u) w = {i,j}`。
+
+§24.2（`sideLeafCount_cherry_side_eq_two`）只给了**计数** `= 2`；这里要的是**集合**，
+装配时才能从 `inSide s(w,u) (leaf x) w` 反推出 `x = i ∨ x = j`。
+
+证：`sideLeaves s(w,u) w` 含 `{i,j}`（两片叶都与 `w` 同侧，§24.2′），基数为 2
+（`sideLeafCount_eq_of_inSide` ＋ §24.2），故相等。 -/
+theorem sideLeaves_cherry_side_eq_pair (T : Cladogram X) {i j : X} {w u : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w)
+    (hij : i ≠ j) (hu : T.graph.Adj w u) (hdeg : T.graph.degree w = 3)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j) :
+    T.sideLeaves s(w, u) w = {i, j} := by
+  classical
+  have hwi : T.inSide s(w, u) w (T.leaf i) := T.inSide_leaf_of_adj_ne (u := u) hi hui.symm
+  have hwj : T.inSide s(w, u) w (T.leaf j) := T.inSide_leaf_of_adj_ne (u := u) hj huj.symm
+  have hSi : T.sideLeafCount s(w, u) (T.leaf i) = 2 :=
+    T.sideLeafCount_cherry_side_eq_two (u := u) hi hj hij hu hdeg hne hui huj
+  have hSw : T.sideLeafCount s(w, u) w = 2 := (T.sideLeafCount_eq_of_inSide hwi).trans hSi
+  have hcard : (T.sideLeaves s(w, u) w).card = 2 := by
+    rw [← T.sideLeafCount_eq_card_sideLeaves]
+    exact hSw
+  have hsub : ({i, j} : Finset X) ⊆ T.sideLeaves s(w, u) w := by
+    intro x hx
+    rw [Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with h | h
+    · rw [h]; exact (T.mem_sideLeaves_iff_inSide).mpr hwi
+    · rw [h]; exact (T.mem_sideLeaves_iff_inSide).mpr hwj
+  have hEq : T.sideLeaves s(w, u) w = {i, j} := by
+    refine (Finset.eq_of_subset_of_card_le hsub ?_).symm
+    rw [hcard, Finset.card_pair hij]
+  exact hEq
+
+/-- ★★★ **「另一端同侧」**：樱桃 `(i,j)` 连同中心 `w` 在 `s(v,c)` 的 **`c` 侧**，
+而 `leaf x` 在 **`v` 侧** ⇒ `x` 不在 `w` 侧，即 `leaf x` 与 `u` 同侧 ——
+正是 §24.3 附着边系数所需的两条 `inSide` 前提（`k` 与 `m` 各用一次）。
+
+证：`inSide_or_inSide hu` 给两支。若 `leaf x` 与 `w` 同侧，则它落在
+`sideLeaves s(w,u) w = {i,j}`（§32.1）里 ⇒ `x = i` 或 `x = j`；可 `leaf i`、`leaf j`
+都在 `c` 侧、`leaf x` 在 `v` 侧，`not_inSide_both` 排除。 -/
+theorem inSide_attach_of_cherry_branch (T : Cladogram X) {i j x : X} {v c w u : T.V}
+    (hi : T.graph.Adj (T.leaf i) w) (hj : T.graph.Adj (T.leaf j) w)
+    (hij : i ≠ j) (hu : T.graph.Adj w u) (hdeg : T.graph.degree w = 3)
+    (hne : ∀ y, T.graph.Adj w y → y = T.leaf i ∨ y = T.leaf j ∨ y = u)
+    (hui : u ≠ T.leaf i) (huj : u ≠ T.leaf j)
+    (hvc : T.graph.Adj v c)
+    (hic : T.inSide s(v, c) c (T.leaf i)) (hjc : T.inSide s(v, c) c (T.leaf j))
+    (hxv : T.inSide s(v, c) v (T.leaf x)) :
+    T.inSide s(w, u) u (T.leaf x) := by
+  classical
+  have hneq : T.sideLeaves s(w, u) w = {i, j} :=
+    T.sideLeaves_cherry_side_eq_pair (u := u) hi hj hij hu hdeg hne hui huj
+  have hxi : x ≠ i := by
+    rintro rfl
+    exact T.not_inSide_both hvc ⟨hxv, hic⟩
+  have hxj : x ≠ j := by
+    rintro rfl
+    exact T.not_inSide_both hvc ⟨hxv, hjc⟩
+  rcases T.inSide_or_inSide (x := T.leaf x) hu with h | h
+  · exfalso
+    have hmem : x ∈ T.sideLeaves s(w, u) w := (T.mem_sideLeaves_iff_inSide).mpr h.symm
+    rw [hneq] at hmem
+    rcases Finset.mem_insert.mp hmem with h1 | h1
+    · exact hxi h1
+    · exact hxj (Finset.mem_singleton.mp h1)
+  · exact h.symm
+
 end Cladogram
 
