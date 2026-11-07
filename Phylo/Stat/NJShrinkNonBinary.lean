@@ -499,4 +499,348 @@ theorem shrinkWNB_new {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b) :
   unfold shrinkWNB
   rw [if_pos rfl]
 
+/-! ## G6b²｜走法搬移（带边权和）
+
+`dist` 对齐的地基：把 `T`-走法搬进新图、把新图走法搬回 `T`，**同时**跟踪
+`edges.map wExt` 的权和。两支的支点都是 ★★ `shrinkWNB_old`：
+**只要走法避开了 `⟨leaf a⟩`，它就绕开了唯一那条被改权的边**。 -/
+
+/-- ★★ **被改权的那条边不是「两端都避 `leaf a`」的边**。
+
+`Sym2.eq_iff` 只给两种配对：`⟨u⟩ = ⟨leaf a⟩` 或 `⟨v⟩ = ⟨leaf a⟩`，两者都被 `hua`/`hva` 排掉。
+（★D：这里**不**需要二叉性 —— 改权边的一个端点就**是** `T.leaf a`。） -/
+theorem shrinkWNB_mk_ne_new {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b)
+    {u v : T.V} (hu : u ≠ T.leaf b) (hv : v ≠ T.leaf b)
+    (hua : u ≠ T.leaf a) (hva : v ≠ T.leaf a) :
+    s((⟨u, hu⟩ : ShrinkVNB T b), ⟨v, hv⟩)
+      ≠ s((⟨T.leaf a, fun h => hab (T.leaf.injective h)⟩ : ShrinkVNB T b), ⟨w, hwb⟩) := by
+  intro h
+  rcases Sym2.eq_iff.mp h with ⟨h1, -⟩ | ⟨-, h2⟩
+  · exact hua (congrArg Subtype.val h1)
+  · exact hva (congrArg Subtype.val h2)
+
+/-- ★★ **旧边的权就是 `T.wExt`**（`hua`/`hva` 版；两支搬移都用它）。 -/
+theorem shrinkWNB_old' {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b)
+    {u v : T.V} (huv : T.graph.Adj u v) (hu : u ≠ T.leaf b) (hv : v ≠ T.leaf b)
+    (hua : u ≠ T.leaf a) (hva : v ≠ T.leaf a) :
+    shrinkWNB (T := T) hab hwb s((⟨u, hu⟩ : ShrinkVNB T b), ⟨v, hv⟩) = T.wExt s(u, v) :=
+  shrinkWNB_old (T := T) hab hwb huv hu hv
+    (shrinkWNB_mk_ne_new (T := T) hab hwb hu hv hua hva)
+
+/-- ★★ **走法的 `walkDist` = `shrinkWNB` 沿边表求和**（`wExt` 落到 `shrinkWNB`）。 -/
+theorem shrinkPhylogramNB_walkDist_eq {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {U V : ShrinkVNB T b} (q : (shrinkGraphNB T b).Walk U V) :
+    (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).walkDist q
+      = (q.edges.map (shrinkWNB (T := T) hab hwb)).sum := by
+  rw [Phylogram.walkDist]
+  congr 1
+  refine List.map_congr_left ?_
+  intro e he
+  have hmem : e ∈ (shrinkGraphNB T b).edgeSet := q.edges_subset_edgeSet he
+  rw [Phylogram.wExt, dif_pos hmem]
+
+/-- ★★★ **走法搬移 `T → G`（带边权和）**：若 `T` 里走法 `p` 的支撑集**避开**
+`T.leaf a`（改了权）与 `T.leaf b`（已删），则它整条落进新图，且**边权和不变**。
+
+（★D：这里**不**需要「避开中点 `w`」——本构造把 `w` 留在了树里，
+所以「旧–旧路径过 `w`」完全无害；二叉支之所以要避 `w`，是因为那边 `w` 被抑制了。） -/
+theorem exists_walk_nb_sum {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b) :
+    ∀ {u v : T.V} (p : T.graph.Walk u v),
+      ∀ (hu : u ≠ T.leaf b) (hv : v ≠ T.leaf b),
+        (∀ z ∈ p.support, z ≠ T.leaf a ∧ z ≠ T.leaf b) →
+          ∃ q : (shrinkGraphNB T b).Walk ⟨u, hu⟩ ⟨v, hv⟩,
+            (q.edges.map (shrinkWNB (T := T) hab hwb)).sum = (p.edges.map T.wExt).sum := by
+  intro u v p
+  induction p with
+  | nil => intro _ _ _; exact ⟨SimpleGraph.Walk.nil, rfl⟩
+  | @cons u0 m x0 hadj rest ih =>
+      intro hu hv hsp
+      have hmem_m : m ∈ (SimpleGraph.Walk.cons hadj rest).support :=
+        List.mem_cons_of_mem u0 (SimpleGraph.Walk.start_mem_support rest)
+      have hmem_u0 : u0 ∈ (SimpleGraph.Walk.cons hadj rest).support :=
+        SimpleGraph.Walk.start_mem_support (SimpleGraph.Walk.cons hadj rest)
+      have hu_a : u0 ≠ T.leaf a := (hsp u0 hmem_u0).1
+      have hm_a : m ≠ T.leaf a := (hsp m hmem_m).1
+      have hm : m ≠ T.leaf b := (hsp m hmem_m).2
+      have hsp' : ∀ z ∈ rest.support, z ≠ T.leaf a ∧ z ≠ T.leaf b := by
+        intro z hz
+        exact hsp z (by rw [SimpleGraph.Walk.support_cons]; exact List.mem_cons_of_mem u0 hz)
+      obtain ⟨r, hr⟩ := ih hm hv hsp'
+      refine ⟨SimpleGraph.Walk.cons
+        (show (shrinkGraphNB T b).Adj ⟨u0, hu⟩ ⟨m, hm⟩ from hadj) r, ?_⟩
+      rw [SimpleGraph.Walk.edges_cons, SimpleGraph.Walk.edges_cons, List.map_cons, List.sum_cons,
+        List.map_cons, List.sum_cons,
+        shrinkWNB_old' (T := T) hab hwb hadj hu hm hu_a hm_a, hr]
+
+/-- ★★★ **走法搬移 `G → T`（带边权和）**：若新图里走法 `q` 的支撑集**不含** `⟨leaf a⟩`，
+则它完全由旧边组成，可搬回 `T` 且**边权和不变**。
+
+（`⟨leaf a⟩` 在新图里度为 1，故以别的顶点为端点的**路径**不会经过它 ——
+★★ `not_mem_support_of_degree_one`。） -/
+theorem exists_walk_of_nb_sum {b : X} {w : T.V} (hab : a ≠ b) (hwb : w ≠ T.leaf b) :
+    ∀ {U V : ShrinkVNB T b} (q : (shrinkGraphNB T b).Walk U V),
+      (∀ z ∈ q.support, z.1 ≠ T.leaf a) →
+        ∃ p : T.graph.Walk U.1 V.1,
+          (q.edges.map (shrinkWNB (T := T) hab hwb)).sum = (p.edges.map T.wExt).sum := by
+  intro U V q
+  induction q with
+  | nil => intro _; exact ⟨SimpleGraph.Walk.nil, rfl⟩
+  | @cons U0 M V0 hadj rest ih =>
+      intro hsp
+      have hmem_M : M ∈ (SimpleGraph.Walk.cons hadj rest).support :=
+        List.mem_cons_of_mem U0 (SimpleGraph.Walk.start_mem_support rest)
+      have hmem_U0 : U0 ∈ (SimpleGraph.Walk.cons hadj rest).support :=
+        SimpleGraph.Walk.start_mem_support (SimpleGraph.Walk.cons hadj rest)
+      have hU : U0.1 ≠ T.leaf a := hsp U0 hmem_U0
+      have hM : M.1 ≠ T.leaf a := hsp M hmem_M
+      have hsp' : ∀ z ∈ rest.support, z.1 ≠ T.leaf a := by
+        intro z hz
+        exact hsp z (by rw [SimpleGraph.Walk.support_cons]; exact List.mem_cons_of_mem U0 hz)
+      obtain ⟨p, hp⟩ := ih hsp'
+      refine ⟨SimpleGraph.Walk.cons (show T.graph.Adj U0.1 M.1 from hadj) p, ?_⟩
+      rw [SimpleGraph.Walk.edges_cons, SimpleGraph.Walk.edges_cons, List.map_cons, List.sum_cons,
+        List.map_cons, List.sum_cons,
+        shrinkWNB_old' (T := T) hab hwb (show T.graph.Adj U0.1 M.1 from hadj)
+          U0.2 M.2 hU hM, hp]
+
+/-! ## G6b｜旧–旧距离：`dist` 不变 -/
+
+/-- ★★★ **旧–旧距离（一般形式）**：`u, v` 都**不是**合并叶的像（`u.1, v.1 ≠ T.leaf a`）时
+`T'.dist u v = T.dist u.1 v.1`。
+
+两个方向：
+* `≤`：`T` 中 `u.1 → v.1` 的**唯一**路径避开 `leaf a`、`leaf b`（两者度均为 1 且都不是端点
+  ⇒ ★★ `not_mem_support_of_degree_one`），整条搬进 `G` 且权和不变
+  （★★★ `exists_walk_nb_sum`）⇒ `dist' ≤ walkDist = dist_T`；
+* `≥`：`G` 中唯一路径**不含** `⟨leaf a⟩`（它在 `G` 里度 1 且不是端点），搬回 `T`
+  （★★★ `exists_walk_of_nb_sum`）⇒ `dist_T ≤ walkDist ≤ dist'`。
+
+⇒ 被改权的那条边 `{leaf a, w}` **不在**任何「旧叶 ↔ 旧叶」路径上，故旧–旧距离一字不改。 -/
+theorem shrinkPhylogramNB_dist_old {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {u v : ShrinkVNB T b} (hua : u.1 ≠ T.leaf a) (hva : v.1 ≠ T.leaf a) :
+    (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist u v = T.dist u.1 v.1 := by
+  have haa : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+  by_cases huv : u.1 = v.1
+  · have hsub : u = v := Subtype.ext huv
+    rw [hsub]
+    simp only [Phylogram.dist_self]
+  · have h1 : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist u v
+        ≤ T.dist u.1 v.1 := by
+      set P := (T.existsUnique_path u.1 v.1).choose with hPdef
+      have hPpath : P.IsPath := (T.existsUnique_path u.1 v.1).choose_spec.1
+      have hda : T.graph.degree (T.leaf a) = 1 :=
+        (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+      have hdb : T.graph.degree (T.leaf b) = 1 :=
+        (T.isLeaf_iff_degree_eq_one (T.leaf b)).mp ⟨b, rfl⟩
+      have haP : T.leaf a ∉ P.support :=
+        NJShrink.not_mem_support_of_degree_one T hda P hPpath hua hva
+      have hbP : T.leaf b ∉ P.support :=
+        NJShrink.not_mem_support_of_degree_one T hdb P hPpath u.2 v.2
+      obtain ⟨q, hq⟩ := exists_walk_nb_sum (T := T) hab hwb P u.2 v.2
+        (fun z hz => ⟨fun h => haP (h ▸ hz), fun h => hbP (h ▸ hz)⟩)
+      have hqw : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).walkDist q
+          = T.dist u.1 v.1 := by
+        have hsum : (P.edges.map T.wExt).sum = T.dist u.1 v.1 := by
+          have hwalk : (P.edges.map T.wExt).sum = T.walkDist P := rfl
+          rw [hwalk, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath T P hPpath]
+        rw [shrinkPhylogramNB_walkDist_eq (T := T) hab hbw hwb hdeg haw hpos q, hq]
+        exact hsum
+      have hdw : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist u v
+          ≤ (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).walkDist q :=
+        Phylo.Contract.dist_le_walkDist (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos) q
+      linarith
+    have h2 : T.dist u.1 v.1 ≤ (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist u v := by
+      obtain ⟨q', hq'path, -⟩ :=
+        (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).existsUnique_path u v
+      have hdegA : (shrinkGraphNB T b).degree (⟨T.leaf a, haa⟩ : ShrinkVNB T b) = 1 := by
+        rw [degree_nb_of_ne (b := b) (v := T.leaf a) hbw
+          (fun h => T.graph.loopless.irrefl (T.leaf a) (h ▸ haw)) haa]
+        exact (T.isLeaf_iff_degree_eq_one (T.leaf a)).mp ⟨a, rfl⟩
+      have hqa : (⟨T.leaf a, haa⟩ : ShrinkVNB T b) ∉ q'.support :=
+        NJShrink.not_mem_support_of_degree_one
+          (T := shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos) hdegA q' hq'path
+          (fun h => hua (congrArg Subtype.val h))
+          (fun h => hva (congrArg Subtype.val h))
+      obtain ⟨p, hp⟩ := exists_walk_of_nb_sum (T := T) hab hwb q'
+        (fun t ht hcon => hqa (by
+          have hteq : t = (⟨T.leaf a, haa⟩ : ShrinkVNB T b) := Subtype.ext hcon
+          rwa [hteq] at ht))
+      have e1 : T.dist u.1 v.1 ≤ T.walkDist p := Phylo.Contract.dist_le_walkDist T p
+      have e3 : T.walkDist p = (q'.edges.map (shrinkWNB (T := T) hab hwb)).sum := hp.symm
+      have e4 : (q'.edges.map (shrinkWNB (T := T) hab hwb)).sum
+          = (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).walkDist q' :=
+        (shrinkPhylogramNB_walkDist_eq (T := T) hab hbw hwb hdeg haw hpos q').symm
+      have e5 : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).walkDist q'
+          = (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist u v :=
+        (Phylo.TreeDist.dist_eq_walkDist_of_isPath _ q' hq'path).symm
+      linarith
+    exact le_antisymm h1 h2
+
+/-- ★★★ **旧–旧距离（叶标签形式）**：`x, y ∉ {a,b}` 时 `T'.dist (leaf' x) (leaf' y) = δ(x,y)`。 -/
+theorem shrinkPhylogramNB_dist_inl_inl (δ : NJ.Dissimilarity X) {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) (x y : MergeOld X a b) :
+    (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+        ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl x))
+        ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl y))
+      = δ.val x.1 y.1 := by
+  have hxa : T.leaf x.1 ≠ T.leaf a := fun h => mergeOld_ne_left x (T.leaf.injective h)
+  have hya : T.leaf y.1 ≠ T.leaf a := fun h => mergeOld_ne_left y (T.leaf.injective h)
+  have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
+  have hyb : T.leaf y.1 ≠ T.leaf b := fun h => mergeOld_ne_right y (T.leaf.injective h)
+  have hxu : ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl x))
+      = (⟨T.leaf x.1, hxb⟩ : ShrinkVNB T b) := Subtype.ext rfl
+  have hyu : ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl y))
+      = (⟨T.leaf y.1, hyb⟩ : ShrinkVNB T b) := Subtype.ext rfl
+  rw [hxu, hyu,
+    shrinkPhylogramNB_dist_old (T := T) hab hbw hwb hdeg haw hpos hxa hya]
+  exact hT x.1 y.1
+
+/-- ★★★ **新–旧距离**：`x ∉ {a,b}` 时
+`T'.dist (leaf' u) (leaf' x) = ½·δ(a,x) + ½·δ(b,x)`。
+
+三步（★D：比二叉支短 —— 没有第三邻居要抑制）：
+1. `⟨leaf a⟩` 在新图里**唯一**邻居是 `⟨w⟩`（★★ `NJShrink.leaf_a_adj_eq_midpoint`）
+   ⇒ 路径第一步必到 `⟨w⟩` ⇒ `dist' = shrinkNewWNB + dist' ⟨w⟩ ⟨leaf x⟩`；
+2. `dist' ⟨w⟩ ⟨leaf x⟩ = d_T(w, x)`（★★★ `shrinkPhylogramNB_dist_old`）；
+3. 算术：★★★ `StrictCherry.mergeStep_val_eq` 恰好给
+   `½δ(x,a) + ½δ(x,b) = shrinkNewWNB + d(w,x)`。 -/
+theorem shrinkPhylogramNB_dist_new_old (δ : NJ.Dissimilarity X) {b : X} {w : T.V}
+    (hab : a ≠ b) (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b)
+    (hdeg : 3 < T.graph.degree w) (haw : T.graph.Adj (T.leaf a) w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hc : T.IsCherry a b) (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y)
+    (x : MergeOld X a b) :
+    (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+        ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inr ()))
+        ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl x))
+      = (1 / 2) * δ.val a x.1 + (1 - 1 / 2) * δ.val b x.1 := by
+  have haa : T.leaf a ≠ T.leaf b := fun h => hab (T.leaf.injective h)
+  have hlaw : T.leaf a ≠ w := fun h => T.graph.loopless.irrefl (T.leaf a) (h ▸ haw)
+  have hxa : T.leaf x.1 ≠ T.leaf a := fun h => mergeOld_ne_left x (T.leaf.injective h)
+  have hxb : T.leaf x.1 ≠ T.leaf b := fun h => mergeOld_ne_right x (T.leaf.injective h)
+  have hu : ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inr ()))
+      = (⟨T.leaf a, haa⟩ : ShrinkVNB T b) := Subtype.ext rfl
+  have hxu : ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf (Sum.inl x))
+      = (⟨T.leaf x.1, hxb⟩ : ShrinkVNB T b) := Subtype.ext rfl
+  rw [hu, hxu]
+  -- ① 第一步必到 `⟨w⟩`
+  have hstep : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+      (⟨T.leaf a, haa⟩ : ShrinkVNB T b) ⟨T.leaf x.1, hxb⟩
+      = shrinkNewWNB (T := T) a b w
+        + (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+            (⟨w, hwb⟩ : ShrinkVNB T b) ⟨T.leaf x.1, hxb⟩ := by
+    have hne : (⟨T.leaf a, haa⟩ : ShrinkVNB T b) ≠ ⟨T.leaf x.1, hxb⟩ := by
+      intro h
+      exact hxa (congrArg Subtype.val h).symm
+    obtain ⟨P, hPpath, -⟩ :=
+      (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).existsUnique_path
+        (⟨T.leaf a, haa⟩ : ShrinkVNB T b) ⟨T.leaf x.1, hxb⟩
+    obtain ⟨v', hv', P', hsplit⟩ := SimpleGraph.Walk.exists_eq_cons_of_ne hne P
+    have hv'w : v' = (⟨w, hwb⟩ : ShrinkVNB T b) := by
+      have h1 : v'.1 = w := NJShrink.leaf_a_adj_eq_midpoint T haw v'.1 hv'
+      exact Subtype.ext h1
+    subst hv'w
+    have hP'path : P'.IsPath := by
+      rw [hsplit] at hPpath
+      exact SimpleGraph.Walk.IsPath.of_cons hPpath
+    have he : s((⟨T.leaf a, haa⟩ : ShrinkVNB T b), ⟨w, hwb⟩) ∈ (shrinkGraphNB T b).edgeSet :=
+      (SimpleGraph.mem_edgeSet _).mpr
+        (show (shrinkGraphNB T b).Adj ⟨T.leaf a, haa⟩ ⟨w, hwb⟩ from haw)
+    have hnew : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).wExt
+        s((⟨T.leaf a, haa⟩ : ShrinkVNB T b), ⟨w, hwb⟩) = shrinkNewWNB (T := T) a b w := by
+      rw [Phylogram.wExt, dif_pos he]
+      exact shrinkWNB_new (T := T) hab hwb
+    rw [Phylo.TreeDist.dist_eq_walkDist_of_isPath _ P hPpath, hsplit,
+      Phylogram.walkDist, SimpleGraph.Walk.edges_cons, List.map_cons, List.sum_cons, hnew,
+      ← Phylogram.walkDist, ← Phylo.TreeDist.dist_eq_walkDist_of_isPath _ P' hP'path]
+  rw [hstep]
+  -- ② `⟨w⟩ → ⟨leaf x⟩` 是旧–旧
+  have hzold : (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+      (⟨w, hwb⟩ : ShrinkVNB T b) ⟨T.leaf x.1, hxb⟩ = T.dist w (T.leaf x.1) :=
+    shrinkPhylogramNB_dist_old (T := T) hab hbw hwb hdeg haw hpos hlaw.symm hxa
+  rw [hzold]
+  -- ③ 算术：`mergeStep_val_eq` 的原式
+  obtain ⟨w', haw', -, hEq⟩ :=
+    Phylo.Stat.StrictCherry.mergeStep_val_eq δ hT hc (mergeOld_ne_left x) (mergeOld_ne_right x)
+  have hw'w : w' = w := NJShrink.leaf_a_adj_eq_midpoint T haw w' haw'
+  subst hw'w
+  have hs1 : δ.val a x.1 = δ.val x.1 a := δ.symm a x.1
+  have hs2 : δ.val b x.1 = δ.val x.1 b := δ.symm b x.1
+  have hhalf : (1 : ℝ) - 1 / 2 = 1 / 2 := by norm_num
+  unfold shrinkNewWNB
+  linarith
+
+/-! ## G6c｜`HasPosReal` 的两件配套：边权严格正 ＋ 三支合流 -/
+
+/-- ★★ **新图每条边权严格正**：唯一边取 ★★ `shrinkNewWNB`（★ `shrinkNewWNB_pos`），
+其余旧边搬 `T` 的 `hpos`。 -/
+theorem shrinkWNB_pos {b : X} {w : T.V} (hab : a ≠ b) (hbw : T.graph.Adj (T.leaf b) w)
+    (hwb : w ≠ T.leaf b) (haw : T.graph.Adj (T.leaf a) w)
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    {u v : ShrinkVNB T b} (huv : (shrinkGraphNB T b).Adj u v) :
+    0 < shrinkWNB (T := T) hab hwb s(u, v) := by
+  unfold shrinkWNB
+  by_cases hnew : s(u, v)
+      = s((⟨T.leaf a, fun h => hab (T.leaf.injective h)⟩ : ShrinkVNB T b), ⟨w, hwb⟩)
+  · rw [if_pos hnew]
+    exact shrinkNewWNB_pos (T := T) haw hbw hpos
+  · rw [if_neg hnew, Sym2.map_mk]
+    change 0 < T.wExt s(u.1, v.1)
+    have htedge : T.graph.Adj u.1 v.1 := huv
+    rw [Phylo.TreeDist.wExt_eq_w T ((SimpleGraph.mem_edgeSet T.graph).mpr htedge)]
+    exact hpos _
+
+/-- ★★ **`Phylogram.w` 版本**（`Sym2.ind` 把边拆成端点对）。 -/
+theorem shrinkPhylogramNB_w_pos {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) :
+    ∀ e : Edge (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).toCladogram,
+      0 < (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).w e := by
+  have key : ∀ e' : Sym2 (ShrinkVNB T b), e' ∈ (shrinkGraphNB T b).edgeSet →
+      0 < shrinkWNB (T := T) hab hwb e' :=
+    Sym2.ind (fun u v he =>
+      shrinkWNB_pos (T := T) hab hbw hwb haw hpos ((SimpleGraph.mem_edgeSet _).mp he))
+  intro e
+  exact key e.1 e.2
+
+/-- ★★★ **`dist` 对齐（三支合流）**：
+`∀ u v : MergeIdx X a b`，`T'.dist (leaf' u) (leaf' v) = (mergeStep δ a b).val u v`。 -/
+theorem shrinkPhylogramNB_dist (δ : NJ.Dissimilarity X) {b : X} {w : T.V} (hab : a ≠ b)
+    (hbw : T.graph.Adj (T.leaf b) w) (hwb : w ≠ T.leaf b) (hdeg : 3 < T.graph.degree w)
+    (haw : T.graph.Adj (T.leaf a) w) (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e)
+    (hc : T.IsCherry a b) (hT : ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y) :
+    ∀ u v : MergeIdx X a b,
+      (shrinkPhylogramNB (T := T) hab hbw hwb hdeg haw hpos).dist
+          ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf u)
+          ((shrinkCladogramNB (T := T) hab hbw hwb hdeg).leaf v)
+        = (Phylo.Stat.CASTERNJStep.mergeStep δ a b).val u v := by
+  intro u v
+  cases u with
+  | inl x =>
+      cases v with
+      | inl y =>
+          rw [shrinkPhylogramNB_dist_inl_inl (T := T) δ hab hbw hwb hdeg haw hpos hT x y]
+          rfl
+      | inr y =>
+          cases y
+          rw [Phylo.TreeDist.dist_comm,
+            shrinkPhylogramNB_dist_new_old (T := T) δ hab hbw hwb hdeg haw hpos hc hT x]
+          simp only [Phylo.Stat.CASTERNJStep.mergeStep, mergeDissim, mergeVal]
+  | inr x =>
+      cases x
+      cases v with
+      | inl y =>
+          rw [shrinkPhylogramNB_dist_new_old (T := T) δ hab hbw hwb hdeg haw hpos hc hT y]
+          simp only [Phylo.Stat.CASTERNJStep.mergeStep, mergeDissim, mergeVal]
+      | inr y =>
+          cases y
+          rw [Phylogram.dist_self]
+          rfl
+
 end Phylo.Stat.NJShrinkNonBinary
