@@ -3571,3 +3571,101 @@ theorem attesonW_sub_ge_of_path_edge (T : Cladogram X) {e : Sym2 T.V} {i j k l :
 
 end Cladogram
 
+
+/-! ## 27. ★★★ W50-A-#12：`P_{k,l}` **起点处的三条边** —— F 剩余几何的全部起点
+
+F 的两条系数和只需要**一个**挂点：`P_{k,l}` 的**起点侧**（`leaf k` 的邻居 `v`）。
+本轮的关键观察（`W50_A_MATH.md` §7.6）是：**不必**去找「樱桃分支与 `P_{k,l}` 的交点 `v_{p*}`」，
+因为 `4 ≤ n` ＋ `¬ IsCherry k l` 保证「`P_{k,l}` 的第一条边之后还有边」，于是 `v := leaf k`
+的邻居天然带三条互异邻边 `leaf k`、`z`（路径方向）、`c`（分支方向），并且
+
+* `¬ T.inSide s(v,z) (leaf k) (leaf l)` —— `s(v,z)` 是路径边（本节直接给出）；
+* `c` 一侧若有两片叶就有樱桃（§22 的 `exists_cherry_of_side`），挂在 `v` 上；
+* `c` 一侧若只有一片叶，则 `(k, that leaf)` 本身就是一颗樱桃（`SharesOneLabel`）。
+
+本节落第一件：**存在性与「路径方向」的路径归属**。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **`P_{k,l}` 起点处的三条边**：`4 ≤ n` 时，`leaf k` 的邻居 `v` 非叶（度 3），它的
+另两条邻边是 `s(v,z)`（**路径方向**，`¬inSide`）与 `s(v,c)`（**分支方向**），且 `z ≠ c`、
+两者都不回到 `leaf k`。
+
+技法：`Walk.exists_eq_cons_of_ne` 连拆两次 `pathOf (leaf k) (leaf l)` 的头两步 ⇒ `v`、`z`；
+`z ≠ leaf k` 靠路径边表**无重复**（`pathOf_edges_nodup`）；`c` 由「度 3 ⇒ 邻居集基数为 3、
+连删两点后剩一点」（`Finset.card_erase_of_mem`）取出。 -/
+theorem exists_first_three_of_path (T : Cladogram X) (hbin : T.IsBinary) {k l : X}
+    (hklne : k ≠ l) (h4 : 4 ≤ Fintype.card X) :
+    ∃ v z c : T.V, T.graph.Adj (T.leaf k) v ∧ T.graph.Adj v z ∧ T.graph.Adj v c ∧
+      T.graph.degree v = 3 ∧ v ≠ T.leaf l ∧ z ≠ T.leaf k ∧ c ≠ T.leaf k ∧ z ≠ c ∧
+      ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l) := by
+  classical
+  have hkl' : T.leaf k ≠ T.leaf l := fun h => hklne (T.leaf.injective h)
+  obtain ⟨v, hadj_kv, rest, hEq⟩ :=
+    SimpleGraph.Walk.exists_eq_cons_of_ne (G := T.graph) hkl' (T.pathOf (T.leaf k) (T.leaf l))
+  -- ### `v ≠ leaf l`：否则 `k,l` 相邻且都是叶 ⇒ `n = 2`
+  have hvl : v ≠ T.leaf l := by
+    intro h
+    have hadj : T.graph.Adj (T.leaf k) (T.leaf l) := h ▸ hadj_kv
+    have e1 := T.sideLeafCount_leaf_edge hadj
+    have e2 : T.sideLeafCount s(T.leaf k, T.leaf l) (T.leaf l) = 1 := by
+      rw [Sym2.eq_swap]; exact T.sideLeafCount_leaf_edge hadj.symm
+    have e3 := T.sideLeafCount_add_of_adj hadj
+    omega
+  -- ### 第二步：`z`（路径从 `v` 走出的那条边）
+  obtain ⟨z, hadj_vz, rest2, hEq2⟩ :=
+    SimpleGraph.Walk.exists_eq_cons_of_ne (G := T.graph) hvl rest
+  -- ### 路径边表无重复 ⇒ `s(v,z) ≠ s(leaf k, v)`
+  have hnodup := T.pathOf_edges_nodup (T.leaf k) (T.leaf l)
+  rw [hEq, SimpleGraph.Walk.edges_cons, hEq2, SimpleGraph.Walk.edges_cons] at hnodup
+  have hsvz : s(v, z) ≠ s(T.leaf k, v) := fun h =>
+    (List.nodup_cons.mp hnodup).1 (h ▸ List.mem_cons_self)
+  have hzk : z ≠ T.leaf k := fun h => hsvz (by rw [h, Sym2.eq_swap])
+  -- ### `v` 非叶 ⇒ 度 3
+  have hnleaf : ¬ T.IsLeaf v := by
+    intro hleaf
+    have hd1 : T.graph.degree v = 1 := (T.isLeaf_iff_degree_eq_one v).mp hleaf
+    have hsub : ({z, T.leaf k} : Finset T.V) ⊆ T.graph.neighborFinset v := by
+      intro y hy
+      rw [Finset.mem_insert, Finset.mem_singleton] at hy
+      rcases hy with h | h
+      · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v z).mpr hadj_vz
+      · rw [h]; exact (SimpleGraph.mem_neighborFinset _ v (T.leaf k)).mpr hadj_kv.symm
+    have h2 : 2 ≤ (T.graph.neighborFinset v).card := by
+      have hc := Finset.card_le_card hsub
+      rwa [Finset.card_pair hzk] at hc
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hd1] at h2
+    omega
+  have hdeg3 : T.graph.degree v = 3 := hbin v hnleaf
+  -- ### 取第三条邻边 `c`
+  have hcard3 : (T.graph.neighborFinset v).card = 3 := by
+    rw [SimpleGraph.card_neighborFinset_eq_degree, hdeg3]
+  have hmk : T.leaf k ∈ T.graph.neighborFinset v :=
+    (SimpleGraph.mem_neighborFinset _ v (T.leaf k)).mpr hadj_kv.symm
+  have hmz : z ∈ T.graph.neighborFinset v :=
+    (SimpleGraph.mem_neighborFinset _ v z).mpr hadj_vz
+  have hc1 : ((T.graph.neighborFinset v).erase (T.leaf k)).card = 2 := by
+    rw [Finset.card_erase_of_mem hmk, hcard3]
+  have hzmem : z ∈ (T.graph.neighborFinset v).erase (T.leaf k) :=
+    Finset.mem_erase.mpr ⟨hzk, hmz⟩
+  have hc2 : (((T.graph.neighborFinset v).erase (T.leaf k)).erase z).card = 1 := by
+    rw [Finset.card_erase_of_mem hzmem, hc1]
+  obtain ⟨c, hc⟩ := Finset.card_eq_one.mp hc2
+  have hcmem : c ∈ ((T.graph.neighborFinset v).erase (T.leaf k)).erase z := by
+    rw [hc]; exact Finset.mem_singleton_self c
+  rw [Finset.mem_erase, Finset.mem_erase] at hcmem
+  obtain ⟨hcz, hck, hcnb⟩ := hcmem
+  have hadj_vc : T.graph.Adj v c := (SimpleGraph.mem_neighborFinset _ v c).mp hcnb
+  -- ### `s(v,z)` 是路径边 ⇒ `¬inSide`
+  have hmem : s(v, z) ∈ (T.pathOf (T.leaf k) (T.leaf l)).edges := by
+    rw [hEq, SimpleGraph.Walk.edges_cons, hEq2, SimpleGraph.Walk.edges_cons]
+    exact List.mem_cons_of_mem _ List.mem_cons_self
+  exact ⟨v, z, c, hadj_kv, hadj_vz, hadj_vc, hdeg3, hvl, hzk, hck, hcz.symm,
+    (T.mem_pathOf_edges_iff_not_inSide _ _ _).mp hmem⟩
+
+end Cladogram
+
