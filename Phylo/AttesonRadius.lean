@@ -3969,6 +3969,47 @@ theorem two_le_sideLeafCount_middle (T : Cladogram X) {k l : X} (hklne : k ≠ l
     rw [Sym2.eq_swap] at h2z
     rwa [T.sideLeafCount_eq_of_inSide hzvl] at h2z
 
+/-! ### 27.8 ★★★ **跨边的同侧传递**（`W50_A_MATH.md` §7.11.5 第 5 项）
+
+同一个顶点 `a` 的两条邻边 `s(a,b)`、`s(a,c)`：**`b` 侧的顶点在 `s(a,c)` 下仍与 `a` 同侧**。
+
+　　　`inSide s(a,b) b x` ⇒ `inSide s(a,c) a x`　（`s(a,b) ≠ s(a,c)`，即 `b ≠ c`；`b ≠ c` 给 `a ≠ b`）
+
+★ 为什么需要它：§27.6 的樱桃只给 `inSide s(v,c) c (leaf i)`（**分支边**），而装配要的是
+`inSide s(v,z) (leaf k) (leaf i)`（**中间边**）。这两条边共用顶点 `v`，本条引理就是那座桥。
+
+证明要点：`x` 在 `b` 侧 ⇒ 存在 `b → x` 的 walk 不走 `s(a,b)`。**该 walk 不可能经过 `a`**
+（否则前缀给出 `inSide s(a,b) b a`，与 `not_inSide_both` ＋ `inSide_self` 矛盾），
+故它的每一步都不是 `s(a,c)`（`s(a,c)` 的端点是 `a`、`c`，而 `c` 与 `b` 异侧：
+`¬inSide s(a,b) b c`）。于是同一条 walk 在 `G − s(a,c)` 里仍然有效，再补上 `a — b` 这条边。 -/
+
+/-- ★★★ **跨边同侧传递**：`a` 的两条邻边 `s(a,b)`／`s(a,c)`（`b ≠ c`），
+`b` 侧的 `x` 在 `s(a,c)` 下与 `a` 同侧。 -/
+theorem inSide_of_inSide_adj_swap (T : Cladogram X) {a b c x : T.V}
+    (hab : T.graph.Adj a b) (hac : T.graph.Adj a c) (hbc : b ≠ c)
+    (hbx : T.inSide s(a, b) b x) : T.inSide s(a, c) a x := by
+  classical
+  -- ### `b`、`c` 都不在 `b` 侧
+  have hnab : ¬ T.inSide s(a, b) b a :=
+    fun h' => T.not_inSide_both hab (y := a) ⟨T.inSide_self s(a, b) a, h'⟩
+  have hneab : s(a, b) ≠ s(a, c) := by
+    intro heq
+    rw [Sym2.eq_iff] at heq
+    rcases heq with ⟨-, h2⟩ | ⟨-, h2⟩
+    · exact hbc h2
+    · exact hab.ne h2.symm
+  have hac_side : T.inSide s(a, b) a c :=
+    (SimpleGraph.deleteEdges_adj.mpr ⟨hac, hneab.symm⟩).reachable
+  have hncb : ¬ T.inSide s(a, b) b c := by
+    intro hcon
+    exact hnab ((T.inSide_comm s(a, b) a b).mp
+      (hac_side.trans ((T.inSide_comm s(a, b) b c).mp hcon)))
+  -- ### 旁侧连通性（`Split.lean:685`）：`b` 侧的 walk 在 `G − s(a,c)` 里仍走得通
+  have hside : T.inSide s(a, c) b x :=
+    T.inSide_deleteEdges_of_inSide (e₁ := s(a, b)) (e₂ := s(a, c)) (c := a) (d := c)
+      rfl hbx hnab hncb
+  exact (SimpleGraph.deleteEdges_adj.mpr ⟨hab, hneab⟩).reachable.trans hside
+
 /-! ## 28. ★★★ W50-A-#19：Case D 的**逐边系数**（路径边上的 `c_e` 的显式值）
 
 `W50_A_MATH.md` §7.9.2 的两端求和要求：对 `P_{k,l}` 上的**每一条**边给出 `c_e` 的显式值，
