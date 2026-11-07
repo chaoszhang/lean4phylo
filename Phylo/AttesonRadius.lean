@@ -3427,3 +3427,34 @@ theorem attesonW_sub_cherry_edge_of_share (T : Cladogram X) {i j k l : X} {w u :
 
 end Cladogram
 
+
+/-! ## 25. ★★★ W50-A-#10：F 的求和层 —— 三条边的贡献 ⇒ 全边之和
+
+F 的两条系数和（§23.2 的 `n−4`、§24.3 的 `2(n−4)`／`2(n−3)`）都是**逐条边**的等式／不等式；
+装配要用的是**全部边之和**。本节把两者接起来：其余边由 §21′ 逐边非负，
+**直接丢弃**（`Finset.sum_le_sum_of_subset_of_nonneg`）。 -/
+
+/-- ★★★ **求和层**：三条**互异**元素的函数值之和 `≥ K` ⇒ 整个 `Finset` 上的和 `≥ K`
+（前提：集合内每项非负）。 -/
+theorem le_sum_of_three_mem {α : Type*} [DecidableEq α] (f : α → ℝ) (s : Finset α) {K : ℝ}
+    {e1 e2 e3 : α} (h1 : e1 ∈ s) (h2 : e2 ∈ s) (h3 : e3 ∈ s)
+    (h12 : e1 ≠ e2) (h13 : e1 ≠ e3) (h23 : e2 ≠ e3)
+    (h0 : ∀ e ∈ s, 0 ≤ f e) (hb : K ≤ f e1 + f e2 + f e3) :
+    K ≤ ∑ e ∈ s, f e := by
+  classical
+  have hsub : ({e1, e2, e3} : Finset α) ⊆ s := by
+    intro x hx
+    rw [Finset.mem_insert, Finset.mem_insert, Finset.mem_singleton] at hx
+    rcases hx with h | h | h
+    · rw [h]; exact h1
+    · rw [h]; exact h2
+    · rw [h]; exact h3
+  have hsum3 : ∑ e ∈ ({e1, e2, e3} : Finset α), f e = f e1 + f e2 + f e3 := by
+    rw [Finset.sum_insert (by simp [h12, h13]), Finset.sum_insert (by simp [h23]),
+      Finset.sum_singleton]
+    ring
+  have hmono := Finset.sum_le_sum_of_subset_of_nonneg hsub (fun x hx _ => h0 x hx)
+  calc K ≤ f e1 + f e2 + f e3 := hb
+    _ = ∑ e ∈ ({e1, e2, e3} : Finset α), f e := hsum3.symm
+    _ ≤ ∑ e ∈ s, f e := hmono
+
