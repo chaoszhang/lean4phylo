@@ -899,13 +899,13 @@ noncomputable def toDissimilarity (T : Phylogram X) : Dissimilarity X where
   diag x := T.dist_self (T.leaf x)
 
 /-- ★ **Atteson Lemma 11 的忠实形态（定量版）** —— 本 `def` 里**没有 `∃ δmin`**，
-常数被钉成**由树算出的**最短边长 `minEdgeWeight T`。
+常数被钉成**由树算出的**最短边长 `NJ.Dissimilarity.minEdgeWeight T`。
 
 依据：`references/md/Atteson1999_PerformanceNeighborJoiningAlgorithmica.md:1989–2009` 的
 **LEMMA 11**：`k,l` 不是邻居 ⟹ 存在邻居对 `i,j` 使
 `S_{k,l} − S_{i,j} ≥ 3(n−4)·min_e l(e)`（两对不交）或 `≥ 2(n−3)·min_e l(e)`（恰交一标签）。
 `IsCherrySeparated`（本文件 `:132`）的形状已忠实（两条间隙式 ＋ 两分支），
-故这里**直接复用**它，只把自由参数换成 `minEdgeWeight T`。
+故这里**直接复用**它，只把自由参数换成 `NJ.Dissimilarity.minEdgeWeight T`。
 
 ★ **四要素留证（W38-1）**：
   ① **位置**：本文件新 `def`（`NJ.Dissimilarity.atteson_lemma11_gap_quantitative`）；
@@ -937,12 +937,12 @@ case 1（`:2034–2043`）显式用「每个内点恰关联 3 条边」。
 （`atteson_lemma11_gap_quantitative_holds_of_binary`，将落在本文件 §22 **之后**；
 ★ §22 现已用于 `cherry_in_component`，见该节）。 -/
 def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
-  4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
+  4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (NJ.Dissimilarity.minEdgeWeight T)
 
 
 /-! ### 8.1.0′ ★★★ W49-A-(i)：`minEdgeWeight` 的 `sInf → min` 桥
 
-`minEdgeWeight T` 定义为 `sInf (Set.range T.w)`（`:891`）。★ 现场复核：`grep -rn 'sInf' Phylo/`
+`NJ.Dissimilarity.minEdgeWeight T` 定义为 `sInf (Set.range T.w)`（`:891`）。★ 现场复核：`grep -rn 'sInf' Phylo/`
 在**全库只命中两处** —— 本 `def` 与 `Phylo/SplitWeak.lean:92` 的一行**注释**
 （W48 报告说「只出现这一次」是漏了那条注释，结论不变：**没有任何** `sInf → min` 的桥）。
 
@@ -972,16 +972,16 @@ noncomputable def minEdgeWeight' (T : Phylogram X) (hne : Nonempty (Edge T.toCla
     haveI := hne
     exact Finset.univ_nonempty.image T.w)
 
-/-- ★ **下界**：`minEdgeWeight T ≤ T.w e`（对**每条**边；这就是 `sInf` 是下界）。
+/-- ★ **下界**：`NJ.Dissimilarity.minEdgeWeight T ≤ T.w e`（对**每条**边；这就是 `sInf` 是下界）。
 ★ 不需要非空假设 —— 空集时 `sInf ∅ = 0` 也照样给一条（此时左边没意义，但等式仍相容）。 -/
 theorem minEdgeWeight_le (T : Phylogram X) (e : Edge T.toCladogram) :
-    minEdgeWeight T ≤ T.w e := by
+    NJ.Dissimilarity.minEdgeWeight T ≤ T.w e := by
   refine csInf_le ?_ (Set.mem_range_self e)
   exact (Set.finite_range T.w).bddBelow
 
 /-- ★★ **`sInf` 就是 `min'`**：边集有限非空 ⇒ 下确界**被取到**，且就是有限集的 `min'`。 -/
 theorem minEdgeWeight_eq_min' (T : Phylogram X) (hne : Nonempty (Edge T.toCladogram)) :
-    minEdgeWeight T = minEdgeWeight' T hne := by
+    NJ.Dissimilarity.minEdgeWeight T = minEdgeWeight' T hne := by
   classical
   haveI := hne
   have hne' : (Finset.univ : Finset (Edge T.toCladogram)).Nonempty := Finset.univ_nonempty
@@ -997,10 +997,10 @@ theorem minEdgeWeight_eq_min' (T : Phylogram X) (hne : Nonempty (Edge T.toCladog
     · rintro _ ⟨e, -, rfl⟩
       exact Finset.min'_le _ _ (Finset.mem_image_of_mem T.w (Finset.mem_univ e))
 
-/-- ★★ **正性**：全边权为正 ⇒ `0 < minEdgeWeight T` —— 这是 `csInf_le` **给不出**的一半
+/-- ★★ **正性**：全边权为正 ⇒ `0 < NJ.Dissimilarity.minEdgeWeight T` —— 这是 `csInf_le` **给不出**的一半
 （要用「下确界被取到」）：`minEdgeWeight = T.w e₀` 对**某条**边 `e₀` 成立。 -/
 theorem minEdgeWeight_pos (T : Phylogram X) (hne : Nonempty (Edge T.toCladogram))
-    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) : 0 < minEdgeWeight T := by
+    (hpos : ∀ e : Edge T.toCladogram, 0 < T.w e) : 0 < NJ.Dissimilarity.minEdgeWeight T := by
   classical
   haveI := hne
   rw [minEdgeWeight_eq_min' T hne]
@@ -4279,7 +4279,7 @@ theorem attesonW_sub_nonneg_all_of_min (T : Cladogram X) {c d : T.V}
 /-- ★★★★ **装配桥**：若
 
 * `K ≤ Σ_{e ∈ E} c_e`（`E` = 边集，`c_e = w_e(k,m) − w_e(i,j)`）；
-* 每条边 `δ ≤ l(e)`（`δ = minEdgeWeight T` 时由 `minEdgeWeight_le` 供给）；
+* 每条边 `δ ≤ l(e)`（`δ = NJ.Dissimilarity.minEdgeWeight T` 时由 `minEdgeWeight_le` 供给）；
 * 边外 `l = 0`（`l = T.wExt` 时由 `wExt` 的定义供给）；
 * 每条边 `0 ≤ c_e`（§30.2 供给）；
 * `0 ≤ δ`（`minEdgeWeight_pos` 的一半，非负性由 `w_nonneg` 直接给）；
@@ -5349,4 +5349,60 @@ theorem attesonW_sub_pair_start_ge (T : Cladogram X) {i j k l : X} {v z c : T.V}
   linarith
 
 end Cladogram
+
+
+/-! ## 41. ★★★★ W50-A-#39：**度量层实例化** —— `δ = minEdgeWeight`、`l = wExt`
+
+§38 的结论以抽象的 `l`／`δ` 写出。本节把它们钉成 Atteson 定理真正用的两个对象：
+
+* `δ := NJ.Dissimilarity.minEdgeWeight T`（`sInf` 版，**真的是 min**：`minEdgeWeight_le` 逐边、`minEdgeWeight_eq_min'` 被取到）；
+* `l := T.wExt`（边外为 `0`，见 `Phylo.TreeDist.wExt_eq_zero`）。
+
+于是 `DisjointPairs` 支的定量结论直接写成 `3(n−4)·minEdgeWeight ≤ Q(k,l) − Q(i,j)`，
+其中 `Q = attesonQ T.wExt` 正是 NJ 判据（`attesonQ_wExt_eq`）。 -/
+
+
+
+open Cladogram
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **DisjointPairs 支的定量结论（`minEdgeWeight` 版）**：
+
+　　`3(n − 4)·NJ.Dissimilarity.minEdgeWeight T ≤ Q(k,m) − Q(i,j)`　（`Q = attesonQ T.wExt`）。
+
+几何三件（`hc0`、配对项 `n−4`、附着边项 `2n−8`）一齐时直接调用即可；
+`δ` 用的是真正的 `sInf` 最小边权（验收 #3），未弱化成 `∃ δ`。 -/
+theorem attesonQ_gap_ge_three_mul_minEdgeWeight (T : Phylogram X) {i j k m : X}
+    {e1 e2 e3 : Sym2 T.V}
+    (hδ0 : 0 ≤ NJ.Dissimilarity.minEdgeWeight T)
+    (hsub : ({e1, e2, e3} : Finset (Sym2 T.V))
+      ⊆ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet))
+    (h12ne : e1 ≠ e2) (h13ne : e1 ≠ e3) (h23ne : e2 ≠ e3)
+    (hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.toCladogram.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) e : ℝ))
+    (h12 : (Fintype.card X : ℝ) - 4
+      ≤ ((T.toCladogram.attesonW (T.leaf k) (T.leaf m) e1 : ℝ)
+          - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) e1 : ℝ))
+        + ((T.toCladogram.attesonW (T.leaf k) (T.leaf m) e2 : ℝ)
+          - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) e2 : ℝ)))
+    (h3 : 2 * (Fintype.card X : ℝ) - 8
+      ≤ (T.toCladogram.attesonW (T.leaf k) (T.leaf m) e3 : ℝ)
+        - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) e3 : ℝ)) :
+    3 * ((Fintype.card X : ℝ) - 4) * NJ.Dissimilarity.minEdgeWeight T
+      ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf m)
+        - T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j) := by
+  classical
+  refine T.toCladogram.attesonQ_gap_ge_three_mul_of_three_edges T.wExt hδ0 ?_ ?_ hsub
+    h12ne h13ne h23ne hc0 h12 h3
+  · -- `δ ≤ wExt e`：`wExt` 在边上就是 `w`，而 `minEdgeWeight_le` 逐边成立
+    intro e he
+    rw [Phylo.TreeDist.wExt_eq_w T he]
+    exact NJ.Dissimilarity.minEdgeWeight_le T ⟨e, he⟩
+  · -- 边外 `wExt = 0`
+    intro e he
+    exact Phylo.TreeDist.wExt_eq_zero T he
+
+
 
