@@ -5404,5 +5404,77 @@ theorem attesonQ_gap_ge_three_mul_minEdgeWeight (T : Phylogram X) {i j k m : X}
     intro e he
     exact Phylo.TreeDist.wExt_eq_zero T he
 
+/-- ★★★★ **`DisjointPairs` 支的完整接线（一次性调用版）**
+
+把 §30.2（`hc0`）、§40（配对项 `n−4`）、§39（附着边项 `2n−8`）、§41（`minEdgeWeight` 实例化）
+四块接成一条定理：
+
+　　`3(n − 4)·minEdgeWeight T ≤ Q(k,l) − Q(i,j)`，　`Q = attesonQ T.wExt`。
+
+几何前提分三组（全部可由 §20′／§22／§27.1／§30.1／§32／§34 的**输出**直接喂）；
+本定理之后只剩「把 `∃`-形式接到环境里」。 -/
+theorem attesonQ_gap_ge_three_of_start (T : Phylogram X) {i j k l : X} {v z c c₀ d₀ w u : T.V}
+    (hδ0 : 0 ≤ NJ.Dissimilarity.minEdgeWeight T)
+    (hij : i ≠ j) (hik : i ≠ k) (hjk : j ≠ k) (hil : i ≠ l) (hjl : j ≠ l) (hlk : l ≠ k)
+    (hcher : T.toCladogram.IsCherry i j) (hklne : k ≠ l) (hcd : T.graph.Adj c₀ d₀)
+    (heStarI : T.toCladogram.inSide s(c₀, d₀) (T.leaf k) (T.leaf l))
+    (hCin : T.toCladogram.inSide s(c₀, d₀) (T.leaf i) (T.leaf k))
+    (hCjn : T.toCladogram.inSide s(c₀, d₀) (T.leaf j) (T.leaf k))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      T.toCladogram.inSide e (T.leaf k) (T.leaf l) →
+      T.toCladogram.sideLeafCount s(c₀, d₀) (T.leaf k)
+        ≤ T.toCladogram.sideLeafCount e (T.leaf k))
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hzc : z ≠ c) (hzk : z ≠ T.leaf k)
+    (hnb : T.graph.neighborFinset v = {T.leaf k, z, c})
+    (hdeg : T.graph.degree v ≠ 1)
+    (hic : T.toCladogram.inSide s(v, c) c (T.leaf i))
+    (hjc : T.toCladogram.inSide s(v, c) c (T.leaf j))
+    (hklz : ¬ T.toCladogram.inSide s(v, z) (T.leaf k) (T.leaf l))
+    (hklc : T.toCladogram.inSide s(v, c) (T.leaf k) (T.leaf l))
+    (hikc : ¬ T.toCladogram.inSide s(v, c) (T.leaf i) (T.leaf k))
+    (hkvc : T.toCladogram.inSide s(v, c) v (T.leaf k))
+    (hwu : T.graph.Adj w u) (hsl : T.toCladogram.sideLeaves s(w, u) w = {i, j})
+    (h3ne1 : s(w, u) ≠ s(T.leaf k, v)) (h3ne2 : s(w, u) ≠ s(v, z))
+    (h1ne2 : s(T.leaf k, v) ≠ s(v, z)) :
+    3 * ((Fintype.card X : ℝ) - 4) * NJ.Dissimilarity.minEdgeWeight T
+      ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf l)
+        - T.toCladogram.attesonQ T.wExt (T.leaf i) (T.leaf j) := by
+  classical
+  -- ### (1) `hc0`：§30.2（樱桃在 `k` 侧 ＋ `e*` 最小性）
+  have hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.toCladogram.attesonW (T.leaf k) (T.leaf l) e : ℝ)
+        - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) e : ℝ) :=
+    T.toCladogram.attesonW_sub_nonneg_all_of_min hcd hcher hklne heStarI hCin hCjn hmin
+  -- ### (2) `2S_c ≤ n`：§37
+  have hS : 2 * T.toCladogram.sideLeafCount s(v, c) c ≤ Fintype.card X :=
+    T.toCladogram.two_mul_sideLeafCount_third_of_min hvc hcd hklc hikc hkvc hCin hmin
+  -- ### (3) 配对项：§40
+  have h12 : (Fintype.card X : ℝ) - 4
+      ≤ ((T.toCladogram.attesonW (T.leaf k) (T.leaf l) s(T.leaf k, v) : ℝ)
+          - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) s(T.leaf k, v) : ℝ))
+        + ((T.toCladogram.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+          - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) s(v, z) : ℝ)) :=
+    T.toCladogram.attesonW_sub_pair_start_ge hkv hvz hvc hzc hzk hlk hik hjk hic hjc hklz hnb hdeg hS
+  -- ### (4) 附着边项：§39
+  have h3 : 2 * (Fintype.card X : ℝ) - 8
+      ≤ (T.toCladogram.attesonW (T.leaf k) (T.leaf l) s(w, u) : ℝ)
+        - (T.toCladogram.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) :=
+    T.toCladogram.attesonW_sub_attach_ge_of_side_pair hwu hsl hij hik hjk hil hjl
+  -- ### (5) 三条边入边集 ＋ §41 收尾
+  have hE1 : s(T.leaf k, v) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hkv
+  have hE2 : s(v, z) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hvz
+  have hE3 : s(w, u) ∈ T.graph.edgeSet := (SimpleGraph.mem_edgeSet T.graph).mpr hwu
+  have hsub : ({s(T.leaf k, v), s(v, z), s(w, u)} : Finset (Sym2 T.V))
+      ⊆ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet) := by
+    intro e he
+    simp only [Finset.mem_insert, Finset.mem_singleton, Finset.mem_filter, Finset.mem_univ,
+      true_and] at he ⊢
+    rcases he with rfl | rfl | rfl
+    · exact hE1
+    · exact hE2
+    · exact hE3
+  exact attesonQ_gap_ge_three_mul_minEdgeWeight T hδ0 hsub h1ne2 h3ne1.symm h3ne2.symm hc0 h12 h3
+
 
 
