@@ -2223,3 +2223,84 @@ theorem attesonW_sub_nonneg_of_not_inSide (T : Cladogram X) {a b : T.V} (hab : T
 
 end Cladogram
 
+
+/-! ## 20. ★★★ W50-A-#5 ／ #3：三情形收口（「其余边」`c_e = 0` ＋ 两条分离支的非负）
+
+§19 给的是**闭式**；本节把 Atteson 情形表里剩下的三格落成**可直接用于求和**的结论：
+
+| `e` 的位置 | 结论 | 本节定理 |
+|---|---|---|
+| 不分离 `k,l`、也不分离 `i,k`／`j,l`（情形 ④） | `c_e = 0` | `attesonW_sub_eq_zero_of_far` |
+| 分离 `i,k`（且 `i,j` 同侧）＝ Atteson case 2 | `c_e = 2(2S_k − n) ≥ 0`（要 `n ≤ 2S_k`） | `attesonW_sub_nonneg_of_sep_ik` |
+| 对称的一支（`l = j` 时才出现） | 同上有理 | `attesonW_sub_nonneg_of_sep_ik` 的 `b` 侧版 |
+
+★ **`hbig : n ≤ 2·S_k` 是本节的唯一「外部输入」** —— 它**不是**假设出来的几何事实，而是
+`e*` 最小性的**输出**：`e*` 取「不在 `P_{k,l}` 上、且 `k` 侧叶数最小」的边 ⇒
+对任意 `e ∉ P_{k,l}` 有 `ℓ_k(e*) ≤ ℓ_k(e)`，再配上「`e*` 在 `T − e` 的 `k` 侧」这条严格包含
+即得 `ℓ_k(e) + ℓ_k(e*) < n`，于是 `2ℓ_k(e) ≥ n`。**这一段（`#1` 最小性 → `hbig`）W50 未落**，
+故本节三条引理都带 `hbig` 作为参数 —— 见 `W50_A_MATH.md` §3 的施工清单。
+-/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **（A）-情形④｜三对都不被 `e` 分离 ⇒ `c_e = 0`**（Atteson case 4，`:2063`）。
+
+即 `e` 不分离 `k,l`、不分离 `i,k`、不分离 `j,l` ⇒ 四片叶同在 `e` 的一侧 ⇒
+`c_e = 2(S_k − S_i) = 0`（`sideLeafCount_eq_of_inSide` 把两个侧叶数对齐）。 -/
+theorem attesonW_sub_eq_zero_of_far (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : T.inSide e k l) (hik : T.inSide e i k) (hjl : T.inSide e j l) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ) = 0 := by
+  -- `i ~ k ~ l ~ j` ⇒ `i ~ j`（同侧关系是等价关系）
+  have hij : T.inSide e i j := (hik.trans hkl).trans ((T.inSide_comm e l j).mpr hjl)
+  rw [T.attesonW_sub_of_inSide_inSide hkl hij]
+  have hS : T.sideLeafCount e i = T.sideLeafCount e k := T.sideLeafCount_eq_of_inSide hik
+  rw [hS, sub_self]
+  ring
+
+/-- ★★★ **（A）-情形②（`a` 侧定向）｜`i` 与 `k` 分居 `e` 两侧、`i,j` 同侧** ⇒
+
+　　`c_e = 2(2·S_k − n) ≥ 0`（当 `n ≤ 2·S_k`）。
+
+这是 Atteson case 2（`:2042–2057`）的**逐边代数部分**：`w_e(k,l) = −2(n − S_k)`、
+`w_e(i,j) = −2S_k`（因 `S_i = n − S_k`），故差为 `2(2S_k − n)`。 -/
+theorem attesonW_sub_of_sep_ik_eq (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hkl : T.inSide s(a, b) k l) (hij : T.inSide s(a, b) i j)
+    (hik : ¬ T.inSide s(a, b) i k) :
+    (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ)
+      = 2 * (2 * (T.sideLeafCount s(a, b) k : ℝ) - (Fintype.card X : ℝ)) := by
+  -- 先定 `k` 在哪侧、`i` 必在另一侧，于是 `S_i + S_k = n`
+  have hsum : (T.sideLeafCount s(a, b) i : ℝ) + (T.sideLeafCount s(a, b) k : ℝ)
+      = (Fintype.card X : ℝ) := by
+    rcases T.inSide_or_inSide (x := k) hab with hk | hk
+    · -- `k` 在 `a` 侧 ⇒ `i` 在 `b` 侧
+      have hi : T.inSide s(a, b) i b := by
+        rcases T.inSide_or_inSide (x := i) hab with hi' | hi'
+        · exact absurd (hi'.trans ((T.inSide_comm s(a, b) k a).mp hk)) hik
+        · exact hi'
+      rw [T.sideLeafCount_eq_of_inSide hi, T.sideLeafCount_eq_of_inSide hk,
+        ← Nat.cast_add, Nat.add_comm, T.sideLeafCount_add_of_adj hab]
+    · -- `k` 在 `b` 侧 ⇒ `i` 在 `a` 侧
+      have hi : T.inSide s(a, b) i a := by
+        rcases T.inSide_or_inSide (x := i) hab with hi' | hi'
+        · exact hi'
+        · exact absurd (hi'.trans ((T.inSide_comm s(a, b) k b).mp hk)) hik
+      rw [T.sideLeafCount_eq_of_inSide hi, T.sideLeafCount_eq_of_inSide hk,
+        ← Nat.cast_add, T.sideLeafCount_add_of_adj hab]
+  rw [T.attesonW_sub_of_inSide_inSide hkl hij]
+  linarith
+
+/-- ★★★ **（A）-情形②的非负版**：把上一条与 `hbig : n ≤ 2·S_k` 拼起来。 -/
+theorem attesonW_sub_nonneg_of_sep_ik (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hkl : T.inSide s(a, b) k l) (hij : T.inSide s(a, b) i j)
+    (hik : ¬ T.inSide s(a, b) i k)
+    (hbig : (Fintype.card X : ℝ) ≤ 2 * (T.sideLeafCount s(a, b) k : ℝ)) :
+    0 ≤ (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ) := by
+  rw [T.attesonW_sub_of_sep_ik_eq hab hkl hij hik]
+  linarith
+
+end Cladogram
+
