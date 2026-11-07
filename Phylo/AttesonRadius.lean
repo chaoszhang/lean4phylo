@@ -2302,5 +2302,76 @@ theorem attesonW_sub_nonneg_of_sep_ik (T : Cladogram X) {a b : T.V} (hab : T.gra
   rw [T.attesonW_sub_of_sep_ik_eq hab hkl hij hik]
   linarith
 
+/-! ### 20′｜`(ii)b` 的第一块：**离路径边存在** ＋ **`ℓ_k` 的最小者**
+
+Atteson 的选法是「`e* ∈ E − P_{k,l}` 使 `ℓ_k(e*)`（`k` 一侧的叶数）**最小**」。本节落两件：
+
+* ★★ `exists_offPath_edge`：只要 `3 ≤ card X`，就有离路径边 —— 取**第三片叶** `x ∉ {k,l}`，
+  它的唯一关联边 `s(leaf x, u)` 不可能在 `k → l` 的路径上（路径是简单的，而叶的度是 1，
+  不可能成为路径的**内部**点）；用 `sideLeaves` 说更省事：`x` 一侧恰是 `{x}`，故 `k,l` 都在 `u` 一侧。
+* ★★★ `exists_min_sideLeafCount_offPath`：`Finset.exists_min_image` 把「最小」取成一条边的见证。
+
+★ **诚实边界**：Atteson 还要给自己的 `e*` 配两条界 —— 下界 `3 ≤ ℓ_k(e*)`（在最终证明里由
+**樱桃落在 `k,l` 侧**给出：`DisjointPairs` 支 ≥ 4、`SharesOneLabel` 支 ≥ 3）与上界
+`ℓ_k(e*) ≤ n − 2`（要「路径上第二个内点存在」＝ `¬IsCherry k l ⇒ |P_{k,l}| ≥ 3`）。
+**这两条 W50 未落**，理由与做法见 `W50_A_MATH.md` §3.1。 -/
+
+/-- ★★ **离路径边存在**（Atteson `:2016–2022` 的 `e*` 候选）：取第三片叶 `x ∉ {k,l}`，
+它的唯一关联边 `s(leaf x, u)` 就是一条**不在** `k → l` 路径上的边。 -/
+theorem exists_offPath_edge (T : Cladogram X) {k l : X} (hkl : k ≠ l)
+    (h3 : 3 ≤ Fintype.card X) :
+    ∃ e : Sym2 T.V, e ∈ T.graph.edgeSet ∧ T.inSide e (T.leaf k) (T.leaf l) := by
+  -- 取第三片叶
+  have hx : ∃ x : X, x ≠ k ∧ x ≠ l := by
+    by_contra hcon
+    push_neg at hcon
+    have hsub : (Finset.univ : Finset X) ⊆ ({k, l} : Finset X) := by
+      intro y _
+      by_cases hy : y = k
+      · exact Finset.mem_insert.mpr (Or.inl hy)
+      · exact Finset.mem_insert.mpr (Or.inr (Finset.mem_singleton.mpr (hcon y hy)))
+    have hcard := Finset.card_le_card hsub
+    rw [Finset.card_univ, Finset.card_pair hkl] at hcard
+    omega
+  obtain ⟨x, hxk, hxl⟩ := hx
+  -- `x` 的唯一邻居 `u`
+  have hdeg : T.graph.degree (T.leaf x) = 1 :=
+    (T.isLeaf_iff_degree_eq_one (T.leaf x)).mp ⟨x, rfl⟩
+  obtain ⟨u, hu, -⟩ := SimpleGraph.degree_eq_one_iff_existsUnique_adj.mp hdeg
+  refine ⟨s(T.leaf x, u), (SimpleGraph.mem_edgeSet T.graph).mpr hu, ?_⟩
+  -- `x` 一侧恰是 `{x}` ⇒ `k,l` 都在 `u` 一侧
+  have hside : T.sideLeaves s(T.leaf x, u) u = (T.sideLeaves s(T.leaf x, u) (T.leaf x))ᶜ :=
+    T.sideLeaves_compl_adj hu
+  have hxs : T.sideLeaves s(T.leaf x, u) (T.leaf x) = {x} := T.sideLeaves_leaf_edge hu
+  have hk_mem : k ∈ T.sideLeaves s(T.leaf x, u) u := by
+    rw [hside, hxs, Finset.mem_compl, Finset.mem_singleton]
+    exact fun h => hxk h.symm
+  have hl_mem : l ∈ T.sideLeaves s(T.leaf x, u) u := by
+    rw [hside, hxs, Finset.mem_compl, Finset.mem_singleton]
+    exact fun h => hxl h.symm
+  have hin_k : T.inSide s(T.leaf x, u) u (T.leaf k) := (T.mem_sideLeaves_iff_inSide).mp hk_mem
+  have hin_l : T.inSide s(T.leaf x, u) u (T.leaf l) := (T.mem_sideLeaves_iff_inSide).mp hl_mem
+  exact ((T.inSide_comm s(T.leaf x, u) (T.leaf k) u).mpr hin_k).trans hin_l
+
+/-- ★★★ **（A）`#1`｜离路径边中 `ℓ_k` 最小者存在**（Atteson 的 `e*`）。
+
+`ℓ_k(e) := sideLeafCount e (leaf k)` 是 `e` 的 `k` 一侧叶数；最小性对**每条**离路径边成立
+（这正是后面 `hbig : n ≤ 2·S_k` 的唯一输入）。 -/
+theorem exists_min_sideLeafCount_offPath (T : Cladogram X) {k l : X} (hkl : k ≠ l)
+    (h3 : 3 ≤ Fintype.card X) :
+    ∃ eStar : Sym2 T.V, eStar ∈ T.graph.edgeSet ∧ T.inSide eStar (T.leaf k) (T.leaf l) ∧
+      ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+        T.sideLeafCount eStar (T.leaf k) ≤ T.sideLeafCount e (T.leaf k) := by
+  classical
+  obtain ⟨e₀, he₀, hin₀⟩ := T.exists_offPath_edge hkl h3
+  have hne : ((Finset.univ : Finset (Sym2 T.V)).filter
+      (fun e => e ∈ T.graph.edgeSet ∧ T.inSide e (T.leaf k) (T.leaf l))).Nonempty :=
+    ⟨e₀, Finset.mem_filter.mpr ⟨Finset.mem_univ _, he₀, hin₀⟩⟩
+  obtain ⟨eStar, heStar, hmin⟩ :=
+    Finset.exists_min_image _ (fun e => T.sideLeafCount e (T.leaf k)) hne
+  obtain ⟨-, heStarE, heStarI⟩ := Finset.mem_filter.mp heStar
+  exact ⟨eStar, heStarE, heStarI, fun e heE heI => hmin e (Finset.mem_filter.mpr
+    ⟨Finset.mem_univ _, heE, heI⟩)⟩
+
 end Cladogram
 
