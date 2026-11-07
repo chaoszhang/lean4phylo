@@ -5220,5 +5220,54 @@ theorem attesonQ_gap_ge_three_mul_of_three_edges (T : Cladogram X) (l : Sym2 T.V
   T.attesonQ_gap_ge_of_coeff_sum l hδ0 hl hl0 hc0
     (T.three_mul_le_sum_coeff_of_three_edges hsub h12ne h13ne h23ne hc0 h12 h3)
 
+/-- ★★★★ **附着边项的就地形式（`k,l` 在 `u` 侧）**：若樱桃 `(i,j)` 的附着边 `s(w,u)` 的
+`w` 侧叶集恰为 `{i,j}`（§32 `sideLeaves_cherry_side_eq_pair` 的输出），且 `k,l ∉ {i,j}`，则
+
+　　`c_{s(w,u)} = w_{s(w,u)}(k,l) − w_{s(w,u)}(i,j) ≥ 2n − 8`。
+
+这一条把 §36 的纯系数计算接上「叶集 = `{i,j}`」这一步，装配时只需 `§32` 的输出。 -/
+theorem attesonW_sub_attach_ge_of_side_pair (T : Cladogram X) {i j k l : X} {w u : T.V}
+    (hwu : T.graph.Adj w u) (hsl : T.sideLeaves s(w, u) w = {i, j})
+    (hij : i ≠ j) (hik : i ≠ k) (hjk : j ≠ k) (hil : i ≠ l) (hjl : j ≠ l) :
+    2 * (Fintype.card X : ℝ) - 8
+      ≤ (T.attesonW (T.leaf k) (T.leaf l) s(w, u) : ℝ)
+        - (T.attesonW (T.leaf i) (T.leaf j) s(w, u) : ℝ) := by
+  classical
+  -- ### 樱桃两叶在 `w` 侧
+  have hiw : T.inSide s(w, u) w (T.leaf i) := by
+    have h : i ∈ T.sideLeaves s(w, u) w := by rw [hsl]; exact Finset.mem_insert_self _ _
+    exact (T.mem_sideLeaves_iff_inSide).mp h
+  have hjw : T.inSide s(w, u) w (T.leaf j) := by
+    have h : j ∈ T.sideLeaves s(w, u) w := by
+      rw [hsl]; exact Finset.mem_insert_of_mem (Finset.mem_singleton_self _)
+    exact (T.mem_sideLeaves_iff_inSide).mp h
+  -- ### `w` 侧恰 2 片叶
+  have h2 : T.sideLeafCount s(w, u) w = 2 := by
+    rw [T.sideLeafCount_eq_card_sideLeaves, hsl, Finset.card_pair hij]
+  -- ### `k,l` 不在 `w` 侧 ⇒ 在 `u` 侧
+  have hknot : ¬ T.inSide s(w, u) w (T.leaf k) := by
+    intro h
+    have hmem := (T.mem_sideLeaves_iff_inSide).mpr h
+    rw [hsl, Finset.mem_insert, Finset.mem_singleton] at hmem
+    rcases hmem with h' | h'
+    · exact hik h'.symm
+    · exact hjk h'.symm
+  have hlnot : ¬ T.inSide s(w, u) w (T.leaf l) := by
+    intro h
+    have hmem := (T.mem_sideLeaves_iff_inSide).mpr h
+    rw [hsl, Finset.mem_insert, Finset.mem_singleton] at hmem
+    rcases hmem with h' | h'
+    · exact hil h'.symm
+    · exact hjl h'.symm
+  have hku : T.inSide s(w, u) u (T.leaf k) := by
+    rcases T.inSide_or_inSide (x := T.leaf k) hwu with h | h
+    · exact absurd ((T.inSide_comm s(w, u) (T.leaf k) w).mp h) hknot
+    · exact (T.inSide_comm s(w, u) (T.leaf k) u).mp h
+  have hlu : T.inSide s(w, u) u (T.leaf l) := by
+    rcases T.inSide_or_inSide (x := T.leaf l) hwu with h | h
+    · exact absurd ((T.inSide_comm s(w, u) (T.leaf l) w).mp h) hlnot
+    · exact (T.inSide_comm s(w, u) (T.leaf l) u).mp h
+  rw [T.attesonW_sub_eq_two_n_sub_eight hwu hiw hjw hku hlu h2]
+
 end Cladogram
 
