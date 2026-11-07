@@ -21,7 +21,7 @@ def njAdditiveGapUnrestricted : Prop :=
 `w` 的第三邻居 `z` 上，边权 `w_a + w_b`）；它的每一步都吃了 `deg w = 3`
 （★★ `NJShrink.exists_third` 的 `hbin` 只用来推 `degree w = 3`）。
 
-**本文件 = 方案 ＋ G1–G6 落地**（W48 起，W49 续）。实现进度见 §7 的勾选列。
+**本文件 = 方案 ＋ G1–G7 落地（B 已收口）**（W48 起，W49 续）。实现进度见 §7 的勾选列。
 
 ## 0 ★D 更正①：非二叉**不等于** `deg w ≥ 4`
 
@@ -136,19 +136,28 @@ graph' := T.graph.induce (fun v => v ≠ T.leaf b)      -- `SimpleGraph.induce`
 （`midpoint_not_mem_support T hbin …`、`degree_shrinkGraph T hbin …` 等），
 另有 `leaf_ne_midpoint` 里的一次（也只需 `degree w = 3`）。
 
-⇒ 正确施工法（下一批）：把 A6–A8 链条的前提从
-`(hbin : T.toCladogram.IsBinary)` **机械改写**为 `(hdeg : T.graph.degree w = 3)`；
-`degree_eq_three`／`exists_third`／`shrinkPhylogram_isBinary` 三处保留 `hbin`；
-`njAdditiveGap_holds`／`njReductionStep` 的调用点补一个
-`degree_eq_three T hbin hab haw hbw` 即可。这样 G7 两支都落在同一套机器上，
-且库内多出一批更一般的引理（不是为派单打的补丁）。
+⇒ 正确施工法（**W49 已落**，见 `NJShrink.lean` 文末 §A9）：把 A5–A8 链条的前提从
+`(hbin : T.toCladogram.IsBinary)` **机械改写**为 `(hdeg : T.graph.degree w = 3)`，名字统一加
+`_of_degree`；`degree_eq_three`／`exists_third`／`shrinkPhylogram_isBinary` 三处保留 `hbin`；
+`njAdditiveGap_holds`／`njReductionStep` 的调用点改走**薄包装**（§A9），故四个调用文件**零改动**。
+这样 G7 两支都落在同一套机器上，且库内多出一批更一般的引理（不是为派单打的补丁）。
 
-**★ 施工记录（复用价值高）**：本文件的定理一用 `SimpleGraph.degree`／`neighborFinset`，
-就要求 `Fintype ↥(neighborSet)`，而它要 `DecidableRel` —— 对**抽象的** `shrinkGraphNB` 拿不到。
-解法与 `Phylo/BunemanGraft` 的 `graftGraph` 一节相同：
-`attribute [local instance] Classical.propDecidable`（只用于证明，不追求可计算）。
-另：`exists_third_of_degree` 的 `T` 是**显式**参数（`variable (T : Phylogram)`），
-调用时须写 `exists_third_of_degree T hab hdeg haw hbw`。
+**★ 施工记录（复用价值高）**：
+1. 名字改写之外还有一处**必须同时改**的接口细节：`(hbin : IsBinary)` 原来排在 `{w : T.V}` **之前**，
+   而 `hdeg : T.graph.degree w = 3` 用到了 `w` ⇒ 若只换类型，`autoImplicit` 会造出一个 `w✝`，
+   于是引理的陈述里出现**两个** `w`（症状：`hdeg` 的类型显示成 `T.graph.degree w✝ = 3`）。
+   解法：把 `{w : T.V}`／`{w z : T.V}` 挪到 `hdeg` **之前**；显式参数的位置顺序不变，调用点无需改序。
+2. `shrinkPhylogram_isBinary` 是唯一**真正**需要 `hbin` 的（结论就是二叉性），它的陈述里照旧写
+   `shrinkPhylogram_of_degree T (degree_eq_three T hbin …) …`；证里要改写 `graph` 字段时不能
+   `rw [hG]`（motive 含 `decAdj`，不是 type-correct）⇒ 用 `show` 转到 `shrinkGraph` 上再 `rw`。
+3. 本文件的定理一用 `SimpleGraph.degree`／`neighborFinset`，就要求 `Fintype ↥(neighborSet)`，
+   而它要 `DecidableRel` —— 对**抽象的** `shrinkGraphNB` 拿不到。解法与 `Phylo/BunemanGraft` 的
+   `graftGraph` 一节相同：`attribute [local instance] Classical.propDecidable`（只用于证明，不追求可计算）。
+4. `exists_third_of_degree` 的 `T` 是**显式**参数（`variable (T : Phylogram)`），调用须写
+   `exists_third_of_degree T hab hdeg haw hbw`；`SimpleGraph.card_neighborFinset_eq_degree` 亦然
+   （要写 `T.graph w`）。
+5. `obtain ⟨hab, w, haw, hbw⟩ := hc` 会把 `hc` **清出上下文**（`Prop` 里的结构消去后不可回引）
+   ⇒ 后面还要用就先 `have hckeep := hc`。
 
 ## 8 实施前的三条核查（★ 已现场核过两条）
 
@@ -864,5 +873,75 @@ theorem shrinkPhylogramNB_dist (δ : NJ.Dissimilarity X) {b : X} {w : T.V} (hab 
           cases y
           rw [Phylogram.dist_self]
           rfl
+
+/-! ## G7｜★★★ 装配：`njAdditiveGapUnrestricted` 收口
+
+两支的分界**不是**「整棵树是否二叉」，而是**樱桃中点的度**（§0 ★D①）：
+
+* `degree w = 3` —— 收缩手术与二叉情形**逐字相同**，走 ★★★ `NJShrink.shrinkPhylogram_of_degree`
+  （W49 把 A5–A8 链条的前提从 `IsBinary` 放宽成 `degree w = 3`，
+  见 `Phylo/Stat/NJShrink.lean` 文末 §A9）；
+* `3 < degree w` —— 走本文件的 ★★★ `shrinkPhylogramNB`（只删叶 `b`、把 `T.leaf a` 的权改成
+  `½(w_a+w_b)`、其余不动）。
+
+两支共用同一个入口：★★★ `NJShrink.isCherry_of_njStep` 给出 `T.IsCherry a b`（**与二叉性无关**，
+这是 W46 起就有的接口）。`w` 的度**至少** 3：两个叶邻居给出 `2 ≤ degree w`
+（★★ `SimpleGraph.card_neighborFinset_eq_degree`），而 `Cladogram.no_degree_two` 排除 `= 2`。 -/
+
+open Phylo.Stat.CASTERNJ in
+/-- ★★★ **B 的收口定理｜★★ `njAdditiveGapUnrestricted` 成立**（`CASTERNJ.lean:153`，不再是缺口）。
+
+`HasPosReal δ`（边权**全正**的实现树，**允许 polytomy**）＋ `njStep δ a b`
+⇒ `HasPosReal (mergeStep δ a b)`。★ 注意前提只有 `HasPosReal`，**没有** `IsBinary`
+——这正是它与已收口的 ★★★ `njAdditiveGap_holds`（前提 `HasPosRealBinary`）的**唯一**差别；
+`HasPosRealBinary` 情形现在也可由本定理推出（把二叉见证给 `HasPosReal`）。 -/
+theorem njAdditiveGapUnrestricted_holds : njAdditiveGapUnrestricted (X := X) := by
+  intro δ hpos hcard a b hstep
+  obtain ⟨T, hwpos, hT⟩ := hpos
+  have hc : T.IsCherry a b := NJShrink.isCherry_of_njStep δ hwpos hT hcard hstep
+  have hckeep := hc
+  obtain ⟨hab, w, haw, hbw⟩ := hc
+  -- 前置：`w ≠ leaf b`，且 `2 ≤ degree w`
+  have hwb : w ≠ T.leaf b := fun h => T.graph.loopless.irrefl (T.leaf b) (h ▸ hbw)
+  have hmemF : ({T.leaf a, T.leaf b} : Finset T.V) ⊆ T.graph.neighborFinset w := by
+    intro v hv
+    rw [Finset.mem_insert, Finset.mem_singleton] at hv
+    rcases hv with rfl | rfl
+    · exact (SimpleGraph.mem_neighborFinset T.graph w (T.leaf a)).mpr haw.symm
+    · exact (SimpleGraph.mem_neighborFinset T.graph w (T.leaf b)).mpr hbw.symm
+  have hdeg2 : 2 ≤ T.graph.degree w := by
+    have h1 : (T.graph.neighborFinset w).card = T.graph.degree w :=
+      SimpleGraph.card_neighborFinset_eq_degree T.graph w
+    have h2 : ({T.leaf a, T.leaf b} : Finset T.V).card = 2 :=
+      Finset.card_pair (fun h => hab (T.leaf.injective h))
+    calc 2 = ({T.leaf a, T.leaf b} : Finset T.V).card := h2.symm
+      _ ≤ (T.graph.neighborFinset w).card := Finset.card_le_card hmemF
+      _ = T.graph.degree w := h1
+  by_cases hdeg3 : T.graph.degree w = 3
+  · -- ① `degree w = 3`：复用 A5–A8 的 `hdeg` 机器（**不**需要整棵树二叉）
+    obtain ⟨z, hwz, hza, hzb, -⟩ := NJShrink.exists_third_of_degree T hab hdeg3 haw hbw
+    have hla : T.leaf a ≠ T.leaf b ∧ T.leaf a ≠ w :=
+      ⟨fun h => hab (T.leaf.injective h),
+        NJShrink.leaf_ne_midpoint_of_degree T hdeg3 hab haw hbw a⟩
+    have hzm : z ≠ T.leaf b ∧ z ≠ w :=
+      ⟨hzb, fun h => T.graph.loopless.irrefl z (h ▸ hwz)⟩
+    refine ⟨NJShrink.shrinkPhylogram_of_degree T hdeg3 hab haw hbw hza hzb hwz hwpos, ?_, ?_⟩
+    · intro e
+      have key : ∀ e' : Sym2 (NJShrink.ShrinkV T b w),
+          e' ∈ (NJShrink.shrinkGraph T a b w z hza).edgeSet →
+            0 < NJShrink.shrinkW T a b w z hza hla hzm e' :=
+        Sym2.ind (fun u v he =>
+          NJShrink.shrinkW_pos_of_degree T hdeg3 hab haw hbw hza hzb hwz hwpos hla hzm
+            ((SimpleGraph.mem_edgeSet _).mp he))
+      exact key e.1 e.2
+    · intro u v
+      exact NJShrink.shrinkPhylogram_dist_of_degree T δ hdeg3 hab haw hbw hza hzb hwz hwpos hckeep hT u v
+  · -- ② `3 < degree w`：本文件的非二叉机器（只删叶 `b`，`w` 保留）
+    have hgt : 3 < T.graph.degree w := by
+      have hnd := T.toCladogram.no_degree_two w
+      omega
+    exact ⟨shrinkPhylogramNB (T := T) hab hbw hwb hgt haw hwpos,
+      shrinkPhylogramNB_w_pos (T := T) hab hbw hwb hgt haw hwpos,
+      fun u v => shrinkPhylogramNB_dist (T := T) δ hab hbw hwb hgt haw hwpos hckeep hT u v⟩
 
 end Phylo.Stat.NJShrinkNonBinary

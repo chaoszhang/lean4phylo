@@ -124,9 +124,11 @@ import Phylo.AttesonRadius
   ★★★ `CASTERNJ.njReductionStep`（归约保持「正权 ∧ 二叉 ∧ 实现」）、
   ★★★ `StrictCherryProved.strictCherry_of_isBinary_pos_gap_holds`、
   ★★★ `NJRecovers.iso_of_realizes_binary_additive`（★ W47 改名，原名 `nj_recovers_topology_additive`）。
-* **本库未证**（W47 已落成**显式缺口**，不再只写在散文里）：
-  `CASTERNJ.njAdditiveGapUnrestricted` —— 非二叉实现（`deg w ≥ 4`）的树层收缩。
-  它与 `njAdditiveGap` 的差别**只有「二叉」二字**（`HasPosReal` vs `HasPosRealBinary`）。
+* **★ W49 起非二叉支也收口了**：★★★ `CASTERNJ.njAdditiveGapUnrestricted_holds`
+  （`Phylo/Stat/NJShrinkNonBinary.lean`）只假设 `HasPosReal` 就证同一结论
+  ⇒ 原「本库未证」的 ★★ `CASTERNJ.njAdditiveGapUnrestricted` 已不是缺口。
+  ★ 关键更正：**「非二叉」≠「`deg w ≥ 4`」**（`no_degree_two` 只排除度 2），
+  故正确切法是按**樱桃中点的度**分情形，而不是按整棵树是否二叉。
 * **`nj_recovers_topology_additive` 这个名字已让位**（W47 M1-②）：原定理的结论里**不含 NJ**，
   故改名为内容名 `iso_of_realizes_binary_additive`；`nj_` 系列的名字留给真正含 `njStep` 的定理
   （`Phylo/Stat/NJRun.lean` 的 `njRun_correct_additive`）。

@@ -13,8 +13,9 @@ import Phylo.Stat.NJRecovers
 ## 定位
 
 **CASTER-NJ**（对归一化 `D̃` 跑 NJ）与库内既有的 CASTER 定理 1/2（贪心放置）是**不同下游**。
-本文件登记「CASTER-NJ 还缺什么」，**并且**证明其中可证的部分（W46/W47）：
+本文件登记「CASTER-NJ 还缺什么」，**并且**证明其中可证的部分（W46/W47/W49）：
 ★★★ `njAdditiveGap_holds`、★★★ `njReductionStep`、★★★ `njNoiseStep_holds`、
+★★★ `njAdditiveGapUnrestricted_holds`（W49，在 `Phylo/Stat/NJShrinkNonBinary.lean`）、
 ★★ `not_cladogram_of_subsingleton` / `not_hasPosReal_of_subsingleton`。
 ⚠️ **W47 校准**：本节原文写的「本文件不证新数学，只把缺口落成 `def … : Prop`」**已不成立**（上面这些是定理）。
 
@@ -84,8 +85,10 @@ def HasPosReal (δ : NJ.Dissimilarity X) : Prop :=
 `Phylogram.dist_eq_add_of_adj_leaf_dist`（`Phylo/CherryQuartet.lean:79`）。
 
 ★ **W47 校准：本节「诚实边界」已过时 —— 本命题**已由 ★★★ `njAdditiveGap_holds`（本文件下方）证出**，
-机制见 `Phylo/Stat/NJShrink.lean`。**唯一仍未做**的是**非二叉**那一支（`deg w ≥ 4`），
-已另立显式缺口 ★★ `njAdditiveGapUnrestricted`（本文件 §1′）。
+机制见 `Phylo/Stat/NJShrink.lean`。**非二叉**那一支（原先写的 `deg w ≥ 4`）已另立
+★★ `njAdditiveGapUnrestricted`（本文件 §1′），并已由 ★★★ `njAdditiveGapUnrestricted_holds`
+（`Phylo/Stat/NJShrinkNonBinary.lean`）在 **W49 收口** —— ★D：正确的切法是按**樱桃中点的度**
+分情形，而不是按整棵树是否二叉。
 
 ## ★★ 2026-11-05（W46 长程第 32 轮）：**加上了 `3 ≤ |X|`** —— 原陈述在 `|X| = 2` 时**为假**
 
@@ -114,10 +117,13 @@ njStep δ 0 1 成立（只有一对，Q 最小化平凡）
 不声称已证。 -/
 /-- ★★ **正权 **binary** 实现树** —— SK1988 `:20-22` 的**原假设**（binary＋所有分支为正）。
 
-为什么要把它从 `HasPosReal` 里拆出来：**树层收缩确实用到二叉性**
+为什么要把它从 `HasPosReal` 里拆出来：**树层收缩确实用到「中点度 3」**
 —— 樱桃中点 `w` 的第三邻居 `z` 只在 `deg w = 3` 时存在且唯一
 （★★★ `CASTERNJStep.exists_third`）。非二叉的情形需要**另一支**构造
-（`deg w ≥ 4` 时只删叶、把新叶挂回 `w`），**本库未做**（见下面的诚实边界）。 -/
+（`deg w ≥ 4` 时只删叶、把 `T.leaf a` 的权改成 `½(w_a+w_b)` 挂回 `w`），
+**W49 已做**：★★★ `njAdditiveGapUnrestricted_holds`（`Phylo/Stat/NJShrinkNonBinary.lean`）。
+★ 本 `def` 作为 SK1988 的**原假设**仍然保留 —— ★★★ `njReductionStep`（保持「正权 **二叉**」）
+的归纳不变式要它。 -/
 def HasPosRealBinary (δ : NJ.Dissimilarity X) : Prop :=
   ∃ T : Phylogram.{0, 0} X, (∀ e : Edge T.toCladogram, 0 < T.w e) ∧
     T.toCladogram.IsBinary ∧ ∀ x y : X, T.dist (T.leaf x) (T.leaf y) = δ.val x y
@@ -128,28 +134,37 @@ def njAdditiveGap : Prop :=
   ∀ (δ : NJ.Dissimilarity X), HasPosRealBinary δ → 3 ≤ Fintype.card X →
     ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
 
-/-- ★★ **L5a 的**非二叉**支 —— 显式缺口**（W47 M1-③ 新立，台账 75 → 76）。
+/-- ★★ **L5a 的非二叉支**（W47 M1-③ 新立，台账 75 → 76；**W49 已收口**）。
 
 与 ★★ `njAdditiveGap` 的差别**只有「二叉」二字**：
 
 * `njAdditiveGap` 的前提是 `HasPosRealBinary`（= SK1988 `:20-22` 的原假设：二叉 ＋ 全边正），
   **已由 ★★★ `njAdditiveGap_holds` 收口**；
-* 本命题的前提是 `HasPosReal`（只要求边权全正，**允许** `deg ≥ 4`）—— **本库未证**。
+* 本命题的前提是 `HasPosReal`（只要求边权全正，**允许** polytomy）。
 
-**为什么它不是 `njAdditiveGap` 的推论**：树层收缩（★★★ `NJShrink.shrinkPhylogram`）用到了
-樱桃中点 `w` 的**第三邻居** `z`，而 `z` 的存在 ＋ 唯一只在 `deg w = 3` 时成立
-（★★★ `NJShrink.exists_third`）。
+**★★★ W49 收口**：本命题**已证** —— ★★★ `njAdditiveGapUnrestricted_holds`
+（`Phylo/Stat/NJShrinkNonBinary.lean` G7），证明按**樱桃中点 `w` 的度**分两支：
 
-**为什么它是真的（估 400–600 行可证）**：非二叉（`deg w ≥ 4`）时**反而更简单** ——
-删叶 `b` 后 `deg w ≥ 3`，**不需要**抑制度 2 顶点，故
-「删叶 `b`、把新叶 `u` 以权 `½(w_a+w_b)` **挂回** `w`」就直接是合法 `Phylogram`；
-`dist` 对齐在那支也更容易（`a`、`b` 都是 `w` 的叶邻居 ⇒ 到任何旧叶的路径必过 `w`，
-故 `d(a,x) = w_a + d(w,x)`、`d(b,x) = w_b + d(w,x)`，两边一平均即得 `mergeStep` 的取值）。
-代价是**与 `NJShrink` 平行的一套顶点层构造**（连通性 / 无环 / 度数 / 叶判别 / `dist` 对齐）。
+| 情形 | 归约手术 |
+|---|---|
+| `degree w = 3` | 与二叉情形**逐字相同**（W49 把 `NJShrink` 的 A5–A8 链条前提从整棵树二叉放宽成 `degree w = 3`，见其 §A9） |
+| `3 < degree w` | 只删叶 `b`、把 `T.leaf a` 的权改成 `½(w_a+w_b)`，**不需要**抑制度 2 顶点（`NJShrinkNonBinary.shrinkPhylogramNB`） |
 
-**登记理由**：W46 那批只在 `njAdditiveGap` 的 docstring 里用**散文**承认「本库未做」，
-`list_gaps.sh` 看不见（0 行）。按本库纪律「未做的命题必须落成显式缺口」，故立此 `def`。
-★ 它**不是**已知为假、**不是**判不忠实，而是**真开放**。 -/
+★ 关键更正（W49 ★D①）：**「非二叉」≠「`deg w ≥ 4`」** —— `Cladogram.no_degree_two`
+只排除度 2，故非二叉只保证「某处度 ≥ 4」，**不保证** `njStep` 那一轮的中点就是那个点；
+因此分情形必须按 `w` 的度，而不是按整棵树是否二叉。（见 `NJShrinkNonBinary.lean` §0。）
+
+以下是 W47 立此缺口时的原文（保留作历史；「本库未证」「估 400–600 行」两句已被 W49 推翻）：
+
+* **为什么它不是 `njAdditiveGap` 的推论**：二叉支的树层收缩（★★★ `NJShrink.shrinkPhylogram`）
+  用到樱桃中点 `w` 的**第三邻居** `z`，而 `z` 的存在 ＋ 唯一只在 `deg w = 3` 时成立
+  （★★ `NJShrink.exists_third`）；
+* **为什么 `deg w ≥ 4` 那支反而更简单**：删叶 `b` 后 `deg w ≥ 3`，**不需要**抑制度 2 顶点，
+  故「删叶 `b`、把新叶以权 `½(w_a+w_b)` 挂回 `w`」就直接是合法 `Phylogram`；
+  `dist` 对齐也更容易（`a`、`b` 都是 `w` 的叶邻居 ⇒ 到任何旧叶的路径必过 `w`）。
+  代价是**与 `NJShrink` 平行的一套顶点层构造**（连通性 / 无环 / 度数 / 叶判别 / `dist` 对齐）；
+* **登记理由**：W46 那批只在 `njAdditiveGap` 的 docstring 里用**散文**承认「本库未做」，
+  `list_gaps.sh` 看不见（0 行）。按本库纪律「未做的命题必须落成显式缺口」，故立此 `def`。 -/
 def njAdditiveGapUnrestricted : Prop :=
   ∀ (δ : NJ.Dissimilarity X), HasPosReal δ → 3 ≤ Fintype.card X →
     ∀ a b : X, njStep δ a b → HasPosReal (mergeStep δ a b)
@@ -204,10 +219,12 @@ theorem not_hasPosReal_of_subsingleton {Y : Type} [Fintype Y] [DecidableEq Y]
 3. ★★★ `NJShrink.shrinkPhylogram` 就是归约后的实现树：边权全正（★★★ `shrinkW_pos`）、
    `dist` 与 `mergeStep` **逐点对齐**（★★★ `shrinkPhylogram_dist`）。
 
-⚠️ **诚实边界**：本定理只覆盖**二叉**实现（`HasPosRealBinary`）。非二叉实现
-（`deg w ≥ 4`）需要**另一支**构造 —— 只删叶 `b`、把新叶 `u` 以权 `½(w_a+w_b)` 挂回 `w`，
-**本库未做**；★ **W47 M1-③ 起它不再只写在散文里**，而是显式缺口
-★★ `njAdditiveGapUnrestricted`（本文件 §1）。 -/
+⚠️ **前提口径**：本定理要求**二叉**实现（`HasPosRealBinary`）。非二叉实现
+（`deg w ≥ 4`）原先写着「本库未做」—— **W49 已推翻**：★★★ `njAdditiveGapUnrestricted_holds`
+（`Phylo/Stat/NJShrinkNonBinary.lean`）在**只假设 `HasPosReal`** 下证同一结论，
+故 ★★ `njAdditiveGapUnrestricted`（本文件 §1）已收口，本定理是它在二叉情形的特化。
+保留本定理的理由只有一个：★★★ `njReductionStep` 的归纳不变式还需要「**二叉性也保持**」，
+而 → `njAdditiveGapUnrestricted_holds` 的收缩树不保证二叉。 -/
 theorem njAdditiveGap_holds : njAdditiveGap (X := X) := by
   intro δ hpos hcard a b hstep
   obtain ⟨T, hwpos, hbin, hT⟩ := hpos
