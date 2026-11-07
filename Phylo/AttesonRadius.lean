@@ -912,10 +912,16 @@ noncomputable def toDissimilarity (T : Phylogram X) : Dissimilarity X where
   ② **依据**：上述 md `:1989–2009`（`.w36/D_report.md` §2.2 的符号表，已逐字复核）；
   ③ **现状**：库里**已证**的是 `atteson_lemma11_gap_order_form_holds`（序关系版，
      `∃ δmin > 0`）；**本 `def` 未证**，台账记 `[真开放]`（71 → 72）；
-  ④ **未证的原因（缺什么）**：仍缺 D 报告列的三件器材 ——
-     (a)「`Dissimilarity.IsCherry` ⟺ 树中 `a,b` 相邻」的桥、(b)「路径关联 `e ∈ P_{i,j}` ＋
-     子树叶数 `|L_i(e)|`」的层、(c) Lemma 10 的权重公式 `w_e`。
-     ⚠️ 正是这三件把 `∃ δmin`（弱）升级成 `min_e l(e)`（强）。 -/
+  ④ **未证的原因（缺什么）** —— ★ **W48 实核后已改写**（原写「缺 (a)(b)(c) 三件器材」，已过时）：
+     **(b)(c) 已备** —— 「路径关联 `e ∈ P_{i,j}`」＝ §13 `mem_pathOf_edges_iff_not_inSide`（`:1680`）、
+     「子树叶数 `|L_i(e)|`」＝ §12 `sideLeafCount`（`:1521`）、「Lemma 10 的权重公式 `w_e`」＝
+     §13 `attesonW`（`:1715`）＋ §14–§18 的逐边分解与收口（`attesonQ_sub` `:1767`、
+     `attesonQ_wExt_eq` `:2032`）；**(a) 不需要** —— `IsCherrySeparated` 的假设是**度量层**
+     `¬δ.IsCherry k l`，由既有 ★ `CASTERNJ.isCherry_of_tree_isCherry` 的**逆否**即得树层非樱桃
+     （W48 报告 §2）。⇒ **真正缺的只有「逐边单调性」**（Atteson `:2008–2070` 的 `e*` 选法 ＋
+     系数和 `3(n−4)` / `2(n−3)`），即 W48 报告 §3 的 `(ii)`。W49 已落 `(i)`（`minEdgeWeight` 的
+     `sInf → min` 桥，见 §8.1.0′）与 `(ii)a`（任意 `(k,l)` 的系数差四种情形 ＋「分离 ⇒ 系数非负」，
+     见 §19）；**`(ii)b`/`(ii)c`/`(iii)` 未落**，路线见项目根目录 `W49_A_PLAN.md`。 -/
 def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
   4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
 
@@ -2124,6 +2130,96 @@ theorem attesonQ_wExt_eq (T : Phylogram X) (i j : X) :
       fun h => hab ((SimpleGraph.mem_edgeSet T.graph).mp h)
     rw [Phylo.TreeDist.wExt_eq_zero T hnot]
     simp
+
+end Cladogram
+
+
+/-! ## 19. ★★★ W49-A-(ii)a：**任意** `(k,l)` 的逐边系数差（四种情形）
+
+Lemma 11 的证明（Atteson `:2008–2070`）的全部内容都在比较**逐边系数**
+
+　　　`c_e := w_e(k,l) − w_e(i,j)`
+
+的符号与总和。关键事实：`w_e` 的两条分支引理（§13 的
+`attesonW_eq_neg_two_of_not_inSide` / `attesonW_eq_sideCount_of_inSide`）对**任意顶点对**
+`(x,y)` 都成立 ⇒ `c_e` **只由**「`e` 是否分离这两对」决定，四种组合各有一个闭式：
+
+| `e` 分离 `k,l`？ | `e` 分离 `i,j`？ | `c_e` |
+|---|---|---|
+| 否 | 否 | `0` |
+| 否 | 是 | `2·(n − S_i) − 2` |
+| 是 | 否 | `2 − 2·(n − S_k)` |
+| 是 | 是 | `2·(S_k − S_i)` |
+
+其中 `S_x := sideLeafCount s(a,b) x` 是 `x` 一侧的叶数（`sideLeafCount_eq_of_inSide` 说明它只依赖侧）。
+
+★ **这正是 `(ii)b`（路径单调性）要的接口**：`c_e` 里只剩「侧叶数」这一个几何量，
+于是「沿 `k → l` 走、侧叶数递增」的论证可以完全在**侧叶数**上做。
+
+★★ **诚实边界（W49）**：下面四条闭式与「`e` 分离 `k,l` ⇒ `c_e ≥ 0`」**已落**；
+把 Atteson 的 `e*` 选法（`e* ∈ E − P_{k,l}` 使 `ℓ_k(e*)` 最小 ⇒ 在 `T − e*` 的 `k,l` 侧
+取樱桃 `(i,j)`）接上、并做出 `Σ c_e ≥ 3(n−4)` / `2(n−3)` 的系数和（`(ii)b`/`(ii)c`）**未落**，
+路线与卡点见 `W49_A_PLAN.md`。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★ **（ii)a｜① 两对都**不**被 `e` 分离** ⇒ `c_e = 0`（两边都取 `−2`）。 -/
+theorem attesonW_sub_of_not_inSide_not_inSide (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : ¬ T.inSide e k l) (hij : ¬ T.inSide e i j) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ) = 0 := by
+  rw [T.attesonW_eq_neg_two_of_not_inSide hkl, T.attesonW_eq_neg_two_of_not_inSide hij]
+  norm_num
+
+/-- ★★★ **（ii)a｜② `e` 分离 `k,l` 但不分离 `i,j`** ⇒ `c_e = 2·(n − S_i) − 2`
+（`(k,l)` 计 `−2`，`(i,j)` 计 `−2(n − S_i)`）。 -/
+theorem attesonW_sub_of_not_inSide_inSide (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : ¬ T.inSide e k l) (hij : T.inSide e i j) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ)
+      = 2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e i : ℝ)) - 2 := by
+  rw [T.attesonW_eq_neg_two_of_not_inSide hkl, T.attesonW_eq_sideCount_of_inSide hij]
+  push_cast
+  ring
+
+/-- ★★★ **（ii)a｜③ `e` 不分离 `k,l` 但分离 `i,j`** ⇒ `c_e = 2 − 2·(n − S_k)`。 -/
+theorem attesonW_sub_of_inSide_not_inSide (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : T.inSide e k l) (hij : ¬ T.inSide e i j) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ)
+      = 2 - 2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e k : ℝ)) := by
+  rw [T.attesonW_eq_sideCount_of_inSide hkl, T.attesonW_eq_neg_two_of_not_inSide hij]
+  push_cast
+  ring
+
+/-- ★★★ **（ii)a｜④ 两对都**被** `e` 分离** ⇒ `c_e = 2·(S_k − S_i)`。 -/
+theorem attesonW_sub_of_inSide_inSide (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : T.inSide e k l) (hij : T.inSide e i j) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ)
+      = 2 * ((T.sideLeafCount e k : ℝ) - (T.sideLeafCount e i : ℝ)) := by
+  rw [T.attesonW_eq_sideCount_of_inSide hkl, T.attesonW_eq_sideCount_of_inSide hij]
+  push_cast
+  ring
+
+/-- ★★★ **（ii)a-正｜`e` 分离 `k,l` ⇒ `c_e ≥ 0`**（**与 `(i,j)` 在哪侧无关**）：
+
+* `i,j` 也被 `e` 分离 ⇒ 情形 ①，`c_e = 0`；
+* 否则情形 ②，`c_e = 2·(n − S_i) − 2 ≥ 0`（边的两侧都含叶 ⇒ `S_i < n`）。
+
+这是 Atteson case 1（`:2008–2020`）的逐边结论，也是 `(ii)b` 里**唯一无条件**成立的那一半
+（另外两半要靠 `e*` 的最小性）。 -/
+theorem attesonW_sub_nonneg_of_not_inSide (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hkl : ¬ T.inSide s(a, b) k l) :
+    0 ≤ (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ) := by
+  by_cases hij : T.inSide s(a, b) i j
+  · rw [T.attesonW_sub_of_not_inSide_inSide hkl hij]
+    have hlt : T.sideLeafCount s(a, b) i < Fintype.card X :=
+      T.sideLeafCount_lt_card_of_adj hab
+    have hle : (T.sideLeafCount s(a, b) i : ℝ) + 1 ≤ (Fintype.card X : ℝ) := by
+      exact_mod_cast Nat.succ_le_of_lt hlt
+    linarith
+  · rw [T.attesonW_sub_of_not_inSide_not_inSide hkl hij]
 
 end Cladogram
 
