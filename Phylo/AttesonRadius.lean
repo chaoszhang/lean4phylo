@@ -934,7 +934,8 @@ case 1（`:2034–2043`）显式用「每个内点恰关联 3 条边」。
 ⇒ 两支**全不满足**。同脚本 `m = 2`（二叉，`n = 4`）则满足（间隙 2，要求 0／2）。
 ⇒ 定量版的**忠实陈述必须带 `T.toCladogram.IsBinary`**；`def` 本体**逐字未动**（引理留证）。
 建议老师裁定：把 `IsBinary` 写进 `def`，还是在定理处加前提 —— 本库取后者
-（`atteson_lemma11_gap_quantitative_holds_of_binary`，见本文件 §22）。 -/
+（`atteson_lemma11_gap_quantitative_holds_of_binary`，将落在本文件 §22 **之后**；
+★ §22 现已用于 `cherry_in_component`，见该节）。 -/
 def atteson_lemma11_gap_quantitative (T : Phylogram X) : Prop :=
   4 ≤ Fintype.card X → (toDissimilarity T).IsCherrySeparated (minEdgeWeight T)
 
