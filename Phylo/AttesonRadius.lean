@@ -5599,6 +5599,39 @@ theorem minEdgeWeight_nonneg (T : Phylogram X) [Nonempty X] :
   · rintro _ ⟨e, rfl⟩
     exact T.w_nonneg e
 
+/-! ## 46. ★★★★ W50-A-#44：`e*` 组数据的**生产**（§20′ ＋ §22 ＋ 端点形式）
+
+§42 的「`e*` 组」有五个前提：`IsCherry i j`、`Adj c₀ d₀`、`inSide e* k l`、
+`inSide e* i k`、`inSide e* j k`、`hmin`。本节一条定理**全部产出**：
+
+* `e*` 与最小性 ← §20′ `exists_min_sideLeafCount_offPath`；
+* 端点形式 `e* = s(c₀,d₀)` ← §34.4 `exists_adj_of_mem_edgeSet`；
+* 樱桃 ＋ 两叶都在 `k` 侧 ← §22 `cherry_in_component`（验收标准 #4：**樱桃不需要假设**）。 -/
+
+namespace Cladogram
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **`e*` ＋ 樱桃 ＋ 最小性，一次给全**（`§42` 的「`e*` 组」）。 -/
+theorem exists_cherry_offpath_data (T : Cladogram X) {k l : X} (hkl : k ≠ l)
+    (h3 : 3 ≤ Fintype.card X) :
+    ∃ i j : X, ∃ c₀ d₀ : T.V,
+      T.IsCherry i j ∧ T.graph.Adj c₀ d₀ ∧ T.inSide s(c₀, d₀) (T.leaf k) (T.leaf l) ∧
+      T.inSide s(c₀, d₀) (T.leaf i) (T.leaf k) ∧
+      T.inSide s(c₀, d₀) (T.leaf j) (T.leaf k) ∧
+      (∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+        T.sideLeafCount s(c₀, d₀) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) := by
+  classical
+  obtain ⟨eStar, heStar_mem, heStarI, hmin⟩ := T.exists_min_sideLeafCount_offPath hkl h3
+  obtain ⟨c₀, d₀, hcd, heq⟩ := T.exists_adj_of_mem_edgeSet heStar_mem
+  rw [heq] at heStarI hmin
+  obtain ⟨i, j, w, hij, hiw, hjw, -, hik, hjk⟩ := T.cherry_in_component hcd hkl heStarI
+  refine ⟨i, j, c₀, d₀, ⟨hij, w, hiw, hjw⟩, hcd, heStarI, ?_, ?_, hmin⟩
+  · exact (T.inSide_comm s(c₀, d₀) (T.leaf k) (T.leaf i)).mp hik
+  · exact (T.inSide_comm s(c₀, d₀) (T.leaf k) (T.leaf j)).mp hjk
+
+end Cladogram
+
 end Dissimilarity
 
 end NJ
