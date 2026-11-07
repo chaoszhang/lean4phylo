@@ -3142,5 +3142,88 @@ theorem card_le_sum_three_sideLeaves_of_degree (T : Cladogram X) {v a b c : T.V}
     rw [SimpleGraph.card_neighborFinset_eq_degree, hdeg, hcard]
   exact T.card_le_sum_three_sideLeaves (by rw [hnb']) (by rw [hdeg]; norm_num)
 
+/-! ### 23.1 挂点处的 `n/2` 界（Atteson `:2040`） -/
+
+/-- ★★★ **`|L_a| + |L_b| ≥ n/2`**（挂点 `v` 的第三条支 `c` 只占 ≤ `n/2`）。
+
+`c` 支就是 §21 里的 `e_{p*}`（往樱桃去的分支边）：`ℓ_i(e_{p*}) ≤ ℓ_k(e_{p*})`（`e*` 最小性）
+＋ `ℓ_i + ℓ_k = n` 给出 `2·|L_c| ≤ n`，再拼上 §23 的覆盖
+`n ≤ |L_a| + |L_b| + |L_c|` 即得。 -/
+theorem card_le_two_mul_card_add_card_sideLeaves (T : Cladogram X) {v a b c : T.V}
+    (ha : T.graph.Adj v a) (hb : T.graph.Adj v b) (hc : T.graph.Adj v c)
+    (hab : a ≠ b) (hac : a ≠ c) (hbc : b ≠ c) (hdeg : T.graph.degree v = 3)
+    (hmid : 2 * (T.sideLeaves s(v, c) c).card ≤ Fintype.card X) :
+    Fintype.card X
+      ≤ 2 * ((T.sideLeaves s(v, a) a).card + (T.sideLeaves s(v, b) b).card) := by
+  have hcov := T.card_le_sum_three_sideLeaves_of_degree ha hb hc hab hac hbc hdeg
+  omega
+
+/-! ### 23.2 配对估计：`c_{e'} + c_{e''} ≥ n − 4` -/
+
+/-- ★★★ **分离 ⇒ 两侧叶数之和 `= n`**（`sideLeafCount_add_of_adj` ＋ 同侧不变性）。 -/
+theorem sideLeafCount_add_of_sep (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {x y : T.V} (h : ¬ T.inSide s(a, b) x y) :
+    T.sideLeafCount s(a, b) x + T.sideLeafCount s(a, b) y = Fintype.card X := by
+  rcases T.inSide_or_inSide hab (x := x) with hx | hx
+  · have hy : T.inSide s(a, b) y b := by
+      rcases T.inSide_or_inSide hab (x := y) with hy' | hy'
+      · exact absurd (hx.trans hy'.symm) h
+      · exact hy'
+    have e1 := T.sideLeafCount_eq_of_inSide hy
+    have e2 := T.sideLeafCount_eq_of_inSide hx
+    have e3 := T.sideLeafCount_add_of_adj hab
+    omega
+  · have hy : T.inSide s(a, b) y a := by
+      rcases T.inSide_or_inSide hab (x := y) with hy' | hy'
+      · exact hy'
+      · exact absurd (hx.trans hy'.symm) h
+    have e1 := T.sideLeafCount_eq_of_inSide hy
+    have e2 := T.sideLeafCount_eq_of_inSide hx
+    have e3 := T.sideLeafCount_add_of_adj hab
+    omega
+
+/-- ★★★ **F 的配对估计（Atteson `:2038–2042`）**：两条都分离 `k,l`、都不分离 `i,j`、
+都分离 `i,k` 的真边，系数和 `≥ n − 4`。
+
+推导：§19 情形② 给 `c_e = 2(n − S_i(e)) − 2`；`e` 分离 `i,k` ⇒ `S_i(e) = n − S_k(e)`
+⇒ `c_e = 2·S_k(e) − 2`；两条相加 `= 2(S_k(e') + S_k(e'')) − 4 ≥ n − 4`（用 `hhalf`）。 -/
+theorem attesonW_sub_pair_ge (T : Cladogram X) {a1 b1 a2 b2 : T.V}
+    (h1 : T.graph.Adj a1 b1) (h2 : T.graph.Adj a2 b2) {i j k l : X}
+    (hkl1 : ¬ T.inSide s(a1, b1) (T.leaf k) (T.leaf l))
+    (hkl2 : ¬ T.inSide s(a2, b2) (T.leaf k) (T.leaf l))
+    (hij1 : T.inSide s(a1, b1) (T.leaf i) (T.leaf j))
+    (hij2 : T.inSide s(a2, b2) (T.leaf i) (T.leaf j))
+    (hik1 : ¬ T.inSide s(a1, b1) (T.leaf i) (T.leaf k))
+    (hik2 : ¬ T.inSide s(a2, b2) (T.leaf i) (T.leaf k))
+    (hhalf : Fintype.card X
+      ≤ 2 * (T.sideLeafCount s(a1, b1) (T.leaf k) + T.sideLeafCount s(a2, b2) (T.leaf k))) :
+    (Fintype.card X : ℝ) - 4
+      ≤ ((T.attesonW (T.leaf k) (T.leaf l) s(a1, b1) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(a1, b1) : ℝ))
+        + ((T.attesonW (T.leaf k) (T.leaf l) s(a2, b2) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(a2, b2) : ℝ)) := by
+  rw [T.attesonW_sub_of_not_inSide_inSide hkl1 hij1,
+    T.attesonW_sub_of_not_inSide_inSide hkl2 hij2]
+  have hs1 := T.sideLeafCount_add_of_sep h1 hik1
+  have hs2 := T.sideLeafCount_add_of_sep h2 hik2
+  have hhalf' : (Fintype.card X : ℝ)
+      ≤ 2 * ((T.sideLeafCount s(a1, b1) (T.leaf k) : ℝ)
+        + (T.sideLeafCount s(a2, b2) (T.leaf k) : ℝ)) := by exact_mod_cast hhalf
+  have hs1' : (T.sideLeafCount s(a1, b1) (T.leaf i) : ℝ)
+      = (Fintype.card X : ℝ) - (T.sideLeafCount s(a1, b1) (T.leaf k) : ℝ) := by
+    have h := hs1
+    have h' : (T.sideLeafCount s(a1, b1) (T.leaf i) : ℝ)
+        + (T.sideLeafCount s(a1, b1) (T.leaf k) : ℝ) = (Fintype.card X : ℝ) := by
+      rw [← Nat.cast_add, h]
+    linarith
+  have hs2' : (T.sideLeafCount s(a2, b2) (T.leaf i) : ℝ)
+      = (Fintype.card X : ℝ) - (T.sideLeafCount s(a2, b2) (T.leaf k) : ℝ) := by
+    have h' : (T.sideLeafCount s(a2, b2) (T.leaf i) : ℝ)
+        + (T.sideLeafCount s(a2, b2) (T.leaf k) : ℝ) = (Fintype.card X : ℝ) := by
+      rw [← Nat.cast_add, hs2]
+    linarith
+  rw [hs1', hs2']
+  linarith
+
 end Cladogram
 
