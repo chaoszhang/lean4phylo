@@ -5670,6 +5670,34 @@ theorem exists_attach_data (T : Cladogram X) (hbin : T.IsBinary) {i j : X} {w : 
   obtain ⟨u, hui, huj, hwu, hne⟩ := T.exists_cherry_attach_vertex hi hj hij hdeg
   exact ⟨u, hwu, hui, huj, T.sideLeaves_cherry_side_eq_pair hi hj hij hwu hdeg hne hui huj⟩
 
+/-- ★★★★ **`c` 支樱桃的生产 ＋ 四个互异 ＋ `hikc`**（§27.6 的输出 ＋ 四条 `not_inSide_both` 推论）
+
+装配需要：樱桃 `(i,j)` 在 `c` 支里、`i,j ∉ {k,l}`、`¬inSide s(v,c) (leaf i) (leaf k)`（§37 的
+`hikc`）。本定理全部给出，于是 §42 的起点组最后一个缺口补上。 -/
+theorem exists_start_cherry_data (T : Cladogram X) {k l : X} {v c : T.V}
+    (hvc : T.graph.Adj v c) (hkvc : T.inSide s(v, c) v (T.leaf k))
+    (hlvc : T.inSide s(v, c) v (T.leaf l))
+    (h2 : 2 ≤ T.sideLeafCount s(v, c) c) :
+    ∃ i j : X, T.IsCherry i j ∧ i ≠ k ∧ j ≠ k ∧ i ≠ l ∧ j ≠ l ∧
+      T.inSide s(v, c) c (T.leaf i) ∧ T.inSide s(v, c) c (T.leaf j) ∧
+      ¬ T.inSide s(v, c) (T.leaf i) (T.leaf k) := by
+  classical
+  obtain ⟨i, j, w, hij, hcher, -, hic, hjc, -⟩ := T.exists_cherry_of_start_side_two_le hvc h2
+  -- `k`、`l` 都不在 `c` 侧
+  have hk_not : ¬ T.inSide s(v, c) c (T.leaf k) :=
+    fun h => T.not_inSide_both hvc (y := T.leaf k) ⟨hkvc, h⟩
+  have hl_not : ¬ T.inSide s(v, c) c (T.leaf l) :=
+    fun h => T.not_inSide_both hvc (y := T.leaf l) ⟨hlvc, h⟩
+  have hik : i ≠ k := fun h => hk_not (h ▸ hic)
+  have hjk : j ≠ k := fun h => hk_not (h ▸ hjc)
+  have hil : i ≠ l := fun h => hl_not (h ▸ hic)
+  have hjl : j ≠ l := fun h => hl_not (h ▸ hjc)
+  have hikc : ¬ T.inSide s(v, c) (T.leaf i) (T.leaf k) := by
+    intro h
+    have hvi : T.inSide s(v, c) v (T.leaf i) := hkvc.trans h.symm
+    exact T.not_inSide_both hvc (y := T.leaf i) ⟨hvi, hic⟩
+  exact ⟨i, j, hcher, hik, hjk, hil, hjl, hic, hjc, hikc⟩
+
 end Cladogram
 
 end Dissimilarity
