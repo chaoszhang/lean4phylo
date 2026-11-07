@@ -3805,6 +3805,37 @@ theorem attesonW_sub_start_of_side_card_one (T : Cladogram X) {k l x : X} {v z c
   have hS2' : (T.sideLeafCount s(v, z) (T.leaf k) : ℝ) ≤ 2 := by exact_mod_cast hS2
   linarith
 
+/-! ### 27.4′ **`l` 端的镜像**（Case S 的另一半，`W50_A_MATH.md` §7.9.1）
+
+Case S（`k` 或 `l` 落在樱桃里）关于 `k ↔ l` **完全对称**：一旦 `l` 落在樱桃 `(l, y)` 里，
+§27.4 的整条论证把 `k,l` 互换即可。本节把这件事落成一条**可直接调用**的引理，免得在装配处
+手工搬 `attesonW_comm` 的方向（那里极易写反）。
+
+★ 结论的形状要注意：`l` 端给的是 `Q(k,l) − Q(l,y)`，而 §27.4 的 `k` 端给的是
+`Q(k,l) − Q(k,x)` —— 两者**不能**互换使用，装配时按「`k` 在樱桃里 ⇒ 用 `_k` 版；
+`l` 在樱桃里 ⇒ 用本版」分派。 -/
+
+/-- ★★★ **第二支的系数下界（`l` 端镜像）**：`l` 挂在 `v` 上、`S_c = 1` ⇒ 起点边给出
+`c_e ≥ 2(n−3)`，此处 `(i,j) = (l, y)`，`leaf y = c`。
+
+由 §27.4 的 `attesonW_sub_start_of_side_card_one` 以 `(k,l,x) := (l,k,y)` 实例化，
+再用 `attesonW_comm` 把两处 `attesonW (leaf l) (leaf k)`／`attesonW (leaf l) (leaf y)`
+翻回 `(leaf k, leaf l)`／`(leaf y, leaf l)`。 -/
+theorem attesonW_sub_start_of_side_card_one_l (T : Cladogram X) {k l y : X} {v z c : T.V}
+    (hlv : T.graph.Adj (T.leaf l) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hnb : T.graph.neighborFinset v = {T.leaf l, z, c}) (hdeg : T.graph.degree v ≠ 1)
+    (hzk : z ≠ T.leaf l) (hcz : z ≠ c) (hx : T.leaf y = c)
+    (hS : T.sideLeafCount s(v, c) c = 1)
+    (hpath : ¬ T.inSide s(v, z) (T.leaf l) (T.leaf k)) :
+    2 * ((Fintype.card X : ℝ) - 3)
+      ≤ (T.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+        - (T.attesonW (T.leaf y) (T.leaf l) s(v, z) : ℝ) := by
+  have h := T.attesonW_sub_start_of_side_card_one (k := l) (l := k) (x := y)
+    hlv hvz hvc hnb hdeg hzk hcz hx hS hpath
+  rw [← T.attesonW_comm (T.leaf k) (T.leaf l) s(v, z),
+    ← T.attesonW_comm (T.leaf y) (T.leaf l) s(v, z)] at h
+  exact h
+
 /-! ### 27.5 樱桃与目标对的形态二分（**树层**，`W50_A_MATH.md` §7.6.2 的装配前提）
 
 `IsCherrySeparated` 的两条分支要求：非樱桃对 `(k,l)` 与樱桃 `(i,j)` 要么**不交**、要么
@@ -3861,5 +3892,137 @@ theorem exists_cherry_of_start_side_two_le (T : Cladogram X) {v c : T.V}
     (T.sideLeafCount_eq_of_inSide (hi'.trans hii)).symm, hi'.trans hii, hi'.trans hjj,
     hi'.trans hw⟩
 
+/-! ## 28. ★★★ W50-A-#19：Case D 的**逐边系数**（路径边上的 `c_e` 的显式值）
+
+`W50_A_MATH.md` §7.9.2 的两端求和要求：对 `P_{k,l}` 上的**每一条**边给出 `c_e` 的显式值，
+且该值只依赖「`k` 侧叶数 `ℓ_k(e)`」。樱桃 `(i,j)` 在起点分支内（Case D），故 `i,j` 都与 `k`
+同侧、或都与 `k` 异侧 —— 恰好两种形状：
+
+| `(i,j)` 相对 `k` | `c_e` | 本节定理 |
+|---|---|---|
+| **同侧**（`r ≥ 2` 的路径边） | `2(n − ℓ_k(e)) − 2 = 2·ℓ_l(e) − 2` | `attesonW_sub_path_eq_near_k` / `_near_k'` |
+| **异侧**（首边 `e₁ = ⟦k,x₁⟧`） | `2·ℓ_k(e) − 2` | `attesonW_sub_path_eq_far_k` |
+
+★ 首边 `ℓ_k(e₁) = 1`、末边 `ℓ_l(e_m) = 1`，两种形状**同时**退化为 `0`（`_zero_of_sideLeafCount_one`）
+—— 这就是 §7.9.2 里「两端路径边不贡献、贡献只来自中间 `m − 2` 条边」的 Lean 依据。
+
+★ 与 §19 的区别：§19 的形状用 `S_i(e)` 写（取决于 `(i,j)` 落在哪侧），本节用 `ℓ_k(e)` 写 ——
+**同一侧的两条路径边可以有不同的 `ℓ_k`**，但求和号里 `ℓ_k` 是唯一变量，这样才可加。 -/
+
+/-- ★★★ **Case D｜路径边（同侧形）**：`e` 分离 `k,l`、`i,j` 同侧、且 `i` 与 `k` **同侧** ⇒
+
+　　`c_e = 2·(n − ℓ_k(e)) − 2`。
+
+这是 §19 情形②（`2(n − S_i) − 2`）＋「同侧 ⇒ `S_i = ℓ_k`」（`sideLeafCount_eq_of_inSide`）。 -/
+theorem attesonW_sub_path_eq_near_k (T : Cladogram X) {e : Sym2 T.V} {i j k l : T.V}
+    (hkl : ¬ T.inSide e k l) (hij : T.inSide e i j) (hki : T.inSide e k i) :
+    (T.attesonW k l e : ℝ) - (T.attesonW i j e : ℝ)
+      = 2 * ((Fintype.card X : ℝ) - (T.sideLeafCount e k : ℝ)) - 2 := by
+  rw [T.attesonW_sub_of_not_inSide_inSide hkl hij, T.sideLeafCount_eq_of_inSide hki]
+
+/-- ★★★ **Case D｜路径边（同侧形，按 `ℓ_l` 写）**：同上，再用 `ℓ_k(e) + ℓ_l(e) = n`，
+
+　　`c_e = 2·ℓ_l(e) − 2`。
+
+★ 这个写法正是 §7.9.2 `l` 端求和里出现的项：`Σ_{r=1}^{m-1}(2ℓ_k(e_r) − 2)` 与
+`Σ_{r=2}^{m}(2ℓ_l(e_r) − 2)` 把同一条中间边从两端各数一次，两份相加后 `ℓ_k + ℓ_l = n` 才用得上。 -/
+theorem attesonW_sub_path_eq_near_k' (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hkl : ¬ T.inSide s(a, b) k l) (hij : T.inSide s(a, b) i j)
+    (hki : T.inSide s(a, b) k i) :
+    (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ)
+      = 2 * (T.sideLeafCount s(a, b) l : ℝ) - 2 := by
+  rw [T.attesonW_sub_path_eq_near_k hkl hij hki]
+  have hsum : (T.sideLeafCount s(a, b) k : ℝ) + (T.sideLeafCount s(a, b) l : ℝ)
+      = (Fintype.card X : ℝ) := by
+    exact_mod_cast T.sideLeafCount_add_of_sep hab hkl
+  linarith
+
+/-- ★★★ **Case D｜首边（异侧形）**：`e` 分离 `k,l`、`i,j` 同侧、但 `i` 与 `k` **异侧** ⇒
+
+　　`c_e = 2·ℓ_k(e) − 2`。
+
+`S_i = n − ℓ_k(e)`（`sideLeafCount_add_of_sep`）⇒ `2(n − S_i) − 2 = 2ℓ_k(e) − 2`。 -/
+theorem attesonW_sub_path_eq_far_k (T : Cladogram X) {a b : T.V} (hab : T.graph.Adj a b)
+    {i j k l : T.V} (hkl : ¬ T.inSide s(a, b) k l) (hij : T.inSide s(a, b) i j)
+    (hik : ¬ T.inSide s(a, b) k i) :
+    (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ)
+      = 2 * (T.sideLeafCount s(a, b) k : ℝ) - 2 := by
+  rw [T.attesonW_sub_of_not_inSide_inSide hkl hij]
+  have hsum : (T.sideLeafCount s(a, b) k : ℝ) + (T.sideLeafCount s(a, b) i : ℝ)
+      = (Fintype.card X : ℝ) := by
+    exact_mod_cast T.sideLeafCount_add_of_sep hab hik
+  linarith
+
+/-- ★★★ **Case D｜首边不贡献**：异侧形且 `ℓ_k(e) = 1` ⇒ `c_e = 0`。
+
+`e = ⟦k,x₁⟧` 时 `k` 侧只有 `k` 一片叶（`sideLeafCount_leaf_edge`），故 `2·1 − 2 = 0`。
+这是 §7.9.2 里 `Σ` 的下限 `m − 2`（而非 `m`）的来源。 -/
+theorem attesonW_sub_path_eq_zero_of_sideLeafCount_one (T : Cladogram X) {a b : T.V}
+    (hab : T.graph.Adj a b) {i j k l : T.V} (hkl : ¬ T.inSide s(a, b) k l)
+    (hij : T.inSide s(a, b) i j) (hik : ¬ T.inSide s(a, b) k i)
+    (h1 : T.sideLeafCount s(a, b) k = 1) :
+    (T.attesonW k l s(a, b) : ℝ) - (T.attesonW i j s(a, b) : ℝ) = 0 := by
+  rw [T.attesonW_sub_path_eq_far_k hab hkl hij hik, h1]
+  push_cast
+  ring
+
 end Cladogram
+
+/-! ## 29. ★★★ W50-A-#19：Case D 的**两端算术**（纯数值，与树结构完全无关）
+
+§7.9.2 的收尾是两行实数算术，本节把它们从几何里**彻底剥离**出来，这样剩下的 Lean 工作
+（路径枚举 ⇒ `A`／`B` 两个求和）只要产出 `A + B ≥ 2(m−2)(n−2)` 这一条不等式即可。
+
+记 `m` = `P_{k,l}` 的边数，`A` = `k` 端的中间边系数和、`B` = `l` 端的中间边系数和。则
+
+* `m ≥ 3`（否则 `k,l` 在同一顶点的两条邻边上 ⇒ 樱桃，与 Case D 矛盾）；
+* `m ≤ n − 1`（路径上的中间顶点各带一「非叶」…见 `W50_A_MATH.md` §7.9.2 (4)）；
+* `A + B = 2(m − 2)(n − 2)`（逐边 `c` 的两端和，用 `ℓ_k + ℓ_l = n`）。
+
+于是 `2(n−4) + A + 2(n−4) + B = 4(n−4) + 2(m−2)(n−2) ≥ 6(n−4)`，故**至少一端**
+`≥ 3(n−4)` —— 这就是 `DisjointPairs` 支的 `3(n−4)` 的来源，也是 Atteson 原文
+`|L_i(e*)| ≤ |L_k(e*)|`（★D③：原文此处不成立）的**替代品**。 -/
+
+/-- ★★★ **两数之和够大 ⇒ 至少一个够大**（`K/2` 版）。 -/
+theorem half_le_of_le_add {a b K : ℝ} (h : K ≤ a + b) : K / 2 ≤ a ∨ K / 2 ≤ b := by
+  by_contra hc
+  rw [not_or] at hc
+  have h1 : a < K / 2 := not_le.mp hc.1
+  have h2 : b < K / 2 := not_le.mp hc.2
+  linarith
+
+/-- ★★★ **Case D｜核心数值不等式**：`3 ≤ m`、`m + 1 ≤ n` ⇒
+
+　　`6(n − 4) ≤ 2(n − 4) + 2(n − 4) + 2(m − 2)(n − 2)`。
+
+等价于 `n − 4 ≤ (m − 2)(n − 2)`：`m ≥ 3` 给 `m − 2 ≥ 1`，`n ≥ 4` 给 `n − 2 ≥ n − 4`。
+（`n = 4`、`m = 3` 时取等：`0 ≤ 0`。） -/
+theorem two_end_sum_ge (n m : ℕ) (hm : 3 ≤ m) (hmn : m + 1 ≤ n) :
+    6 * ((n : ℝ) - 4)
+      ≤ 2 * ((n : ℝ) - 4) + 2 * ((n : ℝ) - 4) + 2 * ((m : ℝ) - 2) * ((n : ℝ) - 2) := by
+  have hm' : (3 : ℝ) ≤ (m : ℝ) := by exact_mod_cast hm
+  have hn' : (m : ℝ) + 1 ≤ (n : ℝ) := by exact_mod_cast hmn
+  have hn2 : (0 : ℝ) ≤ (n : ℝ) - 2 := by linarith
+  have hm2 : (1 : ℝ) ≤ (m : ℝ) - 2 := by linarith
+  have hm2' : (0 : ℝ) ≤ (m : ℝ) - 2 := by linarith
+  nlinarith [mul_le_mul hm2 le_rfl hn2 hm2']
+
+/-- ★★★★ **Case D｜`DisjointPairs` 支的收尾（可直接用于装配）**：
+
+若两端的中间边系数和 `A + B ≥ 2(m−2)(n−2)`（`m` = `P_{k,l}` 的边数，`3 ≤ m ≤ n−1`），
+则**至少一端**满足 `2(n−4) + (该端中间和) ≥ 3(n−4)`。
+
+这就是 §7.9.2 全部算术的最终形状：剩下的几何任务只剩「证明 `A + B ≥ 2(m−2)(n−2)`」，
+即逐边 `c_{e_r} = 2ℓ_l(e_r) − 2`（`attesonW_sub_path_eq_near_k'`）＋ `ℓ_k + ℓ_l = n`
+（`sideLeafCount_add_of_sep`）＋ 两端路径边 `c = 0`（`attesonW_sub_path_eq_zero_of_sideLeafCount_one`）。 -/
+theorem three_mul_le_of_two_end {n m : ℕ} (hm : 3 ≤ m) (hmn : m + 1 ≤ n) {A B : ℝ}
+    (hAB : 2 * ((m : ℝ) - 2) * ((n : ℝ) - 2) ≤ A + B) :
+    3 * ((n : ℝ) - 4) ≤ 2 * ((n : ℝ) - 4) + A ∨
+      3 * ((n : ℝ) - 4) ≤ 2 * ((n : ℝ) - 4) + B := by
+  have hcore := two_end_sum_ge n m hm hmn
+  have h2 := half_le_of_le_add (K := 6 * ((n : ℝ) - 4))
+    (a := 2 * ((n : ℝ) - 4) + A) (b := 2 * ((n : ℝ) - 4) + B) (by linarith)
+  rcases h2 with h2 | h2
+  · left; linarith
+  · right; linarith
 
