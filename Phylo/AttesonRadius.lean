@@ -3805,5 +3805,32 @@ theorem attesonW_sub_start_of_side_card_one (T : Cladogram X) {k l x : X} {v z c
   have hS2' : (T.sideLeafCount s(v, z) (T.leaf k) : ℝ) ≤ 2 := by exact_mod_cast hS2
   linarith
 
+/-! ### 27.5 樱桃与目标对的形态二分（**树层**，`W50_A_MATH.md` §7.6.2 的装配前提）
+
+`IsCherrySeparated` 的两条分支要求：非樱桃对 `(k,l)` 与樱桃 `(i,j)` 要么**不交**、要么
+**恰交一个标签**。度量层已有 ★★ `NJ.Dissimilarity.disjointPairs_or_sharesOneLabel_of_isCherry`
+（`:1064`）；本节的**树层**版本供 §27.4／§27.6 的构造直接使用 —— 那里只知道
+`T.IsCherry i j`（由 `v` 处的两条邻边造出），并不知道任何距离。
+
+技法：`i,j` 都不在 `{k,l}` 里 ⇒ `DisjointPairs`；否则（如 `i = k`）另一片叶 `j` 必不等于 `l`
+（否则 `IsCherry k l`，与非樱桃假设矛盾）⇒ 落入 `SharesOneLabel` 的对应形态。 -/
+theorem disjointPairs_or_sharesOneLabel_of_tree_isCherry (T : Cladogram X) {i j k l : X}
+    (hch : T.IsCherry i j) (hnc : ¬ T.IsCherry k l) :
+    NJ.Dissimilarity.DisjointPairs i j k l ∨
+      NJ.Dissimilarity.SharesOneLabel i j k l := by
+  have hch' := hch
+  obtain ⟨hij, -⟩ := hch
+  by_cases hik : i = k
+  · exact Or.inr (Or.inl ⟨hik, fun h => hij (hik.trans h.symm),
+      fun h => hnc (h ▸ (hik ▸ hch'))⟩)
+  by_cases hil : i = l
+  · exact Or.inr (Or.inr (Or.inl ⟨hil, fun h => hnc (T.isCherry_symm (h ▸ (hil ▸ hch'))),
+      fun h => hij (hil.trans h.symm)⟩))
+  by_cases hjk : j = k
+  · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨hjk, hik, hil⟩)))
+  by_cases hjl : j = l
+  · exact Or.inr (Or.inr (Or.inr (Or.inr ⟨hjl, hik, hil⟩)))
+  exact Or.inl ⟨hik, hil, hjk, hjl⟩
+
 end Cladogram
 
