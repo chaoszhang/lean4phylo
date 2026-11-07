@@ -5269,5 +5269,84 @@ theorem attesonW_sub_attach_ge_of_side_pair (T : Cladogram X) {i j k l : X} {w u
     · exact (T.inSide_comm s(w, u) (T.leaf l) u).mp h
   rw [T.attesonW_sub_eq_two_n_sub_eight hwu hiw hjw hku hlu h2]
 
+/-- ★★★ **叶边的「其余都在 `b` 侧」**：`s(leaf x, b)` 的 `b` 侧叶集 `= {x}ᶜ`，
+故任何不是 `x` 的叶都在 `b` 侧。装配里 `e' = s(leaf k, v)` 的三个侧条件全靠它一行拿下。 -/
+theorem inSide_leaf_edge_other (T : Cladogram X) {x : X} {b : T.V} {y : X}
+    (h : T.graph.Adj (T.leaf x) b) (hy : y ≠ x) : T.inSide s(T.leaf x, b) b (T.leaf y) := by
+  classical
+  have hmem : y ∈ T.sideLeaves s(T.leaf x, b) b := by
+    rw [T.sideLeaves_compl_adj h, Finset.mem_compl, T.sideLeaves_leaf_edge h, Finset.mem_singleton]
+    exact hy
+  exact (T.mem_sideLeaves_iff_inSide).mp hmem
+
+/-- ★★★★ **配对项的就地形式（`v₁` 结构）**：`leaf k — v — z` 是 `P_{k,l}` 的头两段、`v` 的第三支
+是 `c`，樱桃 `(i,j)` 在 `c` 支内。则两条路径边 `e' = s(leaf k, v)`、`e'' = s(v, z)` 的系数满足
+
+　　`c_{e'} + c_{e''} ≥ n − 4`　（Atteson `:2041–2043` 的 `n−4`）。
+
+计算：`c_{e'} = 0`（`ℓ_k(e') = 1`，§28 零系数引理）；`c_{e''} = 2ℓ_l(e'') − 2`（§28 近形），
+而 `ℓ_l(e'') = n − ℓ_k(e'')`、`ℓ_k(e'') = ℓ_v(s(v,z)) ≤ 1 + S_c`（§27.3 `sideLeafCount_start_le`），
+配合 `2S_c ≤ n`（§37）即得 `2ℓ_l − 2 ≥ 2n − 4 − 2S_c ≥ n − 4`。 -/
+theorem attesonW_sub_pair_start_ge (T : Cladogram X) {i j k l : X} {v z c : T.V}
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hzc : z ≠ c) (hzk : z ≠ T.leaf k) (hlk : l ≠ k) (hik : i ≠ k) (hjk : j ≠ k)
+    (hic : T.inSide s(v, c) c (T.leaf i)) (hjc : T.inSide s(v, c) c (T.leaf j))
+    (hklz : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf l))
+    (hnb : T.graph.neighborFinset v = {T.leaf k, z, c})
+    (hdeg : T.graph.degree v ≠ 1)
+    (hS : 2 * T.sideLeafCount s(v, c) c ≤ Fintype.card X) :
+    (Fintype.card X : ℝ) - 4
+      ≤ ((T.attesonW (T.leaf k) (T.leaf l) s(T.leaf k, v) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(T.leaf k, v) : ℝ))
+        + ((T.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+          - (T.attesonW (T.leaf i) (T.leaf j) s(v, z) : ℝ)) := by
+  classical
+  -- ### 樱桃两叶在 `s(v,z)` 的 `v` 侧；`leaf k` 也在 `v` 侧
+  have hiv_z : T.inSide s(v, z) v (T.leaf i) := T.inSide_of_inSide_adj_swap hvc hvz hzc.symm hic
+  have hjv_z : T.inSide s(v, z) v (T.leaf j) := T.inSide_of_inSide_adj_swap hvc hvz hzc.symm hjc
+  have hkv_z : T.inSide s(v, z) v (T.leaf k) := T.inSide_branch_of_leaf_adj hkv hzk
+  -- ### 第一段 `e' = s(leaf k, v)`：除 `leaf k` 外都在 `v` 侧
+  have hiv_e : T.inSide s(T.leaf k, v) v (T.leaf i) :=
+    T.inSide_leaf_edge_other hkv hik
+  have hjv_e : T.inSide s(T.leaf k, v) v (T.leaf j) :=
+    T.inSide_leaf_edge_other hkv hjk
+  have hlv_e : T.inSide s(T.leaf k, v) v (T.leaf l) :=
+    T.inSide_leaf_edge_other hkv hlk
+  have hkl_e : ¬ T.inSide s(T.leaf k, v) (T.leaf k) (T.leaf l) := by
+    intro h
+    have hk_v : T.inSide s(T.leaf k, v) (T.leaf k) v := h.trans hlv_e.symm
+    exact T.not_inSide_both hkv (y := v) ⟨hk_v, T.inSide_self s(T.leaf k, v) v⟩
+  have hki_e : ¬ T.inSide s(T.leaf k, v) (T.leaf k) (T.leaf i) := by
+    intro h
+    have hk_v : T.inSide s(T.leaf k, v) (T.leaf k) v := h.trans hiv_e.symm
+    exact T.not_inSide_both hkv (y := v) ⟨hk_v, T.inSide_self s(T.leaf k, v) v⟩
+  have hc1 : (T.attesonW (T.leaf k) (T.leaf l) s(T.leaf k, v) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(T.leaf k, v) : ℝ) = 0 :=
+    T.attesonW_sub_path_eq_zero_of_sideLeafCount_one hkv hkl_e
+      (hiv_e.symm.trans hjv_e) hki_e (T.sideLeafCount_leaf_edge hkv)
+  -- ### 第二段 `e'' = s(v,z)`
+  have hc2 : (T.attesonW (T.leaf k) (T.leaf l) s(v, z) : ℝ)
+      - (T.attesonW (T.leaf i) (T.leaf j) s(v, z) : ℝ)
+      = 2 * (T.sideLeafCount s(v, z) (T.leaf l) : ℝ) - 2 :=
+    T.attesonW_sub_path_eq_near_k' hvz hklz (hiv_z.symm.trans hjv_z) (hkv_z.symm.trans hiv_z)
+  -- ### 数值：`ℓ_l(e'') ≥ n − 1 − S_c`，再配 `2S_c ≤ n`
+  have hstart := T.sideLeafCount_start_le hkv hvz hvc hnb hdeg
+  have hkv_eq : T.sideLeafCount s(v, z) (T.leaf k) = T.sideLeafCount s(v, z) v := by
+    have h := T.sideLeafCount_eq_of_inSide (u := v) (a := T.leaf k) hkv_z
+    first
+      | exact h
+      | exact h.symm
+  have hadd := T.sideLeafCount_add_of_sep hvz hklz
+  have hS' : 2 * (T.sideLeafCount s(v, c) c : ℝ) ≤ (Fintype.card X : ℝ) := by exact_mod_cast hS
+  have hstart' : (T.sideLeafCount s(v, z) v : ℝ)
+      ≤ 1 + (T.sideLeafCount s(v, c) c : ℝ) := by exact_mod_cast hstart
+  have hkv_eq' : (T.sideLeafCount s(v, z) (T.leaf k) : ℝ)
+      = (T.sideLeafCount s(v, z) v : ℝ) := by rw [hkv_eq]
+  have hadd' : (T.sideLeafCount s(v, z) (T.leaf k) : ℝ)
+      + (T.sideLeafCount s(v, z) (T.leaf l) : ℝ) = (Fintype.card X : ℝ) := by
+    exact_mod_cast hadd
+  rw [hc1, hc2]
+  linarith
+
 end Cladogram
 
