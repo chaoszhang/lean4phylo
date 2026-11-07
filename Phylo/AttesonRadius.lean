@@ -4344,3 +4344,148 @@ theorem le_sum_of_two_mem {α : Type*} [DecidableEq α] (f : α → ℝ) (s : Fi
 
 end Cladogram
 
+
+/-! ## 31. ★★★★ W52：Case S（`k` 落在樱桃 `(k,x)` 里）的**逐边非负**
+
+装配的两个分支里，Case S 只需**一条**边的系数（起点边 `s(v,z)` 给 `2(n−3)`，§27.4 已落）
+＋ 其余边非负。本节给出后一半：以 `(k,l)` 与樱桃 `(k,x)` 相比，**每条边**的系数差 `c_e ≥ 0`。
+
+★ 为什么这一支**不需要** `e*` 最小性（与 Case D 不同）：樱桃 `(k,x)` 与目标对 `(k,l)` **共用标签 `k`**，
+于是 `w_e(k,x)` 与 `w_e(k,l)` 的侧内叶数都按**同一个顶点** `leaf k` 计 —— 情形④ 直接给 `c_e = 0`，
+不出现 Case D 里那种「叶数单调性」的比较。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **Case S 的逐边非负**：`w` 是 `k` 的邻居、`x` 也是 `k` 的邻居（即 `(k,x)` 是中心 `v` 的樱桃）
+⇒ 对**每条边** `e`，`c_e = w_e(k,l) − w_e(k,x) ≥ 0`。
+
+四种情形（`inSide` = 同侧）：
+
+| `(k,l)` | `(k,x)` | `c_e` | 结论 |
+|---|---|---|---|
+| 同侧 | 同侧 | `−2(n−S_k) + 2(n−S_k) = 0` | 恒 `0`（**同一顶点** `leaf k` 计侧） |
+| 异侧 | 同侧 | `2(n−S_k) − 2` | `≥ 0`（`S_k ≤ n−1`，`l` 在另一侧） |
+| 同侧 | 异侧 | `2 − 2(n−S_k)` | `= 0`：只有 `e = s(leaf x, v)` 可能，此时 `S_k = n−1` |
+| 异侧 | 异侧 | `−2 + 2 = 0` | 恒 `0` |
+
+★ 第三格是唯一的非平凡格。**识别 `e` 只用两行**（不必碰 `Walk` 归纳、也不必证「路径恰两条边」）：
+若 `e ≠ s(leaf x, v)`，则 `leaf x` 与 `v` 在 `T − e` 中仍相邻；再由 `leaf k` 与 `v` 在 `T − e` 中相邻
+（`e ≠ s(leaf k,v)`，因为 `s(leaf k,v)` **分离** `k,l` 而本格假设 `k ~ l`）得 `k ~ x`，与「异侧」矛盾。
+其中「`s(leaf k,v)` 分离 `k,l`」由 `sideLeaves_leaf_edge`（`k` 那侧的叶集恰 `{k}`）一行得到。 -/
+theorem attesonW_sub_nonneg_of_cherry_start (T : Cladogram X) {k l x : X} {v : T.V}
+    (hklne : k ≠ l) (hkv : T.graph.Adj (T.leaf k) v) (hxv : T.graph.Adj (T.leaf x) v) :
+    ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf l) e : ℝ)
+        - (T.attesonW (T.leaf k) (T.leaf x) e : ℝ) := by
+  classical
+  -- `s(leaf k, v)` 分离 `k` 与 `l`（`k` 那侧只有 `k` 一片叶）
+  have hkvsep : ¬ T.inSide s(T.leaf k, v) (T.leaf k) (T.leaf l) := by
+    intro hcon
+    have hmemb : l ∈ T.sideLeaves s(T.leaf k, v) (T.leaf k) :=
+      (T.mem_sideLeaves_iff_inSide).mpr hcon
+    rw [T.sideLeaves_leaf_edge hkv, Finset.mem_singleton] at hmemb
+    exact hklne hmemb.symm
+  intro e he
+  induction e using Sym2.ind with
+  | h a b =>
+    have hab : T.graph.Adj a b := (SimpleGraph.mem_edgeSet T.graph).mp he
+    by_cases h1 : T.inSide s(a, b) (T.leaf k) (T.leaf l)
+    · by_cases h2 : T.inSide s(a, b) (T.leaf k) (T.leaf x)
+      · -- 情形④：两对都同侧，且**同一个顶点** `leaf k` 计侧 ⇒ `c = 0`
+        rw [T.attesonW_eq_sideCount_of_inSide h1, T.attesonW_eq_sideCount_of_inSide h2]
+        push_cast
+        linarith
+      · -- `k ~ l`、`k ≁ x` ⇒ 只有 `e = s(leaf x, v)` 可能，此时 `S_k = n − 1`，`c = 0`
+        have heq : s(T.leaf x, v) = s(a, b) := by
+          by_contra hne
+          have hxv' : T.inSide s(a, b) (T.leaf x) v :=
+            (SimpleGraph.deleteEdges_adj.mpr ⟨hxv, hne⟩).reachable
+          have hne2 : s(T.leaf k, v) ≠ s(a, b) := by
+            intro h
+            exact hkvsep (by rw [h]; exact h1)
+          have hkv' : T.inSide s(a, b) (T.leaf k) v :=
+            (SimpleGraph.deleteEdges_adj.mpr ⟨hkv, hne2⟩).reachable
+          exact h2 (hkv'.trans ((T.inSide_comm s(a, b) (T.leaf x) v).mp hxv'))
+        have hSx : T.sideLeafCount s(a, b) (T.leaf x) = 1 := by
+          rw [← heq]
+          exact T.sideLeafCount_leaf_edge hxv
+        have hsum := T.sideLeafCount_add_of_sep hab h2
+        have hSkR : (T.sideLeafCount s(a, b) (T.leaf k) : ℝ) + 1 = (Fintype.card X : ℝ) := by
+          have h : T.sideLeafCount s(a, b) (T.leaf k) + 1 = Fintype.card X := by omega
+          exact_mod_cast h
+        rw [T.attesonW_eq_sideCount_of_inSide h1, T.attesonW_eq_neg_two_of_not_inSide h2]
+        push_cast
+        linarith
+    · by_cases h2 : T.inSide s(a, b) (T.leaf k) (T.leaf x)
+      · -- `k ≁ l`、`k ~ x` ⇒ `c = 2(n − S_k) − 2 ≥ 0`（`l` 在另一侧 ⇒ `S_k ≤ n−1`）
+        have hsum := T.sideLeafCount_add_of_sep hab h1
+        have hSl : 0 < T.sideLeafCount s(a, b) (T.leaf l) := T.sideLeafCount_pos_self s(a, b) l
+        have hle : T.sideLeafCount s(a, b) (T.leaf k) + 1 ≤ Fintype.card X := by omega
+        have hleR : (T.sideLeafCount s(a, b) (T.leaf k) : ℝ) + 1 ≤ (Fintype.card X : ℝ) := by
+          exact_mod_cast hle
+        rw [T.attesonW_eq_neg_two_of_not_inSide h1, T.attesonW_eq_sideCount_of_inSide h2]
+        push_cast
+        linarith
+      · -- 情形：两对都异侧 ⇒ `c = −2 + 2 = 0`
+        rw [T.attesonW_eq_neg_two_of_not_inSide h1, T.attesonW_eq_neg_two_of_not_inSide h2]
+        push_cast
+        linarith
+
+/-! ### 31.2 Case S 的 **`Q` 层**：一条边给 `2(n−3)`，其余丢弃
+
+§31.1 给「其余边 `c_e ≥ 0`」，§27.4 给「起点边 `c_{s(v,z)} ≥ 2(n−3)`」，两者用
+`Finset.single_le_sum` 拼成**系数和** `K ≤ Σ_E c_e`，再交给 §30.3 的桥
+（`attesonQ_sub` ＋ `minEdgeWeight_le`）⇒ `Q` 层结论。 -/
+
+/-- ★★★★ **Case S（`k` 端）的 `Q` 层下界**：`S_c = 1` ⇒ 樱桃 `(k,x)`（`leaf x = c`）满足
+
+　　　`2(n−3)·δ ≤ Q(k,m) − Q(k,x)`。
+
+★ 与 Case D 的区别：**不需要** `e*` 最小性，只需要 §31.1 的逐边非负（`(k,x)` 与 `(k,m)` 共用 `k`）。 -/
+theorem attesonQ_gap_of_cherry_start (T : Cladogram X) (l : Sym2 T.V → ℝ) {k m x : X} {v z c : T.V}
+    {δ : ℝ} (hδ0 : 0 ≤ δ)
+    (hl : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → δ ≤ l e)
+    (hl0 : ∀ e : Sym2 T.V, e ∉ T.graph.edgeSet → l e = 0)
+    (hkm : k ≠ m) (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z)
+    (hvc : T.graph.Adj v c) (hnb : T.graph.neighborFinset v = {T.leaf k, z, c})
+    (hdeg : T.graph.degree v ≠ 1) (hzk : z ≠ T.leaf k) (hzc : z ≠ c)
+    (hx : T.leaf x = c) (hS : T.sideLeafCount s(v, c) c = 1)
+    (hpath : ¬ T.inSide s(v, z) (T.leaf k) (T.leaf m)) :
+    2 * ((Fintype.card X : ℝ) - 3) * δ
+      ≤ T.attesonQ l (T.leaf k) (T.leaf m) - T.attesonQ l (T.leaf k) (T.leaf x) := by
+  classical
+  -- 樱桃 `(k,x)`：`x` 与 `k` 都邻 `v`
+  have hxv : T.graph.Adj (T.leaf x) v := by rw [hx]; exact hvc.symm
+  -- 逐边非负（§31.1）
+  have hc0 : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet →
+      0 ≤ (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf k) (T.leaf x) e : ℝ) :=
+    T.attesonW_sub_nonneg_of_cherry_start (k := k) (l := m) (x := x) hkm hkv hxv
+  -- 起点边 `s(v,z)` 的系数下界（§27.4）
+  have hstart : 2 * ((Fintype.card X : ℝ) - 3)
+      ≤ (T.attesonW (T.leaf k) (T.leaf m) s(v, z) : ℝ)
+        - (T.attesonW (T.leaf k) (T.leaf x) s(v, z) : ℝ) :=
+    T.attesonW_sub_start_of_side_card_one (k := k) (l := m) (x := x)
+      hkv hvz hvc hnb hdeg hzk hzc hx hS hpath
+  -- 单点求和：`Σ_E c_e ≥ c_{s(v,z)} ≥ 2(n−3)`
+  have hmem : s(v, z) ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet) := by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
+    exact (SimpleGraph.mem_edgeSet T.graph).mpr hvz
+  have hK : 2 * ((Fintype.card X : ℝ) - 3)
+      ≤ ∑ e ∈ Finset.univ.filter (fun e : Sym2 T.V => e ∈ T.graph.edgeSet),
+          ((T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+            - (T.attesonW (T.leaf k) (T.leaf x) e : ℝ)) := by
+    refine le_trans hstart (Finset.single_le_sum (f := fun e : Sym2 T.V =>
+      (T.attesonW (T.leaf k) (T.leaf m) e : ℝ)
+        - (T.attesonW (T.leaf k) (T.leaf x) e : ℝ)) ?_ hmem)
+    intro e he
+    exact hc0 e (Finset.mem_filter.mp he).2
+  exact T.attesonQ_gap_ge_of_coeff_sum (l := l) (i := T.leaf k) (j := T.leaf x)
+    (k := T.leaf k) (m := T.leaf m) hδ0 hl hl0 hc0 hK
+
+end Cladogram
+
