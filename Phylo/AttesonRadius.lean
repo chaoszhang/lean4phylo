@@ -5078,3 +5078,71 @@ theorem attesonW_sub_eq_two_n_sub_eight (T : Cladogram X) {a b : T.V} (hab : T.g
 
 end Cladogram
 
+
+/-! ## 37. ★★★★ W50-A-#35：配对项的 `hhalf` —— `v` 三条邻边把叶集三分
+
+Atteson `:2041–2043` 的配对项（§26 `attesonW_sub_pair_ge_of_path`）需要
+
+　　`n ≤ 2(ℓ_k(e') + ℓ_l(e''))`　（`e'`、`e''` 是 `v_{p*}` 两侧的路径边）。
+
+本节把它拆成两件**已经可以白拿**的东西：
+
+1. `card_le_sum_three_sideLeaves`（三分覆盖，W12e 已落）：`n ≤ ℓ_z + ℓ_c + ℓ_q`；
+2. §21 `card_le_two_mul_sideLeafCount_of_sep_ik`（最小性 ⇒ `n ≤ 2ℓ_k`）给 `2ℓ_q ≤ n`。
+
+两式相减即得 `n/2 ≤ ℓ_z + ℓ_c`。 -/
+
+namespace Cladogram
+
+open SimpleGraph
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **配对项 `hhalf`（数值核心）**：`v` 的三条邻边 `s(v,z)`、`s(v,c)`、`s(v,q)`
+（`neighborFinset v = {z,c,q}`、`degree v ≠ 1`），若樱桃支 `q` 一侧叶数 `ℓ_q ≤ n/2`，则
+
+　　`n ≤ 2(ℓ_z + ℓ_c)`。
+
+证明：三分覆盖 `n ≤ ℓ_z + ℓ_c + ℓ_q` ＋ `2ℓ_q ≤ n`，纯 `omega`。 -/
+theorem two_mul_side_add_of_three_adj (T : Cladogram X) {v z c q : T.V}
+    (hnb : T.graph.neighborFinset v = {z, c, q}) (hdeg : T.graph.degree v ≠ 1)
+    (hq : 2 * T.sideLeafCount s(v, q) q ≤ Fintype.card X) :
+    Fintype.card X ≤ 2 * (T.sideLeafCount s(v, z) z + T.sideLeafCount s(v, c) c) := by
+  classical
+  have hcov := T.card_le_sum_three_sideLeaves hnb hdeg
+  -- `sideLeafCount` 与 `#sideLeaves` 是定义相等，故下面两条直接 `have` 即可
+  have hcov' : Fintype.card X ≤ (T.sideLeaves s(v, z) z).card
+      + (T.sideLeaves s(v, c) c).card + (T.sideLeaves s(v, q) q).card := hcov
+  have hq' : 2 * (T.sideLeaves s(v, q) q).card ≤ Fintype.card X := hq
+  have hgoal : Fintype.card X ≤ 2 * ((T.sideLeaves s(v, z) z).card
+      + (T.sideLeaves s(v, c) c).card) := by omega
+  exact hgoal
+
+/-- ★★★★ **`ℓ_q ≤ n/2` 的供给（Atteson `:2039–2040`）**：`e_{p*} = s(v,q)` 是**樱桃所在的
+第三支**（`k` 在 `v` 一侧、`i` 在 `q` 一侧），`e* = s(c,d)` 是离路径边中 `ℓ_k` 最小者 ⇒
+
+　　`2·ℓ_q ≤ n`。
+
+证明：§21 `card_le_two_mul_sideLeafCount_of_sep_ik` 给 `n ≤ 2ℓ_k(e_{p*})`；
+`k` 在 `v` 侧 ⇒ `ℓ_k(e_{p*}) = ℓ_v(e_{p*})`；再由 `ℓ_v + ℓ_q = n` 得 `2ℓ_q ≤ n`。 -/
+theorem two_mul_sideLeafCount_third_of_min (T : Cladogram X) {v q c d : T.V}
+    (hvq : T.graph.Adj v q) (hcd : T.graph.Adj c d) {i k l : X}
+    (hkl : T.inSide s(v, q) (T.leaf k) (T.leaf l))
+    (hik : ¬ T.inSide s(v, q) (T.leaf i) (T.leaf k))
+    (hkv : T.inSide s(v, q) v (T.leaf k))
+    (hCin : T.inSide s(c, d) (T.leaf i) (T.leaf k))
+    (hmin : ∀ e : Sym2 T.V, e ∈ T.graph.edgeSet → T.inSide e (T.leaf k) (T.leaf l) →
+      T.sideLeafCount s(c, d) (T.leaf k) ≤ T.sideLeafCount e (T.leaf k)) :
+    2 * T.sideLeafCount s(v, q) q ≤ Fintype.card X := by
+  classical
+  have h1 := T.card_le_two_mul_sideLeafCount_of_sep_ik hvq hcd hkl hik hCin hmin
+  have hkq : T.sideLeafCount s(v, q) (T.leaf k) = T.sideLeafCount s(v, q) v := by
+    have h := T.sideLeafCount_eq_of_inSide (u := v) (a := T.leaf k) hkv
+    first
+      | exact h
+      | exact h.symm
+  have hadd := T.sideLeafCount_add_of_adj hvq
+  omega
+
+end Cladogram
+
