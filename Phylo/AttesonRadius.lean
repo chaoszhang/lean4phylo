@@ -5745,4 +5745,53 @@ theorem attesonW_sub_pair_end_ge (T : Cladogram X) {i j k l : X} {v z c : T.V}
 end Cladogram
 
 
+/-! ## 50. ★★★★ W50-A-#49：`SharesOneLabel` 支的**成品生产**（§31 ＋ §44 接线）
+
+起点处第三支 `c` 只有一片叶（`ℓ_c(s(v,c)) = 1`、`c = leaf x`）时，`(k,x)` 本身就是樱桃
+（都与 `v` 相邻），且与 `(k,m)` **恰共享一个标签** `k` —— 这正是 `SharesOneLabel` 支。
+
+§31 `attesonQ_gap_of_cherry_start` 已给 `2(n−3)δ ≤ Q` 差；本节把它与 §41 的
+`minEdgeWeight`／`wExt` 实例化、§44 的 `sharesOneLabel_branch` 一次接起来。 -/
+
+namespace NJ
+
+namespace Dissimilarity
+
+variable {X : Type*} [Fintype X] [DecidableEq X]
+
+/-- ★★★★ **`SharesOneLabel` 支的成品**：`hS : ℓ_c(s(v,c)) = 1` ＋ `hx : leaf x = c` ⇒
+`∃ i j, δ.IsCherry i j ∧ SharesOneLabel i j k m ∧ 2(n−3)·minEdgeWeight ≤ δ.Q k m − δ.Q i j`。 -/
+theorem sharesOneLabel_branch_of_start (T : Phylogram X) {k m x : X} {v z c : T.V}
+    (hkm : k ≠ m) (hkx : k ≠ x) (hmx : m ≠ x)
+    (hkv : T.graph.Adj (T.leaf k) v) (hvz : T.graph.Adj v z) (hvc : T.graph.Adj v c)
+    (hnb : T.graph.neighborFinset v = {T.leaf k, z, c})
+    (hdeg : T.graph.degree v ≠ 1) (hzk : z ≠ T.leaf k) (hzc : z ≠ c)
+    (hx : T.leaf x = c) (hS : T.toCladogram.sideLeafCount s(v, c) c = 1)
+    (hpath : ¬ T.toCladogram.inSide s(v, z) (T.leaf k) (T.leaf m)) :
+    ∃ i j : X, (toDissimilarity T).IsCherry i j ∧ SharesOneLabel i j k m ∧
+      2 * ((Fintype.card X : ℝ) - 3) * minEdgeWeight T
+        ≤ (toDissimilarity T).Q k m - (toDissimilarity T).Q i j := by
+  classical
+  haveI : Nonempty X := ⟨k⟩
+  -- ### 樱桃 `(k,x)`
+  have hxv : T.graph.Adj (T.leaf x) v := by rw [hx]; exact hvc.symm
+  have hcher : T.IsCherry k x := ⟨hkx, v, hkv, hxv⟩
+  -- ### §31 的间隙
+  have hgap : 2 * ((Fintype.card X : ℝ) - 3) * minEdgeWeight T
+      ≤ T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf m)
+        - T.toCladogram.attesonQ T.wExt (T.leaf k) (T.leaf x) :=
+    T.toCladogram.attesonQ_gap_of_cherry_start T.wExt (minEdgeWeight_nonneg T)
+      (fun e he => by rw [Phylo.TreeDist.wExt_eq_w T he]; exact minEdgeWeight_le T ⟨e, he⟩)
+      (fun e he => Phylo.TreeDist.wExt_eq_zero T he)
+      hkm hkv hvz hvc hnb hdeg hzk hzc hx hS hpath
+  -- ### 打包
+  have hs : SharesOneLabel k x k m := Or.inl ⟨rfl, hkx.symm, hmx.symm⟩
+  have h := sharesOneLabel_branch T hcher hs hgap
+  exact ⟨k, x, h.1, h.2.1, h.2.2⟩
+
+end Dissimilarity
+
+end NJ
+
+
 
